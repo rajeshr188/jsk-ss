@@ -56,6 +56,7 @@ class OwnerFlowTests(TestCase):
                 "savings_mode": SchemeAccount.SavingsMode.CASH,
                 "start_date": "2026-08-01",
                 "agreed_months": 12,
+                "audit_reason": "Customer requested enrolment at the store.",
             },
         )
         self.assertRedirects(response, reverse("schemes:customer_detail", args=[customer.pk]))
@@ -107,4 +108,3 @@ class CustomerIsolationTests(TestCase):
         response = self.client.get(reverse("schemes:my_schemes"))
         self.assertContains(response, account_a.scheme_number)
         self.assertNotContains(response, account_b.scheme_number)
-

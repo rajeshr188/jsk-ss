@@ -1,12 +1,14 @@
 from django.contrib import admin
 
 from .models import (
+    AuditEvent,
     Contribution,
     Customer,
     MetalAllocation,
     PaymentWebhookEvent,
     RateSnapshot,
     Redemption,
+    RedemptionReversal,
     SchemeAccount,
     SchemePlan,
 )
@@ -226,6 +228,67 @@ class RedemptionAdmin(admin.ModelAdmin):
         "processed_by",
         "completed_at",
         "status",
+        "created_at",
+    )
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(RedemptionReversal)
+class RedemptionReversalAdmin(admin.ModelAdmin):
+    list_display = (
+        "reversal_number",
+        "redemption",
+        "processed_by",
+        "reversed_at",
+    )
+    search_fields = (
+        "reversal_number",
+        "redemption__redemption_number",
+        "redemption__scheme_account__scheme_number",
+    )
+    readonly_fields = (
+        "reversal_number",
+        "redemption",
+        "reason",
+        "processed_by",
+        "reversed_at",
+        "created_at",
+    )
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(AuditEvent)
+class AuditEventAdmin(admin.ModelAdmin):
+    list_display = ("action", "actor_label", "scheme_account", "occurred_at")
+    list_filter = ("action", "occurred_at")
+    search_fields = (
+        "actor_label",
+        "reason",
+        "scheme_account__scheme_number",
+        "redemption__redemption_number",
+    )
+    readonly_fields = (
+        "action",
+        "actor",
+        "actor_label",
+        "reason",
+        "scheme_plan",
+        "scheme_account",
+        "contribution",
+        "rate_snapshot",
+        "redemption",
+        "details",
+        "occurred_at",
         "created_at",
     )
 

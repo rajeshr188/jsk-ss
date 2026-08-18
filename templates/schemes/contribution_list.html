@@ -27,6 +27,8 @@
           {% if contribution.status == 'PAID_UNALLOCATED' %}
           <form method="post" action="{% url 'schemes:retry_contribution_allocation' contribution.pk %}">
             {% csrf_token %}
+            <label class="visually-hidden" for="reason-{{ contribution.pk }}">Retry reason</label>
+            <input class="form-control form-control-sm mb-2" id="reason-{{ contribution.pk }}" name="reason" placeholder="Reason for retry" required>
             <button class="btn btn-sm btn-outline-dark" type="submit">Retry allocation</button>
           </form>
           {% else %}—{% endif %}

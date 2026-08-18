@@ -5,6 +5,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.http import Http404, JsonResponse
+from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -14,13 +15,16 @@ from django.views.decorators.csrf import csrf_exempt
 from accounts.models import CustomUser
 
 from .forms import (
+    AuditReasonForm,
     ContributionForm,
     CustomerCreateForm,
     EnrolmentForm,
     RedemptionForm,
+    RedemptionReversalForm,
+    SchemePlanChangeForm,
     SchemePlanForm,
 )
-from .models import Contribution, Customer, SchemeAccount, SchemePlan
+from .models import Contribution, Customer, Redemption, SchemeAccount, SchemePlan
 from .payments import (
     PaymentGatewayAuthenticationError,
     PaymentGatewayError,
@@ -39,9 +43,11 @@ from .selectors import (
     get_customer_scheme_summary,
     get_metal_balance,
     get_owner_activity_summary,
+    get_owner_audit_events,
     get_owner_contributions,
     get_owner_customers,
     get_owner_liability_summary,
+    get_owner_exception_queue,
     get_owner_redemptions,
     get_redemption_eligibility_summary,
     get_redemption_history,
@@ -55,6 +61,8 @@ from .services import (
     initiate_razorpay_contribution,
     process_razorpay_webhook,
     process_mock_contribution,
+    record_scheme_plan_change,
+    reverse_redemption,
     retry_metal_allocation,
 )
 
@@ -69,8 +77,10 @@ def post_login(request):
 @owner_required
 def owner_dashboard(request):
     activity = get_owner_activity_summary()
+    exceptions = get_owner_exception_queue()
     context = {
         "activity": activity,
+        "exception_count": len(exceptions),
         "eligibility": get_redemption_eligibility_summary(),
         "liabilities": get_owner_liability_summary(),
     }
@@ -133,6 +143,24 @@ def redemption_list(request):
 
 
 @owner_required
+def audit_log(request):
+    return render(
+        request,
+        "schemes/audit_log.html",
+        {"audit_events": get_owner_audit_events()},
+    )
+
+
+@owner_required
+def exception_queue(request):
+    return render(
+        request,
+        "schemes/exception_queue.html",
+        {"exceptions": get_owner_exception_queue()},
+    )
+
+
+@owner_required
 def redemption_create(request, scheme_number):
     account = get_object_or_404(
         SchemeAccount.objects.select_related("customer", "plan"),
@@ -164,6 +192,7 @@ def redemption_create(request, scheme_number):
                 notes=form.cleaned_data["notes"],
                 idempotency_key=form.cleaned_data["idempotency_key"],
                 processed_by=request.user,
+                audit_reason=form.cleaned_data["audit_reason"],
             )
         except ValidationError as error:
             if hasattr(error, "message_dict"):
@@ -188,6 +217,41 @@ def redemption_create(request, scheme_number):
             "cash_bonus": cash_bonus,
             "form": form,
         },
+    )
+
+
+@owner_required
+def redemption_reverse(request, redemption_number):
+    redemption = get_object_or_404(
+        Redemption.objects.select_related(
+            "scheme_account",
+            "scheme_account__customer",
+            "processed_by",
+        ),
+        redemption_number=redemption_number,
+        reversal__isnull=True,
+    )
+    form = RedemptionReversalForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        try:
+            reversal = reverse_redemption(
+                redemption=redemption,
+                processed_by=request.user,
+                reason=form.cleaned_data["reason"],
+            )
+        except ValidationError as error:
+            for message in error.messages:
+                form.add_error(None, message)
+        else:
+            messages.success(
+                request,
+                f"Reversal {reversal.reversal_number} recorded; the original redemption remains in the audit trail.",
+            )
+            return redirect("schemes:redemption_list")
+    return render(
+        request,
+        "schemes/redemption_reversal_form.html",
+        {"redemption": redemption, "form": form},
     )
 
 
@@ -248,6 +312,8 @@ def customer_enroll(request, customer_id):
                 savings_mode=form.cleaned_data["savings_mode"],
                 start_date=form.cleaned_data["start_date"],
                 agreed_months=form.cleaned_data["agreed_months"],
+                performed_by=request.user,
+                reason=form.cleaned_data["audit_reason"],
             )
         except ValidationError as error:
             for field, field_errors in error.message_dict.items():
@@ -276,6 +342,34 @@ def plan_add(request):
         messages.success(request, f"Plan {plan.name} created.")
         return redirect("schemes:plan_list")
     return render(request, "schemes/plan_form.html", {"form": form})
+
+
+@owner_required
+def plan_edit(request, plan_id):
+    plan = get_object_or_404(SchemePlan, pk=plan_id)
+    form = SchemePlanChangeForm(request.POST or None, instance=plan)
+    if request.method == "POST" and form.is_valid():
+        tracked_fields = SchemePlanForm.Meta.fields
+        stored_plan = SchemePlan.objects.get(pk=plan.pk)
+        before = {field: getattr(stored_plan, field) for field in tracked_fields}
+        with transaction.atomic():
+            plan = form.save()
+            event = record_scheme_plan_change(
+                plan=plan,
+                actor=request.user,
+                reason=form.cleaned_data["audit_reason"],
+                before=before,
+            )
+        if event is None:
+            messages.info(request, "No plan values changed.")
+        else:
+            messages.success(request, f"Plan {plan.name} updated and audited.")
+        return redirect("schemes:plan_list")
+    return render(
+        request,
+        "schemes/plan_form.html",
+        {"form": form, "plan": plan},
+    )
 
 
 @login_required
@@ -554,8 +648,16 @@ def retry_contribution_allocation(request, contribution_id):
             SchemeAccount.SavingsMode.SILVER,
         ],
     )
+    form = AuditReasonForm(request.POST)
+    if not form.is_valid():
+        messages.error(request, "Enter a reason for retrying the allocation.")
+        return redirect("schemes:contribution_list")
     try:
-        allocation = retry_metal_allocation(contribution=contribution)
+        allocation = retry_metal_allocation(
+            contribution=contribution,
+            performed_by=request.user,
+            reason=form.cleaned_data["reason"],
+        )
     except (ImproperlyConfigured, MetalRateProviderError, ValidationError) as error:
         messages.error(request, f"Allocation retry failed: {error}")
     else:

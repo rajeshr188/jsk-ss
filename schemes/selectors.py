@@ -9,9 +9,11 @@ from django.utils import timezone
 
 from .bonuses import cash_bonus_policy_for_account
 from .models import (
+    AuditEvent,
     Contribution,
     Customer,
     MetalAllocation,
+    PaymentWebhookEvent,
     RateSnapshot,
     Redemption,
     SchemeAccount,
@@ -99,6 +101,23 @@ class RedemptionEligibilitySummary:
         return len(self.next_90_days)
 
 
+@dataclass(frozen=True)
+class OwnerExceptionItem:
+    category: str
+    detected_at: datetime
+    detail: str
+    contribution: Contribution | None = None
+    webhook_event: PaymentWebhookEvent | None = None
+
+    @property
+    def scheme_account(self):
+        if self.contribution is not None:
+            return self.contribution.scheme_account
+        if self.webhook_event and self.webhook_event.contribution_id:
+            return self.webhook_event.contribution.scheme_account
+        return None
+
+
 def get_customer_scheme_summary(user):
     money_field = DecimalField(max_digits=14, decimal_places=2)
     metal_field = DecimalField(max_digits=18, decimal_places=6)
@@ -124,6 +143,7 @@ def get_customer_scheme_summary(user):
         Redemption.objects.filter(
             scheme_account=OuterRef("pk"),
             status=Redemption.Status.COMPLETED,
+            reversal__isnull=True,
         )
         .values("scheme_account")
         .annotate(total=Sum("cash_principal_amount"))
@@ -133,6 +153,7 @@ def get_customer_scheme_summary(user):
         Redemption.objects.filter(
             scheme_account=OuterRef("pk"),
             status=Redemption.Status.COMPLETED,
+            reversal__isnull=True,
         )
         .values("scheme_account")
         .annotate(total=Sum("gold_quantity"))
@@ -142,6 +163,7 @@ def get_customer_scheme_summary(user):
         Redemption.objects.filter(
             scheme_account=OuterRef("pk"),
             status=Redemption.Status.COMPLETED,
+            reversal__isnull=True,
         )
         .values("scheme_account")
         .annotate(total=Sum("silver_quantity"))
@@ -214,7 +236,9 @@ def get_contribution_history(scheme_account):
 
 
 def get_redemption_history(scheme_account):
-    return scheme_account.redemptions.select_related("processed_by")
+    return scheme_account.redemptions.select_related(
+        "processed_by", "reversal", "reversal__processed_by"
+    )
 
 
 def get_owner_contributions():
@@ -233,7 +257,66 @@ def get_owner_redemptions():
         "scheme_account__customer",
         "scheme_account__plan",
         "processed_by",
+        "reversal",
+        "reversal__processed_by",
     )
+
+
+def get_owner_audit_events():
+    return AuditEvent.objects.select_related(
+        "actor",
+        "scheme_plan",
+        "scheme_account",
+        "scheme_account__customer",
+        "contribution",
+        "rate_snapshot",
+        "redemption",
+    )
+
+
+def get_owner_exception_queue():
+    items = []
+    unallocated = Contribution.objects.filter(
+        status=Contribution.Status.PAID_UNALLOCATED
+    ).select_related("scheme_account", "scheme_account__customer")
+    for contribution in unallocated:
+        items.append(
+            OwnerExceptionItem(
+                category="PAID_UNALLOCATED / failed allocation",
+                detected_at=(
+                    contribution.allocation_attempted_at or contribution.paid_at
+                    or contribution.created_at
+                ),
+                detail=(
+                    contribution.allocation_error
+                    or "Verified payment is awaiting a metal allocation."
+                ),
+                contribution=contribution,
+            )
+        )
+
+    failed_webhooks = PaymentWebhookEvent.objects.filter(
+        status=PaymentWebhookEvent.Status.FAILED
+    ).select_related(
+        "contribution",
+        "contribution__scheme_account",
+        "contribution__scheme_account__customer",
+    )
+    for event in failed_webhooks:
+        is_mismatch = "match" in event.error.lower()
+        items.append(
+            OwnerExceptionItem(
+                category=(
+                    "Payment mismatch / manual correction required"
+                    if is_mismatch
+                    else "Failed webhook reconciliation"
+                ),
+                detected_at=event.processed_at or event.received_at,
+                detail=event.error or "Webhook processing failed.",
+                webhook_event=event,
+            )
+        )
+    return tuple(sorted(items, key=lambda item: item.detected_at, reverse=True))
 
 
 def get_cash_balance(scheme_account):
@@ -270,7 +353,8 @@ def get_cash_bonus_summary(scheme_account, as_of=None):
         )
     )["total"]
     redeemed = scheme_account.redemptions.filter(
-        status=Redemption.Status.COMPLETED
+        status=Redemption.Status.COMPLETED,
+        reversal__isnull=True,
     ).aggregate(
         principal=Coalesce(
             Sum("cash_principal_amount"),
@@ -352,7 +436,8 @@ def get_metal_balance(scheme_account):
         else "silver_quantity"
     )
     redeemed = scheme_account.redemptions.filter(
-        status=Redemption.Status.COMPLETED
+        status=Redemption.Status.COMPLETED,
+        reversal__isnull=True,
     ).aggregate(
         total=Coalesce(
             Sum(field_name),
@@ -400,6 +485,7 @@ def get_owner_liability_summary(rate_provider=None):
     )
     metal_redeemed = Redemption.objects.filter(
         status=Redemption.Status.COMPLETED,
+        reversal__isnull=True,
     ).aggregate(
         gold=Coalesce(
             Sum("gold_quantity"),

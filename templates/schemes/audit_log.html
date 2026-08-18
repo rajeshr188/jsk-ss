@@ -1,0 +1,28 @@
+{% extends '_base.html' %}
+
+{% block title %}Audit log | Jai Shri Krishna Jewellery{% endblock %}
+
+{% block content %}
+<div class="mb-4"><h1 class="mb-1">Audit log</h1><p class="text-muted mb-0">Immutable record of sensitive owner and system actions</p></div>
+<div class="table-responsive">
+  <table class="table align-middle">
+    <thead><tr><th>Timestamp</th><th>Action</th><th>Actor</th><th>Target</th><th>Reason</th><th>Recorded details</th></tr></thead>
+    <tbody>
+      {% for event in audit_events %}
+      <tr>
+        <td>{{ event.occurred_at|date:'d M Y, g:i A' }}</td>
+        <td>{{ event.get_action_display }}</td>
+        <td>{{ event.actor_label }}</td>
+        <td>
+          {% if event.scheme_account %}{{ event.scheme_account.scheme_number }}{% elif event.scheme_plan %}Plan {{ event.scheme_plan.code }}{% else %}—{% endif %}
+          {% if event.redemption %}<br><small>{{ event.redemption.redemption_number }}</small>{% endif %}
+          {% if event.contribution %}<br><small>Contribution {{ event.contribution.pk }}</small>{% endif %}
+        </td>
+        <td>{{ event.reason }}</td>
+        <td><small>{{ event.details }}</small></td>
+      </tr>
+      {% empty %}<tr><td colspan="6" class="text-center text-muted py-4">No audited actions yet.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

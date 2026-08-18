@@ -19,10 +19,14 @@ graph TD
   P[SchemePlan] -->|one-to-many| A
   A -->|one-to-many| N[Contribution]
   A -->|one-to-many| D[Redemption]
+  D -->|zero-or-one| V[RedemptionReversal]
   W[PaymentWebhookEvent] -->|zero-or-many| N
   N -->|zero-or-one| M[MetalAllocation]
   M -->|one-to-one| R[RateSnapshot]
   U -->|processed by| D
+  U -->|actor| E[AuditEvent]
+  E -->|references| A
+  E -->|references| D
 ```
 
 `SchemeAccount` snapshots plan terms during enrolment so later plan edits do not change existing agreements. Cash agreements also snapshot the bonus policy version, percentage, and minimum qualifying duration.
@@ -48,7 +52,7 @@ If public signup is introduced later, registration must create a complete custom
 
 ## Financial source of truth
 
-Cash principal is derived by selectors from `PAID` contribution records less completed cash redemptions; pending and failed attempts contribute zero. Gold and silver balances are derived from immutable `MetalAllocation` quantities attached one-to-one to paid contributions less completed redemptions in the matching metal. Historical `RateSnapshot`, allocation, contribution, and `Redemption` records remain visible; rate snapshots, allocations, and redemptions reject application-level edits. There are no mutable balance fields.
+Cash principal is derived by selectors from `PAID` contribution records less completed, unreversed cash redemptions; pending and failed attempts contribute zero. Gold and silver balances are derived from immutable `MetalAllocation` quantities attached one-to-one to paid contributions less completed, unreversed redemptions in the matching metal. Historical `RateSnapshot`, allocation, contribution, `Redemption`, and `RedemptionReversal` records remain visible and reject application-level edits. There are no mutable balance fields.
 
 Cash bonus is derived from immutable paid contributions and the versioned policy snapshot on the agreement. Before eligibility it is projected exposure only. At eligibility it becomes earned from principal paid by the eligibility-date cutoff. Cash redemptions store immutable principal and bonus components whose sum equals the cash settlement total; partial settlement consumes principal first. There is no mutable bonus balance field.
 
@@ -79,3 +83,5 @@ Owner liability dashboard: paid cash contributions → outstanding INR principal
 Eligibility: India-local current date plus each agreement's `eligible_from` snapshot → active/not-yet-eligible or redemption-eligible display state → exclusive owner windows for eligible now, days 1–30, 31–60, and 61–90. Eligibility is a read model; it does not create a redemption or persist an automatic status change.
 
 Redemption: owner eligibility review → denomination-specific outstanding balance → allowed settlement and precision validation → account row lock → idempotency check → immutable completed redemption → derived customer/owner balances. Cash settlement stores principal and earned-bonus components. Partial redemption leaves the account eligible and open; exact final redemption stores `REDEEMED`. Jewellery purchase records a required external invoice/reference and settlement notes without creating inventory or invoicing subsystems.
+
+Audit and exceptions: sensitive owner action → mandatory reason → transactional domain mutation → immutable `AuditEvent` with actor label, timestamp, target, and compact details. An erroneous redemption is corrected by an immutable one-to-one `RedemptionReversal`; selectors exclude reversed settlements and restore the original entitlement while both records remain visible. The owner exception queue is a read model over current `PAID_UNALLOCATED` contributions and failed `PaymentWebhookEvent` records, not a second financial ledger.

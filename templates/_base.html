@@ -42,6 +42,8 @@
             <li class="nav-item"><a class="nav-link" href="{% url 'schemes:customer_list' %}">Customers</a></li>
             <li class="nav-item"><a class="nav-link" href="{% url 'schemes:contribution_list' %}">Contributions</a></li>
             <li class="nav-item"><a class="nav-link" href="{% url 'schemes:redemption_list' %}">Redemptions</a></li>
+            <li class="nav-item"><a class="nav-link" href="{% url 'schemes:exception_queue' %}">Exceptions</a></li>
+            <li class="nav-item"><a class="nav-link" href="{% url 'schemes:audit_log' %}">Audit log</a></li>
             {% else %}
             <li class="nav-item"><a class="nav-link" href="{% url 'schemes:my_schemes' %}">My schemes</a></li>
             {% endif %}

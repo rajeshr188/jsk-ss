@@ -406,6 +406,7 @@ class RedemptionViewTests(TestCase):
                 "amount": "5000.00",
                 "external_reference": "SETTLEMENT-5000",
                 "notes": "Paid at store counter",
+                "audit_reason": "Customer collected the matured amount.",
                 "idempotency_key": str(key),
             },
             follow=True,

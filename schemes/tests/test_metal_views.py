@@ -94,6 +94,7 @@ class MetalContributionViewTests(TestCase):
 
         response = self.client.post(
             reverse("schemes:retry_contribution_allocation", args=[contribution.pk]),
+            {"reason": "Provider recovered; retry verified payment."},
             follow=True,
         )
 

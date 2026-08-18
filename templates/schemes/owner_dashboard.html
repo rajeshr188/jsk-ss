@@ -28,6 +28,13 @@
 </div>
 {% endif %}
 
+{% if exception_count %}
+<div class="alert alert-danger mt-3 mb-0" role="alert">
+  <strong>{{ exception_count }} unresolved operational exception{{ exception_count|pluralize }}.</strong>
+  <a class="alert-link" href="{% url 'schemes:exception_queue' %}">Open exception queue</a>
+</div>
+{% endif %}
+
 <div class="d-flex justify-content-between align-items-end mt-5 mb-3">
   <div>
     <h2 class="h4 mb-1">Redemption eligibility</h2>
@@ -108,5 +115,7 @@
   <a class="btn btn-outline-dark" href="{% url 'schemes:contribution_list' %}">View contributions</a>
   <a class="btn btn-outline-dark" href="{% url 'schemes:redemption_eligibility' %}">View redemption eligibility</a>
   <a class="btn btn-outline-dark" href="{% url 'schemes:redemption_list' %}">View redemptions</a>
+  <a class="btn btn-outline-dark" href="{% url 'schemes:exception_queue' %}">Review exceptions</a>
+  <a class="btn btn-outline-dark" href="{% url 'schemes:audit_log' %}">View audit log</a>
 </div>
 {% endblock %}

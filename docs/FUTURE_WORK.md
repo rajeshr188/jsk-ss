@@ -33,14 +33,21 @@ here are not implemented behavior and do not relax the financial invariants in
 
 ## Milestone 10 — audit and exceptions
 
-- **FW-AUDIT-001:** Add owner-controlled correction, reversal, and void workflows
-  that append compensating events instead of editing completed redemptions.
+- **FW-AUDIT-001 (completed in Milestone 10):** Supported sensitive owner actions
+  append immutable actor/timestamp/reason audit events, and an erroneous redemption
+  is corrected through one immutable compensating reversal rather than editing it.
 - **FW-AUDIT-002:** Define approval and segregation-of-duties rules for sensitive
   settlements, including who may initiate, approve, and review them.
-- **FW-AUDIT-003:** Add exception queues and operational reconciliation for payment
-  failures, Razorpay refunds/disputes, and unmatched or delayed webhooks.
+- **FW-AUDIT-003 (initial queue completed in Milestone 10):** The owner queue derives
+  paid-unallocated/failed-allocation and failed or mismatched webhook exceptions.
+  Add provider reconciliation and resolution workflows for delayed/unmatched
+  payments, Razorpay refunds/disputes, and other external settlement differences.
 - **FW-AUDIT-004:** Automate safe retries and external alerts for
   `PAID_UNALLOCATED` metal contributions while preserving idempotency.
+- **FW-AUDIT-005:** Define and implement manual payment correction, payment void,
+  and manual rate override policies, including compensating-event shape, required
+  evidence, pricing/customer disclosure, and authorization. Reserved audit action
+  names do not currently enable these financial mutations.
 
 ## Milestone 11 — receipts and statements
 
@@ -121,4 +128,5 @@ and is not current work.
 | Milestone 6 | No external Razorpay transaction/webhook had been exercised; live keys were rejected pending live operations; abandoned monthly orders had no expiry/cancellation. Earlier Milestone 5 limitations remained. | The external Test Mode transaction and signed webhook are resolved by the MVP Beta checkpoint. Live operations, stable HTTPS/webhook operations, abandoned-order handling, and carried-forward rate/recovery work remain `FW-BETA-003`, `FW-PAY-001`–`FW-PAY-003`, and the related items above. |
 | Milestone 7 | Eligibility had no reminders and did not initiate/complete redemption. The later review also noted exact-calendar behavior with no business-day or grace-period policy. | Redemption execution was resolved by Milestone 8. Communication and calendar policy remain `FW-ELIG-001` and `FW-ELIG-002`. |
 | Milestone 8 | Redemption only recorded settlement; no payout, metal handover, POS, inventory, invoice validation, or metal-to-cash policy existed. Bonus, correction/reversal/approval, and configurable partial-settlement policies remained deferred. Receipts/statements were also deferred. | Initial versioned cash bonus is resolved by Milestone 9. Tracked by `FW-SETTLE-001` through `FW-SETTLE-004`, `FW-BONUS-004`–`FW-BONUS-005`, all Milestone 10 audit items, and all Milestone 11 document items. |
-| Milestone 9 | The initial cash bonus has one plan-configured percentage, a minimum qualifying duration, a paid-principal eligibility cutoff, and principal-first redemption. It has no caps, tiers, approval/forfeiture/tax policy, future-contribution projection, or optimized aggregate read model. | Tracked by `FW-BONUS-004` and `FW-BONUS-005`; correction and approval workflows remain in Milestone 10. |
+| Milestone 9 | The initial cash bonus has one plan-configured percentage, a minimum qualifying duration, a paid-principal eligibility cutoff, and principal-first redemption. It has no caps, tiers, approval/forfeiture/tax policy, future-contribution projection, or optimized aggregate read model. | Tracked by `FW-BONUS-004` and `FW-BONUS-005`; initial audit/reversal is resolved by Milestone 10 while dual approval remains `FW-AUDIT-002`. |
+| Milestone 10 | Immutable audit events cover supported sensitive actions; redemption reversal is append-only; the exception queue covers current paid-unallocated and failed webhook records. There is no manual payment/rate correction, void, refund/dispute reconciliation, dual approval, automated retry/alerting, or immutable database trigger protection against bulk ORM updates. | Tracked by `FW-AUDIT-002` through `FW-AUDIT-005`, `FW-PAY-001` through `FW-PAY-003`, and the production operations gate. |

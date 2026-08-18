@@ -11,12 +11,14 @@ from django.utils import timezone
 
 from .bonuses import CASH_BONUS_POLICY_VERSION
 from .models import (
+    AuditEvent,
     Contribution,
     Customer,
     MetalAllocation,
     PaymentWebhookEvent,
     RateSnapshot,
     Redemption,
+    RedemptionReversal,
     SchemeAccount,
     SchemePlan,
 )
@@ -36,6 +38,36 @@ EXPECTED_ALLOCATION_ERRORS = (
     MetalRateProviderError,
     ValidationError,
 )
+
+
+def _actor_label(actor):
+    if actor is None:
+        return "System service"
+    return actor.email or actor.username or f"User {actor.pk}"
+
+
+def _validate_owner(actor):
+    user_model = get_user_model()
+    if actor is None or not actor.is_active or not (
+        actor.is_superuser or actor.role == user_model.Role.OWNER
+    ):
+        raise ValidationError("Only an active owner can perform this action.")
+
+
+def record_audit_event(*, action, reason, actor=None, **targets):
+    normalized_reason = reason.strip()
+    if not normalized_reason:
+        raise ValidationError({"reason": "Enter a reason for this action."})
+    event = AuditEvent(
+        action=action,
+        actor=actor,
+        actor_label=_actor_label(actor),
+        reason=normalized_reason,
+        **targets,
+    )
+    event.full_clean()
+    event.save()
+    return event
 
 
 def _reference(prefix, model, field_name):
@@ -87,7 +119,16 @@ def create_customer(*, full_name, email, mobile_number, address="", password):
 
 
 @transaction.atomic
-def enroll_customer(*, customer, plan, savings_mode, start_date=None, agreed_months=None):
+def enroll_customer(
+    *,
+    customer,
+    plan,
+    savings_mode,
+    start_date=None,
+    agreed_months=None,
+    performed_by=None,
+    reason="Customer enrolled through service.",
+):
     plan.full_clean()
     if not plan.active:
         raise ValidationError({"plan": "Only active plans can accept new enrolments."})
@@ -120,6 +161,19 @@ def enroll_customer(*, customer, plan, savings_mode, start_date=None, agreed_mon
     )
     account.full_clean()
     account.save()
+    record_audit_event(
+        action=AuditEvent.Action.CUSTOMER_ENROLMENT,
+        actor=performed_by,
+        reason=reason,
+        scheme_plan=plan,
+        scheme_account=account,
+        details={
+            "scheme_number": account.scheme_number,
+            "savings_mode": account.savings_mode,
+            "agreed_months": account.agreed_months,
+            "eligible_from": account.eligible_from.isoformat(),
+        },
+    )
     return account
 
 
@@ -411,15 +465,48 @@ def mark_contribution_paid_unallocated(*, contribution_id, error):
     return contribution
 
 
-def retry_metal_allocation(*, contribution, rate_provider=None):
+def retry_metal_allocation(
+    *, contribution, rate_provider=None, performed_by=None, reason=""
+):
+    if performed_by is not None:
+        _validate_owner(performed_by)
+        if not reason.strip():
+            raise ValidationError({"reason": "Enter a reason for retrying allocation."})
     try:
-        return allocate_metal(contribution=contribution, rate_provider=rate_provider)
+        allocation = allocate_metal(
+            contribution=contribution,
+            rate_provider=rate_provider,
+        )
     except Exception as error:
         mark_contribution_paid_unallocated(
             contribution_id=contribution.pk,
             error=error,
         )
+        if performed_by is not None:
+            record_audit_event(
+                action=AuditEvent.Action.ALLOCATION_RETRY,
+                actor=performed_by,
+                reason=reason,
+                scheme_account=contribution.scheme_account,
+                contribution=contribution,
+                details={"outcome": "FAILED", "error": str(error).strip()[:1000]},
+            )
         raise
+    if performed_by is not None:
+        record_audit_event(
+            action=AuditEvent.Action.ALLOCATION_RETRY,
+            actor=performed_by,
+            reason=reason,
+            scheme_account=contribution.scheme_account,
+            contribution=contribution,
+            rate_snapshot=allocation.rate_snapshot,
+            details={
+                "outcome": "SUCCEEDED",
+                "quantity": str(allocation.quantity),
+                "applied_rate": str(allocation.rate_snapshot.applied_rate),
+            },
+        )
+    return allocation
 
 
 def _apply_contribution_entitlement(contribution):
@@ -647,6 +734,7 @@ def complete_redemption(
     idempotency_key,
     external_reference="",
     notes="",
+    audit_reason="Redemption completed through service.",
 ):
     account = (
         SchemeAccount.objects.select_for_update()
@@ -749,7 +837,95 @@ def complete_redemption(
     )
     redemption.full_clean()
     redemption.save()
+    record_audit_event(
+        action=AuditEvent.Action.REDEMPTION,
+        actor=processed_by,
+        reason=audit_reason,
+        scheme_account=account,
+        redemption=redemption,
+        details={
+            "redemption_number": redemption.redemption_number,
+            "settlement_type": settlement_type,
+            "amount": str(normalized_amount),
+            "unit": redemption.entitlement_unit,
+        },
+    )
     if normalized_amount == outstanding:
         account.status = SchemeAccount.Status.REDEEMED
         account.save(update_fields=["status", "updated_at"])
     return redemption
+
+
+@transaction.atomic
+def reverse_redemption(*, redemption, processed_by, reason):
+    _validate_owner(processed_by)
+    normalized_reason = reason.strip()
+    if not normalized_reason:
+        raise ValidationError({"reason": "Enter a reason for the reversal."})
+
+    locked_redemption = (
+        Redemption.objects.select_for_update()
+        .select_related("scheme_account")
+        .get(pk=redemption.pk)
+    )
+    existing = RedemptionReversal.objects.filter(
+        redemption=locked_redemption
+    ).first()
+    if existing is not None:
+        raise ValidationError("This redemption has already been reversed.")
+
+    reversal = RedemptionReversal(
+        reversal_number=_reference(
+            "REV", RedemptionReversal, "reversal_number"
+        ),
+        redemption=locked_redemption,
+        reason=normalized_reason,
+        processed_by=processed_by,
+    )
+    reversal.full_clean()
+    reversal.save()
+
+    account = SchemeAccount.objects.select_for_update().get(
+        pk=locked_redemption.scheme_account_id
+    )
+    if account.status == SchemeAccount.Status.REDEEMED:
+        account.status = SchemeAccount.Status.ACTIVE
+        account.save(update_fields=["status", "updated_at"])
+
+    record_audit_event(
+        action=AuditEvent.Action.REVERSAL,
+        actor=processed_by,
+        reason=normalized_reason,
+        scheme_account=account,
+        redemption=locked_redemption,
+        details={
+            "reversal_number": reversal.reversal_number,
+            "redemption_number": locked_redemption.redemption_number,
+            "amount": str(locked_redemption.entitlement_amount),
+            "unit": locked_redemption.entitlement_unit,
+        },
+    )
+    return reversal
+
+
+@transaction.atomic
+def record_scheme_plan_change(*, plan, actor, reason, before):
+    _validate_owner(actor)
+    after = {
+        key: str(getattr(plan, key))
+        for key in before
+    }
+    changed = {
+        key: {"from": str(before[key]), "to": after[key]}
+        for key in before
+        if str(before[key]) != after[key]
+    }
+    if not changed:
+        return None
+    return record_audit_event(
+        action=AuditEvent.Action.SCHEME_CHANGE,
+        actor=actor,
+        reason=reason,
+        scheme_plan=plan,
+        details={"changes": changed},
+    )

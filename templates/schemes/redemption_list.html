@@ -9,7 +9,7 @@
 </div>
 <div class="table-responsive">
   <table class="table align-middle">
-    <thead><tr><th>Completed</th><th>Reference</th><th>Customer</th><th>Scheme</th><th>Settlement</th><th>Entitlement redeemed</th><th>External reference</th><th>Notes</th><th>Processed by</th></tr></thead>
+    <thead><tr><th>Completed</th><th>Reference</th><th>Customer</th><th>Scheme</th><th>Settlement</th><th>Entitlement redeemed</th><th>External reference</th><th>Notes</th><th>Processed by</th><th>Status</th></tr></thead>
     <tbody>
       {% for redemption in redemptions %}
       <tr>
@@ -26,8 +26,17 @@
         <td>{{ redemption.external_reference|default:'—' }}</td>
         <td>{{ redemption.notes|default:'—' }}</td>
         <td>{{ redemption.processed_by.email }}</td>
+        <td>
+          {% if redemption.reversal %}
+          <span class="badge text-bg-secondary">Reversed</span>
+          <div class="small text-muted mt-1">{{ redemption.reversal.reversal_number }} by {{ redemption.reversal.processed_by.email }}<br>{{ redemption.reversal.reason }}</div>
+          {% else %}
+          <span class="badge text-bg-success">Completed</span>
+          <a class="btn btn-sm btn-outline-danger d-block mt-2" href="{% url 'schemes:redemption_reverse' redemption.redemption_number %}">Reverse</a>
+          {% endif %}
+        </td>
       </tr>
-      {% empty %}<tr><td colspan="9" class="text-center text-muted py-4">No redemptions recorded.</td></tr>{% endfor %}
+      {% empty %}<tr><td colspan="10" class="text-center text-muted py-4">No redemptions recorded.</td></tr>{% endfor %}
     </tbody>
   </table>
 </div>

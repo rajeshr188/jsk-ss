@@ -63,11 +63,24 @@ class SchemePlanForm(forms.ModelForm):
         }
 
 
+class SchemePlanChangeForm(SchemePlanForm):
+    audit_reason = forms.CharField(
+        label="Reason for change",
+        widget=forms.Textarea(attrs={"rows": 2}),
+        help_text="Recorded in the immutable owner audit log.",
+    )
+
+
 class EnrolmentForm(forms.Form):
     plan = forms.ModelChoiceField(queryset=SchemePlan.objects.none())
     savings_mode = forms.ChoiceField(choices=SchemeAccount.SavingsMode.choices)
     start_date = forms.DateField(widget=forms.DateInput(attrs={"type": "date"}))
     agreed_months = forms.IntegerField(min_value=12)
+    audit_reason = forms.CharField(
+        label="Reason for enrolment",
+        widget=forms.Textarea(attrs={"rows": 2}),
+        help_text="Recorded with your identity and timestamp.",
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -122,6 +135,11 @@ class RedemptionForm(forms.Form):
         required=False,
     )
     notes = forms.CharField(widget=forms.Textarea(attrs={"rows": 3}), required=False)
+    audit_reason = forms.CharField(
+        label="Reason for redemption",
+        widget=forms.Textarea(attrs={"rows": 2}),
+        help_text="Recorded with your identity and timestamp.",
+    )
     idempotency_key = forms.UUIDField(widget=forms.HiddenInput)
 
     def __init__(self, *args, scheme_account, outstanding, **kwargs):
@@ -179,3 +197,21 @@ class RedemptionForm(forms.Form):
                 "Enter the jewellery invoice or sales reference.",
             )
         return cleaned
+
+
+class AuditReasonForm(forms.Form):
+    reason = forms.CharField(
+        widget=forms.Textarea(attrs={"rows": 2}),
+        help_text="Recorded with your identity and timestamp.",
+    )
+
+
+class RedemptionReversalForm(AuditReasonForm):
+    reason = forms.CharField(
+        label="Reason for reversal",
+        widget=forms.Textarea(attrs={"rows": 3}),
+        help_text=(
+            "This appends a compensating event and restores the entitlement. "
+            "The original redemption remains visible."
+        ),
+    )

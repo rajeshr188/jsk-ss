@@ -2,7 +2,7 @@
 
 ## Current milestone
 
-Milestone 9 — Cash bonus (complete)
+Milestone 10 — Audit and exceptions (complete)
 
 ## Completed
 
@@ -49,6 +49,14 @@ Milestone 9 — Cash bonus (complete)
   bonus remains outside actual liability and redemption.
 - Immutable cash-redemption principal/bonus components with deterministic
   principal-first allocation and exact owner-liability reconciliation.
+- Immutable audit events with stable actor labels, timestamps, reasons, targets,
+  and outcome/change details for supported sensitive owner workflows.
+- Audited plan editing that affects future enrolments without rewriting agreement
+  snapshots; enrolment, redemption, and allocation retry now retain owner reasons.
+- Immutable one-to-one redemption reversals that restore the matching entitlement,
+  reopen fully redeemed accounts, and preserve the original settlement record.
+- Owner-only audit log and a derived exception queue for paid-unallocated/failed
+  allocations plus failed or mismatched Razorpay webhook reconciliation.
 
 ## In progress
 
@@ -64,8 +72,8 @@ Milestone 9 — Cash bonus (complete)
   owned HTTPS endpoint and synchronized webhook-secret configuration.
 - The application records redemptions but does not execute payouts, move inventory,
   create invoices, or convert metal to cash.
-- Compensating correction events, operational reconciliation, automated
-  alerts/retries, receipts, and statements remain scheduled work.
+- Manual payment/rate correction, voids, refunds/disputes, dual approval, broader
+  provider reconciliation, automated alerts/retries, receipts, and statements remain.
 - Cash bonus has one percentage policy with no caps, tiers, discretionary approval,
   forfeiture, tax treatment, or expected-future-contribution projection.
 - Bonus liability reads are calculated per cash account; aggregate optimization is
@@ -77,16 +85,16 @@ Milestone 9 — Cash bonus (complete)
 
 ## Deferred
 
-- See [Future work](FUTURE_WORK.md) for deployment gates and work mapped to Milestones 10–11.
+- See [Future work](FUTURE_WORK.md) for deployment gates and work mapped to Milestone 11 and post-MVP operations.
 
 ## Verification
 
 - PostgreSQL 16 migrations applied successfully.
-- 112 tests pass, including cash-bonus boundaries/rounding, Razorpay failure handling, redemption precision, over-redemption protection,
+- 119 tests pass, including audit immutability, exception classification, reversal reconciliation, cash-bonus boundaries/rounding, Razorpay failure handling, redemption precision, over-redemption protection,
   idempotency, partial/full closure, denomination separation, access control,
   PostgreSQL constraints, and all prior regressions.
-- Migration `schemes.0007_cash_bonus` is applied to PostgreSQL; historical cash
-  redemptions were preserved as principal-only components.
+- Migrations through `schemes.0008_auditevent_redemptionreversal` are applied to
+  PostgreSQL; historical redemptions remain completed and unreversed.
 - Migration drift check reports no changes.
 - Django system check and migration drift check pass.
 - Production static collection and deployment check pass with preload explicitly enabled.
@@ -105,8 +113,12 @@ Milestone 9 — Cash bonus (complete)
   enrolment, customer mock payment, eligibility transition, and owner redemption:
   ₹100 principal earns ₹5, the immutable redemption stores both components, the
   account closes, and owner liability returns exactly to baseline.
+- Milestone 10 rollback-only owner smoke passes through audited enrolment, ₹100 cash
+  redemption, compensating reversal, restored ₹100 liability, reopened account, and
+  owner audit/exception views; exactly three audit events were created and all tagged
+  smoke records were rolled back.
 
 ## Next recommended step
 
-Milestone 10 — add append-oriented audit, correction/reversal, approval, and exception
-workflows without silently rewriting financial history.
+Milestone 11 — add customer receipts and statements plus denomination-safe owner
+exports without changing financial source-of-truth records.

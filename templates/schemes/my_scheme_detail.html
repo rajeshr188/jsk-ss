@@ -84,7 +84,7 @@
 <h2 class="h4 mt-5">Redemption history</h2>
 <div class="table-responsive">
   <table class="table align-middle">
-    <thead><tr><th>Completed</th><th>Reference</th><th>Settlement</th><th>Entitlement redeemed</th><th>External reference</th></tr></thead>
+    <thead><tr><th>Completed</th><th>Reference</th><th>Settlement</th><th>Entitlement redeemed</th><th>External reference</th><th>Status</th></tr></thead>
     <tbody>
       {% for redemption in redemptions %}
       <tr>
@@ -97,8 +97,9 @@
           {% else %}{{ redemption.silver_quantity|floatformat:6 }} g silver{% endif %}
         </td>
         <td>{{ redemption.external_reference|default:'—' }}</td>
+        <td>{% if redemption.reversal %}<span class="badge text-bg-secondary">Reversed</span><br><small class="text-muted">{{ redemption.reversal.reason }}</small>{% else %}<span class="badge text-bg-success">Completed</span>{% endif %}</td>
       </tr>
-      {% empty %}<tr><td colspan="5" class="text-center text-muted py-4">No redemptions recorded.</td></tr>{% endfor %}
+      {% empty %}<tr><td colspan="6" class="text-center text-muted py-4">No redemptions recorded.</td></tr>{% endfor %}
     </tbody>
   </table>
 </div>

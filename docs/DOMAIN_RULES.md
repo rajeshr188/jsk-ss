@@ -79,12 +79,23 @@ This is the canonical source for stable business rules.
 - **RED-008:** Partial redemption leaves an eligible account open. Redeeming the exact remaining entitlement changes its stored status to `REDEEMED`.
 - **RED-009:** Every redemption submission has a unique idempotency key. Replaying the same key and details returns the existing event; changing details with a used key is rejected.
 - **RED-010:** Jewellery-purchase redemption requires an external invoice or sales reference. The MVP records the reference, entitlement settled, and notes but does not manage inventory or invoices.
+- **RED-011:** A redemption correction appends one immutable `RedemptionReversal`; it never edits or deletes the original redemption. Reversed settlements are excluded from outstanding-balance and liability subtraction.
+- **RED-012:** Reversing any settlement restores that denomination's entitlement. If the account was fully redeemed, the stored account status reopens to `ACTIVE`; date-derived eligibility still presents it as redemption eligible.
 - **FIN-007:** Gold, silver, and INR liabilities are never combined into a single balance.
 - **FIN-008:** All financial calculations use `Decimal` with explicit rounding.
 - **FIN-009:** Editing a plan does not rewrite existing account economic terms.
 - **FIN-010:** Owner liability aggregates reconcile with underlying customer obligations.
 - **FIN-011:** Payment success is verified server-side.
 - **FIN-012:** Corrections preserve audit history rather than silently rewriting financial records.
+
+## Audit and exception rules
+
+- **AUD-001:** Customer enrolment, scheme-plan change, redemption, redemption reversal, and owner-triggered allocation retry retain an actor label, timestamp, reason, target, and action details in an immutable audit event.
+- **AUD-002:** System-service actions may retain a stable system actor label when no authenticated user initiated them. Owner UI actions always reference the authenticated owner as actor.
+- **AUD-003:** Audited plan changes affect only future enrolments; existing agreement snapshots remain unchanged.
+- **AUD-004:** Manual payment correction and manual rate override must not be enabled until explicit accounting/pricing and approval rules exist. Reserved audit action names do not authorize those mutations.
+- **EXC-001:** The owner exception queue derives unresolved paid-unallocated/failed-allocation contributions and failed or mismatched webhook reconciliation from their authoritative source records.
+- **EXC-002:** Resolving an allocation exception uses the existing idempotent retry service. A queue display or acknowledgement must never itself create entitlement.
 
 ## Owner liability reporting
 

@@ -12,7 +12,7 @@
 - [x] Milestone 8 — Redemption
 - [x] MVP Beta checkpoint
 - [x] Milestone 9 — Cash bonus
-- [ ] Milestone 10 — Audit and exceptions
+- [x] Milestone 10 — Audit and exceptions
 - [ ] Milestone 11 — Receipts and statements
 
 Milestones are vertical increments. Each must leave migrations, tests, system checks, user flows, and canonical documentation coherent before the next begins.

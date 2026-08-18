@@ -623,3 +623,124 @@ class Redemption(models.Model):
 
     def __str__(self):
         return f"{self.redemption_number} — {self.scheme_account.scheme_number}"
+
+
+class RedemptionReversal(models.Model):
+    reversal_number = models.CharField(max_length=24, unique=True)
+    redemption = models.OneToOneField(
+        Redemption,
+        on_delete=models.PROTECT,
+        related_name="reversal",
+    )
+    reason = models.TextField()
+    processed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="processed_redemption_reversals",
+    )
+    reversed_at = models.DateTimeField(default=timezone.now)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-reversed_at", "-pk"]
+        constraints = [
+            models.CheckConstraint(
+                condition=~models.Q(reason=""),
+                name="redemption_reversal_reason_required",
+            ),
+        ]
+
+    def save(self, *args, **kwargs):
+        if self.pk and type(self).objects.filter(pk=self.pk).exists():
+            raise ValidationError("Historical redemption reversals are immutable.")
+        return super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.reversal_number} — {self.redemption.redemption_number}"
+
+
+class AuditEvent(models.Model):
+    class Action(models.TextChoices):
+        CUSTOMER_ENROLMENT = "CUSTOMER_ENROLMENT", "Customer enrolment"
+        SCHEME_CHANGE = "SCHEME_CHANGE", "Scheme change"
+        MANUAL_PAYMENT_CORRECTION = (
+            "MANUAL_PAYMENT_CORRECTION",
+            "Manual payment correction",
+        )
+        MANUAL_RATE_OVERRIDE = "MANUAL_RATE_OVERRIDE", "Manual rate override"
+        REDEMPTION = "REDEMPTION", "Redemption"
+        REVERSAL = "REVERSAL", "Reversal"
+        ALLOCATION_RETRY = "ALLOCATION_RETRY", "Allocation retry"
+
+    action = models.CharField(max_length=40, choices=Action.choices)
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name="scheme_audit_events",
+        null=True,
+        blank=True,
+    )
+    actor_label = models.CharField(max_length=254)
+    reason = models.TextField()
+    scheme_plan = models.ForeignKey(
+        SchemePlan,
+        on_delete=models.PROTECT,
+        related_name="audit_events",
+        null=True,
+        blank=True,
+    )
+    scheme_account = models.ForeignKey(
+        SchemeAccount,
+        on_delete=models.PROTECT,
+        related_name="audit_events",
+        null=True,
+        blank=True,
+    )
+    contribution = models.ForeignKey(
+        Contribution,
+        on_delete=models.PROTECT,
+        related_name="audit_events",
+        null=True,
+        blank=True,
+    )
+    rate_snapshot = models.ForeignKey(
+        RateSnapshot,
+        on_delete=models.PROTECT,
+        related_name="audit_events",
+        null=True,
+        blank=True,
+    )
+    redemption = models.ForeignKey(
+        Redemption,
+        on_delete=models.PROTECT,
+        related_name="audit_events",
+        null=True,
+        blank=True,
+    )
+    details = models.JSONField(default=dict, blank=True)
+    occurred_at = models.DateTimeField(default=timezone.now)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-occurred_at", "-pk"]
+        constraints = [
+            models.CheckConstraint(
+                condition=~models.Q(actor_label=""),
+                name="audit_event_actor_label_required",
+            ),
+            models.CheckConstraint(
+                condition=~models.Q(reason=""),
+                name="audit_event_reason_required",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["action", "occurred_at"], name="audit_action_time_idx"),
+        ]
+
+    def save(self, *args, **kwargs):
+        if self.pk and type(self).objects.filter(pk=self.pk).exists():
+            raise ValidationError("Historical audit events are immutable.")
+        return super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.get_action_display()} — {self.actor_label}"

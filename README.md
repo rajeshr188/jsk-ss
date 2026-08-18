@@ -1,6 +1,6 @@
 # Jai Shri Krishna Jewellery Savings Scheme
 
-A single-business Django application for managing customer cash, 24K gold, and silver savings schemes. It reuses the [Lithium](https://github.com/wsvincent/lithium) Django foundation and now includes owner-managed enrolment, verified contributions, versioned cash bonus, immutable metal allocations, eligibility, and audited redemption records.
+A single-business Django application for managing customer cash, 24K gold, and silver savings schemes. It reuses the [Lithium](https://github.com/wsvincent/lithium) Django foundation and now includes owner-managed enrolment, verified contributions, versioned cash bonus, immutable metal allocations, eligibility, an owner exception queue, and append-oriented audit/reversal records.
 
 ## Technology
 
@@ -80,9 +80,15 @@ Scheme plans may define a cash bonus percentage and minimum qualifying duration;
 
 ## Redemption
 
-Once a scheme reaches its India-local eligibility date, an owner can record a partial or full redemption. Cash accounts support cash or jewellery-purchase settlement and may include earned bonus; gold and silver accounts support matching metal or jewellery-purchase settlement. Jewellery purchase requires an invoice or sales reference. Outstanding balances and owner liabilities subtract completed redemptions while retaining all historical contributions and allocations. A full redemption closes the account; partial redemption leaves it eligible.
+Once a scheme reaches its India-local eligibility date, an owner can record a partial or full redemption. Cash accounts support cash or jewellery-purchase settlement and may include earned bonus; gold and silver accounts support matching metal or jewellery-purchase settlement. Jewellery purchase requires an invoice or sales reference. Outstanding balances and owner liabilities subtract completed, unreversed redemptions while retaining all historical contributions and allocations. A full redemption closes the account; partial redemption leaves it eligible. If an owner records a settlement in error, an immutable reversal restores the entitlement and reopens a fully redeemed account without editing or deleting the original redemption. Both events retain actor, timestamp, and reason in the owner audit log.
 
-The MVP records settlement facts only. It does not execute payouts, convert metal to cash, manage inventory/invoices, or support editing/reversing a redemption.
+The MVP records settlement facts only. It does not execute payouts, convert metal to cash, manage inventory/invoices, or edit a historical redemption.
+
+## Audit and exceptions
+
+Owner enrolment, plan changes, redemptions, redemption reversals, and manual allocation retries require or retain an actor, timestamp, and reason in immutable audit records. Plan changes apply only to future enrolments; existing agreement snapshots remain unchanged. The exception queue derives unresolved `PAID_UNALLOCATED` contributions and failed Razorpay webhook reconciliation records from their source records, so successful allocation recovery removes the live allocation exception without deleting its audit history.
+
+Manual payment correction and manual rate override actions are deliberately unavailable until their accounting, pricing, approval, and customer-disclosure rules are defined. Refunds, disputes, automated retries/alerts, and dual approval also remain future operational work.
 
 ## Live metal rates
 

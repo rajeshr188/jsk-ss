@@ -13,10 +13,17 @@ urlpatterns = [
         name="redemption_eligibility",
     ),
     path("owner/redemptions/", views.redemption_list, name="redemption_list"),
+    path("owner/audit/", views.audit_log, name="audit_log"),
+    path("owner/exceptions/", views.exception_queue, name="exception_queue"),
     path(
         "owner/schemes/<str:scheme_number>/redeem/",
         views.redemption_create,
         name="redemption_create",
+    ),
+    path(
+        "owner/redemptions/<str:redemption_number>/reverse/",
+        views.redemption_reverse,
+        name="redemption_reverse",
     ),
     path("owner/customers/", views.customer_list, name="customer_list"),
     path("owner/customers/add/", views.customer_add, name="customer_add"),
@@ -32,6 +39,7 @@ urlpatterns = [
     ),
     path("owner/plans/", views.plan_list, name="plan_list"),
     path("owner/plans/add/", views.plan_add, name="plan_add"),
+    path("owner/plans/<int:plan_id>/edit/", views.plan_edit, name="plan_edit"),
     path("owner/contributions/", views.contribution_list, name="contribution_list"),
     path(
         "owner/contributions/<int:contribution_id>/retry-allocation/",
