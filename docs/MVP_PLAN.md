@@ -4,7 +4,7 @@
 - [x] Milestone 1 — Customer and scheme enrolment
 - [x] Milestone 2 — Cash contributions with mock payment
 - [x] Milestone 3 — Gold/silver allocation with mock rates
-- [ ] Milestone 4 — Owner liability dashboard
+- [x] Milestone 4 — Owner liability dashboard
 - [ ] MVP Alpha checkpoint
 - [ ] Milestone 5 — Live metal-rate provider
 - [ ] Milestone 6 — Razorpay test mode and idempotent webhooks

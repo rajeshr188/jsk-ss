@@ -9,7 +9,7 @@ uv run --env-file .env python manage.py check
 uv run --env-file .env python manage.py makemigrations --check --dry-run
 ```
 
-Current regressions cover amount/frequency enforcement, failed-payment entitlement, confirmation/allocation idempotency, exact metal calculation, historical-rate stability, customer isolation, and database constraints. Future suites must add webhook idempotency, over-redemption prevention, and owner/customer liability reconciliation.
+Current regressions cover amount/frequency enforcement, failed-payment entitlement, confirmation/allocation idempotency, exact metal calculation, historical-rate stability, customer isolation, owner liability reconciliation, current-exposure rounding, India-local activity periods, and database constraints. Future suites must add webhook idempotency and over-redemption prevention.
 
 Mock financial tests use `override_settings` for payment and rate configuration. For manual testing, put `DEBUG=True`, `PAYMENT_GATEWAY=mock`, and `METAL_RATE_PROVIDER=mock` in the ignored `.env`, plus optional mock rates.
 
@@ -26,4 +26,7 @@ Mock financial tests use `override_settings` for payment and rate configuration.
 - Confirm the owner contribution list shows the payment
 - Make gold and silver contributions and confirm gram balances/history use their captured rates
 - Change a mock rate and confirm earlier allocations remain unchanged
-- Owner liability and redemption checks are added in later milestones
+- Confirm the owner dashboard reconciles cash principal, gold grams, and silver grams separately
+- Confirm current gold/silver reference rates and indicative exposures update without changing historical allocations
+- Confirm contribution-today/month counts include successful payments only
+- Redemption checks are added in later milestones

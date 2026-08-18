@@ -1,6 +1,6 @@
 # Jai Shri Krishna Jewellery Savings Scheme
 
-A single-business Django application for managing customer cash, 24K gold, and silver savings schemes. It reuses the [Lithium](https://github.com/wsvincent/lithium) Django foundation and currently supports customer records and scheme enrolment.
+A single-business Django application for managing customer cash, 24K gold, and silver savings schemes. It reuses the [Lithium](https://github.com/wsvincent/lithium) Django foundation and currently supports owner-managed enrolment, mock contributions, immutable metal allocations, customer balances, and an owner liability dashboard.
 
 ## Technology
 
@@ -64,6 +64,8 @@ MOCK_SILVER_RATE=150.0000
 ```
 
 The payment screen is unavailable unless mock payment mode is enabled. Gold and silver payments additionally require the mock metal-rate provider. Mock payments record no real transfer; rates are snapshotted and INR is converted to six-decimal grams for local testing. Razorpay, live metal rates, and `seed_demo` remain deferred.
+
+The owner dashboard derives outstanding cash principal and gold/silver gram obligations from successful financial records. Current mock rates provide separate indicative INR exposure for each metal; these display values never alter historical allocations and are never combined with cash into one liability total.
 
 ## Verification
 

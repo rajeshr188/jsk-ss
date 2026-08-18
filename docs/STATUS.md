@@ -2,7 +2,7 @@
 
 ## Current milestone
 
-Milestone 3 — Gold and silver allocation with mock rates (complete)
+Milestone 4 — Owner liability dashboard (complete)
 
 ## Completed
 
@@ -18,6 +18,9 @@ Milestone 3 — Gold and silver allocation with mock rates (complete)
 - Debug-only mock gold/silver rate provider with configurable rates and purity.
 - Immutable rate snapshots and one six-decimal metal allocation per paid contribution.
 - Customer gold/silver gram balances and historical allocation-rate visibility.
+- Owner dashboard with separately reconciled cash principal, gold grams, and silver grams.
+- Current gold/silver reference rates and separately rounded indicative INR exposures.
+- India-local successful-contribution counts for today and the current calendar month.
 - Future public-signup requirements documented under `AUTH-*` domain rules.
 
 ## In progress
@@ -30,16 +33,16 @@ Milestone 3 — Gold and silver allocation with mock rates (complete)
 
 ## Deferred
 
-- Real payment/rate providers, paid-unallocated retry handling, liability reporting, and redemption.
+- Real payment/rate providers, paid-unallocated retry handling, and redemption.
 
 ## Verification
 
 - PostgreSQL 16 migrations applied successfully.
-- 38 tests pass, including exact metal calculations, historical-rate stability, payment/allocation idempotency, database constraints, authorization, and isolation.
+- 44 tests pass, including liability reconciliation, current-exposure rounding, independently unavailable rates, India-local activity periods, authorization, and prior financial regressions.
 - Django system check and migration drift check pass.
 - Production static collection and deployment check pass with preload explicitly enabled.
-- Live-server smoke flow passes for gold and silver mock payments, immutable rate snapshots, derived gram balances/history, and owner visibility.
+- Live-server smoke flow passes for cash, gold, and silver mock payments, derived customer entitlements, and separately reconciled owner liabilities.
 
 ## Next recommended step
 
-Milestone 4 — Owner liability dashboard across separate INR, gold, and silver dimensions.
+MVP Alpha checkpoint — verify the complete owner enrolment, customer contribution, entitlement, and liability workflow end to end.

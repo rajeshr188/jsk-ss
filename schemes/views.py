@@ -18,8 +18,10 @@ from .selectors import (
     get_customer_scheme_account,
     get_customer_scheme_summary,
     get_metal_balance,
+    get_owner_activity_summary,
     get_owner_contributions,
     get_owner_customers,
+    get_owner_liability_summary,
 )
 from .services import create_customer, enroll_customer, process_mock_contribution
 
@@ -33,15 +35,10 @@ def post_login(request):
 
 @owner_required
 def owner_dashboard(request):
+    activity = get_owner_activity_summary()
     context = {
-        "customer_count": Customer.objects.count(),
-        "active_account_count": SchemeAccount.objects.exclude(
-            status=SchemeAccount.Status.REDEEMED
-        ).count(),
-        "active_plan_count": SchemePlan.objects.filter(active=True).count(),
-        "paid_contribution_count": Contribution.objects.filter(
-            status=Contribution.Status.PAID
-        ).count(),
+        "activity": activity,
+        "liabilities": get_owner_liability_summary(),
     }
     return render(request, "schemes/owner_dashboard.html", context)
 

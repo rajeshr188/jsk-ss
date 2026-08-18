@@ -45,6 +45,15 @@ This is the canonical source for stable business rules.
 - **FIN-011:** Payment success is verified server-side.
 - **FIN-012:** Corrections preserve audit history rather than silently rewriting financial records.
 
+## Owner liability reporting
+
+- **LIA-001:** Outstanding cash principal is the sum of `PAID` contributions for cash scheme accounts. Pending and failed attempts contribute zero.
+- **LIA-002:** Outstanding gold and silver quantities are summed independently from allocations attached to `PAID` contributions. The primary metal liabilities remain grams.
+- **LIA-003:** Indicative metal exposure equals outstanding grams multiplied by the current applied reference rate, rounded to 2 money decimal places with `ROUND_HALF_UP`. It does not rewrite historical allocations.
+- **LIA-004:** Cash principal, gold exposure, and silver exposure are never added into a single headline liability total.
+- **LIA-005:** If a current rate is unavailable, the dashboard must continue showing authoritative gram liabilities and explicitly mark reference rate and exposure as unavailable.
+- **LIA-006:** Dashboard contribution counts include only `PAID` contributions and use `paid_at` within India-local calendar-day and calendar-month boundaries.
+
 ## Precision
 
 Money uses 2 decimal places. Contribution input with more than 2 decimal places is rejected rather than silently rounded. Metal quantities use 6 decimal places and `ROUND_HALF_UP`. Rates and purity metadata use 4 decimal places; mock configuration is normalized with `ROUND_HALF_UP`.

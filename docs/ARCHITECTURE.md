@@ -29,6 +29,7 @@ graph TD
 - Views authorize, validate forms, call services/selectors, and render or redirect.
 - Services own transactional mutations such as customer creation and enrolment.
 - Selectors own reusable reads such as customer scheme summaries.
+- The owner liability selector derives separate INR, gold, and silver obligations and applies current reference quotes only for indicative metal exposure.
 - Models and database constraints protect structural invariants.
 
 ## Authentication and authorization
@@ -58,3 +59,5 @@ Customer: login → My Schemes → account terms. Login routing is role-aware.
 Cash contribution: customer account → Pay now → validate snapshotted amount/frequency rules → create pending contribution → verified mock result → idempotent confirmation → derived cash balance.
 
 Metal contribution: customer account → Pay now → verified contribution → mock rate quote → immutable rate snapshot → one immutable six-decimal allocation → derived gold or silver gram balance.
+
+Owner liability dashboard: paid cash contributions → outstanding INR principal; paid metal allocations → separate gold/silver grams → current provider quotes → separate indicative INR exposures. Reference quotes used for display do not create or alter historical allocation snapshots. Activity counters use successful payment timestamps in the India-local calendar day and month.
