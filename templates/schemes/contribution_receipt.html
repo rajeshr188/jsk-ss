@@ -1,0 +1,48 @@
+{% extends '_base.html' %}
+
+{% block title %}Receipt {{ receipt.receipt_number }} | Jai Shri Krishna Jewellery{% endblock %}
+
+{% block css %}
+{{ block.super }}
+<style>
+  @media print {
+    body { background: white; margin: 0; }
+    .receipt-document { border: 0 !important; box-shadow: none !important; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-end mb-3 d-print-none"><button class="btn btn-jsk" type="button" onclick="window.print()">Print receipt</button></div>
+<article class="card receipt-document"><div class="card-body p-4 p-md-5">
+  <div class="text-center border-bottom pb-3 mb-4">
+    <h1 class="h2 mb-1">Jai Shri Krishna Jewellery</h1>
+    <p class="text-muted mb-0">Savings contribution acknowledgement — not a tax invoice</p>
+  </div>
+  <div class="d-flex justify-content-between flex-wrap gap-2 mb-4">
+    <div><strong>Receipt number</strong><br>{{ receipt.receipt_number }}</div>
+    <div class="text-md-end"><strong>Date</strong><br>{{ receipt.contribution.paid_at|date:'d M Y, g:i A' }}</div>
+  </div>
+  <dl class="row">
+    <dt class="col-sm-4">Customer</dt><dd class="col-sm-8">{{ receipt.contribution.scheme_account.customer.full_name }} ({{ receipt.contribution.scheme_account.customer.customer_number }})</dd>
+    <dt class="col-sm-4">Scheme number</dt><dd class="col-sm-8">{{ receipt.contribution.scheme_account.scheme_number }}</dd>
+    <dt class="col-sm-4">Savings mode</dt><dd class="col-sm-8">{{ receipt.contribution.scheme_account.get_savings_mode_display }}</dd>
+    <dt class="col-sm-4">Amount received</dt><dd class="col-sm-8 fw-semibold">₹{{ receipt.contribution.amount|floatformat:2 }}</dd>
+    <dt class="col-sm-4">Payment reference</dt><dd class="col-sm-8">{{ receipt.contribution.gateway_reference }}</dd>
+    <dt class="col-sm-4">Payment method</dt><dd class="col-sm-8">{{ receipt.contribution.payment_gateway|title }}</dd>
+  </dl>
+  {% if receipt.allocation %}
+  <div class="border-top pt-3 mt-3">
+    <h2 class="h5">Metal allocation</h2>
+    <dl class="row mb-0">
+      <dt class="col-sm-4">Metal</dt><dd class="col-sm-8">{{ receipt.allocation.get_metal_display }}</dd>
+      <dt class="col-sm-4">Applied rate</dt><dd class="col-sm-8">₹{{ receipt.allocation.rate_snapshot.applied_rate|floatformat:4 }} per g</dd>
+      <dt class="col-sm-4">Quantity allocated</dt><dd class="col-sm-8 fw-semibold">{{ receipt.allocation.quantity|floatformat:6 }} g</dd>
+    </dl>
+  </div>
+  {% elif receipt.contribution.scheme_account.savings_mode != 'CASH' %}
+  <div class="alert alert-warning mt-3 mb-0">Payment is verified, but metal allocation is pending. No rate or quantity has been assigned.</div>
+  {% endif %}
+  <p class="small text-muted border-top pt-3 mt-4 mb-0">Generated from the verified payment record. Keep the receipt number and payment reference for enquiries.</p>
+</div></article>
+{% endblock %}

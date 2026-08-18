@@ -1,0 +1,54 @@
+{% extends '_base.html' %}
+
+{% block title %}Statement {{ statement.scheme_account.scheme_number }} | Jai Shri Krishna Jewellery{% endblock %}
+
+{% block css %}
+{{ block.super }}
+<style>
+  @media print {
+    body { background: white; margin: 0; }
+    .statement-document { border: 0 !important; box-shadow: none !important; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-end mb-3 d-print-none"><button class="btn btn-jsk" type="button" onclick="window.print()">Print statement</button></div>
+<article class="card statement-document"><div class="card-body p-4 p-md-5">
+  <div class="text-center border-bottom pb-3 mb-4">
+    <h1 class="h2 mb-1">Jai Shri Krishna Jewellery</h1>
+    <p class="text-muted mb-0">Customer savings scheme statement</p>
+  </div>
+  <dl class="row">
+    <dt class="col-sm-3">Customer</dt><dd class="col-sm-9">{{ statement.scheme_account.customer.full_name }} ({{ statement.scheme_account.customer.customer_number }})</dd>
+    <dt class="col-sm-3">Scheme</dt><dd class="col-sm-9">{{ statement.scheme_account.scheme_number }} · {{ statement.scheme_account.get_savings_mode_display }}</dd>
+    <dt class="col-sm-3">Agreement</dt><dd class="col-sm-9">{{ statement.scheme_account.start_date|date:'d M Y' }} · {{ statement.scheme_account.agreed_months }} months · eligible {{ statement.scheme_account.eligible_from|date:'d M Y' }}</dd>
+    <dt class="col-sm-3">Generated</dt><dd class="col-sm-9">{{ statement.generated_at|date:'d M Y, g:i A' }}</dd>
+  </dl>
+
+  <div class="card bg-light my-4"><div class="card-body">
+    <div class="text-muted">Remaining entitlement</div>
+    {% if statement.entitlement_unit == 'INR' %}<div class="display-6">₹{{ statement.remaining_entitlement|floatformat:2 }}</div>{% else %}<div class="display-6">{{ statement.remaining_entitlement|floatformat:6 }} {{ statement.entitlement_unit }}</div>{% endif %}
+    {% if statement.cash_bonus %}<div class="small text-muted">Principal ₹{{ statement.cash_bonus.principal_outstanding|floatformat:2 }} · earned bonus ₹{{ statement.cash_bonus.earned_bonus|floatformat:2 }} · projected bonus ₹{{ statement.cash_bonus.projected_bonus|floatformat:2 }} (not redeemable)</div>{% endif %}
+  </div></div>
+
+  <div class="table-responsive"><table class="table table-sm align-middle">
+    <thead><tr><th>Date</th><th>Description</th><th>Reference</th><th>Amount paid</th><th>Applied rate</th><th>Metal allocation</th><th>Redemption / restoration</th><th>Status</th></tr></thead>
+    <tbody>
+      {% for entry in statement.entries %}
+      <tr>
+        <td>{{ entry.occurred_at|date:'d M Y, g:i A' }}</td>
+        <td>{{ entry.description }}</td>
+        <td>{{ entry.reference|default:'—' }}{% if entry.contribution_id %}<span class="d-print-none"><br><a href="{% url 'schemes:contribution_receipt' entry.contribution_id %}">Receipt</a></span>{% endif %}</td>
+        <td>{% if entry.amount_inr is not None %}₹{{ entry.amount_inr|floatformat:2 }}{% else %}—{% endif %}</td>
+        <td>{% if entry.applied_rate is not None %}₹{{ entry.applied_rate|floatformat:4 }}/g{% else %}—{% endif %}</td>
+        <td>{% if entry.metal_allocation is not None %}{{ entry.metal_allocation|floatformat:6 }} g{% else %}—{% endif %}</td>
+        <td>{% if entry.redemption is not None %}{{ entry.redemption }} {{ entry.entitlement_unit }} redeemed{% elif entry.restoration is not None %}{{ entry.restoration }} {{ entry.entitlement_unit }} restored{% else %}—{% endif %}</td>
+        <td>{{ entry.status }}</td>
+      </tr>
+      {% empty %}<tr><td colspan="8" class="text-center text-muted py-4">No verified financial activity.</td></tr>{% endfor %}
+    </tbody>
+  </table></div>
+  <p class="small text-muted border-top pt-3 mt-4 mb-0">This on-demand statement is generated from verified contributions, immutable metal allocations, redemptions, and reversals. Projected bonus is informational and is not part of the remaining redeemable entitlement.</p>
+</div></article>
+{% endblock %}

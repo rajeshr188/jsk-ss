@@ -16,6 +16,16 @@ urlpatterns = [
     path("owner/audit/", views.audit_log, name="audit_log"),
     path("owner/exceptions/", views.exception_queue, name="exception_queue"),
     path(
+        "owner/exports/contributions.csv",
+        views.contribution_export,
+        name="contribution_export",
+    ),
+    path(
+        "owner/exports/redemptions.csv",
+        views.redemption_export,
+        name="redemption_export",
+    ),
+    path(
         "owner/schemes/<str:scheme_number>/redeem/",
         views.redemption_create,
         name="redemption_create",
@@ -45,6 +55,16 @@ urlpatterns = [
         "owner/contributions/<int:contribution_id>/retry-allocation/",
         views.retry_contribution_allocation,
         name="retry_contribution_allocation",
+    ),
+    path(
+        "documents/contributions/<int:contribution_id>/receipt/",
+        views.contribution_receipt,
+        name="contribution_receipt",
+    ),
+    path(
+        "documents/schemes/<str:scheme_number>/statement/",
+        views.scheme_statement,
+        name="scheme_statement",
     ),
     path("mine/", views.my_schemes, name="my_schemes"),
     path("mine/<str:scheme_number>/", views.my_scheme_detail, name="my_scheme_detail"),

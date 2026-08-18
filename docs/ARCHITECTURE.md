@@ -38,6 +38,7 @@ graph TD
 - Selectors own reusable reads such as customer scheme summaries.
 - The owner liability selector derives separate INR, gold, and silver obligations and applies current reference quotes only for indicative metal exposure.
 - The redemption eligibility selector partitions open accounts from their snapshotted `eligible_from` dates into non-overlapping owner forecast windows without mutating account state.
+- Document selectors assemble printable receipts and lifetime statements directly from verified contributions, immutable allocation snapshots, redemptions, reversals, and current derived entitlement. They do not copy financial data into a reporting ledger.
 - Models and database constraints protect structural invariants.
 
 ## Authentication and authorization
@@ -85,3 +86,5 @@ Eligibility: India-local current date plus each agreement's `eligible_from` snap
 Redemption: owner eligibility review → denomination-specific outstanding balance → allowed settlement and precision validation → account row lock → idempotency check → immutable completed redemption → derived customer/owner balances. Cash settlement stores principal and earned-bonus components. Partial redemption leaves the account eligible and open; exact final redemption stores `REDEEMED`. Jewellery purchase records a required external invoice/reference and settlement notes without creating inventory or invoicing subsystems.
 
 Audit and exceptions: sensitive owner action → mandatory reason → transactional domain mutation → immutable `AuditEvent` with actor label, timestamp, target, and compact details. An erroneous redemption is corrected by an immutable one-to-one `RedemptionReversal`; selectors exclude reversed settlements and restore the original entitlement while both records remain visible. The owner exception queue is a read model over current `PAID_UNALLOCATED` contributions and failed `PaymentWebhookEvent` records, not a second financial ledger.
+
+Documents: authenticated customer/owner → authorized scheme or verified contribution → selector-built statement/receipt → print-oriented HTML. Receipt references are deterministic from the paid year and immutable contribution ID; no receipt table or PDF subsystem is introduced. Owner CSV exports read the same source records and keep INR, gold grams, and silver grams in separate fields.

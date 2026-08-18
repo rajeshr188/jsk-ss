@@ -2,7 +2,7 @@
 
 ## Current milestone
 
-Milestone 10 — Audit and exceptions (complete)
+Milestone 11 — Receipts and statements (complete; MVP feature plan complete)
 
 ## Completed
 
@@ -57,6 +57,12 @@ Milestone 10 — Audit and exceptions (complete)
   reopen fully redeemed accounts, and preserve the original settlement record.
 - Owner-only audit log and a derived exception queue for paid-unallocated/failed
   allocations plus failed or mismatched Razorpay webhook reconciliation.
+- Customer/owner printable HTML contribution acknowledgements with stable receipt
+  references and captured metal-rate/allocation details where applicable.
+- Lifetime customer scheme statements showing verified payments, allocations,
+  redemptions, reversals, and current denomination-specific entitlement.
+- Owner contribution and redemption CSV exports with separated INR/gold/silver
+  fields and spreadsheet-formula neutralization.
 
 ## In progress
 
@@ -73,7 +79,10 @@ Milestone 10 — Audit and exceptions (complete)
 - The application records redemptions but does not execute payouts, move inventory,
   create invoices, or convert metal to cash.
 - Manual payment/rate correction, voids, refunds/disputes, dual approval, broader
-  provider reconciliation, automated alerts/retries, receipts, and statements remain.
+  provider reconciliation, and automated alerts/retries remain.
+- Documents are on-demand HTML acknowledgements, not archived statutory tax invoices;
+  PDF generation, signatures, tax identity, delivery/reissue logs, and date-filtered
+  exports remain future production/legal work.
 - Cash bonus has one percentage policy with no caps, tiers, discretionary approval,
   forfeiture, tax treatment, or expected-future-contribution projection.
 - Bonus liability reads are calculated per cash account; aggregate optimization is
@@ -85,16 +94,16 @@ Milestone 10 — Audit and exceptions (complete)
 
 ## Deferred
 
-- See [Future work](FUTURE_WORK.md) for deployment gates and work mapped to Milestone 11 and post-MVP operations.
+- See [Future work](FUTURE_WORK.md) for deployment gates and post-MVP operations.
 
 ## Verification
 
 - PostgreSQL 16 migrations applied successfully.
-- 119 tests pass, including audit immutability, exception classification, reversal reconciliation, cash-bonus boundaries/rounding, Razorpay failure handling, redemption precision, over-redemption protection,
+- 130 tests pass, including document access, receipt stability, unallocated disclosure, CSV denomination/formula safety, audit immutability, exception classification, reversal reconciliation, cash-bonus boundaries/rounding, Razorpay failure handling, redemption precision, over-redemption protection,
   idempotency, partial/full closure, denomination separation, access control,
   PostgreSQL constraints, and all prior regressions.
 - Migrations through `schemes.0008_auditevent_redemptionreversal` are applied to
-  PostgreSQL; historical redemptions remain completed and unreversed.
+  PostgreSQL; Milestone 11 adds read-only documents and requires no schema change.
 - Migration drift check reports no changes.
 - Django system check and migration drift check pass.
 - Production static collection and deployment check pass with preload explicitly enabled.
@@ -117,8 +126,12 @@ Milestone 10 — Audit and exceptions (complete)
   redemption, compensating reversal, restored ₹100 liability, reopened account, and
   owner audit/exception views; exactly three audit events were created and all tagged
   smoke records were rolled back.
+- Milestone 11 rollback-only authenticated smoke passes for a gold mock payment,
+  stable printable receipt, statement showing 0.080000 g gold, and both owner CSV
+  exports; all tagged records were rolled back.
 
 ## Next recommended step
 
-Milestone 11 — add customer receipts and statements plus denomination-safe owner
-exports without changing financial source-of-truth records.
+MVP release hardening — close the production deployment gates, validate live GoldAPI
+credentials privately, and define Razorpay live-mode reconciliation/refund/dispute
+operations before handling real customer funds.

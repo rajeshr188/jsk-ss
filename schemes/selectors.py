@@ -118,6 +118,38 @@ class OwnerExceptionItem:
         return None
 
 
+@dataclass(frozen=True)
+class ContributionReceiptSummary:
+    receipt_number: str
+    contribution: Contribution
+    allocation: MetalAllocation | None
+
+
+@dataclass(frozen=True)
+class StatementEntry:
+    occurred_at: datetime
+    description: str
+    reference: str
+    status: str
+    amount_inr: Decimal | None = None
+    applied_rate: Decimal | None = None
+    metal_allocation: Decimal | None = None
+    redemption: Decimal | None = None
+    restoration: Decimal | None = None
+    entitlement_unit: str = ""
+    contribution_id: int | None = None
+
+
+@dataclass(frozen=True)
+class SchemeStatement:
+    scheme_account: SchemeAccount
+    generated_at: datetime
+    entries: tuple[StatementEntry, ...]
+    remaining_entitlement: Decimal
+    entitlement_unit: str
+    cash_bonus: CashBonusSummary | None = None
+
+
 def get_customer_scheme_summary(user):
     money_field = DecimalField(max_digits=14, decimal_places=2)
     metal_field = DecimalField(max_digits=18, decimal_places=6)
@@ -317,6 +349,107 @@ def get_owner_exception_queue():
             )
         )
     return tuple(sorted(items, key=lambda item: item.detected_at, reverse=True))
+
+
+def contribution_receipt_number(contribution):
+    paid_date = timezone.localtime(contribution.paid_at).date()
+    return f"JSK-RCT-{paid_date.year}-{contribution.pk:08d}"
+
+
+def get_contribution_receipt_summary(contribution):
+    if contribution.status not in SUCCESSFUL_PAYMENT_STATUSES:
+        raise ValueError("Only verified payments have contribution receipts.")
+    try:
+        allocation = contribution.metal_allocation
+    except MetalAllocation.DoesNotExist:
+        allocation = None
+    return ContributionReceiptSummary(
+        receipt_number=contribution_receipt_number(contribution),
+        contribution=contribution,
+        allocation=allocation,
+    )
+
+
+def get_scheme_statement(scheme_account):
+    entries = []
+    contributions = get_contribution_history(scheme_account).filter(
+        status__in=SUCCESSFUL_PAYMENT_STATUSES
+    )
+    for contribution in contributions:
+        try:
+            allocation = contribution.metal_allocation
+        except MetalAllocation.DoesNotExist:
+            allocation = None
+        if scheme_account.savings_mode == SchemeAccount.SavingsMode.CASH:
+            description = "Cash contribution"
+            unit = "INR"
+        elif allocation is None:
+            description = (
+                f"{scheme_account.get_savings_mode_display()} payment — allocation pending"
+            )
+            unit = "g"
+        else:
+            description = f"{allocation.get_metal_display()} contribution allocated"
+            unit = "g"
+        entries.append(
+            StatementEntry(
+                occurred_at=contribution.paid_at,
+                description=description,
+                reference=contribution.gateway_reference or "",
+                status=contribution.get_status_display(),
+                amount_inr=contribution.amount,
+                applied_rate=(
+                    allocation.rate_snapshot.applied_rate if allocation else None
+                ),
+                metal_allocation=allocation.quantity if allocation else None,
+                entitlement_unit=unit,
+                contribution_id=contribution.pk,
+            )
+        )
+
+    for redemption in get_redemption_history(scheme_account):
+        entries.append(
+            StatementEntry(
+                occurred_at=redemption.completed_at,
+                description=f"{redemption.get_settlement_type_display()} redemption",
+                reference=redemption.redemption_number,
+                status="Reversed" if hasattr(redemption, "reversal") else "Completed",
+                redemption=redemption.entitlement_amount,
+                entitlement_unit=redemption.entitlement_unit,
+            )
+        )
+        if hasattr(redemption, "reversal"):
+            entries.append(
+                StatementEntry(
+                    occurred_at=redemption.reversal.reversed_at,
+                    description="Redemption reversal",
+                    reference=redemption.reversal.reversal_number,
+                    status="Restored",
+                    restoration=redemption.entitlement_amount,
+                    entitlement_unit=redemption.entitlement_unit,
+                )
+            )
+
+    cash_bonus = None
+    if scheme_account.savings_mode == SchemeAccount.SavingsMode.CASH:
+        cash_bonus = get_cash_bonus_summary(scheme_account)
+        remaining_entitlement = cash_bonus.redeemable_amount
+        entitlement_unit = "INR"
+    else:
+        remaining_entitlement = get_metal_balance(scheme_account)
+        entitlement_unit = (
+            "g gold"
+            if scheme_account.savings_mode == SchemeAccount.SavingsMode.GOLD
+            else "g silver"
+        )
+    return SchemeStatement(
+        scheme_account=scheme_account,
+        generated_at=timezone.now(),
+        entries=tuple(sorted(entries, key=lambda entry: entry.occurred_at)),
+        remaining_entitlement=remaining_entitlement,
+        entitlement_unit=entitlement_unit,
+        cash_bonus=cash_bonus,
+    )
 
 
 def get_cash_balance(scheme_account):

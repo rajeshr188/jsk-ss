@@ -23,10 +23,10 @@
     <div class="d-flex justify-content-between"><strong>{{ account.scheme_number }}</strong><span class="badge text-bg-secondary">{{ account.effective_status_label }}</span></div>
     <div>{{ account.get_savings_mode_display }} · {{ account.plan.name }}</div>
     <small class="text-muted">{{ account.start_date }} to eligibility {{ account.eligible_from }} · {{ account.agreed_months }} months</small>
+    <div class="mt-2"><a class="btn btn-sm btn-outline-dark" href="{% url 'schemes:scheme_statement' account.scheme_number %}">View statement</a></div>
   </div></div></div>
   {% empty %}
   <p class="text-muted">No scheme accounts yet.</p>
   {% endfor %}
 </div>
 {% endblock %}
-

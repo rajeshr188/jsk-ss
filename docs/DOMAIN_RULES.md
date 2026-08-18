@@ -109,6 +109,16 @@ This is the canonical source for stable business rules.
   actual redeemable liability. Projected bonus exposure is shown separately and is
   never added to actual cash liability.
 
+## Receipt, statement, and export rules
+
+- **DOC-001:** Only verified `PAID` or `PAID_UNALLOCATED` contributions receive a receipt. Pending and failed attempts are not acknowledged as received funds.
+- **DOC-002:** A receipt reference is deterministic and stable as `JSK-RCT-<paid year>-<zero-padded contribution ID>`; reprinting does not create or renumber a financial event.
+- **DOC-003:** Metal receipts and statements use the immutable allocation's applied rate and quantity. A paid-unallocated record displays allocation pending with no invented rate or grams.
+- **DOC-004:** A scheme statement includes verified payments, allocations, redemptions, and reversals and reports the current remaining entitlement in the scheme's denomination. Projected cash bonus remains separately labelled and non-redeemable.
+- **DOC-005:** Customer documents are accessible only to that customer or an owner. Owner CSV exports require owner authorization and neutralize spreadsheet-formula text.
+- **DOC-006:** INR amounts, gold grams, and silver grams remain separate in documents and exports. Indicative current metal exposure is not exported as booked cash liability.
+- **DOC-007:** MVP documents are on-demand printable HTML acknowledgements, not tax invoices or archived legal snapshots.
+
 ## Precision
 
 Money uses 2 decimal places. Contribution and cash-redemption input with more than 2 decimal places is rejected rather than silently rounded. Cash bonus calculations use `ROUND_HALF_UP` to 2 decimal places. Metal quantities and metal-redemption input use 6 decimal places; excess precision is rejected. Allocation calculations use `ROUND_HALF_UP`. Rates and purity metadata use 4 decimal places; mock configuration is normalized with `ROUND_HALF_UP`.

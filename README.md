@@ -90,6 +90,14 @@ Owner enrolment, plan changes, redemptions, redemption reversals, and manual all
 
 Manual payment correction and manual rate override actions are deliberately unavailable until their accounting, pricing, approval, and customer-disclosure rules are defined. Refunds, disputes, automated retries/alerts, and dual approval also remain future operational work.
 
+## Receipts, statements, and exports
+
+Each verified contribution has a printable HTML acknowledgement with a stable `JSK-RCT-<year>-<contribution id>` reference, customer and scheme details, INR amount, payment reference, and—when allocated—the captured metal, applied rate, and quantity. Paid-unallocated metal receipts explicitly show allocation pending and never invent missing values. Pending and failed payment attempts have no receipt.
+
+Customers can print a lifetime statement for each of their own schemes. It lists verified payments, immutable allocation rates/quantities, redemptions, and reversals, followed by the current denomination-specific entitlement. Owners can view the same documents and download separate contribution and redemption CSV exports; INR, gold grams, and silver grams remain separate columns. Spreadsheet formula-like text is neutralized in CSV output.
+
+Documents are generated on demand from source records and are acknowledgements, not tax invoices. The MVP does not generate PDFs, email documents, archive rendered copies, add signatures, or include statutory business/tax fields.
+
 ## Live metal rates
 
 Create a GoldAPI.io account and keep its token only in your ignored `.env` or deployment secret manager. The official endpoint supports gold (`XAU`) and silver (`XAG`) in INR and supplies per-gram prices.

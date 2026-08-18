@@ -1,10 +1,11 @@
+import csv
 import hashlib
 import json
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ImproperlyConfigured, ValidationError
-from django.http import Http404, JsonResponse
+from django.http import Http404, HttpResponse, JsonResponse
 from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -39,6 +40,7 @@ from .selectors import (
     get_cash_balance,
     get_cash_bonus_summary,
     get_contribution_history,
+    get_contribution_receipt_summary,
     get_customer_scheme_account,
     get_customer_scheme_summary,
     get_metal_balance,
@@ -51,6 +53,7 @@ from .selectors import (
     get_owner_redemptions,
     get_redemption_eligibility_summary,
     get_redemption_history,
+    get_scheme_statement,
     get_outstanding_entitlement,
 )
 from .services import (
@@ -72,6 +75,27 @@ def post_login(request):
     if request.user.is_superuser or request.user.role == CustomUser.Role.OWNER:
         return redirect("schemes:owner_dashboard")
     return redirect("schemes:my_schemes")
+
+
+def _is_owner(user):
+    return user.is_superuser or user.role == CustomUser.Role.OWNER
+
+
+def _can_view_scheme_account(user, scheme_account):
+    return _is_owner(user) or scheme_account.customer.user_id == user.pk
+
+
+def _safe_csv_cell(value):
+    if value is None:
+        return ""
+    text = str(value)
+    if text.lstrip().startswith(("=", "+", "-", "@")):
+        return f"'{text}"
+    return text
+
+
+def _local_iso(value):
+    return timezone.localtime(value).isoformat() if value else ""
 
 
 @owner_required
@@ -158,6 +182,151 @@ def exception_queue(request):
         "schemes/exception_queue.html",
         {"exceptions": get_owner_exception_queue()},
     )
+
+
+@login_required
+def contribution_receipt(request, contribution_id):
+    contribution = get_object_or_404(
+        Contribution.objects.select_related(
+            "scheme_account",
+            "scheme_account__customer",
+            "scheme_account__customer__user",
+            "metal_allocation",
+            "metal_allocation__rate_snapshot",
+        ),
+        pk=contribution_id,
+        status__in=[
+            Contribution.Status.PAID,
+            Contribution.Status.PAID_UNALLOCATED,
+        ],
+    )
+    if not _can_view_scheme_account(request.user, contribution.scheme_account):
+        raise Http404
+    return render(
+        request,
+        "schemes/contribution_receipt.html",
+        {"receipt": get_contribution_receipt_summary(contribution)},
+    )
+
+
+@login_required
+def scheme_statement(request, scheme_number):
+    account = get_object_or_404(
+        SchemeAccount.objects.select_related("customer", "customer__user", "plan"),
+        scheme_number=scheme_number,
+    )
+    if not _can_view_scheme_account(request.user, account):
+        raise Http404
+    return render(
+        request,
+        "schemes/scheme_statement.html",
+        {"statement": get_scheme_statement(account)},
+    )
+
+
+@owner_required
+def contribution_export(request):
+    response = HttpResponse(content_type="text/csv; charset=utf-8")
+    response["Content-Disposition"] = (
+        'attachment; filename="jsk-contributions.csv"'
+    )
+    writer = csv.writer(response)
+    writer.writerow(
+        [
+            "receipt_number",
+            "paid_at",
+            "customer_number",
+            "customer",
+            "scheme_number",
+            "savings_mode",
+            "amount_inr",
+            "payment_gateway",
+            "payment_reference",
+            "payment_status",
+            "metal",
+            "applied_rate_inr_per_g",
+            "quantity_g",
+        ]
+    )
+    contributions = get_owner_contributions().filter(
+        status__in=[
+            Contribution.Status.PAID,
+            Contribution.Status.PAID_UNALLOCATED,
+        ]
+    )
+    for contribution in contributions:
+        receipt = get_contribution_receipt_summary(contribution)
+        allocation = receipt.allocation
+        writer.writerow(
+            [
+                receipt.receipt_number,
+                _local_iso(contribution.paid_at),
+                _safe_csv_cell(contribution.scheme_account.customer.customer_number),
+                _safe_csv_cell(contribution.scheme_account.customer.full_name),
+                _safe_csv_cell(contribution.scheme_account.scheme_number),
+                contribution.scheme_account.savings_mode,
+                f"{contribution.amount:.2f}",
+                _safe_csv_cell(contribution.payment_gateway),
+                _safe_csv_cell(contribution.gateway_reference),
+                contribution.status,
+                allocation.metal if allocation else "",
+                f"{allocation.rate_snapshot.applied_rate:.4f}" if allocation else "",
+                f"{allocation.quantity:.6f}" if allocation else "",
+            ]
+        )
+    return response
+
+
+@owner_required
+def redemption_export(request):
+    response = HttpResponse(content_type="text/csv; charset=utf-8")
+    response["Content-Disposition"] = 'attachment; filename="jsk-redemptions.csv"'
+    writer = csv.writer(response)
+    writer.writerow(
+        [
+            "redemption_number",
+            "completed_at",
+            "status",
+            "reversal_number",
+            "reversed_at",
+            "customer_number",
+            "customer",
+            "scheme_number",
+            "savings_mode",
+            "settlement_type",
+            "cash_amount_inr",
+            "cash_principal_inr",
+            "cash_bonus_inr",
+            "gold_quantity_g",
+            "silver_quantity_g",
+            "external_reference",
+            "processed_by",
+        ]
+    )
+    for redemption in get_owner_redemptions():
+        reversal = redemption.reversal if hasattr(redemption, "reversal") else None
+        writer.writerow(
+            [
+                redemption.redemption_number,
+                _local_iso(redemption.completed_at),
+                "REVERSED" if reversal else redemption.status,
+                reversal.reversal_number if reversal else "",
+                _local_iso(reversal.reversed_at) if reversal else "",
+                _safe_csv_cell(redemption.scheme_account.customer.customer_number),
+                _safe_csv_cell(redemption.scheme_account.customer.full_name),
+                _safe_csv_cell(redemption.scheme_account.scheme_number),
+                redemption.scheme_account.savings_mode,
+                redemption.settlement_type,
+                f"{redemption.cash_amount:.2f}" if redemption.cash_amount is not None else "",
+                f"{redemption.cash_principal_amount:.2f}" if redemption.cash_principal_amount is not None else "",
+                f"{redemption.cash_bonus_amount:.2f}" if redemption.cash_bonus_amount is not None else "",
+                f"{redemption.gold_quantity:.6f}" if redemption.gold_quantity is not None else "",
+                f"{redemption.silver_quantity:.6f}" if redemption.silver_quantity is not None else "",
+                _safe_csv_cell(redemption.external_reference),
+                _safe_csv_cell(redemption.processed_by.email),
+            ]
+        )
+    return response
 
 
 @owner_required

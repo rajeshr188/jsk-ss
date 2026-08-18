@@ -18,6 +18,8 @@
 - Redemption corrections must go through `reverse_redemption`; append one immutable compensating record and exclude it through selectors rather than changing the original redemption.
 - Sensitive owner workflows must append an `AuditEvent` in the same transaction as the supported mutation. Retain a stable actor label, timestamp, reason, target, and compact before/after or outcome details; do not store secrets or full provider payloads.
 - The exception queue is derived from authoritative contribution/webhook state. Do not copy monetary balances into an exception table or treat acknowledging an exception as a financial correction.
+- Receipts, statements, and exports are read models over source records. Never persist a second balance, use current metal rates in historical documents, combine denomination columns, or issue receipts for pending/failed payments.
+- Escape HTML through Django templates and neutralize CSV text beginning with spreadsheet formula operators. Document access must be scoped to the owning customer or an owner.
 - Cash bonus formulas belong in the versioned policy service and reads belong in selectors. Changing a formula requires a new supported policy version; never reinterpret an existing account's snapshotted version or add projected bonus to actual liability.
 
 ## Environment

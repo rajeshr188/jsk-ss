@@ -51,12 +51,19 @@ here are not implemented behavior and do not relax the financial invariants in
 
 ## Milestone 11 — receipts and statements
 
-- **FW-DOC-001:** Generate customer contribution, allocation, and redemption
-  statements with stable references and denomination-specific totals.
-- **FW-DOC-002:** Generate downloadable/printable receipts and define numbering,
-  retention, and reissue rules.
-- **FW-DOC-003:** Add owner exports suitable for accounting reconciliation without
-  presenting indicative metal exposure as a booked cash liability.
+- **FW-DOC-001 (completed in Milestone 11):** Customer lifetime scheme statements
+  show verified contributions, captured metal allocations, redemptions, reversals,
+  and current denomination-specific entitlement.
+- **FW-DOC-002 (completed for MVP in Milestone 11):** Verified contributions have
+  printable HTML acknowledgements with deterministic receipt references; reprinting
+  derives the same reference without creating a new financial event.
+- **FW-DOC-003 (completed in Milestone 11):** Owner contribution/redemption CSV
+  exports use separate INR, gold-gram, and silver-gram columns and exclude indicative
+  current metal exposure from booked amounts.
+- **FW-DOC-004:** Before treating documents as statutory receipts or tax invoices,
+  define business/tax identity fields, numbering jurisdiction, signatures, rendered
+  copy retention, delivery/reissue tracking, correction/cancellation treatment, and
+  whether server-generated PDF/PDF-A is required. Current HTML is an acknowledgement.
 
 ## Payments and settlement operations
 
@@ -127,6 +134,7 @@ and is not current work.
 | Milestone 5 | GoldAPI had deterministic boundary tests but no private-key live smoke; applied rate had no premium/margin/tax/approval policy; cache was process-local; allocation retry and alerts were manual. Razorpay, redemption, bonus, and audit/corrections were deferred. | Redemption, Razorpay Test Mode, and the initial cash-bonus policy are resolved. Remaining work is tracked by `FW-BETA-002`, `FW-RATE-001`, `FW-RATE-002`, `FW-AUDIT-004`, `FW-PAY-001`, `FW-BONUS-004`–`FW-BONUS-005`, and the Milestone 10 audit items. |
 | Milestone 6 | No external Razorpay transaction/webhook had been exercised; live keys were rejected pending live operations; abandoned monthly orders had no expiry/cancellation. Earlier Milestone 5 limitations remained. | The external Test Mode transaction and signed webhook are resolved by the MVP Beta checkpoint. Live operations, stable HTTPS/webhook operations, abandoned-order handling, and carried-forward rate/recovery work remain `FW-BETA-003`, `FW-PAY-001`–`FW-PAY-003`, and the related items above. |
 | Milestone 7 | Eligibility had no reminders and did not initiate/complete redemption. The later review also noted exact-calendar behavior with no business-day or grace-period policy. | Redemption execution was resolved by Milestone 8. Communication and calendar policy remain `FW-ELIG-001` and `FW-ELIG-002`. |
-| Milestone 8 | Redemption only recorded settlement; no payout, metal handover, POS, inventory, invoice validation, or metal-to-cash policy existed. Bonus, correction/reversal/approval, and configurable partial-settlement policies remained deferred. Receipts/statements were also deferred. | Initial versioned cash bonus is resolved by Milestone 9. Tracked by `FW-SETTLE-001` through `FW-SETTLE-004`, `FW-BONUS-004`–`FW-BONUS-005`, all Milestone 10 audit items, and all Milestone 11 document items. |
+| Milestone 8 | Redemption only recorded settlement; no payout, metal handover, POS, inventory, invoice validation, or metal-to-cash policy existed. Bonus, correction/reversal/approval, and configurable partial-settlement policies remained deferred. Receipts/statements were also deferred. | Initial bonus, audit/reversal, and MVP documents are resolved by Milestones 9–11. Remaining settlement, bonus, approval, and statutory-document work is tracked by the corresponding open items. |
 | Milestone 9 | The initial cash bonus has one plan-configured percentage, a minimum qualifying duration, a paid-principal eligibility cutoff, and principal-first redemption. It has no caps, tiers, approval/forfeiture/tax policy, future-contribution projection, or optimized aggregate read model. | Tracked by `FW-BONUS-004` and `FW-BONUS-005`; initial audit/reversal is resolved by Milestone 10 while dual approval remains `FW-AUDIT-002`. |
 | Milestone 10 | Immutable audit events cover supported sensitive actions; redemption reversal is append-only; the exception queue covers current paid-unallocated and failed webhook records. There is no manual payment/rate correction, void, refund/dispute reconciliation, dual approval, automated retry/alerting, or immutable database trigger protection against bulk ORM updates. | Tracked by `FW-AUDIT-002` through `FW-AUDIT-005`, `FW-PAY-001` through `FW-PAY-003`, and the production operations gate. |
+| Milestone 11 | Receipts and statements are on-demand printable HTML, not archived rendered files or statutory tax invoices. There is no server-side PDF, email delivery/reissue log, signature, statutory business/tax identity, formal invoice numbering, or export date filtering. | MVP scope is complete; production/legal document requirements remain `FW-DOC-004`. |
