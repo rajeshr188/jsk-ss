@@ -1,0 +1,12 @@
+{
+	email {$ACME_EMAIL}
+}
+
+www.jaishrikrishnajewellery.com {
+	redir https://jaishrikrishnajewellery.com{uri} permanent
+}
+
+jaishrikrishnajewellery.com {
+	encode zstd gzip
+	reverse_proxy web:8000
+}

@@ -153,8 +153,15 @@ with the actual production environment. The application exposes `/health/live/` 
 process liveness and `/health/ready/` for PostgreSQL readiness; neither response is
 cached and both include `APP_RELEASE`. The container image runs as an unprivileged
 `app` user, contains collected static assets, and emits Gunicorn/Django logs to
-standard output. The detailed rollout, backup/restore, rollback, monitoring, and
-secret-rotation procedure is in [Development conventions](docs/DEVELOPMENT.md).
+standard output. The detailed environment, rollout, smoke-test, backup/restore,
+rollback, monitoring, incident, and secret-rotation procedure is in the
+[Production and deployment guide](docs/PRODUCTION_DEPLOYMENT.md).
+
+The selected deployment target is a Linode Compute Instance behind Caddy at
+`jaishrikrishnajewellery.com`, connected to Linode Managed PostgreSQL with
+CA-verified TLS. Start from [.env.production.example](.env.production.example) and
+[compose.production.yml](compose.production.yml); the checked-in `docker-compose.yml`
+remains development-only.
 
 ## Project guides
 
@@ -165,4 +172,5 @@ secret-rotation procedure is in [Development conventions](docs/DEVELOPMENT.md).
 - [Future work](docs/FUTURE_WORK.md)
 - [Current status](docs/STATUS.md)
 - [Development conventions](docs/DEVELOPMENT.md)
+- [Production and deployment](docs/PRODUCTION_DEPLOYMENT.md)
 - [Testing](docs/TESTING.md)

@@ -19,13 +19,15 @@ here are not implemented behavior and do not relax the financial invariants in
 
 ## Production rollout
 
-- **FW-PROD-001 — Backup recovery proof:** Configure managed PostgreSQL snapshots
-  and point-in-time recovery, then complete and record a restore drill into an
-  isolated database with denomination-specific liability reconciliation.
-- **FW-PROD-002 — Stable edge and observability:** Deploy to the owned HTTPS domain,
-  validate proxy-header trust and staged HSTS, retain application logs, and exercise
+- **FW-PROD-001 — Backup recovery proof (Linode procedure prepared):** Linode
+  Managed PostgreSQL provides daily retained backups and forked-cluster restoration;
+  complete and record the actual isolated restore with denomination-specific
+  liability reconciliation after the cluster exists.
+- **FW-PROD-002 — Stable edge and observability (Linode configuration prepared):**
+  Deploy Caddy to the owned `jaishrikrishnajewellery.com` host, validate automatic
+  HTTPS/proxy trust and staged HSTS, then select durable log retention and exercise
   external alerts for 5xx/readiness, webhook failures, allocation exceptions,
-  database capacity, and backup failure.
+  database capacity, certificate renewal, and backup failure.
 - **FW-PROD-003 — Delivery and rotation drill:** Verify real password-reset email
   delivery and rehearse separate Django, database, email, GoldAPI, Razorpay API, and
   Razorpay webhook secret rotations without exposing credentials.

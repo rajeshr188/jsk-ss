@@ -32,6 +32,10 @@ Read the agent contract and domain rules, implement one milestone slice, add con
 
 ## Production deployment and operations
 
+The canonical, step-by-step procedure is the
+[Production and deployment guide](PRODUCTION_DEPLOYMENT.md). The notes below are a
+compact engineering summary; keep operational changes synchronized with that runbook.
+
 Production configuration must set `DJANGO_DEBUG=False`, a long random
 `DJANGO_SECRET_KEY`, explicit `ALLOWED_HOSTS` and HTTPS-only
 `CSRF_TRUSTED_ORIGINS`, an immutable `APP_RELEASE`, a PostgreSQL `DATABASE_URL`,
