@@ -22,6 +22,11 @@ urlpatterns = [
     path("owner/plans/", views.plan_list, name="plan_list"),
     path("owner/plans/add/", views.plan_add, name="plan_add"),
     path("owner/contributions/", views.contribution_list, name="contribution_list"),
+    path(
+        "owner/contributions/<int:contribution_id>/retry-allocation/",
+        views.retry_contribution_allocation,
+        name="retry_contribution_allocation",
+    ),
     path("mine/", views.my_schemes, name="my_schemes"),
     path("mine/<str:scheme_number>/", views.my_scheme_detail, name="my_scheme_detail"),
     path(

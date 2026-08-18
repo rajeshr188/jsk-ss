@@ -20,10 +20,16 @@ from schemes.services import (
     fail_contribution,
     initiate_contribution,
     process_mock_contribution,
+    retry_metal_allocation,
 )
 
 
-def make_metal_account(*, metal=SchemeAccount.SavingsMode.GOLD, suffix="default"):
+def make_metal_account(
+    *,
+    metal=SchemeAccount.SavingsMode.GOLD,
+    suffix="default",
+    frequency_rule=SchemePlan.FrequencyRule.FLEXIBLE,
+):
     customer = create_customer(
         full_name=f"{metal.title()} Customer",
         email=f"{metal.lower()}-{suffix}@example.com",
@@ -34,7 +40,7 @@ def make_metal_account(*, metal=SchemeAccount.SavingsMode.GOLD, suffix="default"
         name=f"{metal.title()} Flexible",
         code=f"{metal}-{suffix}".upper(),
         amount_rule=SchemePlan.AmountRule.VARIABLE,
-        frequency_rule=SchemePlan.FrequencyRule.FLEXIBLE,
+        frequency_rule=frequency_rule,
         fixed_contribution_amount=None,
         minimum_contribution=Decimal("1000.00"),
         maximum_contribution=Decimal("100000.00"),
@@ -147,12 +153,44 @@ class MetalAllocationTests(TestCase):
         self.assertEqual(get_metal_balance(account), Decimal("0.000000"))
 
     @override_settings(MOCK_GOLD_RATE="0")
-    def test_invalid_mock_rate_creates_no_paid_contribution_or_entitlement(self):
+    def test_invalid_rate_preserves_payment_for_controlled_retry(self):
         account = make_metal_account(suffix="invalid-rate")
-        with self.assertRaises(ImproperlyConfigured):
+        contribution = process_mock_contribution(
+            scheme_account=account, amount=Decimal("10000.00")
+        )
+
+        contribution.refresh_from_db()
+        self.assertEqual(contribution.status, Contribution.Status.PAID_UNALLOCATED)
+        self.assertIsNotNone(contribution.paid_at)
+        self.assertTrue(contribution.gateway_reference.startswith("mock_"))
+        self.assertIn("MOCK_GOLD_RATE", contribution.allocation_error)
+        self.assertIsNotNone(contribution.allocation_attempted_at)
+        self.assertFalse(MetalAllocation.objects.filter(contribution__scheme_account=account).exists())
+        self.assertFalse(RateSnapshot.objects.exists())
+
+        with override_settings(MOCK_GOLD_RATE="12500.0000"):
+            allocation = retry_metal_allocation(contribution=contribution)
+
+        contribution.refresh_from_db()
+        self.assertEqual(contribution.status, Contribution.Status.PAID)
+        self.assertEqual(contribution.allocation_error, "")
+        self.assertEqual(allocation.quantity, Decimal("0.800000"))
+        self.assertEqual(MetalAllocation.objects.count(), 1)
+        self.assertEqual(RateSnapshot.objects.count(), 1)
+
+    @override_settings(MOCK_GOLD_RATE="0")
+    def test_paid_unallocated_consumes_once_per_month_opportunity(self):
+        account = make_metal_account(
+            suffix="unallocated-monthly",
+            frequency_rule=SchemePlan.FrequencyRule.ONCE_PER_MONTH,
+        )
+        contribution = process_mock_contribution(
+            scheme_account=account, amount=Decimal("10000.00")
+        )
+        self.assertEqual(contribution.status, Contribution.Status.PAID_UNALLOCATED)
+
+        with self.assertRaises(ValidationError):
             process_mock_contribution(
                 scheme_account=account, amount=Decimal("10000.00")
             )
-        self.assertFalse(Contribution.objects.filter(scheme_account=account).exists())
-        self.assertFalse(MetalAllocation.objects.filter(contribution__scheme_account=account).exists())
-
+        self.assertEqual(Contribution.objects.filter(scheme_account=account).count(), 1)

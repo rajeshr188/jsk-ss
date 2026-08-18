@@ -188,6 +188,7 @@ class Contribution(models.Model):
     class Status(models.TextChoices):
         PENDING = "PENDING", "Pending"
         PAID = "PAID", "Paid"
+        PAID_UNALLOCATED = "PAID_UNALLOCATED", "Paid — allocation pending"
         FAILED = "FAILED", "Failed"
 
     scheme_account = models.ForeignKey(
@@ -202,9 +203,11 @@ class Contribution(models.Model):
     frequency_rule_snapshot = models.CharField(
         max_length=20, choices=SchemePlan.FrequencyRule.choices
     )
-    status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDING)
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
     payment_gateway = models.CharField(max_length=30)
     gateway_reference = models.CharField(max_length=120, null=True, blank=True, unique=True)
+    allocation_error = models.TextField(blank=True)
+    allocation_attempted_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     paid_at = models.DateTimeField(null=True, blank=True)
 
@@ -221,7 +224,11 @@ class Contribution(models.Model):
             ),
             models.CheckConstraint(
                 condition=(
-                    models.Q(status="PAID", paid_at__isnull=False, gateway_reference__isnull=False)
+                    models.Q(
+                        status__in=["PAID", "PAID_UNALLOCATED"],
+                        paid_at__isnull=False,
+                        gateway_reference__isnull=False,
+                    )
                     | models.Q(status__in=["PENDING", "FAILED"], paid_at__isnull=True)
                 ),
                 name="paid_contribution_has_confirmation",
@@ -229,7 +236,8 @@ class Contribution(models.Model):
             models.UniqueConstraint(
                 fields=["scheme_account", "contribution_period"],
                 condition=models.Q(
-                    status="PAID", frequency_rule_snapshot="ONCE_PER_MONTH"
+                    status__in=["PAID", "PAID_UNALLOCATED"],
+                    frequency_rule_snapshot="ONCE_PER_MONTH",
                 ),
                 name="one_paid_contribution_per_account_period",
             ),

@@ -8,10 +8,14 @@ from django.db.models.functions import Coalesce
 from django.utils import timezone
 
 from .models import Contribution, Customer, MetalAllocation, RateSnapshot, SchemeAccount
-from .rates import get_metal_rate_provider
+from .rates import MetalRateProviderError, get_metal_rate_provider
 
 
 MONEY_QUANTUM = Decimal("0.01")
+SUCCESSFUL_PAYMENT_STATUSES = (
+    Contribution.Status.PAID,
+    Contribution.Status.PAID_UNALLOCATED,
+)
 
 
 @dataclass(frozen=True)
@@ -38,6 +42,7 @@ class OwnerActivitySummary:
     active_account_count: int
     contribution_count_today: int
     contribution_count_month: int
+    unallocated_payment_count: int
 
 
 def get_customer_scheme_summary(user):
@@ -156,7 +161,7 @@ def get_owner_liability_summary(rate_provider=None):
 
     try:
         provider = rate_provider or get_metal_rate_provider()
-    except ImproperlyConfigured as error:
+    except (ImproperlyConfigured, MetalRateProviderError) as error:
         rate_error = str(error)
         gold = MetalLiability(
             metal=SchemeAccount.SavingsMode.GOLD,
@@ -186,7 +191,7 @@ def get_owner_liability_summary(rate_provider=None):
 def _get_current_metal_liability(provider, metal, quantity):
     try:
         quote = provider.get_rate(metal)
-    except ImproperlyConfigured as error:
+    except (ImproperlyConfigured, MetalRateProviderError) as error:
         return MetalLiability(metal=metal, quantity=quantity, rate_error=str(error))
 
     return MetalLiability(
@@ -224,7 +229,7 @@ def get_owner_activity_summary(as_of=None):
         today=Count(
             "pk",
             filter=Q(
-                status=Contribution.Status.PAID,
+                status__in=SUCCESSFUL_PAYMENT_STATUSES,
                 paid_at__gte=day_start,
                 paid_at__lt=day_end,
             ),
@@ -232,10 +237,14 @@ def get_owner_activity_summary(as_of=None):
         month=Count(
             "pk",
             filter=Q(
-                status=Contribution.Status.PAID,
+                status__in=SUCCESSFUL_PAYMENT_STATUSES,
                 paid_at__gte=month_start,
                 paid_at__lt=next_month,
             ),
+        ),
+        unallocated=Count(
+            "pk",
+            filter=Q(status=Contribution.Status.PAID_UNALLOCATED),
         ),
     )
     return OwnerActivitySummary(
@@ -245,4 +254,5 @@ def get_owner_activity_summary(as_of=None):
         ).count(),
         contribution_count_today=contribution_counts["today"],
         contribution_count_month=contribution_counts["month"],
+        unallocated_payment_count=contribution_counts["unallocated"],
     )

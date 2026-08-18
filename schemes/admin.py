@@ -76,6 +76,8 @@ class ContributionAdmin(admin.ModelAdmin):
         "status",
         "payment_gateway",
         "gateway_reference",
+        "allocation_error",
+        "allocation_attempted_at",
         "created_at",
         "paid_at",
     )

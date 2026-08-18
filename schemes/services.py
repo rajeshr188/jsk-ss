@@ -4,7 +4,7 @@ from datetime import date
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 
 from django.contrib.auth import get_user_model
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.db import transaction
 from django.utils import timezone
 
@@ -17,11 +17,20 @@ from .models import (
     SchemePlan,
 )
 from .payments import get_payment_gateway
-from .rates import get_metal_rate_provider
+from .rates import MetalRateProviderError, get_metal_rate_provider
 
 
 MONEY_QUANTUM = Decimal("0.01")
 METAL_QUANTUM = Decimal("0.000001")
+SUCCESSFUL_PAYMENT_STATUSES = (
+    Contribution.Status.PAID,
+    Contribution.Status.PAID_UNALLOCATED,
+)
+EXPECTED_ALLOCATION_ERRORS = (
+    ImproperlyConfigured,
+    MetalRateProviderError,
+    ValidationError,
+)
 
 
 def _reference(prefix, model, field_name):
@@ -167,7 +176,7 @@ def validate_contribution_allowed(
         successful = Contribution.objects.filter(
             scheme_account=scheme_account,
             contribution_period=period,
-            status=Contribution.Status.PAID,
+            status__in=SUCCESSFUL_PAYMENT_STATUSES,
         )
         if exclude_contribution_id is not None:
             successful = successful.exclude(pk=exclude_contribution_id)
@@ -213,7 +222,7 @@ def confirm_contribution(
         .get(pk=contribution_id)
     )
 
-    if contribution.status == Contribution.Status.PAID:
+    if contribution.status in SUCCESSFUL_PAYMENT_STATUSES:
         if (
             contribution.payment_gateway == payment_gateway
             and contribution.gateway_reference == gateway_reference
@@ -247,7 +256,7 @@ def confirm_contribution(
 @transaction.atomic
 def fail_contribution(*, contribution_id, gateway_reference=None):
     contribution = Contribution.objects.select_for_update().get(pk=contribution_id)
-    if contribution.status == Contribution.Status.PAID:
+    if contribution.status in SUCCESSFUL_PAYMENT_STATUSES:
         raise ValidationError("A paid contribution cannot be marked as failed.")
     contribution.status = Contribution.Status.FAILED
     contribution.gateway_reference = gateway_reference
@@ -268,8 +277,12 @@ def allocate_metal(*, contribution, rate_provider=None):
         "rate_snapshot"
     ).first()
     if existing is not None:
+        if locked_contribution.status == Contribution.Status.PAID_UNALLOCATED:
+            locked_contribution.status = Contribution.Status.PAID
+            locked_contribution.allocation_error = ""
+            locked_contribution.save(update_fields=["status", "allocation_error"])
         return existing
-    if locked_contribution.status != Contribution.Status.PAID:
+    if locked_contribution.status not in SUCCESSFUL_PAYMENT_STATUSES:
         raise ValidationError("Only a paid contribution can receive a metal allocation.")
 
     metal = locked_contribution.scheme_account.savings_mode
@@ -306,15 +319,64 @@ def allocate_metal(*, contribution, rate_provider=None):
     )
     allocation.full_clean()
     allocation.save()
+    locked_contribution.status = Contribution.Status.PAID
+    locked_contribution.allocation_error = ""
+    locked_contribution.allocation_attempted_at = timezone.now()
+    locked_contribution.full_clean()
+    locked_contribution.save(
+        update_fields=["status", "allocation_error", "allocation_attempted_at"]
+    )
     return allocation
 
 
 @transaction.atomic
+def mark_contribution_paid_unallocated(*, contribution_id, error):
+    contribution = (
+        Contribution.objects.select_for_update()
+        .select_related("scheme_account")
+        .get(pk=contribution_id)
+    )
+    if contribution.scheme_account.savings_mode not in {
+        SchemeAccount.SavingsMode.GOLD,
+        SchemeAccount.SavingsMode.SILVER,
+    }:
+        raise ValidationError("Only metal contributions can await allocation.")
+    if contribution.status not in SUCCESSFUL_PAYMENT_STATUSES:
+        raise ValidationError("Only a successful payment can await allocation.")
+    if MetalAllocation.objects.filter(contribution=contribution).exists():
+        contribution.status = Contribution.Status.PAID
+        contribution.allocation_error = ""
+    else:
+        contribution.status = Contribution.Status.PAID_UNALLOCATED
+        if isinstance(error, EXPECTED_ALLOCATION_ERRORS):
+            contribution.allocation_error = str(error).strip()[:1000]
+        else:
+            contribution.allocation_error = (
+                "Unexpected allocation error. Owner investigation is required."
+            )
+    contribution.allocation_attempted_at = timezone.now()
+    contribution.full_clean()
+    contribution.save(
+        update_fields=["status", "allocation_error", "allocation_attempted_at"]
+    )
+    return contribution
+
+
+def retry_metal_allocation(*, contribution, rate_provider=None):
+    try:
+        return allocate_metal(contribution=contribution, rate_provider=rate_provider)
+    except Exception as error:
+        mark_contribution_paid_unallocated(
+            contribution_id=contribution.pk,
+            error=error,
+        )
+        raise
+
+
 def process_mock_contribution(*, scheme_account, amount, contribution_date=None):
     gateway = get_payment_gateway()
-    locked_account = SchemeAccount.objects.select_for_update().get(pk=scheme_account.pk)
     contribution = initiate_contribution(
-        scheme_account=locked_account,
+        scheme_account=scheme_account,
         amount=amount,
         payment_gateway=gateway.name,
         contribution_date=contribution_date,
@@ -335,5 +397,10 @@ def process_mock_contribution(*, scheme_account, amount, contribution_date=None)
         SchemeAccount.SavingsMode.GOLD,
         SchemeAccount.SavingsMode.SILVER,
     }:
-        allocate_metal(contribution=contribution)
+        try:
+            retry_metal_allocation(contribution=contribution)
+        except EXPECTED_ALLOCATION_ERRORS:
+            return Contribution.objects.select_related("scheme_account").get(
+                pk=contribution.pk
+            )
     return contribution

@@ -134,7 +134,7 @@ class ContributionServiceTests(TestCase):
             )
         self.assertEqual(get_cash_balance(account), Decimal("2500.00"))
 
-    def test_database_rejects_duplicate_paid_monthly_period(self):
+    def test_database_rejects_paid_and_unallocated_duplicate_monthly_period(self):
         account = make_account(frequency_rule=SchemePlan.FrequencyRule.ONCE_PER_MONTH)
         period = timezone.localdate().replace(day=1)
         Contribution.objects.create(
@@ -153,7 +153,7 @@ class ContributionServiceTests(TestCase):
                 amount=Decimal("5000.00"),
                 contribution_period=period,
                 frequency_rule_snapshot=SchemePlan.FrequencyRule.ONCE_PER_MONTH,
-                status=Contribution.Status.PAID,
+                status=Contribution.Status.PAID_UNALLOCATED,
                 payment_gateway="mock",
                 gateway_reference="mock_db_duplicate",
                 paid_at=timezone.now(),

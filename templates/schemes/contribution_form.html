@@ -11,7 +11,7 @@
   <div class="alert alert-warning" role="alert">
     Development mock payment only. No real payment will be collected.
     {% if scheme_account.savings_mode == 'GOLD' or scheme_account.savings_mode == 'SILVER' %}
-    The INR amount will use the configured mock {{ scheme_account.get_savings_mode_display|lower }} rate.
+    The INR amount will use the configured {{ scheme_account.get_savings_mode_display|lower }} rate provider.
     {% endif %}
   </div>
   <form method="post" novalidate>

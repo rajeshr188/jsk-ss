@@ -65,6 +65,10 @@ def make_liability_accounts():
 
 
 def make_contribution(account, amount, status, reference, paid_at=None):
+    payment_succeeded = status in {
+        Contribution.Status.PAID,
+        Contribution.Status.PAID_UNALLOCATED,
+    }
     return Contribution.objects.create(
         scheme_account=account,
         amount=amount,
@@ -72,8 +76,8 @@ def make_contribution(account, amount, status, reference, paid_at=None):
         frequency_rule_snapshot=SchemePlan.FrequencyRule.FLEXIBLE,
         status=status,
         payment_gateway="test",
-        gateway_reference=reference if status == Contribution.Status.PAID else None,
-        paid_at=paid_at if status == Contribution.Status.PAID else None,
+        gateway_reference=reference if payment_succeeded else None,
+        paid_at=paid_at if payment_succeeded else None,
     )
 
 
@@ -186,7 +190,7 @@ class OwnerLiabilitySelectorTests(TestCase):
         self.assertEqual(summary.gold.quantity, Decimal("0.800000"))
         self.assertIsNone(summary.gold.reference_rate)
         self.assertIsNone(summary.gold.indicative_exposure)
-        self.assertIn("Mock metal rates require", summary.gold.rate_error)
+        self.assertIn("METAL_RATE_PROVIDER", summary.gold.rate_error)
 
     def test_activity_counts_only_successful_payments_in_india_periods(self):
         local_timezone = timezone.get_current_timezone()
@@ -227,6 +231,13 @@ class OwnerLiabilitySelectorTests(TestCase):
             Contribution.Status.FAILED,
             "activity-failed",
         )
+        make_contribution(
+            self.accounts[SchemeAccount.SavingsMode.GOLD],
+            Decimal("1000.00"),
+            Contribution.Status.PAID_UNALLOCATED,
+            "activity-unallocated",
+            today_paid_at,
+        )
         self.accounts[SchemeAccount.SavingsMode.SILVER].status = (
             SchemeAccount.Status.REDEEMED
         )
@@ -236,8 +247,9 @@ class OwnerLiabilitySelectorTests(TestCase):
 
         self.assertEqual(summary.customer_count, 1)
         self.assertEqual(summary.active_account_count, 2)
-        self.assertEqual(summary.contribution_count_today, 1)
-        self.assertEqual(summary.contribution_count_month, 2)
+        self.assertEqual(summary.contribution_count_today, 2)
+        self.assertEqual(summary.contribution_count_month, 3)
+        self.assertEqual(summary.unallocated_payment_count, 1)
 
 
 @override_settings(
@@ -308,3 +320,18 @@ class OwnerLiabilityDashboardTests(TestCase):
             response.context["liabilities"].silver.reference_rate,
             Decimal("155.0000"),
         )
+
+    def test_dashboard_warns_about_paid_unallocated_payments(self):
+        make_contribution(
+            self.accounts[SchemeAccount.SavingsMode.SILVER],
+            Decimal("1000.00"),
+            Contribution.Status.PAID_UNALLOCATED,
+            "dashboard-unallocated",
+            timezone.now(),
+        )
+        self.client.force_login(self.owner)
+
+        response = self.client.get(reverse("schemes:owner_dashboard"))
+
+        self.assertContains(response, "1 verified payment awaiting metal allocation")
+        self.assertContains(response, "Review and retry")

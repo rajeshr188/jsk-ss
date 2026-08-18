@@ -17,7 +17,7 @@ This is the canonical source for stable business rules.
 - **SCH-004:** Eligibility is the account start date plus agreed calendar months. Eligibility does not itself redeem or close an account.
 - **CON-001:** Amount rules (`FIXED`/`VARIABLE`) and frequency rules (`ONCE_PER_MONTH`/`FLEXIBLE`) are independent.
 - **CON-002:** Monthly periods use deterministic calendar keys such as `2026-08`, never rolling 30-day windows.
-- **CON-003:** `ONCE_PER_MONTH` permits one `PAID` contribution per scheme account and calendar month. `PENDING` and `FAILED` attempts do not consume the opportunity.
+- **CON-003:** `ONCE_PER_MONTH` permits one successfully paid contribution per scheme account and calendar month. Both `PAID` and `PAID_UNALLOCATED` consume the opportunity; `PENDING` and `FAILED` attempts do not.
 - **CON-004:** `FLEXIBLE` permits multiple successful contributions in the same calendar month.
 - **CON-005:** Fixed contributions must exactly equal the snapshotted fixed amount. Variable contributions must remain within snapshotted minimum/maximum boundaries.
 - **CON-006:** Contributions are rejected before the account start date, after redemption, and after eligibility unless the agreement snapshot explicitly permits them.
@@ -30,10 +30,14 @@ This is the canonical source for stable business rules.
 - **METAL-001 / FIN-002:** A metal contribution creates at most one successful allocation.
 - **METAL-002 / FIN-003:** A rate snapshot used by an allocation is immutable.
 - **METAL-003 / FIN-004:** Historical allocated grams never change with current market rates.
-- **METAL-004:** A successful metal payment with no valid rate becomes clearly paid-but-unallocated; no rate may be invented.
+- **METAL-004:** A successful metal payment with no valid rate becomes `PAID_UNALLOCATED`; it retains payment confirmation, creates no snapshot/allocation, and no rate may be invented.
 - **METAL-005:** Mock rates are available only with `DEBUG=True` and `METAL_RATE_PROVIDER=mock`.
 - **METAL-006:** Allocation quantity equals INR contribution divided by the snapshotted applied rate per gram, rounded to 6 decimal places using `ROUND_HALF_UP`.
 - **METAL-007:** Provider rate, applied rate, provider timestamp, fetched timestamp, purity, and metal are stored with each rate snapshot. Changing configured rates affects only future allocations.
+- **METAL-008:** `METAL_RATE_PROVIDER=goldapi` uses authenticated HTTPS XAU/XAG-to-INR requests. The API key is sent in a header and must remain outside source control.
+- **METAL-009:** Live responses must match the requested metal and INR currency and contain a positive per-gram rate and valid provider timestamp before allocation.
+- **METAL-010:** Provider, network, or configuration failure after payment confirmation is recoverable only through the owner-controlled, idempotent allocation retry workflow.
+- **METAL-011:** A successful retry changes `PAID_UNALLOCATED` to `PAID`, clears the current allocation error, and still permits at most one `RateSnapshot` and `MetalAllocation` for the contribution.
 
 ## Redemption and financial invariants
 
@@ -52,7 +56,7 @@ This is the canonical source for stable business rules.
 - **LIA-003:** Indicative metal exposure equals outstanding grams multiplied by the current applied reference rate, rounded to 2 money decimal places with `ROUND_HALF_UP`. It does not rewrite historical allocations.
 - **LIA-004:** Cash principal, gold exposure, and silver exposure are never added into a single headline liability total.
 - **LIA-005:** If a current rate is unavailable, the dashboard must continue showing authoritative gram liabilities and explicitly mark reference rate and exposure as unavailable.
-- **LIA-006:** Dashboard contribution counts include only `PAID` contributions and use `paid_at` within India-local calendar-day and calendar-month boundaries.
+- **LIA-006:** Dashboard contribution counts include both `PAID` and `PAID_UNALLOCATED` verified payments and use `paid_at` within India-local calendar-day and calendar-month boundaries.
 
 ## Precision
 

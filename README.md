@@ -41,7 +41,10 @@ Alternatively, set `DJANGO_SECRET_KEY` and run `docker compose up --build`; Comp
 | `CSRF_TRUSTED_ORIGINS` | no | Comma-separated trusted origins |
 | `DEFAULT_FROM_EMAIL` | no | Sender for authentication emails |
 | `PAYMENT_GATEWAY` | Milestone 2 | Must be `mock` for the development payment flow |
-| `METAL_RATE_PROVIDER` | Milestone 3 | Must be `mock` for development gold/silver allocation |
+| `METAL_RATE_PROVIDER` | metal schemes | `mock` in debug or `goldapi` for live XAU/XAG-to-INR rates |
+| `GOLDAPI_API_KEY` | live rates | Required when `METAL_RATE_PROVIDER=goldapi`; never commit it |
+| `GOLDAPI_TIMEOUT_SECONDS` | no | GoldAPI HTTPS timeout; defaults to `10`, maximum `30` |
+| `GOLDAPI_CACHE_SECONDS` | no | Per-metal live quote cache; defaults to `60`, maximum `3600` |
 | `MOCK_GOLD_RATE` | no | Development 24K gold rate per gram; defaults to `12500.0000` |
 | `MOCK_SILVER_RATE` | no | Development silver rate per gram; defaults to `150.0000` |
 | `MOCK_GOLD_PURITY` | no | Development gold fineness metadata; defaults to `0.9999` |
@@ -63,9 +66,24 @@ MOCK_GOLD_RATE=12500.0000
 MOCK_SILVER_RATE=150.0000
 ```
 
-The payment screen is unavailable unless mock payment mode is enabled. Gold and silver payments additionally require the mock metal-rate provider. Mock payments record no real transfer; rates are snapshotted and INR is converted to six-decimal grams for local testing. Razorpay, live metal rates, and `seed_demo` remain deferred.
+The payment screen is unavailable unless mock payment mode is enabled. Gold and silver payments additionally require a configured metal-rate provider. Mock payments record no real transfer; rates are snapshotted and INR is converted to six-decimal grams for local testing. Razorpay and `seed_demo` remain deferred.
 
 The owner dashboard derives outstanding cash principal and gold/silver gram obligations from successful financial records. Current mock rates provide separate indicative INR exposure for each metal; these display values never alter historical allocations and are never combined with cash into one liability total.
+
+## Live metal rates
+
+Create a GoldAPI.io account and keep its token only in your ignored `.env` or deployment secret manager. The official endpoint supports gold (`XAU`) and silver (`XAG`) in INR and supplies per-gram prices.
+
+```dotenv
+METAL_RATE_PROVIDER=goldapi
+GOLDAPI_API_KEY=replace-with-your-real-token
+GOLDAPI_TIMEOUT_SECONDS=10
+GOLDAPI_CACHE_SECONDS=60
+```
+
+The adapter calls `https://www.goldapi.io/api/XAU/INR` or `XAG/INR` over HTTPS and sends the key in the `x-access-token` header, never in the URL. It validates metal, currency, timestamp, and the per-gram rate before creating a snapshot. Quotes are cached briefly to protect provider quota. See the [official GoldAPI documentation](https://www.goldapi.io/api-documentation) and [official integration examples](https://github.com/goldapi-io).
+
+If payment verification succeeds but a rate cannot be obtained, the contribution becomes **Paid — allocation pending**. No rate or grams are invented. The owner dashboard warns about the exception, and the owner can retry safely from the contributions page after restoring provider access.
 
 ## Verification
 

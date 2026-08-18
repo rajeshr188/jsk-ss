@@ -4,6 +4,7 @@ from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.views.decorators.http import require_POST
 
 from accounts.models import CustomUser
 
@@ -11,7 +12,7 @@ from .forms import ContributionForm, CustomerCreateForm, EnrolmentForm, SchemePl
 from .models import Contribution, Customer, SchemeAccount, SchemePlan
 from .payments import mock_payment_is_enabled
 from .permissions import owner_required
-from .rates import mock_metal_rate_is_enabled
+from .rates import MetalRateProviderError, metal_rate_provider_is_configured
 from .selectors import (
     get_cash_balance,
     get_contribution_history,
@@ -23,7 +24,12 @@ from .selectors import (
     get_owner_customers,
     get_owner_liability_summary,
 )
-from .services import create_customer, enroll_customer, process_mock_contribution
+from .services import (
+    create_customer,
+    enroll_customer,
+    process_mock_contribution,
+    retry_metal_allocation,
+)
 
 
 @login_required
@@ -139,7 +145,7 @@ def my_schemes(request):
         {
             "scheme_accounts": accounts,
             "mock_payment_enabled": mock_payment_is_enabled(),
-            "mock_metal_rate_enabled": mock_metal_rate_is_enabled(),
+            "metal_rate_provider_enabled": metal_rate_provider_is_configured(),
         },
     )
 
@@ -158,7 +164,7 @@ def my_scheme_detail(request, scheme_number):
             "metal_balance": get_metal_balance(account),
             "contributions": get_contribution_history(account),
             "mock_payment_enabled": mock_payment_is_enabled(),
-            "mock_metal_rate_enabled": mock_metal_rate_is_enabled(),
+            "metal_rate_provider_enabled": metal_rate_provider_is_configured(),
         },
     )
 
@@ -175,7 +181,7 @@ def pay_contribution(request, scheme_number):
             SchemeAccount.SavingsMode.GOLD,
             SchemeAccount.SavingsMode.SILVER,
         }
-        and not mock_metal_rate_is_enabled()
+        and not metal_rate_provider_is_configured()
     ):
         raise Http404
 
@@ -206,6 +212,12 @@ def pay_contribution(request, scheme_number):
                         f"{allocation.get_metal_display()} was allocated."
                     )
                 messages.success(request, message)
+            elif contribution.status == Contribution.Status.PAID_UNALLOCATED:
+                messages.warning(
+                    request,
+                    "Mock payment was verified, but the metal allocation is pending. "
+                    "The store owner has been notified and can retry it safely.",
+                )
             else:
                 messages.error(request, "The mock payment failed. No balance was added.")
             return redirect("schemes:my_scheme_detail", scheme_number=account.scheme_number)
@@ -223,3 +235,28 @@ def contribution_list(request):
         "schemes/contribution_list.html",
         {"contributions": get_owner_contributions()},
     )
+
+
+@owner_required
+@require_POST
+def retry_contribution_allocation(request, contribution_id):
+    contribution = get_object_or_404(
+        Contribution.objects.select_related("scheme_account", "scheme_account__customer"),
+        pk=contribution_id,
+        status=Contribution.Status.PAID_UNALLOCATED,
+        scheme_account__savings_mode__in=[
+            SchemeAccount.SavingsMode.GOLD,
+            SchemeAccount.SavingsMode.SILVER,
+        ],
+    )
+    try:
+        allocation = retry_metal_allocation(contribution=contribution)
+    except (ImproperlyConfigured, MetalRateProviderError, ValidationError) as error:
+        messages.error(request, f"Allocation retry failed: {error}")
+    else:
+        messages.success(
+            request,
+            f"Allocated {allocation.quantity} g {allocation.get_metal_display()} "
+            f"for {contribution.scheme_account.customer.full_name}.",
+        )
+    return redirect("schemes:contribution_list")

@@ -48,7 +48,9 @@ Cash principal is derived by selectors from `PAID` contribution records; pending
 
 `MockPaymentGateway` is the only payment adapter currently implemented. It can be resolved only when `DEBUG=True` and `PAYMENT_GATEWAY=mock`. A result must be verified before confirmation changes `PENDING` to `PAID`.
 
-`MockMetalRateProvider` implements the separate rate boundary and can be resolved only when `DEBUG=True` and `METAL_RATE_PROVIDER=mock`. It returns provider/applied rates, provider timestamp, and purity metadata. The allocation service snapshots the quote and calculates grams in the same database transaction as the mock payment workflow. External payment and metal-rate providers remain deferred.
+`MockMetalRateProvider` can be resolved only when `DEBUG=True` and `METAL_RATE_PROVIDER=mock`. `GoldApiMetalRateProvider` is the live implementation selected with `METAL_RATE_PROVIDER=goldapi`; it calls fixed HTTPS XAU/XAG-to-INR endpoints with header authentication, bounded timeouts, strict response validation, and a short process-local cache. Both return the same provider-neutral quote containing provider/applied rates, provider timestamp, and purity metadata.
+
+Payment confirmation and metal allocation use separate transactions. If a verified metal payment cannot obtain or validate a quote, the contribution persists as `PAID_UNALLOCATED` with a safe current error description; it creates no `RateSnapshot` or `MetalAllocation`. The owner-only POST retry action re-enters the idempotent allocation service. A successful retry creates exactly one immutable snapshot/allocation and changes the contribution to `PAID`.
 
 ## Current request flows
 
@@ -58,6 +60,6 @@ Customer: login → My Schemes → account terms. Login routing is role-aware.
 
 Cash contribution: customer account → Pay now → validate snapshotted amount/frequency rules → create pending contribution → verified mock result → idempotent confirmation → derived cash balance.
 
-Metal contribution: customer account → Pay now → verified contribution → mock rate quote → immutable rate snapshot → one immutable six-decimal allocation → derived gold or silver gram balance.
+Metal contribution: customer account → Pay now → verified contribution → configured rate quote → immutable rate snapshot → one immutable six-decimal allocation → derived gold or silver gram balance. Rate failure branches to paid/allocation-pending → owner review → controlled retry.
 
 Owner liability dashboard: paid cash contributions → outstanding INR principal; paid metal allocations → separate gold/silver grams → current provider quotes → separate indicative INR exposures. Reference quotes used for display do not create or alter historical allocation snapshots. Activity counters use successful payment timestamps in the India-local calendar day and month.

@@ -10,7 +10,7 @@
     <div class="text-muted">{{ scheme_account.scheme_number }}</div>
   </div>
   {% if mock_payment_enabled %}
-    {% if scheme_account.savings_mode == 'CASH' or mock_metal_rate_enabled %}
+    {% if scheme_account.savings_mode == 'CASH' or metal_rate_provider_enabled %}
     <a class="btn btn-jsk" href="{% url 'schemes:pay_contribution' scheme_account.scheme_number %}">Pay now</a>
     {% endif %}
   {% endif %}
@@ -46,6 +46,7 @@
         <td>{% if contribution.metal_allocation %}₹{{ contribution.metal_allocation.rate_snapshot.applied_rate|floatformat:4 }}/g{% else %}—{% endif %}</td>
         <td>
           {% if contribution.status == 'PAID' %}<span class="badge text-bg-success">Paid</span>
+          {% elif contribution.status == 'PAID_UNALLOCATED' %}<span class="badge text-bg-warning">Paid — allocation pending</span>
           {% elif contribution.status == 'FAILED' %}<span class="badge text-bg-danger">Failed</span>
           {% else %}<span class="badge text-bg-warning">Pending</span>{% endif %}
         </td>

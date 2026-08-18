@@ -124,6 +124,9 @@ MOCK_GOLD_RATE = os.getenv("MOCK_GOLD_RATE", "12500.0000")
 MOCK_SILVER_RATE = os.getenv("MOCK_SILVER_RATE", "150.0000")
 MOCK_GOLD_PURITY = os.getenv("MOCK_GOLD_PURITY", "0.9999")
 MOCK_SILVER_PURITY = os.getenv("MOCK_SILVER_PURITY", "0.9990")
+GOLDAPI_API_KEY = os.getenv("GOLDAPI_API_KEY", "").strip()
+GOLDAPI_TIMEOUT_SECONDS = os.getenv("GOLDAPI_TIMEOUT_SECONDS", "10")
+GOLDAPI_CACHE_SECONDS = os.getenv("GOLDAPI_CACHE_SECONDS", "60")
 
 # Password validation
 # https://docs.djangoproject.com/en/dev/ref/settings/#auth-password-validators

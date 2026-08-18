@@ -10,6 +10,8 @@
 - Use class-based or function-based views according to clarity, server-rendered Bootstrap templates, named URLs, and crispy Django forms.
 - Keep migrations committed and run `makemigrations --check --dry-run` before handoff.
 - Keep payment and metal-rate providers behind their explicit boundaries; provider-specific fields must not leak through views or scheme models.
+- Live rate adapters must use bounded network timeouts, validate provider identity/currency/timestamps/rates, avoid credentials in URLs or errors, and raise provider-neutral failures. Tests mock the HTTP boundary and never consume live quota.
+- Once payment is verified, allocation failure must preserve the payment as `PAID_UNALLOCATED`; owner retry must call the idempotent allocation service rather than editing records directly.
 
 ## Environment
 
