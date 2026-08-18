@@ -2,7 +2,7 @@
 
 ## Current milestone
 
-Milestone 6 — Razorpay test mode and idempotent webhooks (complete)
+Milestone 7 — Redemption eligibility views (complete)
 
 ## Completed
 
@@ -31,6 +31,9 @@ Milestone 6 — Razorpay test mode and idempotent webhooks (complete)
 - Signed raw-body `payment.captured` webhooks with a unique event ledger and idempotent financial processing.
 - Unique Razorpay order/payment identifiers and one resumable pending order for once-per-month accounts.
 - Shared callback/webhook confirmation services that create at most one cash or metal benefit.
+- India-local, date-derived active/not-yet-eligible, redemption-eligible, and redeemed display states.
+- Owner dashboard counts for eligible now and exclusive 1–30, 31–60, and 61–90-day forecast windows.
+- Owner-only grouped eligibility review and customer-facing eligibility guidance without automatic account closure.
 
 ## In progress
 
@@ -53,22 +56,26 @@ Milestone 6 — Razorpay test mode and idempotent webhooks (complete)
   reconciliation, refunds, disputes, and failure-event handling remain future work.
 - An abandoned once-per-month Razorpay order can be resumed, but it has no automatic
   expiry/cancellation workflow yet.
+- Eligibility is visible but does not yet send reminders or initiate/complete a
+  redemption; those financial mutations belong to Milestone 8.
 
 ## Deferred
 
-- Redemption, bonus, and formal audit/correction workflows.
+- Redemption execution, bonus, and formal audit/correction workflows.
 
 ## Verification
 
 - PostgreSQL 16 migrations applied successfully.
-- 73 tests pass, including Razorpay order/API/HMAC boundaries, invalid-payment rejection, duplicate callback/webhook idempotency, GoldAPI behavior, allocation recovery, liability reconciliation, authorization, and prior regressions.
+- 81 tests pass, including exact eligibility boundaries, derived-status non-mutation, owner authorization, Razorpay idempotency, GoldAPI behavior, allocation recovery, liability reconciliation, and prior regressions.
 - Migration `schemes.0005` is applied to PostgreSQL.
+- Milestone 7 requires no migration; migration drift check reports no changes.
 - Django system check and migration drift check pass.
 - Production static collection and deployment check pass with preload explicitly enabled.
 - Live-server checkpoint passes for owner and customer login, UI-created plan/customer/CASH-GOLD-SILVER enrolments, three mock payments, customer entitlements, owner contribution visibility, and exact liability/activity deltas.
 - Live GoldAPI HTTP behavior is verified at the adapter boundary with deterministic mocked responses; no real provider request was made because no API key is stored in the repository.
 - Live-server recovery smoke passes across a rate-failure/server-restart/rate-restoration sequence: verified payment remains unallocated, owner retry creates exactly one 0.800000 g allocation, and all disposable records are removed.
+- Milestone 7 live-HTTP smoke passes for owner forecast/detail views and customer redemption-eligible guidance; the database status remains `ACTIVE`, and all disposable records are removed.
 
 ## Next recommended step
 
-Milestone 7 — redemption eligibility views.
+Milestone 8 — redemption.

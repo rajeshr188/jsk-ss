@@ -31,6 +31,7 @@ graph TD
 - Services own transactional mutations such as customer creation and enrolment.
 - Selectors own reusable reads such as customer scheme summaries.
 - The owner liability selector derives separate INR, gold, and silver obligations and applies current reference quotes only for indicative metal exposure.
+- The redemption eligibility selector partitions open accounts from their snapshotted `eligible_from` dates into non-overlapping owner forecast windows without mutating account state.
 - Models and database constraints protect structural invariants.
 
 ## Authentication and authorization
@@ -68,3 +69,5 @@ Razorpay contribution (test): customer account → validate → pending contribu
 Metal contribution: customer account → Pay now → verified contribution → configured rate quote → immutable rate snapshot → one immutable six-decimal allocation → derived gold or silver gram balance. Rate failure branches to paid/allocation-pending → owner review → controlled retry.
 
 Owner liability dashboard: paid cash contributions → outstanding INR principal; paid metal allocations → separate gold/silver grams → current provider quotes → separate indicative INR exposures. Reference quotes used for display do not create or alter historical allocation snapshots. Activity counters use successful payment timestamps in the India-local calendar day and month.
+
+Eligibility: India-local current date plus each agreement's `eligible_from` snapshot → active/not-yet-eligible or redemption-eligible display state → exclusive owner windows for eligible now, days 1–30, 31–60, and 61–90. Eligibility is a read model; it does not create a redemption or persist an automatic status change.

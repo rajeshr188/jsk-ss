@@ -33,6 +33,7 @@ from .selectors import (
     get_owner_contributions,
     get_owner_customers,
     get_owner_liability_summary,
+    get_redemption_eligibility_summary,
 )
 from .services import (
     create_customer,
@@ -57,9 +58,54 @@ def owner_dashboard(request):
     activity = get_owner_activity_summary()
     context = {
         "activity": activity,
+        "eligibility": get_redemption_eligibility_summary(),
         "liabilities": get_owner_liability_summary(),
     }
     return render(request, "schemes/owner_dashboard.html", context)
+
+
+@owner_required
+def redemption_eligibility(request):
+    eligibility = get_redemption_eligibility_summary()
+    return render(
+        request,
+        "schemes/redemption_eligibility.html",
+        {
+            "eligibility": eligibility,
+            "eligibility_groups": (
+                (
+                    "Eligible now",
+                    "Agreement duration complete; the account remains open until redemption.",
+                    eligibility.eligible_now,
+                ),
+                (
+                    "Next 30 days",
+                    "Becomes eligible 1–30 days from today.",
+                    eligibility.next_30_days,
+                ),
+                (
+                    "Days 31–60",
+                    "Becomes eligible 31–60 days from today.",
+                    eligibility.next_60_days,
+                ),
+                (
+                    "Days 61–90",
+                    "Becomes eligible 61–90 days from today.",
+                    eligibility.next_90_days,
+                ),
+                (
+                    "Later",
+                    "Active agreements more than 90 days from eligibility.",
+                    eligibility.later,
+                ),
+                (
+                    "Redeemed",
+                    "Accounts already completed through redemption.",
+                    eligibility.redeemed,
+                ),
+            ),
+        },
+    )
 
 
 @owner_required

@@ -8,6 +8,7 @@
     <a class="small" href="{% url 'schemes:my_schemes' %}">← All schemes</a>
     <h1 class="mb-1">{{ scheme_account.get_savings_mode_display }}</h1>
     <div class="text-muted">{{ scheme_account.scheme_number }}</div>
+    <span class="badge text-bg-secondary mt-2">{{ scheme_account.effective_status_label }}</span>
   </div>
   {% if payment_gateway_enabled %}
     {% if scheme_account.savings_mode == 'CASH' or metal_rate_provider_enabled %}
@@ -15,6 +16,19 @@
     {% endif %}
   {% endif %}
 </div>
+
+{% if scheme_account.effective_status == 'REDEMPTION_ELIGIBLE' %}
+<div class="alert alert-success" role="alert">
+  This scheme became eligible for redemption on {{ scheme_account.eligible_from|date:'d M Y' }}.
+  It remains open until the store completes a redemption.
+</div>
+{% elif scheme_account.effective_status == 'REDEEMED' %}
+<div class="alert alert-secondary" role="alert">This scheme has been redeemed.</div>
+{% else %}
+<div class="alert alert-info" role="alert">
+  Redemption eligibility begins on {{ scheme_account.eligible_from|date:'d M Y' }}.
+</div>
+{% endif %}
 
 {% if scheme_account.savings_mode == 'CASH' %}
 <div class="card mb-4"><div class="card-body">

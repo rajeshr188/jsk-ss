@@ -178,6 +178,8 @@ class SchemeAccount(models.Model):
 
     @property
     def effective_status_label(self):
+        if self.effective_status == self.Status.ACTIVE:
+            return "Active — not yet eligible"
         return self.Status(self.effective_status).label
 
     def __str__(self):

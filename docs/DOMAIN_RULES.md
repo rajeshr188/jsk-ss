@@ -47,6 +47,9 @@ This is the canonical source for stable business rules.
 ## Redemption and financial invariants
 
 - **RED-001 / FIN-006:** A customer cannot redeem more than the outstanding entitlement.
+- **RED-002:** Before redemption, effective status is derived in the India-local calendar: before `eligible_from` is `ACTIVE / NOT YET ELIGIBLE`; on or after `eligible_from` is `REDEMPTION_ELIGIBLE`.
+- **RED-003:** Reaching `eligible_from` never closes an account, mutates its stored status, or creates a redemption. Only a completed redemption may make it `REDEEMED`.
+- **RED-004:** Owner forecast bands are exclusive: eligible now, days 1–30, days 31–60, and days 61–90. Redeemed accounts are excluded from every open-account band.
 - **FIN-007:** Gold, silver, and INR liabilities are never combined into a single balance.
 - **FIN-008:** All financial calculations use `Decimal` with explicit rounding.
 - **FIN-009:** Editing a plan does not rewrite existing account economic terms.

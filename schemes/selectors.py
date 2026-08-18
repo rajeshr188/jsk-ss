@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import datetime, time, timedelta
+from datetime import date, datetime, time, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 
 from django.core.exceptions import ImproperlyConfigured
@@ -43,6 +43,33 @@ class OwnerActivitySummary:
     contribution_count_today: int
     contribution_count_month: int
     unallocated_payment_count: int
+
+
+@dataclass(frozen=True)
+class RedemptionEligibilitySummary:
+    as_of: date
+    eligible_now: tuple
+    next_30_days: tuple
+    next_60_days: tuple
+    next_90_days: tuple
+    later: tuple
+    redeemed: tuple
+
+    @property
+    def eligible_now_count(self):
+        return len(self.eligible_now)
+
+    @property
+    def next_30_days_count(self):
+        return len(self.next_30_days)
+
+    @property
+    def next_60_days_count(self):
+        return len(self.next_60_days)
+
+    @property
+    def next_90_days_count(self):
+        return len(self.next_90_days)
 
 
 def get_customer_scheme_summary(user):
@@ -255,4 +282,46 @@ def get_owner_activity_summary(as_of=None):
         contribution_count_today=contribution_counts["today"],
         contribution_count_month=contribution_counts["month"],
         unallocated_payment_count=contribution_counts["unallocated"],
+    )
+
+
+def get_redemption_eligibility_summary(as_of=None):
+    as_of = as_of or timezone.localdate()
+    day_30 = as_of + timedelta(days=30)
+    day_60 = as_of + timedelta(days=60)
+    day_90 = as_of + timedelta(days=90)
+    open_accounts = list(
+        SchemeAccount.objects.exclude(status=SchemeAccount.Status.REDEEMED)
+        .select_related("customer", "plan")
+        .order_by("eligible_from", "scheme_number")
+    )
+    redeemed = tuple(
+        SchemeAccount.objects.filter(status=SchemeAccount.Status.REDEEMED)
+        .select_related("customer", "plan")
+        .order_by("-eligible_from", "scheme_number")
+    )
+    return RedemptionEligibilitySummary(
+        as_of=as_of,
+        eligible_now=tuple(
+            account for account in open_accounts if account.eligible_from <= as_of
+        ),
+        next_30_days=tuple(
+            account
+            for account in open_accounts
+            if as_of < account.eligible_from <= day_30
+        ),
+        next_60_days=tuple(
+            account
+            for account in open_accounts
+            if day_30 < account.eligible_from <= day_60
+        ),
+        next_90_days=tuple(
+            account
+            for account in open_accounts
+            if day_60 < account.eligible_from <= day_90
+        ),
+        later=tuple(
+            account for account in open_accounts if account.eligible_from > day_90
+        ),
+        redeemed=redeemed,
     )

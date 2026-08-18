@@ -7,6 +7,11 @@ app_name = "schemes"
 urlpatterns = [
     path("start/", views.post_login, name="post_login"),
     path("owner/", views.owner_dashboard, name="owner_dashboard"),
+    path(
+        "owner/redemptions/eligibility/",
+        views.redemption_eligibility,
+        name="redemption_eligibility",
+    ),
     path("owner/customers/", views.customer_list, name="customer_list"),
     path("owner/customers/add/", views.customer_add, name="customer_add"),
     path(

@@ -9,7 +9,7 @@ uv run --env-file .env python manage.py check
 uv run --env-file .env python manage.py makemigrations --check --dry-run
 ```
 
-Current regressions cover amount/frequency enforcement, failed-payment entitlement, confirmation/allocation idempotency, Razorpay order/API/HMAC boundaries, duplicate callbacks and webhooks, exact metal calculation, historical-rate stability, GoldAPI request/response validation, paid-unallocated recovery, customer isolation, owner liability reconciliation, current-exposure rounding, India-local activity periods, and database constraints. Future suites must add over-redemption prevention.
+Current regressions cover amount/frequency enforcement, failed-payment entitlement, confirmation/allocation idempotency, Razorpay order/API/HMAC boundaries, duplicate callbacks and webhooks, exact metal calculation, historical-rate stability, GoldAPI request/response validation, paid-unallocated recovery, customer isolation, owner liability reconciliation, current-exposure rounding, India-local activity periods, eligibility status and exact 30/60/90-day boundaries, and database constraints. Future suites must add over-redemption prevention.
 
 Mock financial tests use `override_settings` for payment and rate configuration. For manual testing, put `DEBUG=True`, `PAYMENT_GATEWAY=mock`, and `METAL_RATE_PROVIDER=mock` in the ignored `.env`, plus optional mock rates.
 
@@ -37,8 +37,12 @@ Razorpay tests likewise replace the HTTPS boundary with deterministic order and 
 - Restore the provider and confirm the owner retry creates one allocation and clears the exception
 - Switch to private Razorpay test credentials, create an order, complete Standard Checkout, and confirm the callback and `payment.captured` webhook still produce exactly one benefit
 - Repeat the same signed webhook and confirm the contribution, balance, and allocation counts remain unchanged
+- Confirm the owner eligibility view groups accounts into eligible now, days 1–30, 31–60, 61–90, later, and redeemed without overlap
+- Confirm an eligible customer sees the new status while the underlying account remains open
 - Redemption checks are added in later milestones
 
 The complete checklist through owner liability reconciliation was exercised over live HTTP for the MVP Alpha checkpoint. The checkpoint created its plan, customer, three enrolments, and three payments through authenticated application forms, compared liability deltas against the pre-run dashboard, and removed all disposable records afterward.
 
 Milestone 5 additionally exercised the recovery path over live HTTP across a development-server restart: a verified payment with an invalid rate remained paid/allocation-pending, both roles saw the correct state, and an owner-only retry after restoring the rate created one 0.800000 g allocation. The smoke harness and tagged records were removed afterward.
+
+Milestone 7 exercised owner and customer sessions over live HTTP: the owner dashboard and grouped eligibility view showed the tagged account in eligible-now, the customer saw redemption-eligible guidance, and a direct database check confirmed the account remained stored as `ACTIVE`. The temporary server and tagged records were removed afterward.

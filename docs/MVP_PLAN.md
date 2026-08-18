@@ -8,7 +8,7 @@
 - [x] MVP Alpha checkpoint
 - [x] Milestone 5 — Live metal-rate provider
 - [x] Milestone 6 — Razorpay test mode and idempotent webhooks
-- [ ] Milestone 7 — Redemption eligibility views
+- [x] Milestone 7 — Redemption eligibility views
 - [ ] Milestone 8 — Redemption
 - [ ] MVP Beta checkpoint
 - [ ] Milestone 9 — Cash bonus
