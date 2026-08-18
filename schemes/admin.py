@@ -4,6 +4,7 @@ from .models import (
     Contribution,
     Customer,
     MetalAllocation,
+    PaymentWebhookEvent,
     RateSnapshot,
     SchemeAccount,
     SchemePlan,
@@ -75,11 +76,51 @@ class ContributionAdmin(admin.ModelAdmin):
         "frequency_rule_snapshot",
         "status",
         "payment_gateway",
+        "gateway_order_id",
         "gateway_reference",
+        "gateway_signature",
         "allocation_error",
         "allocation_attempted_at",
         "created_at",
         "paid_at",
+    )
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(PaymentWebhookEvent)
+class PaymentWebhookEventAdmin(admin.ModelAdmin):
+    list_display = (
+        "event_id",
+        "event_type",
+        "status",
+        "contribution",
+        "received_at",
+        "processed_at",
+    )
+    list_filter = ("gateway", "event_type", "status")
+    search_fields = (
+        "event_id",
+        "gateway_order_id",
+        "gateway_reference",
+        "contribution__scheme_account__scheme_number",
+    )
+    readonly_fields = (
+        "gateway",
+        "event_id",
+        "event_type",
+        "payload_sha256",
+        "status",
+        "contribution",
+        "gateway_order_id",
+        "gateway_reference",
+        "error",
+        "received_at",
+        "processed_at",
     )
 
     def has_add_permission(self, request):

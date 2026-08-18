@@ -1,0 +1,58 @@
+{% extends '_base.html' %}
+
+{% block title %}Razorpay test checkout | Jai Shri Krishna Jewellery{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center"><div class="col-lg-6">
+  <a class="small" href="{% url 'schemes:my_scheme_detail' contribution.scheme_account.scheme_number %}">← Back to scheme</a>
+  <h1>Razorpay test checkout</h1>
+  <p class="text-muted">{{ contribution.scheme_account.scheme_number }} · Order {{ contribution.gateway_order_id }}</p>
+  <div class="card mb-3"><div class="card-body">
+    <div class="text-muted">Contribution amount</div>
+    <div class="display-6">₹{{ contribution.amount|floatformat:2 }}</div>
+  </div></div>
+  <div class="alert alert-warning" role="alert">
+    Test mode only. Razorpay will simulate the transaction; no real money is collected.
+  </div>
+  <button class="btn btn-jsk" id="open-checkout" type="button">Open secure test checkout</button>
+  <form id="verification-form" method="post" action="{% url 'schemes:razorpay_confirm' contribution.pk %}" class="d-none">
+    {% csrf_token %}
+    <input type="hidden" name="razorpay_payment_id" id="razorpay-payment-id">
+    <input type="hidden" name="razorpay_order_id" id="razorpay-order-id">
+    <input type="hidden" name="razorpay_signature" id="razorpay-signature">
+  </form>
+</div></div>
+{% endblock %}
+
+{% block javascript %}
+{{ block.super }}
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script>
+  (() => {
+    const button = document.getElementById("open-checkout");
+    button.addEventListener("click", () => {
+      const checkout = new Razorpay({
+        key: "{{ razorpay_key_id|escapejs }}",
+        amount: "{{ amount_subunits }}",
+        currency: "INR",
+        name: "Jai Shri Krishna Jewellery",
+        description: "Scheme contribution (test mode)",
+        order_id: "{{ contribution.gateway_order_id|escapejs }}",
+        prefill: {
+          name: "{{ contribution.scheme_account.customer.full_name|escapejs }}",
+          email: "{{ contribution.scheme_account.customer.email|escapejs }}",
+          contact: "{{ contribution.scheme_account.customer.mobile_number|escapejs }}"
+        },
+        handler: (response) => {
+          document.getElementById("razorpay-payment-id").value = response.razorpay_payment_id;
+          document.getElementById("razorpay-order-id").value = response.razorpay_order_id;
+          document.getElementById("razorpay-signature").value = response.razorpay_signature;
+          document.getElementById("verification-form").submit();
+        },
+        theme: { color: "#704214" }
+      });
+      checkout.open();
+    });
+  })();
+</script>
+{% endblock %}

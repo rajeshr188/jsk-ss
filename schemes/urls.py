@@ -34,4 +34,19 @@ urlpatterns = [
         views.pay_contribution,
         name="pay_contribution",
     ),
+    path(
+        "mine/payments/<int:contribution_id>/checkout/",
+        views.razorpay_checkout,
+        name="razorpay_checkout",
+    ),
+    path(
+        "mine/payments/<int:contribution_id>/confirm/",
+        views.razorpay_confirm,
+        name="razorpay_confirm",
+    ),
+    path(
+        "payments/razorpay/webhook/",
+        views.razorpay_webhook,
+        name="razorpay_webhook",
+    ),
 ]

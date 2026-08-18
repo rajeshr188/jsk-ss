@@ -205,7 +205,9 @@ class Contribution(models.Model):
     )
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
     payment_gateway = models.CharField(max_length=30)
+    gateway_order_id = models.CharField(max_length=120, null=True, blank=True, unique=True)
     gateway_reference = models.CharField(max_length=120, null=True, blank=True, unique=True)
+    gateway_signature = models.CharField(max_length=128, blank=True)
     allocation_error = models.TextField(blank=True)
     allocation_attempted_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -241,6 +243,15 @@ class Contribution(models.Model):
                 ),
                 name="one_paid_contribution_per_account_period",
             ),
+            models.UniqueConstraint(
+                fields=["scheme_account", "contribution_period"],
+                condition=models.Q(
+                    status="PENDING",
+                    payment_gateway="razorpay",
+                    frequency_rule_snapshot="ONCE_PER_MONTH",
+                ),
+                name="one_pending_razorpay_monthly_payment",
+            ),
         ]
         indexes = [
             models.Index(fields=["status", "created_at"], name="contrib_status_created_idx"),
@@ -248,6 +259,52 @@ class Contribution(models.Model):
 
     def __str__(self):
         return f"{self.scheme_account.scheme_number} — ₹{self.amount} — {self.status}"
+
+
+class PaymentWebhookEvent(models.Model):
+    class Status(models.TextChoices):
+        RECEIVED = "RECEIVED", "Received"
+        PROCESSED = "PROCESSED", "Processed"
+        IGNORED = "IGNORED", "Ignored"
+        FAILED = "FAILED", "Failed"
+
+    gateway = models.CharField(max_length=30)
+    event_id = models.CharField(max_length=120)
+    event_type = models.CharField(max_length=100)
+    payload_sha256 = models.CharField(max_length=64)
+    status = models.CharField(
+        max_length=20, choices=Status.choices, default=Status.RECEIVED
+    )
+    contribution = models.ForeignKey(
+        Contribution,
+        on_delete=models.PROTECT,
+        related_name="webhook_events",
+        null=True,
+        blank=True,
+    )
+    gateway_order_id = models.CharField(max_length=120, blank=True)
+    gateway_reference = models.CharField(max_length=120, blank=True)
+    error = models.TextField(blank=True)
+    received_at = models.DateTimeField(auto_now_add=True)
+    processed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-received_at", "-pk"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["gateway", "event_id"],
+                name="unique_gateway_webhook_event",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=["gateway", "status", "received_at"],
+                name="webhook_gateway_status_idx",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.gateway} — {self.event_type} — {self.status}"
 
 
 class RateSnapshot(models.Model):

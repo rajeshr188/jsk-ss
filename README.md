@@ -40,7 +40,11 @@ Alternatively, set `DJANGO_SECRET_KEY` and run `docker compose up --build`; Comp
 | `ALLOWED_HOSTS` | no | Comma-separated host names |
 | `CSRF_TRUSTED_ORIGINS` | no | Comma-separated trusted origins |
 | `DEFAULT_FROM_EMAIL` | no | Sender for authentication emails |
-| `PAYMENT_GATEWAY` | Milestone 2 | Must be `mock` for the development payment flow |
+| `PAYMENT_GATEWAY` | contributions | `mock` in debug or `razorpay` for test-mode checkout |
+| `RAZORPAY_KEY_ID` | Razorpay | Test key ID beginning with `rzp_test_`; live keys are rejected |
+| `RAZORPAY_KEY_SECRET` | Razorpay | Test key secret; server-side only and never committed |
+| `RAZORPAY_WEBHOOK_SECRET` | Razorpay | Secret configured separately for webhook signing |
+| `RAZORPAY_TIMEOUT_SECONDS` | no | Razorpay API timeout; defaults to `10`, maximum `30` |
 | `METAL_RATE_PROVIDER` | metal schemes | `mock` in debug or `goldapi` for live XAU/XAG-to-INR rates |
 | `GOLDAPI_API_KEY` | live rates | Required when `METAL_RATE_PROVIDER=goldapi`; never commit it |
 | `GOLDAPI_TIMEOUT_SECONDS` | no | GoldAPI HTTPS timeout; defaults to `10`, maximum `30` |
@@ -66,7 +70,7 @@ MOCK_GOLD_RATE=12500.0000
 MOCK_SILVER_RATE=150.0000
 ```
 
-The payment screen is unavailable unless mock payment mode is enabled. Gold and silver payments additionally require a configured metal-rate provider. Mock payments record no real transfer; rates are snapshotted and INR is converted to six-decimal grams for local testing. Razorpay and `seed_demo` remain deferred.
+The payment screen is unavailable unless a payment adapter is configured. Gold and silver payments additionally require a configured metal-rate provider. Mock payments record no real transfer; rates are snapshotted and INR is converted to six-decimal grams for local testing. `seed_demo` remains deferred.
 
 The owner dashboard derives outstanding cash principal and gold/silver gram obligations from successful financial records. Current mock rates provide separate indicative INR exposure for each metal; these display values never alter historical allocations and are never combined with cash into one liability total.
 
@@ -84,6 +88,22 @@ GOLDAPI_CACHE_SECONDS=60
 The adapter calls `https://www.goldapi.io/api/XAU/INR` or `XAG/INR` over HTTPS and sends the key in the `x-access-token` header, never in the URL. It validates metal, currency, timestamp, and the per-gram rate before creating a snapshot. Quotes are cached briefly to protect provider quota. See the [official GoldAPI documentation](https://www.goldapi.io/api-documentation) and [official integration examples](https://github.com/goldapi-io).
 
 If payment verification succeeds but a rate cannot be obtained, the contribution becomes **Paid — allocation pending**. No rate or grams are invented. The owner dashboard warns about the exception, and the owner can retry safely from the contributions page after restoring provider access.
+
+## Razorpay test mode
+
+Generate test-mode API keys in the Razorpay Dashboard and configure a separate webhook secret in the ignored `.env`:
+
+```dotenv
+PAYMENT_GATEWAY=razorpay
+RAZORPAY_KEY_ID=rzp_test_replace_me
+RAZORPAY_KEY_SECRET=replace-me
+RAZORPAY_WEBHOOK_SECRET=replace-me-with-a-separate-secret
+RAZORPAY_TIMEOUT_SECONDS=10
+```
+
+Configure the test-mode webhook URL as `https://your-host.example/scheme/payments/razorpay/webhook/` and subscribe to `payment.captured`. The browser callback is verified with HMAC using the order ID stored locally, then the server fetches the payment and requires the same order, amount, INR currency, and captured status. Webhooks are verified against the untouched request body; duplicate `X-Razorpay-Event-Id` values are idempotent.
+
+Only test keys are accepted in this milestone. Razorpay test mode simulates transactions and does not move real money. See the official [server integration](https://razorpay.com/docs/payments/server-integration/python/integration-steps/), [webhook validation](https://razorpay.com/docs/webhooks/validate-test/), and [test/live mode](https://razorpay.com/docs/payments/dashboard/test-live-modes/) guides.
 
 ## Verification
 

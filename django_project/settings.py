@@ -119,6 +119,10 @@ if not DATABASE_URL:
 DATABASES = {"default": postgres_database_from_url(DATABASE_URL)}
 
 PAYMENT_GATEWAY = os.getenv("PAYMENT_GATEWAY", "").strip().lower()
+RAZORPAY_KEY_ID = os.getenv("RAZORPAY_KEY_ID", "").strip()
+RAZORPAY_KEY_SECRET = os.getenv("RAZORPAY_KEY_SECRET", "").strip()
+RAZORPAY_WEBHOOK_SECRET = os.getenv("RAZORPAY_WEBHOOK_SECRET", "").strip()
+RAZORPAY_TIMEOUT_SECONDS = os.getenv("RAZORPAY_TIMEOUT_SECONDS", "10")
 METAL_RATE_PROVIDER = os.getenv("METAL_RATE_PROVIDER", "").strip().lower()
 MOCK_GOLD_RATE = os.getenv("MOCK_GOLD_RATE", "12500.0000")
 MOCK_SILVER_RATE = os.getenv("MOCK_SILVER_RATE", "150.0000")

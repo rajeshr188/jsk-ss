@@ -7,7 +7,7 @@
 - [x] Milestone 4 — Owner liability dashboard
 - [x] MVP Alpha checkpoint
 - [x] Milestone 5 — Live metal-rate provider
-- [ ] Milestone 6 — Razorpay test mode and idempotent webhooks
+- [x] Milestone 6 — Razorpay test mode and idempotent webhooks
 - [ ] Milestone 7 — Redemption eligibility views
 - [ ] Milestone 8 — Redemption
 - [ ] MVP Beta checkpoint

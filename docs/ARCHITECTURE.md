@@ -18,6 +18,7 @@ graph TD
   C -->|one-to-many| A[SchemeAccount]
   P[SchemePlan] -->|one-to-many| A
   A -->|one-to-many| N[Contribution]
+  W[PaymentWebhookEvent] -->|zero-or-many| N
   N -->|zero-or-one| M[MetalAllocation]
   M -->|one-to-one| R[RateSnapshot]
 ```
@@ -46,7 +47,9 @@ If public signup is introduced later, registration must create a complete custom
 
 Cash principal is derived by selectors from `PAID` contribution records; pending and failed attempts contribute zero. Gold and silver balances are derived from immutable `MetalAllocation` quantities attached one-to-one to paid contributions. Historical `RateSnapshot` and allocation records reject application-level edits. Future redemption balances must likewise be derived from redemptions and auditable corrections—not mutable balance fields.
 
-`MockPaymentGateway` is the only payment adapter currently implemented. It can be resolved only when `DEBUG=True` and `PAYMENT_GATEWAY=mock`. A result must be verified before confirmation changes `PENDING` to `PAID`.
+`MockPaymentGateway` remains available only when `DEBUG=True` and `PAYMENT_GATEWAY=mock`. `RazorpayPaymentGateway` is the external test-mode adapter. It creates orders through a fixed authenticated HTTPS API, verifies checkout HMAC signatures using the local order ID, fetches the payment server-side, and accepts only a captured payment matching the local amount and INR currency. Live key IDs are deliberately rejected.
+
+Razorpay webhooks are a CSRF-exempt provider endpoint protected by HMAC over the untouched request body. Only `payment.captured` changes financial state. `PaymentWebhookEvent` records a payload hash and provider event ID behind a database uniqueness constraint; duplicate or out-of-order deliveries therefore re-enter the same idempotent confirmation/allocation services without creating additional entitlement. Full webhook payloads are not retained.
 
 `MockMetalRateProvider` can be resolved only when `DEBUG=True` and `METAL_RATE_PROVIDER=mock`. `GoldApiMetalRateProvider` is the live implementation selected with `METAL_RATE_PROVIDER=goldapi`; it calls fixed HTTPS XAU/XAG-to-INR endpoints with header authentication, bounded timeouts, strict response validation, and a short process-local cache. Both return the same provider-neutral quote containing provider/applied rates, provider timestamp, and purity metadata.
 
@@ -58,7 +61,9 @@ Owner: login → dashboard → customers → add customer → customer detail �
 
 Customer: login → My Schemes → account terms. Login routing is role-aware.
 
-Cash contribution: customer account → Pay now → validate snapshotted amount/frequency rules → create pending contribution → verified mock result → idempotent confirmation → derived cash balance.
+Cash contribution (mock): customer account → Pay now → validate snapshotted amount/frequency rules → create pending contribution → verified mock result → idempotent confirmation → derived cash balance.
+
+Razorpay contribution (test): customer account → validate → pending contribution → server-created order → Standard Checkout → HMAC callback plus captured-payment API check and/or signed `payment.captured` webhook → idempotent confirmation → cash entitlement or one metal allocation. A once-per-month account resumes its single pending Razorpay order instead of creating parallel payable orders.
 
 Metal contribution: customer account → Pay now → verified contribution → configured rate quote → immutable rate snapshot → one immutable six-decimal allocation → derived gold or silver gram balance. Rate failure branches to paid/allocation-pending → owner review → controlled retry.
 

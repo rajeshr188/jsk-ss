@@ -2,7 +2,7 @@
 
 ## Current milestone
 
-Milestone 5 — Live metal-rate provider (complete)
+Milestone 6 — Razorpay test mode and idempotent webhooks (complete)
 
 ## Completed
 
@@ -26,6 +26,11 @@ Milestone 5 — Live metal-rate provider (complete)
 - Recoverable `PAID_UNALLOCATED` state when a verified payment cannot obtain a valid rate.
 - Owner alerts, diagnostics, and an authorized idempotent allocation-retry action.
 - Future public-signup requirements documented under `AUTH-*` domain rules.
+- Razorpay test-mode order creation and customer Standard Checkout flow.
+- Browser callback verification using the local order ID, HMAC, and a captured-payment server lookup.
+- Signed raw-body `payment.captured` webhooks with a unique event ledger and idempotent financial processing.
+- Unique Razorpay order/payment identifiers and one resumable pending order for once-per-month accounts.
+- Shared callback/webhook confirmation services that create at most one cash or metal benefit.
 
 ## In progress
 
@@ -42,16 +47,22 @@ Milestone 5 — Live metal-rate provider (complete)
 - Paid metal contributions that cannot obtain a valid rate require an owner to
   retry allocation manually; automated retrying and external alert delivery are
   deferred.
+- No external Razorpay transaction/webhook was exercised because private test
+  credentials and a public HTTPS callback endpoint are not stored in the project.
+- Razorpay live keys are intentionally rejected. Live-mode onboarding, operational
+  reconciliation, refunds, disputes, and failure-event handling remain future work.
+- An abandoned once-per-month Razorpay order can be resumed, but it has no automatic
+  expiry/cancellation workflow yet.
 
 ## Deferred
 
-- Razorpay payment integration, redemption, bonus, and formal audit/correction workflows.
+- Redemption, bonus, and formal audit/correction workflows.
 
 ## Verification
 
 - PostgreSQL 16 migrations applied successfully.
-- 58 tests pass, including GoldAPI request security/parsing/cache/failures, live-provider allocation integration, paid-unallocated recovery, owner-only retry, liability reconciliation, authorization, and prior regressions.
-- Migration `schemes.0004` is applied to PostgreSQL.
+- 73 tests pass, including Razorpay order/API/HMAC boundaries, invalid-payment rejection, duplicate callback/webhook idempotency, GoldAPI behavior, allocation recovery, liability reconciliation, authorization, and prior regressions.
+- Migration `schemes.0005` is applied to PostgreSQL.
 - Django system check and migration drift check pass.
 - Production static collection and deployment check pass with preload explicitly enabled.
 - Live-server checkpoint passes for owner and customer login, UI-created plan/customer/CASH-GOLD-SILVER enrolments, three mock payments, customer entitlements, owner contribution visibility, and exact liability/activity deltas.
@@ -60,4 +71,4 @@ Milestone 5 — Live metal-rate provider (complete)
 
 ## Next recommended step
 
-Milestone 6 — Razorpay test mode with verified, idempotent callbacks/webhooks.
+Milestone 7 — redemption eligibility views.

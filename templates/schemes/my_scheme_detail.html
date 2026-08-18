@@ -9,7 +9,7 @@
     <h1 class="mb-1">{{ scheme_account.get_savings_mode_display }}</h1>
     <div class="text-muted">{{ scheme_account.scheme_number }}</div>
   </div>
-  {% if mock_payment_enabled %}
+  {% if payment_gateway_enabled %}
     {% if scheme_account.savings_mode == 'CASH' or metal_rate_provider_enabled %}
     <a class="btn btn-jsk" href="{% url 'schemes:pay_contribution' scheme_account.scheme_number %}">Pay now</a>
     {% endif %}
@@ -50,7 +50,11 @@
           {% elif contribution.status == 'FAILED' %}<span class="badge text-bg-danger">Failed</span>
           {% else %}<span class="badge text-bg-warning">Pending</span>{% endif %}
         </td>
-        <td><small>{{ contribution.gateway_reference|default:'—' }}</small></td>
+        <td><small>{{ contribution.gateway_reference|default:'—' }}</small>
+          {% if contribution.status == 'PENDING' and contribution.payment_gateway == 'razorpay' and contribution.gateway_order_id %}
+          <br><a href="{% url 'schemes:razorpay_checkout' contribution.pk %}">Resume test payment</a>
+          {% endif %}
+        </td>
       </tr>
       {% empty %}<tr><td colspan="7" class="text-center text-muted py-4">No contributions yet.</td></tr>{% endfor %}
     </tbody>

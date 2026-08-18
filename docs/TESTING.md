@@ -9,11 +9,13 @@ uv run --env-file .env python manage.py check
 uv run --env-file .env python manage.py makemigrations --check --dry-run
 ```
 
-Current regressions cover amount/frequency enforcement, failed-payment entitlement, confirmation/allocation idempotency, exact metal calculation, historical-rate stability, GoldAPI request/response validation, paid-unallocated recovery, customer isolation, owner liability reconciliation, current-exposure rounding, India-local activity periods, and database constraints. Future suites must add webhook idempotency and over-redemption prevention.
+Current regressions cover amount/frequency enforcement, failed-payment entitlement, confirmation/allocation idempotency, Razorpay order/API/HMAC boundaries, duplicate callbacks and webhooks, exact metal calculation, historical-rate stability, GoldAPI request/response validation, paid-unallocated recovery, customer isolation, owner liability reconciliation, current-exposure rounding, India-local activity periods, and database constraints. Future suites must add over-redemption prevention.
 
 Mock financial tests use `override_settings` for payment and rate configuration. For manual testing, put `DEBUG=True`, `PAYMENT_GATEWAY=mock`, and `METAL_RATE_PROVIDER=mock` in the ignored `.env`, plus optional mock rates.
 
 GoldAPI tests replace the standard-library HTTP opener with deterministic responses; they never use a real key or consume provider quota. To perform an optional live check, set `METAL_RATE_PROVIDER=goldapi` and `GOLDAPI_API_KEY` in the ignored `.env`, open the owner dashboard, and confirm both cards show `goldapi` with recent provider timestamps. Do not put the token in a command, test fixture, screenshot, or committed file.
+
+Razorpay tests likewise replace the HTTPS boundary with deterministic order and payment responses. They verify raw-body webhook HMAC, invalid-callback rejection, captured-payment matching, duplicate callback/webhook idempotency, one metal allocation, and customer isolation without using provider credentials. For an external test-mode smoke, use private test keys, expose the webhook endpoint over HTTPS, subscribe to `payment.captured`, and confirm one test payment produces one contribution benefit and one processed webhook event.
 
 ## Manual smoke test
 
@@ -33,6 +35,8 @@ GoldAPI tests replace the standard-library HTTP opener with deterministic respon
 - Confirm contribution-today/month counts include successful payments only
 - Simulate a rate failure and confirm payment remains visibly paid/allocation-pending with no invented grams
 - Restore the provider and confirm the owner retry creates one allocation and clears the exception
+- Switch to private Razorpay test credentials, create an order, complete Standard Checkout, and confirm the callback and `payment.captured` webhook still produce exactly one benefit
+- Repeat the same signed webhook and confirm the contribution, balance, and allocation counts remain unchanged
 - Redemption checks are added in later milestones
 
 The complete checklist through owner liability reconciliation was exercised over live HTTP for the MVP Alpha checkpoint. The checkpoint created its plan, customer, three enrolments, and three payments through authenticated application forms, compared liability deltas against the pre-run dashboard, and removed all disposable records afterward.

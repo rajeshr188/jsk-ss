@@ -1,22 +1,24 @@
 import calendar
+import hashlib
 import secrets
 from datetime import date
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ImproperlyConfigured, ValidationError
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from .models import (
     Contribution,
     Customer,
     MetalAllocation,
+    PaymentWebhookEvent,
     RateSnapshot,
     SchemeAccount,
     SchemePlan,
 )
-from .payments import get_payment_gateway
+from .payments import PaymentGatewayError, get_payment_gateway
 from .rates import MetalRateProviderError, get_metal_rate_provider
 
 
@@ -187,6 +189,19 @@ def validate_contribution_allowed(
     return normalized_amount, period
 
 
+def validate_contribution_confirmation_allowed(contribution):
+    if contribution.frequency_rule_snapshot != SchemePlan.FrequencyRule.ONCE_PER_MONTH:
+        return
+    if Contribution.objects.filter(
+        scheme_account=contribution.scheme_account,
+        contribution_period=contribution.contribution_period,
+        status__in=SUCCESSFUL_PAYMENT_STATUSES,
+    ).exclude(pk=contribution.pk).exists():
+        raise ValidationError(
+            "A successful contribution has already been made for this calendar month."
+        )
+
+
 @transaction.atomic
 def initiate_contribution(
     *, scheme_account, amount, payment_gateway, contribution_date=None
@@ -210,7 +225,12 @@ def initiate_contribution(
 
 @transaction.atomic
 def confirm_contribution(
-    *, contribution_id, payment_gateway, gateway_reference, verified
+    *,
+    contribution_id,
+    payment_gateway,
+    gateway_reference,
+    verified,
+    gateway_signature="",
 ):
     account_id = Contribution.objects.only("scheme_account_id").get(
         pk=contribution_id
@@ -238,18 +258,20 @@ def confirm_contribution(
     if not gateway_reference:
         raise ValidationError("A verified gateway reference is required.")
 
-    validate_contribution_allowed(
-        contribution.scheme_account,
-        contribution.amount,
-        timezone.localdate(),
-        contribution_period=contribution.contribution_period,
-        exclude_contribution_id=contribution.pk,
-    )
+    validate_contribution_confirmation_allowed(contribution)
     contribution.status = Contribution.Status.PAID
     contribution.gateway_reference = gateway_reference
+    contribution.gateway_signature = gateway_signature
     contribution.paid_at = timezone.now()
     contribution.full_clean()
-    contribution.save(update_fields=["status", "gateway_reference", "paid_at"])
+    contribution.save(
+        update_fields=[
+            "status",
+            "gateway_reference",
+            "gateway_signature",
+            "paid_at",
+        ]
+    )
     return contribution
 
 
@@ -373,6 +395,198 @@ def retry_metal_allocation(*, contribution, rate_provider=None):
         raise
 
 
+def _apply_contribution_entitlement(contribution):
+    if contribution.scheme_account.savings_mode in {
+        SchemeAccount.SavingsMode.GOLD,
+        SchemeAccount.SavingsMode.SILVER,
+    }:
+        try:
+            retry_metal_allocation(contribution=contribution)
+        except EXPECTED_ALLOCATION_ERRORS:
+            return Contribution.objects.select_related("scheme_account").get(
+                pk=contribution.pk
+            )
+    return contribution
+
+
+def initiate_razorpay_contribution(
+    *, scheme_account, amount, contribution_date=None, gateway=None
+):
+    gateway = gateway or get_payment_gateway()
+    if gateway.name != "razorpay":
+        raise ImproperlyConfigured("The Razorpay payment gateway is not configured.")
+
+    normalized_amount, period = validate_contribution_allowed(
+        scheme_account, amount, contribution_date
+    )
+    contribution = Contribution.objects.filter(
+        scheme_account=scheme_account,
+        contribution_period=period,
+        frequency_rule_snapshot=SchemePlan.FrequencyRule.ONCE_PER_MONTH,
+        status=Contribution.Status.PENDING,
+        payment_gateway=gateway.name,
+    ).first()
+    if contribution is not None and contribution.amount != normalized_amount:
+        raise ValidationError(
+            "A Razorpay payment is already pending for this contribution month."
+        )
+    if contribution is None:
+        try:
+            contribution = initiate_contribution(
+                scheme_account=scheme_account,
+                amount=normalized_amount,
+                payment_gateway=gateway.name,
+                contribution_date=contribution_date,
+            )
+        except IntegrityError:
+            contribution = Contribution.objects.get(
+                scheme_account=scheme_account,
+                contribution_period=period,
+                frequency_rule_snapshot=SchemePlan.FrequencyRule.ONCE_PER_MONTH,
+                status=Contribution.Status.PENDING,
+                payment_gateway=gateway.name,
+            )
+            if contribution.amount != normalized_amount:
+                raise ValidationError(
+                    "A Razorpay payment is already pending for this contribution month."
+                ) from None
+
+    order_error = None
+    with transaction.atomic():
+        contribution = Contribution.objects.select_for_update().get(pk=contribution.pk)
+        if contribution.gateway_order_id:
+            return contribution
+        try:
+            order = gateway.create_order(contribution)
+        except PaymentGatewayError as error:
+            contribution.status = Contribution.Status.FAILED
+            contribution.full_clean()
+            contribution.save(update_fields=["status"])
+            order_error = error
+        else:
+            contribution.gateway_order_id = order.order_id
+            contribution.full_clean()
+            contribution.save(update_fields=["gateway_order_id"])
+    if order_error is not None:
+        raise order_error
+    return contribution
+
+
+def confirm_razorpay_contribution(
+    *,
+    contribution_id,
+    callback_order_id,
+    payment_id,
+    signature,
+    gateway=None,
+):
+    gateway = gateway or get_payment_gateway()
+    if gateway.name != "razorpay":
+        raise ImproperlyConfigured("The Razorpay payment gateway is not configured.")
+    contribution = Contribution.objects.select_related("scheme_account").get(
+        pk=contribution_id
+    )
+    if not contribution.gateway_order_id or callback_order_id != contribution.gateway_order_id:
+        raise ValidationError("The Razorpay order does not match this contribution.")
+    if contribution.status in SUCCESSFUL_PAYMENT_STATUSES:
+        if contribution.gateway_reference != payment_id:
+            raise ValidationError("This contribution has already been confirmed.")
+        return _apply_contribution_entitlement(contribution)
+
+    verified = gateway.verify_payment(
+        order_id=contribution.gateway_order_id,
+        payment_id=payment_id,
+        signature=signature,
+        expected_amount=contribution.amount,
+    )
+    contribution = confirm_contribution(
+        contribution_id=contribution.pk,
+        payment_gateway=gateway.name,
+        gateway_reference=payment_id,
+        gateway_signature=signature,
+        verified=verified,
+    )
+    return _apply_contribution_entitlement(contribution)
+
+
+def process_razorpay_webhook(*, event_id, body, payload):
+    payload_hash = hashlib.sha256(body).hexdigest()
+    event_type = payload.get("event") if isinstance(payload, dict) else None
+    if not isinstance(event_type, str) or not event_type:
+        raise ValidationError("Razorpay webhook event type is missing.")
+    event, _ = PaymentWebhookEvent.objects.get_or_create(
+        gateway="razorpay",
+        event_id=event_id,
+        defaults={
+            "event_type": event_type,
+            "payload_sha256": payload_hash,
+        },
+    )
+    if event.payload_sha256 != payload_hash:
+        raise ValidationError("Razorpay reused an event ID with different content.")
+    if event.status in {
+        PaymentWebhookEvent.Status.PROCESSED,
+        PaymentWebhookEvent.Status.IGNORED,
+    }:
+        return event
+
+    try:
+        if event_type != "payment.captured":
+            event.status = PaymentWebhookEvent.Status.IGNORED
+            event.processed_at = timezone.now()
+            event.error = ""
+            event.save(update_fields=["status", "processed_at", "error"])
+            return event
+
+        payment = payload.get("payload", {}).get("payment", {}).get("entity", {})
+        payment_id = payment.get("id")
+        order_id = payment.get("order_id")
+        if not isinstance(payment_id, str) or not isinstance(order_id, str):
+            raise ValidationError("Razorpay payment identifiers are missing.")
+        contribution = Contribution.objects.select_related("scheme_account").get(
+            payment_gateway="razorpay",
+            gateway_order_id=order_id,
+        )
+        if (
+            payment.get("status") != "captured"
+            or payment.get("captured") is not True
+            or payment.get("currency") != "INR"
+            or payment.get("amount") != int(contribution.amount * 100)
+        ):
+            raise ValidationError("Razorpay webhook payment details do not match.")
+
+        contribution = confirm_contribution(
+            contribution_id=contribution.pk,
+            payment_gateway="razorpay",
+            gateway_reference=payment_id,
+            verified=True,
+        )
+        contribution = _apply_contribution_entitlement(contribution)
+        event.status = PaymentWebhookEvent.Status.PROCESSED
+        event.contribution = contribution
+        event.gateway_order_id = order_id
+        event.gateway_reference = payment_id
+        event.error = ""
+        event.processed_at = timezone.now()
+        event.save(
+            update_fields=[
+                "status",
+                "contribution",
+                "gateway_order_id",
+                "gateway_reference",
+                "error",
+                "processed_at",
+            ]
+        )
+        return event
+    except (Contribution.DoesNotExist, ValidationError) as error:
+        event.status = PaymentWebhookEvent.Status.FAILED
+        event.error = str(error).strip()[:1000]
+        event.processed_at = timezone.now()
+        event.save(update_fields=["status", "error", "processed_at"])
+        raise ValidationError(event.error) from None
+
+
 def process_mock_contribution(*, scheme_account, amount, contribution_date=None):
     gateway = get_payment_gateway()
     contribution = initiate_contribution(
@@ -393,14 +607,4 @@ def process_mock_contribution(*, scheme_account, amount, contribution_date=None)
         gateway_reference=result.gateway_reference,
         verified=result.verified,
     )
-    if contribution.scheme_account.savings_mode in {
-        SchemeAccount.SavingsMode.GOLD,
-        SchemeAccount.SavingsMode.SILVER,
-    }:
-        try:
-            retry_metal_allocation(contribution=contribution)
-        except EXPECTED_ALLOCATION_ERRORS:
-            return Contribution.objects.select_related("scheme_account").get(
-                pk=contribution.pk
-            )
-    return contribution
+    return _apply_contribution_entitlement(contribution)
