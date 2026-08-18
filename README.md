@@ -125,6 +125,7 @@ uv run --env-file .env python manage.py test
 - [Architecture](docs/ARCHITECTURE.md)
 - [Domain rules](docs/DOMAIN_RULES.md)
 - [MVP plan](docs/MVP_PLAN.md)
+- [Future work](docs/FUTURE_WORK.md)
 - [Current status](docs/STATUS.md)
 - [Development conventions](docs/DEVELOPMENT.md)
 - [Testing](docs/TESTING.md)

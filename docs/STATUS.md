@@ -44,37 +44,19 @@ Milestone 8 — Redemption (complete)
 
 ## Known limitations
 
-- GoldAPI behavior is covered with deterministic HTTP-boundary tests, but a real
-  request has not been verified because no private provider key is stored here.
-- The applied metal rate currently equals the provider rate; store premiums,
-  margins, taxes, and manual rate approval are not implemented.
-- The short GoldAPI cache is process-local, so separate production workers do not
-  share quota protection.
-- Paid metal contributions that cannot obtain a valid rate require an owner to
-  retry allocation manually; automated retrying and external alert delivery are
-  deferred.
-- No external Razorpay transaction/webhook was exercised because private test
-  credentials and a public HTTPS callback endpoint are not stored in the project.
-- Razorpay live keys are intentionally rejected. Live-mode onboarding, operational
-  reconciliation, refunds, disputes, and failure-event handling remain future work.
-- An abandoned once-per-month Razorpay order can be resumed, but it has no automatic
-  expiry/cancellation workflow yet.
-- Eligibility uses exact India-local calendar dates; configurable business-day,
-  grace-period, reminder, and notification policies are not implemented.
-- Redemption records settlement facts but does not execute bank/cash payouts,
-  transfer metal, or integrate with a point-of-sale system.
-- Jewellery purchase stores an external invoice/reference and notes; inventory,
-  invoice creation, invoice-value validation, taxes, and making charges are outside scope.
-- Metal-to-cash conversion is rejected because no conversion-rate or fee policy is
-  defined. Bonus entitlement is not included until Milestone 9.
-- Completed redemptions are intentionally immutable. Reversal, correction, void,
-  approval, and exception workflows are deferred to Milestone 10.
-- Partial redemption is supported, but there are no configurable minimum settlement,
-  maximum partial count, reservation, or expiry policies.
+- External Razorpay and GoldAPI flows have deterministic boundary coverage but still
+  require private-credential verification before the MVP Beta checkpoint.
+- The application records redemptions but does not execute payouts, move inventory,
+  create invoices, or convert metal to cash.
+- Bonus, compensating correction events, operational reconciliation, automated
+  alerts/retries, receipts, and statements remain scheduled work.
+- Pricing policy, shared provider caching, payment-order expiry, eligibility
+  reminders, public onboarding, and partial-settlement policy are not yet defined.
+- The detailed, prioritized backlog is maintained in [Future work](FUTURE_WORK.md).
 
 ## Deferred
 
-- Bonus, formal audit/correction workflows, and receipts/statements.
+- See [Future work](FUTURE_WORK.md) for deployment gates and work mapped to Milestones 9–11.
 
 ## Verification
 
