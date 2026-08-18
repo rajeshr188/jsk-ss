@@ -12,7 +12,25 @@ def env_bool(name, default=False):
     value = os.getenv(name)
     if value is None:
         return default
-    return value.strip().lower() in {"1", "true", "yes", "on"}
+    normalized = value.strip().lower()
+    if normalized in {"1", "true", "yes", "on"}:
+        return True
+    if normalized in {"0", "false", "no", "off"}:
+        return False
+    raise ImproperlyConfigured(f"{name} must be a boolean value")
+
+
+def env_int(name, default, *, minimum=None, maximum=None):
+    value = os.getenv(name, str(default))
+    try:
+        parsed = int(value)
+    except ValueError as exc:
+        raise ImproperlyConfigured(f"{name} must be an integer") from exc
+    if minimum is not None and parsed < minimum:
+        raise ImproperlyConfigured(f"{name} must be at least {minimum}")
+    if maximum is not None and parsed > maximum:
+        raise ImproperlyConfigured(f"{name} must be at most {maximum}")
+    return parsed
 
 
 def env_list(name, default=""):
@@ -43,9 +61,13 @@ def postgres_database_from_url(url):
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY")
 if not SECRET_KEY:
     raise ImproperlyConfigured("DJANGO_SECRET_KEY must be set")
+SECRET_KEY_FALLBACKS = env_list("DJANGO_SECRET_KEY_FALLBACKS")
 
-DEBUG = env_bool("DEBUG")
+# Use an application-specific name so generic host variables such as DEBUG do not
+# silently alter Django's security posture.
+DEBUG = env_bool("DJANGO_DEBUG")
 ALLOWED_HOSTS = env_list("ALLOWED_HOSTS", "localhost,127.0.0.1")
+APP_RELEASE = os.getenv("APP_RELEASE", "unknown").strip() or "unknown"
 
 
 # Application definition
@@ -117,6 +139,10 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
     raise ImproperlyConfigured("DATABASE_URL must be set to a PostgreSQL database")
 DATABASES = {"default": postgres_database_from_url(DATABASE_URL)}
+DATABASES["default"]["CONN_MAX_AGE"] = env_int(
+    "DATABASE_CONN_MAX_AGE", 0 if DEBUG else 60, minimum=0
+)
+DATABASES["default"]["CONN_HEALTH_CHECKS"] = not DEBUG
 
 PAYMENT_GATEWAY = os.getenv("PAYMENT_GATEWAY", "").strip().lower()
 RAZORPAY_KEY_ID = os.getenv("RAZORPAY_KEY_ID", "").strip()
@@ -202,11 +228,22 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 CRISPY_TEMPLATE_PACK = "bootstrap5"
 
-# https://docs.djangoproject.com/en/dev/ref/settings/#email-backend
-EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
-
-# https://docs.djangoproject.com/en/dev/ref/settings/#default-from-email
+# Email defaults remain convenient locally. The deployment check rejects console or
+# dummy delivery outside development so password-reset messages cannot disappear.
+EMAIL_BACKEND = os.getenv(
+    "EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend"
+).strip()
+EMAIL_HOST = os.getenv("EMAIL_HOST", "localhost").strip()
+EMAIL_PORT = env_int("EMAIL_PORT", 25, minimum=1, maximum=65535)
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "").strip()
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
+EMAIL_USE_TLS = env_bool("EMAIL_USE_TLS")
+EMAIL_USE_SSL = env_bool("EMAIL_USE_SSL")
+EMAIL_TIMEOUT = env_int("EMAIL_TIMEOUT", 10, minimum=1, maximum=60)
+if EMAIL_USE_TLS and EMAIL_USE_SSL:
+    raise ImproperlyConfigured("EMAIL_USE_TLS and EMAIL_USE_SSL cannot both be enabled")
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "noreply@jskjewellery.local")
+SERVER_EMAIL = os.getenv("SERVER_EMAIL", DEFAULT_FROM_EMAIL)
 
 # django-debug-toolbar
 # https://django-debug-toolbar.readthedocs.io/en/latest/installation.html
@@ -247,8 +284,50 @@ CSRF_TRUSTED_ORIGINS = env_list(
 # Secure-by-default production cookies and transport. Deployments terminating TLS
 # at a trusted proxy may explicitly override the redirect setting.
 SESSION_COOKIE_SECURE = not DEBUG
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = "Lax"
 CSRF_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SAMESITE = "Lax"
 SECURE_SSL_REDIRECT = env_bool("SECURE_SSL_REDIRECT", not DEBUG)
-SECURE_HSTS_SECONDS = int(os.getenv("SECURE_HSTS_SECONDS", "0" if DEBUG else "3600"))
-SECURE_HSTS_INCLUDE_SUBDOMAINS = env_bool("SECURE_HSTS_INCLUDE_SUBDOMAINS", not DEBUG)
+SECURE_HSTS_SECONDS = env_int(
+    "SECURE_HSTS_SECONDS", 0 if DEBUG else 3600, minimum=0
+)
+SECURE_HSTS_INCLUDE_SUBDOMAINS = env_bool("SECURE_HSTS_INCLUDE_SUBDOMAINS", False)
 SECURE_HSTS_PRELOAD = env_bool("SECURE_HSTS_PRELOAD", False)
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
+X_FRAME_OPTIONS = "DENY"
+
+# Enable this only when every request reaches Django through a trusted proxy that
+# overwrites X-Forwarded-Proto. Blindly trusting this header permits spoofing.
+if env_bool("TRUST_PROXY_SSL_HEADER"):
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").strip().upper()
+if LOG_LEVEL not in {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}:
+    raise ImproperlyConfigured("LOG_LEVEL must be a standard Python logging level")
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "standard": {
+            "format": "{asctime} {levelname} {name} {message}",
+            "style": "{",
+        }
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "standard",
+        }
+    },
+    "root": {"handlers": ["console"], "level": LOG_LEVEL},
+    "loggers": {
+        "django": {
+            "handlers": ["console"],
+            "level": LOG_LEVEL,
+            "propagate": False,
+        }
+    },
+}

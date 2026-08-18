@@ -21,7 +21,7 @@ PowerShell example for the current session:
 
 ```powershell
 $env:DJANGO_SECRET_KEY = "local-development-only"
-$env:DEBUG = "True"
+$env:DJANGO_DEBUG = "True"
 $env:ALLOWED_HOSTS = "localhost,127.0.0.1"
 $env:DATABASE_URL = "postgresql://jsk_user:password@localhost:5432/jsk_savings"
 uv run python manage.py migrate
@@ -35,11 +35,20 @@ Alternatively, set `DJANGO_SECRET_KEY` and run `docker compose up --build`; Comp
 | Variable | Required | Purpose |
 | --- | --- | --- |
 | `DJANGO_SECRET_KEY` | yes | Django cryptographic signing secret |
+| `DJANGO_SECRET_KEY_FALLBACKS` | rotation | Comma-separated previous signing keys used only during a controlled rotation window |
 | `DATABASE_URL` | yes | PostgreSQL URL; SQLite is intentionally unsupported |
-| `DEBUG` | no | `True`, `1`, `yes`, or `on` enables development mode |
+| `DATABASE_CONN_MAX_AGE` | no | Persistent database connection lifetime; defaults to `0` in debug and `60` seconds otherwise |
+| `DJANGO_DEBUG` | no | `True`, `1`, `yes`, or `on` enables development mode |
+| `APP_RELEASE` | production | Commit SHA or immutable image version included in health responses |
 | `ALLOWED_HOSTS` | no | Comma-separated host names |
 | `CSRF_TRUSTED_ORIGINS` | no | Comma-separated trusted origins |
 | `DEFAULT_FROM_EMAIL` | no | Sender for authentication emails |
+| `EMAIL_BACKEND` | production | Delivery backend; deploy checks reject console, dummy, and in-memory backends |
+| `EMAIL_HOST`, `EMAIL_PORT` | SMTP | SMTP server and port |
+| `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD` | SMTP | SMTP credentials; password remains server-side |
+| `EMAIL_USE_TLS`, `EMAIL_USE_SSL` | SMTP | Mutually exclusive SMTP transport modes |
+| `EMAIL_TIMEOUT` | no | SMTP timeout in seconds; defaults to `10`, maximum `60` |
+| `SERVER_EMAIL` | no | Sender for framework-generated error email |
 | `PAYMENT_GATEWAY` | contributions | `mock` in debug or `razorpay` for test-mode checkout |
 | `RAZORPAY_KEY_ID` | Razorpay | Test key ID beginning with `rzp_test_`; live keys are rejected |
 | `RAZORPAY_KEY_SECRET` | Razorpay | Test key secret; server-side only and never committed |
@@ -55,15 +64,17 @@ Alternatively, set `DJANGO_SECRET_KEY` and run `docker compose up --build`; Comp
 | `MOCK_SILVER_PURITY` | no | Development silver fineness metadata; defaults to `0.9990` |
 | `SECURE_SSL_REDIRECT` | no | Defaults on outside debug; set for the deployment's TLS topology |
 | `SECURE_HSTS_SECONDS` | no | Defaults to 3600 outside debug |
-| `SECURE_HSTS_INCLUDE_SUBDOMAINS` | no | Defaults on outside debug |
+| `SECURE_HSTS_INCLUDE_SUBDOMAINS` | no | Explicit opt-in after every affected subdomain is HTTPS-capable |
 | `SECURE_HSTS_PRELOAD` | no | Explicit opt-in after confirming the domain is preload-ready |
+| `TRUST_PROXY_SSL_HEADER` | no | Trust an overwriting proxy's `X-Forwarded-Proto`; enable only for a verified proxy topology |
+| `LOG_LEVEL` | no | Standard server log level; defaults to `INFO` |
 
 ## Mock payment mode
 
 Set both of these values:
 
 ```dotenv
-DEBUG=True
+DJANGO_DEBUG=True
 PAYMENT_GATEWAY=mock
 METAL_RATE_PROVIDER=mock
 MOCK_GOLD_RATE=12500.0000
@@ -136,6 +147,14 @@ uv run --env-file .env python manage.py check
 uv run --env-file .env python manage.py makemigrations --check --dry-run
 uv run --env-file .env python manage.py test
 ```
+
+For a release candidate, run `python manage.py check --deploy --fail-level ERROR`
+with the actual production environment. The application exposes `/health/live/` for
+process liveness and `/health/ready/` for PostgreSQL readiness; neither response is
+cached and both include `APP_RELEASE`. The container image runs as an unprivileged
+`app` user, contains collected static assets, and emits Gunicorn/Django logs to
+standard output. The detailed rollout, backup/restore, rollback, monitoring, and
+secret-rotation procedure is in [Development conventions](docs/DEVELOPMENT.md).
 
 ## Project guides
 

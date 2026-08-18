@@ -10,9 +10,16 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 ADD . /app
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev
+RUN DJANGO_SECRET_KEY=build-only-static-collection-key \
+    DATABASE_URL=postgresql://build:build@localhost/build \
+    DJANGO_DEBUG=False \
+    .venv/bin/python manage.py collectstatic --noinput
 
 # Then, use a final image without uv
 FROM python:3.12-slim-bookworm
+
+RUN groupadd --system app && \
+    useradd --system --gid app --home-dir /app --no-create-home app
 
 # Copy the application from the builder
 COPY --from=builder --chown=app:app /app /app
@@ -27,5 +34,6 @@ ENV PATH="/app/.venv/bin:$PATH"
 # Expose port 8000
 EXPOSE 8000
 
-# Use gunicorn on port 8000
-CMD ["gunicorn", "--bind", ":8000", "--workers", "2", "django_project.wsgi"]
+USER app
+
+CMD ["gunicorn", "--bind", ":8000", "--workers", "2", "--timeout", "30", "--graceful-timeout", "30", "--max-requests", "1000", "--max-requests-jitter", "100", "--access-logfile", "-", "--error-logfile", "-", "django_project.wsgi"]

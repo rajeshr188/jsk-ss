@@ -2,7 +2,7 @@
 
 ## Current milestone
 
-Milestone 11 — Receipts and statements (complete; MVP feature plan complete)
+Production hardening — repository baseline complete; deployment exercises pending
 
 ## Completed
 
@@ -63,10 +63,23 @@ Milestone 11 — Receipts and statements (complete; MVP feature plan complete)
   redemptions, reversals, and current denomination-specific entitlement.
 - Owner contribution and redemption CSV exports with separated INR/gold/silver
   fields and spreadsheet-formula neutralization.
+- Strict namespaced production settings with bounded numeric/boolean parsing,
+  signing-key fallback rotation, persistent database health checks, SMTP settings,
+  secure cookie/header defaults, proxy trust opt-in, and timestamped stdout logging.
+- Uncached liveness and PostgreSQL-readiness endpoints that expose the immutable
+  application release without returning database error details.
+- Deploy-only checks reject mock/unsupported providers, missing selected-provider
+  credentials, non-delivering email, wildcard hosts, and insecure CSRF origins.
+- A non-root production image with build-time static collection and bounded Gunicorn
+  worker recycling/timeouts, plus PostgreSQL-backed CI, deploy-check, and image-build gates.
+- Canonical rollout, backup/restore drill, rollback, TLS/HSTS, monitoring, and
+  coordinated secret-rotation procedures.
 
 ## In progress
 
-- None.
+- Environment-specific production proof: isolated database restoration, stable
+  domain/TLS/proxy validation, real email delivery, external alert routing, and
+  coordinated secret-rotation drills.
 
 ## Known limitations
 
@@ -76,6 +89,10 @@ Milestone 11 — Receipts and statements (complete; MVP feature plan complete)
   payment, reconciliation, refund, dispute, monitoring, and secret-rotation procedures exist.
 - Temporary quick-tunnel URLs have no uptime guarantee; deployment requires a stable,
   owned HTTPS endpoint and synchronized webhook-secret configuration.
+- Repository health checks and logging now exist, but an actual production platform
+  must still retain logs and exercise uptime/error/financial-exception alerts.
+- Backup and rollback procedures are documented but no managed production snapshot or
+  isolated restoration drill can be proven until the production database exists.
 - The application records redemptions but does not execute payouts, move inventory,
   create invoices, or convert metal to cash.
 - Manual payment/rate correction, voids, refunds/disputes, dual approval, broader
@@ -99,14 +116,26 @@ Milestone 11 — Receipts and statements (complete; MVP feature plan complete)
 ## Verification
 
 - PostgreSQL 16 migrations applied successfully.
-- 130 tests pass, including document access, receipt stability, unallocated disclosure, CSV denomination/formula safety, audit immutability, exception classification, reversal reconciliation, cash-bonus boundaries/rounding, Razorpay failure handling, redemption precision, over-redemption protection,
+- 138 tests pass, including health/readiness failure sanitization, deploy-configuration
+  gates, document access, receipt stability, unallocated disclosure, CSV
+  denomination/formula safety, audit immutability, exception classification,
+  reversal reconciliation, cash-bonus boundaries/rounding, Razorpay failure handling,
+  redemption precision, over-redemption protection,
   idempotency, partial/full closure, denomination separation, access control,
   PostgreSQL constraints, and all prior regressions.
 - Migrations through `schemes.0008_auditevent_redemptionreversal` are applied to
   PostgreSQL; Milestone 11 adds read-only documents and requires no schema change.
 - Migration drift check reports no changes.
 - Django system check and migration drift check pass.
-- Production static collection and deployment check pass with preload explicitly enabled.
+- Production deployment checks pass with a synthetic secure configuration and no
+  issues; the real deployment must supply equivalent secrets, hosts, TLS, and email.
+- Production image `jsk-savings:hardening-check` builds successfully, collects 137
+  static files (403 post-processed), and is configured to run as user `app`.
+- A disposable container smoke returned HTTP 200 from `/health/live/`, reported
+  release `hardening-smoke`, and confirmed the running process user is `app`.
+- GitHub Actions CI is defined with SHA-pinned checkout/setup actions, PostgreSQL 16,
+  migrations, drift/system/deploy checks, the regression suite, static collection,
+  and an independent production-image build.
 - Live-server checkpoint passes for owner and customer login, UI-created plan/customer/CASH-GOLD-SILVER enrolments, three mock payments, customer entitlements, owner contribution visibility, and exact liability/activity deltas.
 - Live GoldAPI HTTP behavior is verified at the adapter boundary with deterministic mocked responses; no real provider request was made because no API key is stored in the repository.
 - Live-server recovery smoke passes across a rate-failure/server-restart/rate-restoration sequence: verified payment remains unallocated, owner retry creates exactly one 0.800000 g allocation, and all disposable records are removed.
@@ -132,6 +161,8 @@ Milestone 11 — Receipts and statements (complete; MVP feature plan complete)
 
 ## Next recommended step
 
-MVP release hardening — close the production deployment gates, validate live GoldAPI
-credentials privately, and define Razorpay live-mode reconciliation/refund/dispute
-operations before handling real customer funds.
+Deploy the hardened image to the intended staging/production platform and complete
+`FW-PROD-001` through `FW-PROD-003`: a recorded database restore/reconciliation drill,
+stable owned HTTPS plus alerts, real email delivery, and secret-rotation rehearsal.
+Separately validate GoldAPI privately and define Razorpay live-mode reconciliation,
+refund, and dispute operations before handling real customer funds.

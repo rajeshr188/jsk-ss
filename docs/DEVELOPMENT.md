@@ -29,3 +29,84 @@ Configuration comes from process environment variables. `.env.example` is docume
 ## Adding a domain feature
 
 Read the agent contract and domain rules, implement one milestone slice, add constraints and focused tests, apply migrations against PostgreSQL, run the regression suite and checks, manually exercise the flow, then update status/architecture only where reality changed.
+
+## Production deployment and operations
+
+Production configuration must set `DJANGO_DEBUG=False`, a long random
+`DJANGO_SECRET_KEY`, explicit `ALLOWED_HOSTS` and HTTPS-only
+`CSRF_TRUSTED_ORIGINS`, an immutable `APP_RELEASE`, a PostgreSQL `DATABASE_URL`,
+and a real email backend. Use `DJANGO_DEBUG`; the generic `DEBUG` variable is not
+read because hosting environments may define it for unrelated purposes. Keep all
+credentials in the deployment secret manager, never in an image or repository.
+
+Before every release:
+
+1. Require a green CI run. It applies migrations to PostgreSQL 16, checks migration
+   drift, runs Django checks and the full suite, executes production deployment
+   checks, collects production static files, and builds the container.
+2. Run `python manage.py check --deploy --fail-level ERROR` with the intended
+   production environment. Warnings require an explicit operator review even when
+   they do not fail the command.
+3. Record a restorable managed-database snapshot or confirm point-in-time recovery,
+   its retention, and the person responsible for restoration. Review
+   `python manage.py migrate --plan` before changing the schema.
+4. Build one immutable image, set `APP_RELEASE` to its commit/image identifier, and
+   promote that same image through environments. Run `python manage.py migrate
+   --noinput` once as a release job, not concurrently in every web worker.
+5. Roll out the web image, then require `/health/live/` and `/health/ready/` to pass.
+   The readiness probe checks PostgreSQL. Configure the TLS proxy to overwrite
+   `X-Forwarded-Proto` before enabling `TRUST_PROXY_SSL_HEADER=True`.
+6. Smoke-test owner/customer login, password-reset email, static assets, and a
+   Razorpay Test Mode payment plus signed webhook. Do not substitute mock adapters
+   in a deployed environment.
+
+Terminate TLS at an owned, stable endpoint. Start HSTS with a short value, observe
+the deployment, then increase it; enable subdomains and preload only after every
+affected hostname is permanently HTTPS-capable. A remote production database should
+use `sslmode=require` or stronger in `DATABASE_URL`. Restrict database and provider
+credentials to the application and release jobs that need them.
+
+### Backup and restore drill
+
+Use managed snapshots and point-in-time recovery as the primary controls. Also take
+periodic PostgreSQL custom-format exports using a restricted service identity and
+encrypted storage, for example `pg_dump --format=custom --no-owner --no-acl
+--file=<restricted-path> <service-name>`. Use a PostgreSQL service definition or
+password file so credentials do not appear in shell history.
+
+At least quarterly, restore the selected backup into a newly created isolated
+database with `pg_restore --exit-on-error --no-owner --dbname=<isolated-service>
+<backup-file>`. Never point a drill at the production database. Record recovery time,
+backup timestamp, and errors; run `showmigrations --plan`, inspect owner/customer
+counts, and reconcile cash principal/bonus, gold grams, and silver grams against the
+restored owner dashboard before destroying the isolated drill environment.
+
+### Rollback and incident handling
+
+Prefer rolling back to the previous immutable application image when its code is
+compatible with the current schema. Database migrations should therefore be
+backward-compatible across one release whenever practical. If not, stop the rollout
+and use a reviewed migration-specific recovery plan.
+
+Do not restore an older production database after newer payments, webhooks, or
+redemptions have been recorded unless the incident plan explicitly reconciles every
+post-backup financial event. During a payment incident, prevent new checkout order
+creation, retain webhook evidence/provider retries, preserve append-only records,
+and reconcile Razorpay before reopening payments. Record the incident, release IDs,
+timeline, and reconciliation result.
+
+### Secrets, logs, and monitoring
+
+Rotate database, email, GoldAPI, Razorpay API, and Razorpay webhook credentials
+independently. Coordinate webhook-secret changes with the Razorpay endpoint and
+verify a signed Test Mode delivery. To rotate Django signing material without an
+immediate session cutover, deploy a new `DJANGO_SECRET_KEY` with the previous value
+temporarily in `DJANGO_SECRET_KEY_FALLBACKS`, then remove the fallback after the
+agreed expiry window. Never log either value.
+
+Django and Gunicorn write timestamped logs to standard output. The hosting platform
+must retain them and alert on sustained 5xx responses, readiness failures, failed or
+mismatched webhooks, `PAID_UNALLOCATED` records, database capacity/connection limits,
+and backup failures. Include `APP_RELEASE` in incident searches. External error
+aggregation and alert routing are deployment integrations and must be exercised
+before real customer funds are enabled.
