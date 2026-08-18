@@ -6,6 +6,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt
@@ -21,6 +22,7 @@ from .forms import (
 )
 from .models import Contribution, Customer, SchemeAccount, SchemePlan
 from .payments import (
+    PaymentGatewayAuthenticationError,
     PaymentGatewayError,
     get_payment_gateway,
     mock_payment_is_enabled,
@@ -321,6 +323,7 @@ def pay_contribution(request, scheme_number):
     ):
         raise Http404
 
+    response_status = 200
     form = ContributionForm(request.POST or None, scheme_account=account)
     if request.method == "POST" and form.is_valid():
         try:
@@ -343,6 +346,12 @@ def pay_contribution(request, scheme_number):
             else:
                 for message in error.messages:
                     form.add_error(None, message)
+            if isinstance(error, PaymentGatewayError):
+                response_status = error.status_code
+            elif isinstance(error, ImproperlyConfigured):
+                response_status = 503
+            else:
+                response_status = 400
         else:
             if razorpay_payment_is_enabled():
                 return redirect("schemes:razorpay_checkout", contribution_id=contribution.pk)
@@ -373,6 +382,7 @@ def pay_contribution(request, scheme_number):
             "form": form,
             "mock_payment_enabled": mock_payment_is_enabled(),
         },
+        status=response_status,
     )
 
 
@@ -429,15 +439,40 @@ def razorpay_confirm(request, contribution_id):
         payment_gateway="razorpay",
         scheme_account__customer__user=request.user,
     )
+    callback_order_id = request.POST.get("razorpay_order_id", "")
+    payment_id = request.POST.get("razorpay_payment_id", "")
+    signature = request.POST.get("razorpay_signature", "")
+    if not all((callback_order_id, payment_id, signature)):
+        return JsonResponse(
+            {
+                "success": False,
+                "detail": "Payment verification fields are missing.",
+            },
+            status=400,
+        )
     try:
         contribution = confirm_razorpay_contribution(
             contribution_id=contribution.pk,
-            callback_order_id=request.POST.get("razorpay_order_id", ""),
-            payment_id=request.POST.get("razorpay_payment_id", ""),
-            signature=request.POST.get("razorpay_signature", ""),
+            callback_order_id=callback_order_id,
+            payment_id=payment_id,
+            signature=signature,
         )
     except (ImproperlyConfigured, PaymentGatewayError, ValidationError) as error:
-        messages.error(request, f"Payment verification failed: {error}")
+        if isinstance(error, PaymentGatewayAuthenticationError):
+            status_code = 401
+        elif isinstance(error, PaymentGatewayError):
+            status_code = error.status_code
+        elif isinstance(error, ImproperlyConfigured):
+            status_code = 503
+        else:
+            status_code = 400
+        return JsonResponse(
+            {
+                "success": False,
+                "detail": f"Payment verification failed: {error}",
+            },
+            status=status_code,
+        )
     else:
         if contribution.status == Contribution.Status.PAID_UNALLOCATED:
             messages.warning(
@@ -446,9 +481,14 @@ def razorpay_confirm(request, contribution_id):
             )
         else:
             messages.success(request, "Razorpay test payment verified successfully.")
-    return redirect(
-        "schemes:my_scheme_detail",
-        scheme_number=contribution.scheme_account.scheme_number,
+    return JsonResponse(
+        {
+            "success": True,
+            "redirect_url": reverse(
+                "schemes:my_scheme_detail",
+                args=[contribution.scheme_account.scheme_number],
+            ),
+        }
     )
 
 

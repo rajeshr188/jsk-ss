@@ -52,7 +52,7 @@ class MockGatewayBoundaryTests(TestCase):
         with self.assertRaises(ImproperlyConfigured):
             get_payment_gateway()
 
-    @override_settings(DEBUG=True, PAYMENT_GATEWAY="razorpay")
+    @override_settings(DEBUG=True, PAYMENT_GATEWAY="")
     def test_mock_gateway_requires_explicit_setting(self):
         with self.assertRaises(ImproperlyConfigured):
             get_payment_gateway()

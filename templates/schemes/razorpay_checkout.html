@@ -14,6 +14,7 @@
   <div class="alert alert-warning" role="alert">
     Test mode only. Razorpay will simulate the transaction; no real money is collected.
   </div>
+  <div class="alert d-none" id="checkout-status" role="alert" aria-live="polite"></div>
   <button class="btn btn-jsk" id="open-checkout" type="button">Open secure test checkout</button>
   <form id="verification-form" method="post" action="{% url 'schemes:razorpay_confirm' contribution.pk %}" class="d-none">
     {% csrf_token %}
@@ -30,7 +31,20 @@
 <script>
   (() => {
     const button = document.getElementById("open-checkout");
+    const form = document.getElementById("verification-form");
+    const status = document.getElementById("checkout-status");
+
+    const showStatus = (message, level = "danger") => {
+      status.textContent = message;
+      status.className = `alert alert-${level}`;
+    };
+
     button.addEventListener("click", () => {
+      if (typeof Razorpay === "undefined") {
+        showStatus("Razorpay Checkout could not be loaded. Check your connection and try again.");
+        return;
+      }
+      let verificationStarted = false;
       const checkout = new Razorpay({
         key: "{{ razorpay_key_id|escapejs }}",
         amount: "{{ amount_subunits }}",
@@ -43,13 +57,44 @@
           email: "{{ contribution.scheme_account.customer.email|escapejs }}",
           contact: "{{ contribution.scheme_account.customer.mobile_number|escapejs }}"
         },
-        handler: (response) => {
+        handler: async (response) => {
+          verificationStarted = true;
+          button.disabled = true;
+          showStatus("Verifying the payment securely…", "info");
           document.getElementById("razorpay-payment-id").value = response.razorpay_payment_id;
           document.getElementById("razorpay-order-id").value = response.razorpay_order_id;
           document.getElementById("razorpay-signature").value = response.razorpay_signature;
-          document.getElementById("verification-form").submit();
+          try {
+            const verification = await fetch(form.action, {
+              method: "POST",
+              body: new FormData(form),
+              headers: {"X-Requested-With": "XMLHttpRequest"}
+            });
+            const result = await verification.json();
+            if (!verification.ok || !result.success) {
+              throw new Error(result.detail || "Payment verification failed.");
+            }
+            window.location.assign(result.redirect_url);
+          } catch (error) {
+            button.disabled = false;
+            showStatus(error.message || "Payment verification failed. No contribution was credited.");
+          }
+        },
+        modal: {
+          confirm_close: true,
+          ondismiss: () => {
+            if (!verificationStarted) {
+              showStatus("Checkout was cancelled. No contribution was credited.", "warning");
+            }
+          }
         },
         theme: { color: "#704214" }
+      });
+      checkout.on("payment.failed", (response) => {
+        const detail = response.error && response.error.description
+          ? ` ${response.error.description}`
+          : "";
+        showStatus(`Payment failed.${detail} No contribution was credited.`);
       });
       checkout.open();
     });

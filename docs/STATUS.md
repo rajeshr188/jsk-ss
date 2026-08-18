@@ -2,7 +2,7 @@
 
 ## Current milestone
 
-Milestone 8 — Redemption (complete)
+MVP Beta checkpoint (complete)
 
 ## Completed
 
@@ -37,6 +37,10 @@ Milestone 8 — Redemption (complete)
 - Immutable, idempotent owner-recorded cash, metal, and jewellery-purchase redemptions.
 - Partial/full settlement with denomination-specific outstanding balances and exact final account closure.
 - Customer redemption history, owner redemption ledger, and liability reconciliation after settlement.
+- External Razorpay Test Mode payment captured through Standard Checkout on a public
+  HTTPS endpoint, with the signed `payment.captured` webhook processed exactly once.
+- The external-payment account completed owner-recorded redemption and reconciled
+  customer outstanding cash and owner cash principal from ₹100.00 to ₹0.00.
 
 ## In progress
 
@@ -44,8 +48,12 @@ Milestone 8 — Redemption (complete)
 
 ## Known limitations
 
-- External Razorpay and GoldAPI flows have deterministic boundary coverage but still
-  require private-credential verification before the MVP Beta checkpoint.
+- GoldAPI has deterministic boundary coverage but still requires private-credential
+  verification before production deployment.
+- Razorpay is verified only in Test Mode. Live keys remain rejected until production
+  payment, reconciliation, refund, dispute, monitoring, and secret-rotation procedures exist.
+- Temporary quick-tunnel URLs have no uptime guarantee; deployment requires a stable,
+  owned HTTPS endpoint and synchronized webhook-secret configuration.
 - The application records redemptions but does not execute payouts, move inventory,
   create invoices, or convert metal to cash.
 - Bonus, compensating correction events, operational reconciliation, automated
@@ -62,7 +70,7 @@ Milestone 8 — Redemption (complete)
 ## Verification
 
 - PostgreSQL 16 migrations applied successfully.
-- 95 tests pass, including redemption precision, over-redemption protection,
+- 101 tests pass, including Razorpay failure handling, redemption precision, over-redemption protection,
   idempotency, partial/full closure, denomination separation, access control,
   PostgreSQL constraints, and all prior regressions.
 - Migration `schemes.0006_redemption` is applied to PostgreSQL.
@@ -76,8 +84,12 @@ Milestone 8 — Redemption (complete)
 - Milestone 8 authenticated request smoke passes with CSRF enforcement: an owner
   records partial cash and final jewellery settlement, the customer sees both
   records and no payment action, liabilities reconcile, and disposable data is removed.
+- MVP Beta external smoke passes with private Razorpay Test Mode credentials: a ₹100
+  payment is captured, one signed `payment.captured` webhook is processed, one cash
+  entitlement is created, an owner completes the full redemption through a
+  CSRF-protected form, and customer/owner outstanding cash reconciles to zero.
 
 ## Next recommended step
 
-MVP Beta checkpoint — verify the complete enrolment-to-redemption journey with an
-external Razorpay test transaction and signed webhook on a public HTTPS endpoint.
+Milestone 9 — implement the explicitly versioned cash-bonus policy after its business
+rules and rounding behavior are approved.

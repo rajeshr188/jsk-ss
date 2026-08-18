@@ -10,7 +10,7 @@
 - [x] Milestone 6 — Razorpay test mode and idempotent webhooks
 - [x] Milestone 7 — Redemption eligibility views
 - [x] Milestone 8 — Redemption
-- [ ] MVP Beta checkpoint
+- [x] MVP Beta checkpoint
 - [ ] Milestone 9 — Cash bonus
 - [ ] Milestone 10 — Audit and exceptions
 - [ ] Milestone 11 — Receipts and statements

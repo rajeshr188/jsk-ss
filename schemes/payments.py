@@ -15,12 +15,23 @@ from django.core.exceptions import ImproperlyConfigured
 
 
 RAZORPAY_API_BASE_URL = "https://api.razorpay.com/v1"
+RAZORPAY_MIN_AMOUNT_SUBUNITS = 100
 RAZORPAY_RESPONSE_LIMIT = 64 * 1024
 RAZORPAY_ID_PATTERN = re.compile(r"^[A-Za-z0-9_]+$")
 
 
 class PaymentGatewayError(Exception):
     """A safe, customer-displayable payment provider failure."""
+
+    status_code = 500
+
+
+class PaymentGatewayAuthenticationError(PaymentGatewayError):
+    status_code = 401
+
+
+class PaymentGatewayValidationError(PaymentGatewayError):
+    status_code = 400
 
 
 @dataclass(frozen=True)
@@ -121,6 +132,10 @@ class RazorpayPaymentGateway(PaymentGateway):
 
     def create_order(self, contribution):
         amount_subunits = _amount_to_subunits(contribution.amount)
+        if amount_subunits < RAZORPAY_MIN_AMOUNT_SUBUNITS:
+            raise PaymentGatewayValidationError(
+                "Razorpay requires a minimum payment amount of ₹1.00."
+            )
         payload = self._request_json(
             "POST",
             "/orders",
@@ -203,6 +218,10 @@ class RazorpayPaymentGateway(PaymentGateway):
             with urlopen(request, timeout=self.timeout_seconds) as response:
                 raw_body = response.read(RAZORPAY_RESPONSE_LIMIT + 1)
         except HTTPError as error:
+            if error.code in {401, 403}:
+                raise PaymentGatewayAuthenticationError(
+                    "Razorpay authentication failed. Check the configured test credentials."
+                ) from None
             raise PaymentGatewayError(
                 f"Razorpay rejected the server request (HTTP {error.code})."
             ) from None

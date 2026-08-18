@@ -4,6 +4,7 @@ import json
 from decimal import Decimal
 from types import SimpleNamespace
 from unittest.mock import patch
+from urllib.error import HTTPError
 
 from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.test import TestCase, override_settings
@@ -17,7 +18,13 @@ from schemes.models import (
     SchemeAccount,
     SchemePlan,
 )
-from schemes.payments import PaymentOrder, RazorpayPaymentGateway
+from schemes.payments import (
+    PaymentGatewayAuthenticationError,
+    PaymentGatewayError,
+    PaymentGatewayValidationError,
+    PaymentOrder,
+    RazorpayPaymentGateway,
+)
 from schemes.selectors import get_cash_balance
 from schemes.services import (
     confirm_razorpay_contribution,
@@ -130,6 +137,40 @@ class RazorpayGatewayTests(TestCase):
         self.assertTrue(request.get_header("Authorization").startswith("Basic "))
         self.assertNotIn("secret", request.full_url)
         self.assertEqual(order.amount_subunits, 500000)
+
+    def test_create_order_rejects_less_than_one_rupee_without_network_call(self):
+        gateway = RazorpayPaymentGateway(
+            key_id="rzp_test_key",
+            key_secret="secret",
+            webhook_secret="webhook",
+            timeout_seconds=2,
+        )
+        contribution = SimpleNamespace(pk=42, amount=Decimal("0.99"))
+        with patch("schemes.payments.urlopen") as urlopen_mock:
+            with self.assertRaises(PaymentGatewayValidationError):
+                gateway.create_order(contribution)
+        urlopen_mock.assert_not_called()
+
+    def test_provider_authentication_failure_is_safely_classified(self):
+        gateway = RazorpayPaymentGateway(
+            key_id="rzp_test_key",
+            key_secret="secret",
+            webhook_secret="webhook",
+            timeout_seconds=2,
+        )
+        contribution = SimpleNamespace(pk=42, amount=Decimal("5000.00"))
+        failure = HTTPError(
+            "https://api.razorpay.com/v1/orders",
+            401,
+            "Unauthorized",
+            hdrs=None,
+            fp=None,
+        )
+        with patch("schemes.payments.urlopen", side_effect=failure):
+            with self.assertRaises(PaymentGatewayAuthenticationError) as raised:
+                gateway.create_order(contribution)
+        self.assertNotIn("secret", str(raised.exception))
+        self.assertEqual(raised.exception.status_code, 401)
 
     def test_callback_signature_and_captured_payment_are_both_verified(self):
         gateway = RazorpayPaymentGateway(
@@ -325,7 +366,43 @@ class RazorpayViewTests(TestCase):
             )
         self.assertContains(response, "Razorpay test checkout")
         self.assertContains(response, "rzp_test_public_key")
+        self.assertContains(response, 'checkout.on("payment.failed"', html=False)
+        self.assertContains(response, "Checkout was cancelled", html=False)
         self.assertEqual(Contribution.objects.get().gateway_order_id, "order_view")
+
+    def test_order_authentication_failure_returns_401_and_no_entitlement(self):
+        with patch(
+            "schemes.payments.RazorpayPaymentGateway.create_order",
+            side_effect=PaymentGatewayAuthenticationError(
+                "Razorpay authentication failed."
+            ),
+        ):
+            response = self.client.post(
+                reverse("schemes:pay_contribution", args=[self.account.scheme_number]),
+                {"amount": "5000.00"},
+            )
+        self.assertEqual(response.status_code, 401)
+        self.assertContains(
+            response,
+            "Razorpay authentication failed.",
+            status_code=401,
+        )
+        contribution = Contribution.objects.get()
+        self.assertEqual(contribution.status, Contribution.Status.FAILED)
+        self.assertEqual(get_cash_balance(self.account), Decimal("0.00"))
+
+    def test_order_provider_failure_returns_500_and_no_entitlement(self):
+        with patch(
+            "schemes.payments.RazorpayPaymentGateway.create_order",
+            side_effect=PaymentGatewayError("Razorpay could not be reached."),
+        ):
+            response = self.client.post(
+                reverse("schemes:pay_contribution", args=[self.account.scheme_number]),
+                {"amount": "5000.00"},
+            )
+        self.assertEqual(response.status_code, 500)
+        self.assertEqual(Contribution.objects.get().status, Contribution.Status.FAILED)
+        self.assertEqual(get_cash_balance(self.account), Decimal("0.00"))
 
     def test_customer_cannot_open_another_customers_checkout(self):
         other_customer, other_account = make_account(email="other-rzp@example.com")
@@ -361,12 +438,58 @@ class RazorpayViewTests(TestCase):
                     "razorpay_payment_id": "pay_callback_view",
                     "razorpay_signature": "signed",
                 },
-                follow=True,
             )
-        self.assertContains(response, "verified successfully")
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["success"])
+        detail = self.client.get(response.json()["redirect_url"])
+        self.assertContains(detail, "verified successfully")
         contribution.refresh_from_db()
         self.assertEqual(contribution.status, Contribution.Status.PAID)
         self.assertEqual(get_cash_balance(self.account), Decimal("5000.00"))
+
+    def test_missing_verification_fields_return_400_and_no_entitlement(self):
+        contribution = initiate_contribution(
+            scheme_account=self.account,
+            amount=Decimal("5000.00"),
+            payment_gateway="razorpay",
+        )
+        contribution.gateway_order_id = "order_missing_fields"
+        contribution.save(update_fields=["gateway_order_id"])
+        response = self.client.post(
+            reverse("schemes:razorpay_confirm", args=[contribution.pk]),
+            {"razorpay_order_id": "order_missing_fields"},
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(response.json()["success"])
+        contribution.refresh_from_db()
+        self.assertEqual(contribution.status, Contribution.Status.PENDING)
+        self.assertEqual(get_cash_balance(self.account), Decimal("0.00"))
+
+    def test_signature_mismatch_returns_400_and_no_entitlement(self):
+        contribution = initiate_contribution(
+            scheme_account=self.account,
+            amount=Decimal("5000.00"),
+            payment_gateway="razorpay",
+        )
+        contribution.gateway_order_id = "order_bad_signature"
+        contribution.save(update_fields=["gateway_order_id"])
+        with patch(
+            "schemes.payments.RazorpayPaymentGateway.verify_payment",
+            return_value=False,
+        ):
+            response = self.client.post(
+                reverse("schemes:razorpay_confirm", args=[contribution.pk]),
+                {
+                    "razorpay_order_id": "order_bad_signature",
+                    "razorpay_payment_id": "pay_bad_signature",
+                    "razorpay_signature": "invalid",
+                },
+            )
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(response.json()["success"])
+        contribution.refresh_from_db()
+        self.assertEqual(contribution.status, Contribution.Status.PENDING)
+        self.assertEqual(get_cash_balance(self.account), Decimal("0.00"))
 
     def test_invalid_webhook_signature_creates_no_event(self):
         response = self.client.post(
