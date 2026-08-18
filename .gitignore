@@ -10,9 +10,12 @@ __pycache__/
 *.log
 db.sqlite3
 media
+staticfiles/
 
 # Virtual environment
 .venv
+.env
+.uv-cache/
 
 # Screencast
 Lithium_Demo_2025.mp4

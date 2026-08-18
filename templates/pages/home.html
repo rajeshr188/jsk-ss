@@ -1,11 +1,15 @@
 {% extends '_base.html' %}
-{% load static %}
-
-{% block title %}Home page{% endblock title %}
+{% block title %}Jai Shri Krishna Jewellery{% endblock title %}
 
 {% block content %}
-<div class="pricing-header px-3 py-3 pt-md-5 pb-md-4 mx-auto text-center">
-  <img src="{% static 'images/lithium.png' %}" class="img-fluid" alt="Lithium logo"/>
-  <p class="lead">A Django starter project with batteries.</p>
+<div class="hero-card px-4 py-5 my-4 text-center rounded-4">
+  <p class="text-uppercase small fw-semibold mb-2">Savings with clarity</p>
+  <h1 class="display-5 fw-bold">Jai Shri Krishna Jewellery</h1>
+  <p class="lead mx-auto">Build your jewellery savings through cash, 24K gold, or silver schemes.</p>
+  {% if user.is_authenticated %}
+  <a class="btn btn-jsk btn-lg" href="{% url 'schemes:post_login' %}">Open dashboard</a>
+  {% else %}
+  <a class="btn btn-jsk btn-lg" href="{% url 'account_login' %}">Customer login</a>
+  {% endif %}
 </div>
 {% endblock content %}

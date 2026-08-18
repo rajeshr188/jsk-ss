@@ -1,0 +1,27 @@
+{% extends '_base.html' %}
+
+{% block title %}Owner dashboard | Jai Shri Krishna Jewellery{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+  <div>
+    <h1 class="mb-1">Owner dashboard</h1>
+    <p class="text-muted mb-0">Customer and scheme enrolment overview</p>
+  </div>
+  <div>
+    <a class="btn btn-outline-dark" href="{% url 'schemes:plan_list' %}">Scheme plans</a>
+    <a class="btn btn-jsk" href="{% url 'schemes:customer_add' %}">Add customer</a>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-12 col-md-4"><div class="card h-100"><div class="card-body"><div class="text-muted">Customers</div><div class="display-6">{{ customer_count }}</div></div></div></div>
+  <div class="col-12 col-md-4"><div class="card h-100"><div class="card-body"><div class="text-muted">Open scheme accounts</div><div class="display-6">{{ active_account_count }}</div></div></div></div>
+  <div class="col-12 col-md-4"><div class="card h-100"><div class="card-body"><div class="text-muted">Active plans</div><div class="display-6">{{ active_plan_count }}</div></div></div></div>
+</div>
+
+<div class="mt-4">
+  <a class="btn btn-outline-dark" href="{% url 'schemes:customer_list' %}">View customers</a>
+</div>
+{% endblock %}
+

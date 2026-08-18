@@ -1,120 +1,66 @@
-# Lithium: A Django-Powered Boilerplate
-Lithium is a batteries-included Django starter project with everything you need to start coding, including user authentication, static files, default styling, debugging, DRY forms, custom error pages, and more.
+# Jai Shri Krishna Jewellery Savings Scheme
 
-> This project was formerly known as _DjangoX_ but was renamed to _Lithium_ in November 2024.
+A single-business Django application for managing customer cash, 24K gold, and silver savings schemes. It reuses the [Lithium](https://github.com/wsvincent/lithium) Django foundation and currently supports customer records and scheme enrolment.
 
-https://github.com/user-attachments/assets/8698e9dd-1794-4f96-9c3f-85add17e330b
+## Technology
 
-## 🚀 Features
-- Django 6.0 & Python 3.13
-- Installation via [uv](https://github.com/astral-sh/uv), [Pip](https://pypi.org/project/pip/) or [Docker](https://www.docker.com/)
-- User authentication--log in, sign up, password reset--via [django-allauth](https://github.com/pennersr/django-allauth)
-- Static files configured with [Whitenoise](http://whitenoise.evans.io/en/stable/index.html)
-- Styling with [Bootstrap v5](https://getbootstrap.com/)
-- Debugging with [django-debug-toolbar](https://github.com/jazzband/django-debug-toolbar)
-- DRY forms with [django-crispy-forms](https://github.com/django-crispy-forms/django-crispy-forms)
-- Custom 404, 500, and 403 error pages
+- Python 3.12+, Django 6, PostgreSQL
+- Lithium's `accounts.CustomUser`, django-allauth, Bootstrap 5, crispy forms
+- WhiteNoise, Gunicorn, psycopg, and `uv`
 
-## Table of Contents
-* **[Installation](#installation)**
-  * [uv](#uv)
-  * [Pip](#pip)
-  * [Docker](#docker)
-* [Next Steps](#next-steps)
-* [Contributing](#contributing)
-* [Support](#support)
-* [License](#license)
+## Quick start
 
-## 📖 Installation
-Lithium can be installed via Pip or Docker. To start, clone the repo to your local computer and change into the proper directory.
+1. Install PostgreSQL and create an application database/user.
+2. Copy `.env.example` to `.env` for reference, then export those values in your shell or IDE. Django intentionally does not read `.env` files itself.
+3. Install dependencies: `uv sync --frozen`.
+4. Apply migrations: `uv run python manage.py migrate`.
+5. Create the owner: `uv run python manage.py createsuperuser`. A superuser is always authorized as an owner; its application role can also be set to `OWNER` in admin.
+6. Start the server: `uv run python manage.py runserver`.
 
-```
-$ git clone https://github.com/wsvincent/lithium.git
-$ cd lithium
+PowerShell example for the current session:
+
+```powershell
+$env:DJANGO_SECRET_KEY = "local-development-only"
+$env:DEBUG = "True"
+$env:ALLOWED_HOSTS = "localhost,127.0.0.1"
+$env:DATABASE_URL = "postgresql://jsk_user:password@localhost:5432/jsk_savings"
+uv run python manage.py migrate
+uv run python manage.py runserver
 ```
 
-### uv
-You can use [uv](https://docs.astral.sh/uv/) to create a dedicated virtual environment.
+Alternatively, set `DJANGO_SECRET_KEY` and run `docker compose up --build`; Compose provides an isolated development-only PostgreSQL database.
 
-```
-$ uv sync
-```
+## Environment variables
 
-Then run `migrate` to configure the initial database. The command `createsuperuser` will create a new superuser account for accessing the admin. Execute the `runserver` command to start up the local server.
+| Variable | Required | Purpose |
+| --- | --- | --- |
+| `DJANGO_SECRET_KEY` | yes | Django cryptographic signing secret |
+| `DATABASE_URL` | yes | PostgreSQL URL; SQLite is intentionally unsupported |
+| `DEBUG` | no | `True`, `1`, `yes`, or `on` enables development mode |
+| `ALLOWED_HOSTS` | no | Comma-separated host names |
+| `CSRF_TRUSTED_ORIGINS` | no | Comma-separated trusted origins |
+| `DEFAULT_FROM_EMAIL` | no | Sender for authentication emails |
+| `SECURE_SSL_REDIRECT` | no | Defaults on outside debug; set for the deployment's TLS topology |
+| `SECURE_HSTS_SECONDS` | no | Defaults to 3600 outside debug |
+| `SECURE_HSTS_INCLUDE_SUBDOMAINS` | no | Defaults on outside debug |
+| `SECURE_HSTS_PRELOAD` | no | Explicit opt-in after confirming the domain is preload-ready |
 
-```
-$ uv run manage.py migrate
-$ uv run manage.py createsuperuser
-$ uv run manage.py runserver
-# Load the site at http://127.0.0.1:8000 or http://127.0.0.1:8000/admin for the admin
-```
+Mock payments, Razorpay, live metal rates, and `seed_demo` are planned but are not part of the current Milestone 1 implementation. Their configuration will be documented when implemented.
 
-### Pip
-To use Pip, create a new virtual environment and then install all packages hosted in `requirements.txt`. Run `migrate` to configure the initial database. and `createsuperuser` to create a new superuser account for accessing the admin. Execute the `runserver` command to start up the local server.
+## Verification
 
-```
-(.venv) $ pip install -r requirements.txt
-(.venv) $ python manage.py migrate
-(.venv) $ python manage.py createsuperuser
-(.venv) $ python manage.py runserver
-# Load the site at http://127.0.0.1:8000 or http://127.0.0.1:8000/admin for the admin
-```
-
-### Docker
-
-To use Docker with PostgreSQL as the database update the `DATABASES` section of `django_project/settings.py` to reflect the following:
-
-```python
-# django_project/settings.py
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": "postgres",
-        "USER": "postgres",
-        "PASSWORD": "postgres",
-        "HOST": "db",  # set in docker-compose.yml
-        "PORT": 5432,  # default postgres port
-    }
-}
+```powershell
+uv run python manage.py check
+uv run python manage.py makemigrations --check --dry-run
+uv run python manage.py test
 ```
 
-The `INTERNAL_IPS` configuration in `django_project/settings.py` must be also be updated:
+## Project guides
 
-```python
-# config/settings.py
-# django-debug-toolbar
-import socket
-hostname, _, ips = socket.gethostbyname_ex(socket.gethostname())
-INTERNAL_IPS = [ip[:-1] + "1" for ip in ips]
-```
-
-And then proceed to build the Docker image, run the container, and execute the standard commands within Docker.
-
-```
-$ docker compose up -d --build
-$ docker compose exec web python manage.py migrate
-$ docker compose exec web python manage.py createsuperuser
-# Load the site at http://127.0.0.1:8000 or http://127.0.0.1:8000/admin for the admin
-```
-
-## Next Steps
-
-- Add environment variables. There are multiple packages but I personally prefer [environs](https://pypi.org/project/environs/).
-- Add [gunicorn](https://pypi.org/project/gunicorn/) as the production web server.
-- Update the [EMAIL_BACKEND](https://docs.djangoproject.com/en/4.0/topics/email/#module-django.core.mail) and connect with a mail provider.
-- Make the [admin more secure](https://opensource.com/article/18/1/10-tips-making-django-admin-more-secure).
-- `django-allauth` supports [social authentication](https://django-allauth.readthedocs.io/en/latest/socialaccount/index.html) if you need that.
-
-I cover all of these steps in tutorials and premium courses over at [LearnDjango.com](https://learndjango.com).
-
-## 🤝 Contributing
-
-Contributions, issues and feature requests are welcome! See [CONTRIBUTING.md](https://github.com/wsvincent/lithium/blob/master/CONTRIBUTING.md).
-
-## ⭐️ Support
-
-Give a ⭐️  if this project helped you!
-
-## License
-
-[The MIT License](LICENSE)
+- [Agent contract](AGENTS.md)
+- [Architecture](docs/ARCHITECTURE.md)
+- [Domain rules](docs/DOMAIN_RULES.md)
+- [MVP plan](docs/MVP_PLAN.md)
+- [Current status](docs/STATUS.md)
+- [Development conventions](docs/DEVELOPMENT.md)
+- [Testing](docs/TESTING.md)

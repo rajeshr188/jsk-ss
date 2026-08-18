@@ -1,0 +1,29 @@
+{% extends '_base.html' %}
+
+{% block title %}Customers | Jai Shri Krishna Jewellery{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h1>Customers</h1>
+  <a class="btn btn-jsk" href="{% url 'schemes:customer_add' %}">Add customer</a>
+</div>
+
+<div class="table-responsive">
+  <table class="table align-middle">
+    <thead><tr><th>Customer</th><th>Mobile</th><th>Schemes</th><th></th></tr></thead>
+    <tbody>
+      {% for customer in customers %}
+      <tr>
+        <td><strong>{{ customer.full_name }}</strong><br><small class="text-muted">{{ customer.customer_number }}</small></td>
+        <td>{{ customer.mobile_number }}</td>
+        <td>{{ customer.scheme_accounts.count }}</td>
+        <td class="text-end"><a href="{% url 'schemes:customer_detail' customer.pk %}">View</a></td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="4" class="text-muted text-center py-4">No customers yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
+

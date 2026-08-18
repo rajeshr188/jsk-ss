@@ -1,0 +1,27 @@
+{% extends '_base.html' %}
+
+{% block title %}Scheme plans | Jai Shri Krishna Jewellery{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div><h1 class="mb-1">Scheme plans</h1><p class="text-muted mb-0">Reusable terms for new customer agreements</p></div>
+  <a class="btn btn-jsk" href="{% url 'schemes:plan_add' %}">Add plan</a>
+</div>
+<div class="table-responsive">
+  <table class="table align-middle">
+    <thead><tr><th>Plan</th><th>Amount</th><th>Frequency</th><th>Duration</th><th>Status</th></tr></thead>
+    <tbody>
+      {% for plan in plans %}
+      <tr>
+        <td><strong>{{ plan.name }}</strong><br><small class="text-muted">{{ plan.code }}</small></td>
+        <td>{{ plan.get_amount_rule_display }}{% if plan.fixed_contribution_amount %} · ₹{{ plan.fixed_contribution_amount }}{% endif %}</td>
+        <td>{{ plan.get_frequency_rule_display }}</td>
+        <td>{{ plan.default_months }} months</td>
+        <td>{% if plan.active %}<span class="badge text-bg-success">Active</span>{% else %}<span class="badge text-bg-secondary">Inactive</span>{% endif %}</td>
+      </tr>
+      {% empty %}<tr><td colspan="5" class="text-muted text-center py-4">No plans yet.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
+

@@ -1,0 +1,18 @@
+{% extends '_base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Add customer | Jai Shri Krishna Jewellery{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center"><div class="col-lg-7">
+  <h1>Add customer</h1>
+  <p class="text-muted">This also creates the customer's email login.</p>
+  <form method="post" novalidate>
+    {% csrf_token %}
+    {{ form|crispy }}
+    <button class="btn btn-jsk" type="submit">Create customer</button>
+    <a class="btn btn-link" href="{% url 'schemes:customer_list' %}">Cancel</a>
+  </form>
+</div></div>
+{% endblock %}
+
