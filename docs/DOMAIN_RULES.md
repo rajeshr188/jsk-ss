@@ -2,6 +2,13 @@
 
 This is the canonical source for stable business rules.
 
+## Authentication and onboarding rules
+
+- **AUTH-001:** A login account is not itself an active savings agreement; only a valid `SchemeAccount` represents enrolment.
+- **AUTH-002:** During the MVP, owners create customer credentials and profiles together; public signup remains closed.
+- **AUTH-003:** Future public registration must create a complete customer profile, verify identity/contact data as configured, and remain awaiting owner approval until enrolment.
+- **AUTH-004:** No publicly registered but unenrolled customer may contribute. Reopening allauth signup alone is insufficient.
+
 ## Scheme and contribution rules
 
 - **SCH-001:** Savings modes are separate `CASH`, `GOLD`, and `SILVER` liability dimensions.
@@ -24,6 +31,9 @@ This is the canonical source for stable business rules.
 - **METAL-002 / FIN-003:** A rate snapshot used by an allocation is immutable.
 - **METAL-003 / FIN-004:** Historical allocated grams never change with current market rates.
 - **METAL-004:** A successful metal payment with no valid rate becomes clearly paid-but-unallocated; no rate may be invented.
+- **METAL-005:** Mock rates are available only with `DEBUG=True` and `METAL_RATE_PROVIDER=mock`.
+- **METAL-006:** Allocation quantity equals INR contribution divided by the snapshotted applied rate per gram, rounded to 6 decimal places using `ROUND_HALF_UP`.
+- **METAL-007:** Provider rate, applied rate, provider timestamp, fetched timestamp, purity, and metal are stored with each rate snapshot. Changing configured rates affects only future allocations.
 
 ## Redemption and financial invariants
 
@@ -37,4 +47,4 @@ This is the canonical source for stable business rules.
 
 ## Precision
 
-Money uses 2 decimal places. Contribution input with more than 2 decimal places is rejected rather than silently rounded. Metal quantities use 6 decimal places and rates per gram use 4 decimal places; metal rounding rules will be fixed with allocation implementation.
+Money uses 2 decimal places. Contribution input with more than 2 decimal places is rejected rather than silently rounded. Metal quantities use 6 decimal places and `ROUND_HALF_UP`. Rates and purity metadata use 4 decimal places; mock configuration is normalized with `ROUND_HALF_UP`.

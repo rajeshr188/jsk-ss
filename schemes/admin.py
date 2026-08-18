@@ -1,6 +1,13 @@
 from django.contrib import admin
 
-from .models import Contribution, Customer, SchemeAccount, SchemePlan
+from .models import (
+    Contribution,
+    Customer,
+    MetalAllocation,
+    RateSnapshot,
+    SchemeAccount,
+    SchemePlan,
+)
 
 
 @admin.register(Customer)
@@ -71,6 +78,59 @@ class ContributionAdmin(admin.ModelAdmin):
         "gateway_reference",
         "created_at",
         "paid_at",
+    )
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(RateSnapshot)
+class RateSnapshotAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "metal",
+        "provider",
+        "provider_rate",
+        "applied_rate",
+        "purity",
+        "fetched_at",
+    )
+    list_filter = ("metal", "provider")
+    readonly_fields = (
+        "metal",
+        "provider",
+        "provider_timestamp",
+        "fetched_at",
+        "provider_rate",
+        "applied_rate",
+        "purity",
+    )
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(MetalAllocation)
+class MetalAllocationAdmin(admin.ModelAdmin):
+    list_display = ("id", "contribution", "metal", "quantity", "created_at")
+    list_filter = ("metal",)
+    search_fields = (
+        "contribution__gateway_reference",
+        "contribution__scheme_account__scheme_number",
+        "contribution__scheme_account__customer__full_name",
+    )
+    readonly_fields = (
+        "contribution",
+        "rate_snapshot",
+        "metal",
+        "quantity",
+        "created_at",
     )
 
     def has_add_permission(self, request):

@@ -1,18 +1,27 @@
 import calendar
 import secrets
 from datetime import date
-from decimal import Decimal, InvalidOperation
+from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 
-from .models import Contribution, Customer, SchemeAccount, SchemePlan
+from .models import (
+    Contribution,
+    Customer,
+    MetalAllocation,
+    RateSnapshot,
+    SchemeAccount,
+    SchemePlan,
+)
 from .payments import get_payment_gateway
+from .rates import get_metal_rate_provider
 
 
 MONEY_QUANTUM = Decimal("0.01")
+METAL_QUANTUM = Decimal("0.000001")
 
 
 def _reference(prefix, model, field_name):
@@ -142,10 +151,6 @@ def validate_contribution_allowed(
     exclude_contribution_id=None,
 ):
     contribution_date = contribution_date or timezone.localdate()
-    if scheme_account.savings_mode != SchemeAccount.SavingsMode.CASH:
-        raise ValidationError(
-            "Gold and silver contributions become available in Milestone 3."
-        )
     if scheme_account.status == SchemeAccount.Status.REDEEMED:
         raise ValidationError("A redeemed scheme cannot receive contributions.")
     if contribution_date < scheme_account.start_date:
@@ -253,7 +258,59 @@ def fail_contribution(*, contribution_id, gateway_reference=None):
 
 
 @transaction.atomic
-def process_mock_cash_contribution(*, scheme_account, amount, contribution_date=None):
+def allocate_metal(*, contribution, rate_provider=None):
+    locked_contribution = (
+        Contribution.objects.select_for_update()
+        .select_related("scheme_account")
+        .get(pk=contribution.pk)
+    )
+    existing = MetalAllocation.objects.filter(contribution=locked_contribution).select_related(
+        "rate_snapshot"
+    ).first()
+    if existing is not None:
+        return existing
+    if locked_contribution.status != Contribution.Status.PAID:
+        raise ValidationError("Only a paid contribution can receive a metal allocation.")
+
+    metal = locked_contribution.scheme_account.savings_mode
+    if metal not in {RateSnapshot.Metal.GOLD, RateSnapshot.Metal.SILVER}:
+        raise ValidationError("Cash contributions do not receive a metal allocation.")
+    provider = rate_provider or get_metal_rate_provider()
+    quote = provider.get_rate(metal)
+    if quote.metal != metal:
+        raise ValidationError("The rate quote metal does not match the scheme.")
+    if quote.applied_rate <= 0 or quote.provider_rate <= 0:
+        raise ValidationError("Metal rates must be greater than zero.")
+
+    snapshot = RateSnapshot(
+        metal=quote.metal,
+        provider=quote.provider,
+        provider_timestamp=quote.provider_timestamp,
+        provider_rate=quote.provider_rate,
+        applied_rate=quote.applied_rate,
+        purity=quote.purity,
+    )
+    snapshot.full_clean()
+    snapshot.save()
+
+    quantity = (locked_contribution.amount / snapshot.applied_rate).quantize(
+        METAL_QUANTUM, rounding=ROUND_HALF_UP
+    )
+    if quantity <= 0:
+        raise ValidationError("The contribution is too small to allocate at 6 decimal places.")
+    allocation = MetalAllocation(
+        contribution=locked_contribution,
+        rate_snapshot=snapshot,
+        metal=metal,
+        quantity=quantity,
+    )
+    allocation.full_clean()
+    allocation.save()
+    return allocation
+
+
+@transaction.atomic
+def process_mock_contribution(*, scheme_account, amount, contribution_date=None):
     gateway = get_payment_gateway()
     locked_account = SchemeAccount.objects.select_for_update().get(pk=scheme_account.pk)
     contribution = initiate_contribution(
@@ -268,9 +325,15 @@ def process_mock_cash_contribution(*, scheme_account, amount, contribution_date=
             contribution_id=contribution.pk,
             gateway_reference=result.gateway_reference,
         )
-    return confirm_contribution(
+    contribution = confirm_contribution(
         contribution_id=contribution.pk,
         payment_gateway=gateway.name,
         gateway_reference=result.gateway_reference,
         verified=result.verified,
     )
+    if contribution.scheme_account.savings_mode in {
+        SchemeAccount.SavingsMode.GOLD,
+        SchemeAccount.SavingsMode.SILVER,
+    }:
+        allocate_metal(contribution=contribution)
+    return contribution

@@ -6,7 +6,7 @@
 <div class="mb-4"><h1 class="mb-1">Contributions</h1><p class="text-muted mb-0">All customer payment attempts</p></div>
 <div class="table-responsive">
   <table class="table align-middle">
-    <thead><tr><th>Created</th><th>Customer</th><th>Scheme</th><th>Period</th><th>Amount</th><th>Status</th></tr></thead>
+    <thead><tr><th>Created</th><th>Customer</th><th>Scheme</th><th>Period</th><th>Amount</th><th>Entitlement</th><th>Status</th></tr></thead>
     <tbody>
       {% for contribution in contributions %}
       <tr>
@@ -15,13 +15,14 @@
         <td>{{ contribution.scheme_account.scheme_number }}</td>
         <td>{{ contribution.contribution_period|date:'F Y' }}</td>
         <td>₹{{ contribution.amount|floatformat:2 }}</td>
+        <td>{% if contribution.metal_allocation %}{{ contribution.metal_allocation.quantity|floatformat:6 }} g {{ contribution.metal_allocation.get_metal_display }}{% else %}—{% endif %}</td>
         <td>
           {% if contribution.status == 'PAID' %}<span class="badge text-bg-success">Paid</span>
           {% elif contribution.status == 'FAILED' %}<span class="badge text-bg-danger">Failed</span>
           {% else %}<span class="badge text-bg-warning">Pending</span>{% endif %}
         </td>
       </tr>
-      {% empty %}<tr><td colspan="6" class="text-center text-muted py-4">No contributions yet.</td></tr>{% endfor %}
+      {% empty %}<tr><td colspan="7" class="text-center text-muted py-4">No contributions yet.</td></tr>{% endfor %}
     </tbody>
   </table>
 </div>

@@ -10,6 +10,9 @@
   <p class="text-muted">{{ scheme_account.scheme_number }} · {{ scheme_account.plan.name }}</p>
   <div class="alert alert-warning" role="alert">
     Development mock payment only. No real payment will be collected.
+    {% if scheme_account.savings_mode == 'GOLD' or scheme_account.savings_mode == 'SILVER' %}
+    The INR amount will use the configured mock {{ scheme_account.get_savings_mode_display|lower }} rate.
+    {% endif %}
   </div>
   <form method="post" novalidate>
     {% csrf_token %}
@@ -18,4 +21,3 @@
   </form>
 </div></div>
 {% endblock %}
-

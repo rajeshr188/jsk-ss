@@ -9,9 +9,9 @@ uv run --env-file .env python manage.py check
 uv run --env-file .env python manage.py makemigrations --check --dry-run
 ```
 
-Current regressions cover amount/frequency enforcement, failed-payment entitlement, payment confirmation idempotency, customer isolation, and database constraints. Future suites must add exact metal allocation, webhook idempotency, over-redemption prevention, and owner/customer liability reconciliation.
+Current regressions cover amount/frequency enforcement, failed-payment entitlement, confirmation/allocation idempotency, exact metal calculation, historical-rate stability, customer isolation, and database constraints. Future suites must add webhook idempotency, over-redemption prevention, and owner/customer liability reconciliation.
 
-Mock payment tests use `override_settings(DEBUG=True, PAYMENT_GATEWAY="mock")`. For manual testing, put `DEBUG=True` and `PAYMENT_GATEWAY=mock` in the ignored `.env`. Mock rates remain deferred to Milestone 3.
+Mock financial tests use `override_settings` for payment and rate configuration. For manual testing, put `DEBUG=True`, `PAYMENT_GATEWAY=mock`, and `METAL_RATE_PROVIDER=mock` in the ignored `.env`, plus optional mock rates.
 
 ## Manual smoke test
 
@@ -24,4 +24,6 @@ Mock payment tests use `override_settings(DEBUG=True, PAYMENT_GATEWAY="mock")`. 
 - Make a cash mock contribution and confirm the cash principal/history update
 - Confirm a second monthly contribution is rejected while flexible contributions can repeat
 - Confirm the owner contribution list shows the payment
-- Allocation, owner liability, and redemption checks are added in later milestones
+- Make gold and silver contributions and confirm gram balances/history use their captured rates
+- Change a mock rate and confirm earlier allocations remain unchanged
+- Owner liability and redemption checks are added in later milestones

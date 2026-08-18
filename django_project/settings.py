@@ -119,6 +119,11 @@ if not DATABASE_URL:
 DATABASES = {"default": postgres_database_from_url(DATABASE_URL)}
 
 PAYMENT_GATEWAY = os.getenv("PAYMENT_GATEWAY", "").strip().lower()
+METAL_RATE_PROVIDER = os.getenv("METAL_RATE_PROVIDER", "").strip().lower()
+MOCK_GOLD_RATE = os.getenv("MOCK_GOLD_RATE", "12500.0000")
+MOCK_SILVER_RATE = os.getenv("MOCK_SILVER_RATE", "150.0000")
+MOCK_GOLD_PURITY = os.getenv("MOCK_GOLD_PURITY", "0.9999")
+MOCK_SILVER_PURITY = os.getenv("MOCK_SILVER_PURITY", "0.9990")
 
 # Password validation
 # https://docs.djangoproject.com/en/dev/ref/settings/#auth-password-validators

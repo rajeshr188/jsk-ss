@@ -1,6 +1,6 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -11,15 +11,17 @@ from .forms import ContributionForm, CustomerCreateForm, EnrolmentForm, SchemePl
 from .models import Contribution, Customer, SchemeAccount, SchemePlan
 from .payments import mock_payment_is_enabled
 from .permissions import owner_required
+from .rates import mock_metal_rate_is_enabled
 from .selectors import (
     get_cash_balance,
     get_contribution_history,
     get_customer_scheme_account,
     get_customer_scheme_summary,
+    get_metal_balance,
     get_owner_contributions,
     get_owner_customers,
 )
-from .services import create_customer, enroll_customer, process_mock_cash_contribution
+from .services import create_customer, enroll_customer, process_mock_contribution
 
 
 @login_required
@@ -140,6 +142,7 @@ def my_schemes(request):
         {
             "scheme_accounts": accounts,
             "mock_payment_enabled": mock_payment_is_enabled(),
+            "mock_metal_rate_enabled": mock_metal_rate_is_enabled(),
         },
     )
 
@@ -155,8 +158,10 @@ def my_scheme_detail(request, scheme_number):
         {
             "scheme_account": account,
             "cash_balance": get_cash_balance(account),
+            "metal_balance": get_metal_balance(account),
             "contributions": get_contribution_history(account),
             "mock_payment_enabled": mock_payment_is_enabled(),
+            "mock_metal_rate_enabled": mock_metal_rate_is_enabled(),
         },
     )
 
@@ -166,18 +171,28 @@ def pay_contribution(request, scheme_number):
     if not mock_payment_is_enabled():
         raise Http404
     account = get_customer_scheme_account(request.user, scheme_number)
-    if account is None or account.savings_mode != SchemeAccount.SavingsMode.CASH:
+    if account is None:
+        raise Http404
+    if (
+        account.savings_mode in {
+            SchemeAccount.SavingsMode.GOLD,
+            SchemeAccount.SavingsMode.SILVER,
+        }
+        and not mock_metal_rate_is_enabled()
+    ):
         raise Http404
 
     form = ContributionForm(request.POST or None, scheme_account=account)
     if request.method == "POST" and form.is_valid():
         try:
-            contribution = process_mock_cash_contribution(
+            contribution = process_mock_contribution(
                 scheme_account=account,
                 amount=form.cleaned_data["amount"],
             )
-        except ValidationError as error:
-            if hasattr(error, "message_dict") and "amount" in error.message_dict:
+        except (ImproperlyConfigured, ValidationError) as error:
+            if isinstance(error, ImproperlyConfigured):
+                form.add_error(None, str(error))
+            elif hasattr(error, "message_dict") and "amount" in error.message_dict:
                 for message in error.message_dict["amount"]:
                     form.add_error("amount", message)
             else:
@@ -185,10 +200,15 @@ def pay_contribution(request, scheme_number):
                     form.add_error(None, message)
         else:
             if contribution.status == Contribution.Status.PAID:
-                messages.success(
-                    request,
-                    f"Mock payment successful. ₹{contribution.amount} was added.",
-                )
+                if contribution.scheme_account.savings_mode == SchemeAccount.SavingsMode.CASH:
+                    message = f"Mock payment successful. ₹{contribution.amount} was added."
+                else:
+                    allocation = contribution.metal_allocation
+                    message = (
+                        f"Mock payment successful. {allocation.quantity} g "
+                        f"{allocation.get_metal_display()} was allocated."
+                    )
+                messages.success(request, message)
             else:
                 messages.error(request, "The mock payment failed. No balance was added.")
             return redirect("schemes:my_scheme_detail", scheme_number=account.scheme_number)

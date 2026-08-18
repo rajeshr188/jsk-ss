@@ -20,12 +20,18 @@
       <dt class="col-sm-5">Eligible from</dt><dd class="col-sm-7">{{ account.eligible_from }}</dd>
       {% if account.savings_mode == 'CASH' %}
       <dt class="col-sm-5">Cash principal</dt><dd class="col-sm-7 fw-semibold">₹{{ account.cash_balance|floatformat:2 }}</dd>
+      {% elif account.savings_mode == 'GOLD' %}
+      <dt class="col-sm-5">Gold accumulated</dt><dd class="col-sm-7 fw-semibold">{{ account.metal_balance|floatformat:6 }} g</dd>
+      {% elif account.savings_mode == 'SILVER' %}
+      <dt class="col-sm-5">Silver accumulated</dt><dd class="col-sm-7 fw-semibold">{{ account.metal_balance|floatformat:6 }} g</dd>
       {% endif %}
     </dl>
     <div class="mt-3">
       <a class="btn btn-outline-dark" href="{% url 'schemes:my_scheme_detail' account.scheme_number %}">View history</a>
-      {% if account.savings_mode == 'CASH' and mock_payment_enabled %}
-      <a class="btn btn-jsk" href="{% url 'schemes:pay_contribution' account.scheme_number %}">Pay now</a>
+      {% if mock_payment_enabled %}
+        {% if account.savings_mode == 'CASH' or mock_metal_rate_enabled %}
+        <a class="btn btn-jsk" href="{% url 'schemes:pay_contribution' account.scheme_number %}">Pay now</a>
+        {% endif %}
       {% endif %}
     </div>
   </div></div></div>
@@ -34,4 +40,3 @@
   {% endfor %}
 </div>
 {% endblock %}
-

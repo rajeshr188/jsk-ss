@@ -6,7 +6,7 @@ from django.db import IntegrityError, transaction
 from django.test import TestCase, override_settings
 from django.utils import timezone
 
-from schemes.models import Contribution, SchemeAccount, SchemePlan
+from schemes.models import Contribution, MetalAllocation, SchemeAccount, SchemePlan
 from schemes.payments import get_payment_gateway
 from schemes.selectors import get_cash_balance
 from schemes.services import (
@@ -15,7 +15,7 @@ from schemes.services import (
     enroll_customer,
     fail_contribution,
     initiate_contribution,
-    process_mock_cash_contribution,
+    process_mock_contribution,
     validate_contribution_amount,
 )
 
@@ -92,14 +92,14 @@ class ContributionServiceTests(TestCase):
         fail_contribution(contribution_id=attempt.pk, gateway_reference="mock_failed")
         self.assertEqual(get_cash_balance(account), Decimal("0.00"))
 
-        paid = process_mock_cash_contribution(
+        paid = process_mock_contribution(
             scheme_account=account, amount=Decimal("5000.00")
         )
         self.assertEqual(paid.status, Contribution.Status.PAID)
         self.assertEqual(get_cash_balance(account), Decimal("5000.00"))
 
         with self.assertRaises(ValidationError):
-            process_mock_cash_contribution(
+            process_mock_contribution(
                 scheme_account=account, amount=Decimal("5000.00")
             )
         self.assertEqual(
@@ -111,24 +111,25 @@ class ContributionServiceTests(TestCase):
 
     def test_flexible_account_accepts_multiple_successful_contributions(self):
         account = make_account(frequency_rule=SchemePlan.FrequencyRule.FLEXIBLE)
-        process_mock_cash_contribution(
+        process_mock_contribution(
             scheme_account=account, amount=Decimal("5000.00")
         )
-        process_mock_cash_contribution(
+        process_mock_contribution(
             scheme_account=account, amount=Decimal("5000.00")
         )
         self.assertEqual(get_cash_balance(account), Decimal("10000.00"))
+        self.assertFalse(MetalAllocation.objects.exists())
 
     def test_variable_once_per_month_combination(self):
         account = make_account(
             frequency_rule=SchemePlan.FrequencyRule.ONCE_PER_MONTH,
             amount_rule=SchemePlan.AmountRule.VARIABLE,
         )
-        process_mock_cash_contribution(
+        process_mock_contribution(
             scheme_account=account, amount=Decimal("2500.00")
         )
         with self.assertRaises(ValidationError):
-            process_mock_cash_contribution(
+            process_mock_contribution(
                 scheme_account=account, amount=Decimal("3000.00")
             )
         self.assertEqual(get_cash_balance(account), Decimal("2500.00"))
@@ -203,6 +204,6 @@ class ContributionServiceTests(TestCase):
         account.eligible_from = timezone.localdate() - timedelta(days=1)
         account.save(update_fields=["eligible_from"])
         with self.assertRaises(ValidationError):
-            process_mock_cash_contribution(
+            process_mock_contribution(
                 scheme_account=account, amount=Decimal("5000.00")
             )

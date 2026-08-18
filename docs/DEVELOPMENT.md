@@ -9,6 +9,7 @@
 - Views must not contain substantial financial domain logic; signals must not orchestrate money workflows.
 - Use class-based or function-based views according to clarity, server-rendered Bootstrap templates, named URLs, and crispy Django forms.
 - Keep migrations committed and run `makemigrations --check --dry-run` before handoff.
+- Keep payment and metal-rate providers behind their explicit boundaries; provider-specific fields must not leak through views or scheme models.
 
 ## Environment
 
@@ -17,4 +18,3 @@ Configuration comes from process environment variables. `.env.example` is docume
 ## Adding a domain feature
 
 Read the agent contract and domain rules, implement one milestone slice, add constraints and focused tests, apply migrations against PostgreSQL, run the regression suite and checks, manually exercise the flow, then update status/architecture only where reality changed.
-

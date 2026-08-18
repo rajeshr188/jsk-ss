@@ -3,7 +3,7 @@ from decimal import Decimal
 from django.db.models import DecimalField, Q, Sum, Value
 from django.db.models.functions import Coalesce
 
-from .models import Contribution, Customer, SchemeAccount
+from .models import Contribution, Customer, MetalAllocation, SchemeAccount
 
 
 def get_customer_scheme_summary(user):
@@ -18,7 +18,18 @@ def get_customer_scheme_summary(user):
                 ),
                 Value(Decimal("0.00")),
                 output_field=DecimalField(max_digits=14, decimal_places=2),
-            )
+            ),
+            metal_balance=Coalesce(
+                Sum(
+                    "contributions__metal_allocation__quantity",
+                    filter=Q(
+                        contributions__status=Contribution.Status.PAID,
+                        contributions__metal_allocation__isnull=False,
+                    ),
+                ),
+                Value(Decimal("0.000000")),
+                output_field=DecimalField(max_digits=18, decimal_places=6),
+            ),
         )
     )
 
@@ -38,12 +49,16 @@ def get_customer_scheme_account(user, scheme_number):
 
 
 def get_contribution_history(scheme_account):
-    return scheme_account.contributions.all()
+    return scheme_account.contributions.select_related("metal_allocation__rate_snapshot")
 
 
 def get_owner_contributions():
     return Contribution.objects.select_related(
-        "scheme_account", "scheme_account__customer", "scheme_account__plan"
+        "scheme_account",
+        "scheme_account__customer",
+        "scheme_account__plan",
+        "metal_allocation",
+        "metal_allocation__rate_snapshot",
     )
 
 
@@ -55,5 +70,24 @@ def get_cash_balance(scheme_account):
             Sum("amount"),
             Value(Decimal("0.00")),
             output_field=DecimalField(max_digits=14, decimal_places=2),
+        )
+    )["total"]
+
+
+def get_metal_balance(scheme_account):
+    if scheme_account.savings_mode not in {
+        SchemeAccount.SavingsMode.GOLD,
+        SchemeAccount.SavingsMode.SILVER,
+    }:
+        return Decimal("0.000000")
+    return MetalAllocation.objects.filter(
+        contribution__scheme_account=scheme_account,
+        contribution__status=Contribution.Status.PAID,
+        metal=scheme_account.savings_mode,
+    ).aggregate(
+        total=Coalesce(
+            Sum("quantity"),
+            Value(Decimal("0.000000")),
+            output_field=DecimalField(max_digits=18, decimal_places=6),
         )
     )["total"]

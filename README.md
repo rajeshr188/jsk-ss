@@ -41,6 +41,11 @@ Alternatively, set `DJANGO_SECRET_KEY` and run `docker compose up --build`; Comp
 | `CSRF_TRUSTED_ORIGINS` | no | Comma-separated trusted origins |
 | `DEFAULT_FROM_EMAIL` | no | Sender for authentication emails |
 | `PAYMENT_GATEWAY` | Milestone 2 | Must be `mock` for the development payment flow |
+| `METAL_RATE_PROVIDER` | Milestone 3 | Must be `mock` for development gold/silver allocation |
+| `MOCK_GOLD_RATE` | no | Development 24K gold rate per gram; defaults to `12500.0000` |
+| `MOCK_SILVER_RATE` | no | Development silver rate per gram; defaults to `150.0000` |
+| `MOCK_GOLD_PURITY` | no | Development gold fineness metadata; defaults to `0.9999` |
+| `MOCK_SILVER_PURITY` | no | Development silver fineness metadata; defaults to `0.9990` |
 | `SECURE_SSL_REDIRECT` | no | Defaults on outside debug; set for the deployment's TLS topology |
 | `SECURE_HSTS_SECONDS` | no | Defaults to 3600 outside debug |
 | `SECURE_HSTS_INCLUDE_SUBDOMAINS` | no | Defaults on outside debug |
@@ -53,9 +58,12 @@ Set both of these values:
 ```dotenv
 DEBUG=True
 PAYMENT_GATEWAY=mock
+METAL_RATE_PROVIDER=mock
+MOCK_GOLD_RATE=12500.0000
+MOCK_SILVER_RATE=150.0000
 ```
 
-The customer cash-payment screen is unavailable unless both conditions are true. Mock payments record no real transfer; they exist only to exercise contribution rules and cash entitlement locally. Razorpay, live metal rates, and `seed_demo` remain deferred.
+The payment screen is unavailable unless mock payment mode is enabled. Gold and silver payments additionally require the mock metal-rate provider. Mock payments record no real transfer; rates are snapshotted and INR is converted to six-decimal grams for local testing. Razorpay, live metal rates, and `seed_demo` remain deferred.
 
 ## Verification
 

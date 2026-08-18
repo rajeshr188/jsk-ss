@@ -240,3 +240,83 @@ class Contribution(models.Model):
 
     def __str__(self):
         return f"{self.scheme_account.scheme_number} — ₹{self.amount} — {self.status}"
+
+
+class RateSnapshot(models.Model):
+    class Metal(models.TextChoices):
+        GOLD = "GOLD", "24K Gold"
+        SILVER = "SILVER", "Silver"
+
+    metal = models.CharField(max_length=10, choices=Metal.choices)
+    provider = models.CharField(max_length=50)
+    provider_timestamp = models.DateTimeField()
+    fetched_at = models.DateTimeField(auto_now_add=True)
+    provider_rate = models.DecimalField(max_digits=14, decimal_places=4)
+    applied_rate = models.DecimalField(max_digits=14, decimal_places=4)
+    purity = models.DecimalField(max_digits=6, decimal_places=4)
+
+    class Meta:
+        ordering = ["-fetched_at", "-pk"]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(metal__in=["GOLD", "SILVER"]),
+                name="rate_snapshot_valid_metal",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(provider_rate__gt=Decimal("0")),
+                name="provider_rate_positive",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(applied_rate__gt=Decimal("0")),
+                name="applied_rate_positive",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(purity__gt=Decimal("0"), purity__lte=Decimal("1")),
+                name="rate_snapshot_valid_purity",
+            ),
+        ]
+
+    def save(self, *args, **kwargs):
+        if self.pk and type(self).objects.filter(pk=self.pk).exists():
+            raise ValidationError("Historical rate snapshots are immutable.")
+        return super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.get_metal_display()} at ₹{self.applied_rate}/g ({self.provider})"
+
+
+class MetalAllocation(models.Model):
+    contribution = models.OneToOneField(
+        Contribution,
+        on_delete=models.PROTECT,
+        related_name="metal_allocation",
+    )
+    rate_snapshot = models.OneToOneField(
+        RateSnapshot,
+        on_delete=models.PROTECT,
+        related_name="metal_allocation",
+    )
+    metal = models.CharField(max_length=10, choices=RateSnapshot.Metal.choices)
+    quantity = models.DecimalField(max_digits=18, decimal_places=6)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at", "-pk"]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(metal__in=["GOLD", "SILVER"]),
+                name="metal_allocation_valid_metal",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(quantity__gt=Decimal("0")),
+                name="metal_allocation_quantity_positive",
+            ),
+        ]
+
+    def save(self, *args, **kwargs):
+        if self.pk and type(self).objects.filter(pk=self.pk).exists():
+            raise ValidationError("Historical metal allocations are immutable.")
+        return super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.quantity} g {self.get_metal_display()}"
