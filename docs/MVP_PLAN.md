@@ -2,7 +2,7 @@
 
 - [x] Milestone 0 — Lithium adaptation
 - [x] Milestone 1 — Customer and scheme enrolment
-- [ ] Milestone 2 — Cash contributions with mock payment
+- [x] Milestone 2 — Cash contributions with mock payment
 - [ ] Milestone 3 — Gold/silver allocation with mock rates
 - [ ] Milestone 4 — Owner liability dashboard
 - [ ] MVP Alpha checkpoint
@@ -16,4 +16,3 @@
 - [ ] Milestone 11 — Receipts and statements
 
 Milestones are vertical increments. Each must leave migrations, tests, system checks, user flows, and canonical documentation coherent before the next begins.
-

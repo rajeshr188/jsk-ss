@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Customer, SchemeAccount, SchemePlan
+from .models import Contribution, Customer, SchemeAccount, SchemePlan
 
 
 @admin.register(Customer)
@@ -42,3 +42,39 @@ class SchemeAccountAdmin(admin.ModelAdmin):
         "updated_at",
     )
 
+
+@admin.register(Contribution)
+class ContributionAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "scheme_account",
+        "amount",
+        "contribution_period",
+        "frequency_rule_snapshot",
+        "status",
+        "payment_gateway",
+        "created_at",
+    )
+    list_filter = ("status", "payment_gateway", "contribution_period")
+    search_fields = (
+        "gateway_reference",
+        "scheme_account__scheme_number",
+        "scheme_account__customer__full_name",
+    )
+    readonly_fields = (
+        "scheme_account",
+        "amount",
+        "contribution_period",
+        "frequency_rule_snapshot",
+        "status",
+        "payment_gateway",
+        "gateway_reference",
+        "created_at",
+        "paid_at",
+    )
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False

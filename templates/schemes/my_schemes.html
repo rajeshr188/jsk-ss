@@ -18,7 +18,16 @@
       <dt class="col-sm-5">Start date</dt><dd class="col-sm-7">{{ account.start_date }}</dd>
       <dt class="col-sm-5">Agreed duration</dt><dd class="col-sm-7">{{ account.agreed_months }} months</dd>
       <dt class="col-sm-5">Eligible from</dt><dd class="col-sm-7">{{ account.eligible_from }}</dd>
+      {% if account.savings_mode == 'CASH' %}
+      <dt class="col-sm-5">Cash principal</dt><dd class="col-sm-7 fw-semibold">₹{{ account.cash_balance|floatformat:2 }}</dd>
+      {% endif %}
     </dl>
+    <div class="mt-3">
+      <a class="btn btn-outline-dark" href="{% url 'schemes:my_scheme_detail' account.scheme_number %}">View history</a>
+      {% if account.savings_mode == 'CASH' and mock_payment_enabled %}
+      <a class="btn btn-jsk" href="{% url 'schemes:pay_contribution' account.scheme_number %}">Pay now</a>
+      {% endif %}
+    </div>
   </div></div></div>
   {% empty %}
   <div class="col-12"><div class="alert alert-info">No savings scheme has been enrolled for this login yet. Please contact Jai Shri Krishna Jewellery.</div></div>

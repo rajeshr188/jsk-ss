@@ -183,3 +183,60 @@ class SchemeAccount(models.Model):
     def __str__(self):
         return f"{self.scheme_number} — {self.customer.full_name}"
 
+
+class Contribution(models.Model):
+    class Status(models.TextChoices):
+        PENDING = "PENDING", "Pending"
+        PAID = "PAID", "Paid"
+        FAILED = "FAILED", "Failed"
+
+    scheme_account = models.ForeignKey(
+        SchemeAccount,
+        on_delete=models.PROTECT,
+        related_name="contributions",
+    )
+    amount = models.DecimalField(max_digits=14, decimal_places=2)
+    contribution_period = models.DateField(
+        help_text="First calendar day of the contribution month."
+    )
+    frequency_rule_snapshot = models.CharField(
+        max_length=20, choices=SchemePlan.FrequencyRule.choices
+    )
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDING)
+    payment_gateway = models.CharField(max_length=30)
+    gateway_reference = models.CharField(max_length=120, null=True, blank=True, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    paid_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at", "-pk"]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(amount__gt=Decimal("0")),
+                name="contribution_amount_positive",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(contribution_period__day=1),
+                name="contribution_period_first_day",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(status="PAID", paid_at__isnull=False, gateway_reference__isnull=False)
+                    | models.Q(status__in=["PENDING", "FAILED"], paid_at__isnull=True)
+                ),
+                name="paid_contribution_has_confirmation",
+            ),
+            models.UniqueConstraint(
+                fields=["scheme_account", "contribution_period"],
+                condition=models.Q(
+                    status="PAID", frequency_rule_snapshot="ONCE_PER_MONTH"
+                ),
+                name="one_paid_contribution_per_account_period",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["status", "created_at"], name="contrib_status_created_idx"),
+        ]
+
+    def __str__(self):
+        return f"{self.scheme_account.scheme_number} — ₹{self.amount} — {self.status}"

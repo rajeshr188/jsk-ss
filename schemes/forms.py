@@ -3,6 +3,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 
 from .models import SchemeAccount, SchemePlan
+from .services import validate_contribution_allowed
 
 
 class CustomerCreateForm(forms.Form):
@@ -68,3 +69,31 @@ class EnrolmentForm(forms.Form):
                 f"This plan requires at least {plan.minimum_months} months.",
             )
         return cleaned
+
+
+class ContributionForm(forms.Form):
+    amount = forms.DecimalField(
+        label="Contribution amount",
+        max_digits=14,
+        decimal_places=2,
+        min_value=0.01,
+    )
+
+    def __init__(self, *args, scheme_account, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.scheme_account = scheme_account
+        if scheme_account.amount_rule_snapshot == SchemePlan.AmountRule.FIXED:
+            self.fields["amount"].initial = scheme_account.fixed_amount_snapshot
+            self.fields["amount"].disabled = True
+            self.fields["amount"].help_text = "This scheme has a fixed contribution amount."
+        else:
+            maximum = scheme_account.maximum_amount_snapshot
+            boundary = f"Minimum ₹{scheme_account.minimum_amount_snapshot}"
+            if maximum is not None:
+                boundary += f"; maximum ₹{maximum}"
+            self.fields["amount"].help_text = boundary
+
+    def clean_amount(self):
+        amount = self.cleaned_data["amount"]
+        validated_amount, _ = validate_contribution_allowed(self.scheme_account, amount)
+        return validated_amount

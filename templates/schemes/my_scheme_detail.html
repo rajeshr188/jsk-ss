@@ -1,0 +1,47 @@
+{% extends '_base.html' %}
+
+{% block title %}{{ scheme_account.scheme_number }} | Jai Shri Krishna Jewellery{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-4">
+  <div>
+    <a class="small" href="{% url 'schemes:my_schemes' %}">← All schemes</a>
+    <h1 class="mb-1">{{ scheme_account.get_savings_mode_display }}</h1>
+    <div class="text-muted">{{ scheme_account.scheme_number }}</div>
+  </div>
+  {% if scheme_account.savings_mode == 'CASH' and mock_payment_enabled %}
+  <a class="btn btn-jsk" href="{% url 'schemes:pay_contribution' scheme_account.scheme_number %}">Pay now</a>
+  {% endif %}
+</div>
+
+{% if scheme_account.savings_mode == 'CASH' %}
+<div class="card mb-4"><div class="card-body">
+  <div class="text-muted">Outstanding cash principal</div>
+  <div class="display-6">₹{{ cash_balance|floatformat:2 }}</div>
+  <small class="text-muted">Derived from successful contributions only.</small>
+</div></div>
+{% endif %}
+
+<h2 class="h4">Contribution history</h2>
+<div class="table-responsive">
+  <table class="table align-middle">
+    <thead><tr><th>Date</th><th>Period</th><th>Amount</th><th>Status</th><th>Reference</th></tr></thead>
+    <tbody>
+      {% for contribution in contributions %}
+      <tr>
+        <td>{{ contribution.created_at|date:'d M Y, g:i A' }}</td>
+        <td>{{ contribution.contribution_period|date:'F Y' }}</td>
+        <td>₹{{ contribution.amount|floatformat:2 }}</td>
+        <td>
+          {% if contribution.status == 'PAID' %}<span class="badge text-bg-success">Paid</span>
+          {% elif contribution.status == 'FAILED' %}<span class="badge text-bg-danger">Failed</span>
+          {% else %}<span class="badge text-bg-warning">Pending</span>{% endif %}
+        </td>
+        <td><small>{{ contribution.gateway_reference|default:'—' }}</small></td>
+      </tr>
+      {% empty %}<tr><td colspan="5" class="text-center text-muted py-4">No contributions yet.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
+

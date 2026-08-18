@@ -1,0 +1,28 @@
+{% extends '_base.html' %}
+
+{% block title %}Contributions | Jai Shri Krishna Jewellery{% endblock %}
+
+{% block content %}
+<div class="mb-4"><h1 class="mb-1">Contributions</h1><p class="text-muted mb-0">All customer payment attempts</p></div>
+<div class="table-responsive">
+  <table class="table align-middle">
+    <thead><tr><th>Created</th><th>Customer</th><th>Scheme</th><th>Period</th><th>Amount</th><th>Status</th></tr></thead>
+    <tbody>
+      {% for contribution in contributions %}
+      <tr>
+        <td>{{ contribution.created_at|date:'d M Y, g:i A' }}</td>
+        <td><a href="{% url 'schemes:customer_detail' contribution.scheme_account.customer.pk %}">{{ contribution.scheme_account.customer.full_name }}</a></td>
+        <td>{{ contribution.scheme_account.scheme_number }}</td>
+        <td>{{ contribution.contribution_period|date:'F Y' }}</td>
+        <td>₹{{ contribution.amount|floatformat:2 }}</td>
+        <td>
+          {% if contribution.status == 'PAID' %}<span class="badge text-bg-success">Paid</span>
+          {% elif contribution.status == 'FAILED' %}<span class="badge text-bg-danger">Failed</span>
+          {% else %}<span class="badge text-bg-warning">Pending</span>{% endif %}
+        </td>
+      </tr>
+      {% empty %}<tr><td colspan="6" class="text-center text-muted py-4">No contributions yet.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

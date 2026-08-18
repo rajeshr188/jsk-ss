@@ -18,10 +18,11 @@
   <div class="col-12 col-md-4"><div class="card h-100"><div class="card-body"><div class="text-muted">Customers</div><div class="display-6">{{ customer_count }}</div></div></div></div>
   <div class="col-12 col-md-4"><div class="card h-100"><div class="card-body"><div class="text-muted">Open scheme accounts</div><div class="display-6">{{ active_account_count }}</div></div></div></div>
   <div class="col-12 col-md-4"><div class="card h-100"><div class="card-body"><div class="text-muted">Active plans</div><div class="display-6">{{ active_plan_count }}</div></div></div></div>
+  <div class="col-12 col-md-4"><div class="card h-100"><div class="card-body"><div class="text-muted">Successful contributions</div><div class="display-6">{{ paid_contribution_count }}</div></div></div></div>
 </div>
 
 <div class="mt-4">
   <a class="btn btn-outline-dark" href="{% url 'schemes:customer_list' %}">View customers</a>
+  <a class="btn btn-outline-dark" href="{% url 'schemes:contribution_list' %}">View contributions</a>
 </div>
 {% endblock %}
-

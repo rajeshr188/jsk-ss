@@ -21,6 +21,12 @@ urlpatterns = [
     ),
     path("owner/plans/", views.plan_list, name="plan_list"),
     path("owner/plans/add/", views.plan_add, name="plan_add"),
+    path("owner/contributions/", views.contribution_list, name="contribution_list"),
     path("mine/", views.my_schemes, name="my_schemes"),
+    path("mine/<str:scheme_number>/", views.my_scheme_detail, name="my_scheme_detail"),
+    path(
+        "mine/<str:scheme_number>/pay/",
+        views.pay_contribution,
+        name="pay_contribution",
+    ),
 ]
-

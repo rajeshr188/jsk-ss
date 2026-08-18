@@ -1,13 +1,18 @@
 import calendar
 import secrets
 from datetime import date
+from decimal import Decimal, InvalidOperation
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 
-from .models import Customer, SchemeAccount, SchemePlan
+from .models import Contribution, Customer, SchemeAccount, SchemePlan
+from .payments import get_payment_gateway
+
+
+MONEY_QUANTUM = Decimal("0.01")
 
 
 def _reference(prefix, model, field_name):
@@ -90,3 +95,182 @@ def enroll_customer(*, customer, plan, savings_mode, start_date=None, agreed_mon
     account.full_clean()
     account.save()
     return account
+
+
+def contribution_period_for(value):
+    return date(value.year, value.month, 1)
+
+
+def validate_contribution_amount(scheme_account, amount):
+    try:
+        amount = Decimal(str(amount))
+        normalized_amount = amount.quantize(MONEY_QUANTUM)
+    except (InvalidOperation, TypeError, ValueError):
+        raise ValidationError({"amount": "Enter a valid contribution amount."}) from None
+
+    if amount != normalized_amount:
+        raise ValidationError({"amount": "Contribution amounts support at most 2 decimal places."})
+    if normalized_amount <= 0:
+        raise ValidationError({"amount": "Contribution amount must be greater than zero."})
+
+    if scheme_account.amount_rule_snapshot == SchemePlan.AmountRule.FIXED:
+        if normalized_amount != scheme_account.fixed_amount_snapshot:
+            raise ValidationError(
+                {"amount": f"This scheme requires exactly ₹{scheme_account.fixed_amount_snapshot}."}
+            )
+    else:
+        if normalized_amount < scheme_account.minimum_amount_snapshot:
+            raise ValidationError(
+                {"amount": f"Minimum contribution is ₹{scheme_account.minimum_amount_snapshot}."}
+            )
+        if (
+            scheme_account.maximum_amount_snapshot is not None
+            and normalized_amount > scheme_account.maximum_amount_snapshot
+        ):
+            raise ValidationError(
+                {"amount": f"Maximum contribution is ₹{scheme_account.maximum_amount_snapshot}."}
+            )
+    return normalized_amount
+
+
+def validate_contribution_allowed(
+    scheme_account,
+    amount,
+    contribution_date=None,
+    *,
+    contribution_period=None,
+    exclude_contribution_id=None,
+):
+    contribution_date = contribution_date or timezone.localdate()
+    if scheme_account.savings_mode != SchemeAccount.SavingsMode.CASH:
+        raise ValidationError(
+            "Gold and silver contributions become available in Milestone 3."
+        )
+    if scheme_account.status == SchemeAccount.Status.REDEEMED:
+        raise ValidationError("A redeemed scheme cannot receive contributions.")
+    if contribution_date < scheme_account.start_date:
+        raise ValidationError("Contributions cannot be made before the scheme start date.")
+    if (
+        contribution_date >= scheme_account.eligible_from
+        and not scheme_account.allow_post_eligibility_contributions_snapshot
+    ):
+        raise ValidationError("This scheme does not allow contributions after eligibility.")
+
+    normalized_amount = validate_contribution_amount(scheme_account, amount)
+    period = contribution_period or contribution_period_for(contribution_date)
+    if scheme_account.frequency_rule_snapshot == SchemePlan.FrequencyRule.ONCE_PER_MONTH:
+        successful = Contribution.objects.filter(
+            scheme_account=scheme_account,
+            contribution_period=period,
+            status=Contribution.Status.PAID,
+        )
+        if exclude_contribution_id is not None:
+            successful = successful.exclude(pk=exclude_contribution_id)
+        if successful.exists():
+            raise ValidationError(
+                "A successful contribution has already been made for this calendar month."
+            )
+    return normalized_amount, period
+
+
+@transaction.atomic
+def initiate_contribution(
+    *, scheme_account, amount, payment_gateway, contribution_date=None
+):
+    locked_account = SchemeAccount.objects.select_for_update().get(pk=scheme_account.pk)
+    normalized_amount, period = validate_contribution_allowed(
+        locked_account, amount, contribution_date
+    )
+    contribution = Contribution(
+        scheme_account=locked_account,
+        amount=normalized_amount,
+        contribution_period=period,
+        frequency_rule_snapshot=locked_account.frequency_rule_snapshot,
+        status=Contribution.Status.PENDING,
+        payment_gateway=payment_gateway,
+    )
+    contribution.full_clean()
+    contribution.save()
+    return contribution
+
+
+@transaction.atomic
+def confirm_contribution(
+    *, contribution_id, payment_gateway, gateway_reference, verified
+):
+    account_id = Contribution.objects.only("scheme_account_id").get(
+        pk=contribution_id
+    ).scheme_account_id
+    SchemeAccount.objects.select_for_update().get(pk=account_id)
+    contribution = (
+        Contribution.objects.select_for_update()
+        .select_related("scheme_account")
+        .get(pk=contribution_id)
+    )
+
+    if contribution.status == Contribution.Status.PAID:
+        if (
+            contribution.payment_gateway == payment_gateway
+            and contribution.gateway_reference == gateway_reference
+        ):
+            return contribution
+        raise ValidationError("This contribution has already been confirmed.")
+    if contribution.status == Contribution.Status.FAILED:
+        raise ValidationError("A failed contribution cannot be confirmed.")
+    if not verified:
+        raise ValidationError("Payment success was not verified server-side.")
+    if contribution.payment_gateway != payment_gateway:
+        raise ValidationError("Payment gateway does not match the initiated contribution.")
+    if not gateway_reference:
+        raise ValidationError("A verified gateway reference is required.")
+
+    validate_contribution_allowed(
+        contribution.scheme_account,
+        contribution.amount,
+        timezone.localdate(),
+        contribution_period=contribution.contribution_period,
+        exclude_contribution_id=contribution.pk,
+    )
+    contribution.status = Contribution.Status.PAID
+    contribution.gateway_reference = gateway_reference
+    contribution.paid_at = timezone.now()
+    contribution.full_clean()
+    contribution.save(update_fields=["status", "gateway_reference", "paid_at"])
+    return contribution
+
+
+@transaction.atomic
+def fail_contribution(*, contribution_id, gateway_reference=None):
+    contribution = Contribution.objects.select_for_update().get(pk=contribution_id)
+    if contribution.status == Contribution.Status.PAID:
+        raise ValidationError("A paid contribution cannot be marked as failed.")
+    contribution.status = Contribution.Status.FAILED
+    contribution.gateway_reference = gateway_reference
+    contribution.paid_at = None
+    contribution.full_clean()
+    contribution.save(update_fields=["status", "gateway_reference", "paid_at"])
+    return contribution
+
+
+@transaction.atomic
+def process_mock_cash_contribution(*, scheme_account, amount, contribution_date=None):
+    gateway = get_payment_gateway()
+    locked_account = SchemeAccount.objects.select_for_update().get(pk=scheme_account.pk)
+    contribution = initiate_contribution(
+        scheme_account=locked_account,
+        amount=amount,
+        payment_gateway=gateway.name,
+        contribution_date=contribution_date,
+    )
+    result = gateway.charge(contribution)
+    if not result.successful:
+        return fail_contribution(
+            contribution_id=contribution.pk,
+            gateway_reference=result.gateway_reference,
+        )
+    return confirm_contribution(
+        contribution_id=contribution.pk,
+        payment_gateway=gateway.name,
+        gateway_reference=result.gateway_reference,
+        verified=result.verified,
+    )

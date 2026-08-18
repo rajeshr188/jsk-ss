@@ -8,7 +8,7 @@ This is a server-rendered, single-business Django application. Customers authent
 
 - `accounts`: Lithium's custom user, allauth integration, and simple `OWNER`/`STAFF`/`CUSTOMER` application roles.
 - `pages`: public landing and about pages.
-- `schemes`: customer profiles, reusable plans, scheme agreements, enrolment services, selectors, forms, and owner/customer views.
+- `schemes`: customer profiles, reusable plans, scheme agreements, contributions, payment boundary, services, selectors, forms, and owner/customer views.
 
 ## Model relationships
 
@@ -17,6 +17,7 @@ graph TD
   U[accounts.CustomUser] -->|one-to-one| C[Customer]
   C -->|one-to-many| A[SchemeAccount]
   P[SchemePlan] -->|one-to-many| A
+  A -->|one-to-many| N[Contribution]
 ```
 
 `SchemeAccount` snapshots plan terms during enrolment so later plan edits do not change existing agreements.
@@ -34,9 +35,9 @@ Lithium's `CustomUser` and django-allauth remain authoritative. Superusers and `
 
 ## Financial source of truth
 
-No balances exist yet. Future balances must be derived from successful contributions, metal allocations, redemptions, and auditable corrections—not mutable balance fields.
+Cash principal is derived by selectors from `PAID` contribution records; pending and failed attempts contribute zero. Future metal and redemption balances must likewise be derived from allocations, redemptions, and auditable corrections—not mutable balance fields.
 
-Payment and metal-rate provider boundaries are deferred until their milestones.
+`MockPaymentGateway` is the only payment adapter currently implemented. The adapter can be resolved only when `DEBUG=True` and `PAYMENT_GATEWAY=mock`. A payment result must be verified before the contribution confirmation service changes `PENDING` to `PAID`. External payment and metal-rate providers remain deferred.
 
 ## Current request flows
 
@@ -44,3 +45,4 @@ Owner: login → dashboard → customers → add customer → customer detail �
 
 Customer: login → My Schemes → account terms. Login routing is role-aware.
 
+Cash contribution: customer account → Pay now → validate snapshotted amount/frequency rules → create pending contribution → verified mock result → idempotent confirmation → derived cash balance.

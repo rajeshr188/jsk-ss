@@ -1,16 +1,25 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
+from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
 from accounts.models import CustomUser
 
-from .forms import CustomerCreateForm, EnrolmentForm, SchemePlanForm
-from .models import Customer, SchemeAccount, SchemePlan
+from .forms import ContributionForm, CustomerCreateForm, EnrolmentForm, SchemePlanForm
+from .models import Contribution, Customer, SchemeAccount, SchemePlan
+from .payments import mock_payment_is_enabled
 from .permissions import owner_required
-from .selectors import get_customer_scheme_summary, get_owner_customers
-from .services import create_customer, enroll_customer
+from .selectors import (
+    get_cash_balance,
+    get_contribution_history,
+    get_customer_scheme_account,
+    get_customer_scheme_summary,
+    get_owner_contributions,
+    get_owner_customers,
+)
+from .services import create_customer, enroll_customer, process_mock_cash_contribution
 
 
 @login_required
@@ -28,6 +37,9 @@ def owner_dashboard(request):
             status=SchemeAccount.Status.REDEEMED
         ).count(),
         "active_plan_count": SchemePlan.objects.filter(active=True).count(),
+        "paid_contribution_count": Contribution.objects.filter(
+            status=Contribution.Status.PAID
+        ).count(),
     }
     return render(request, "schemes/owner_dashboard.html", context)
 
@@ -66,7 +78,10 @@ def customer_add(request):
 @owner_required
 def customer_detail(request, customer_id):
     customer = get_object_or_404(
-        get_owner_customers().prefetch_related("scheme_accounts__plan"), pk=customer_id
+        get_owner_customers().prefetch_related(
+            "scheme_accounts__plan", "scheme_accounts__contributions"
+        ),
+        pk=customer_id,
     )
     return render(request, "schemes/customer_detail.html", {"customer": customer})
 
@@ -119,5 +134,75 @@ def plan_add(request):
 @login_required
 def my_schemes(request):
     accounts = get_customer_scheme_summary(request.user)
-    return render(request, "schemes/my_schemes.html", {"scheme_accounts": accounts})
+    return render(
+        request,
+        "schemes/my_schemes.html",
+        {
+            "scheme_accounts": accounts,
+            "mock_payment_enabled": mock_payment_is_enabled(),
+        },
+    )
 
+
+@login_required
+def my_scheme_detail(request, scheme_number):
+    account = get_customer_scheme_account(request.user, scheme_number)
+    if account is None:
+        raise Http404
+    return render(
+        request,
+        "schemes/my_scheme_detail.html",
+        {
+            "scheme_account": account,
+            "cash_balance": get_cash_balance(account),
+            "contributions": get_contribution_history(account),
+            "mock_payment_enabled": mock_payment_is_enabled(),
+        },
+    )
+
+
+@login_required
+def pay_contribution(request, scheme_number):
+    if not mock_payment_is_enabled():
+        raise Http404
+    account = get_customer_scheme_account(request.user, scheme_number)
+    if account is None or account.savings_mode != SchemeAccount.SavingsMode.CASH:
+        raise Http404
+
+    form = ContributionForm(request.POST or None, scheme_account=account)
+    if request.method == "POST" and form.is_valid():
+        try:
+            contribution = process_mock_cash_contribution(
+                scheme_account=account,
+                amount=form.cleaned_data["amount"],
+            )
+        except ValidationError as error:
+            if hasattr(error, "message_dict") and "amount" in error.message_dict:
+                for message in error.message_dict["amount"]:
+                    form.add_error("amount", message)
+            else:
+                for message in error.messages:
+                    form.add_error(None, message)
+        else:
+            if contribution.status == Contribution.Status.PAID:
+                messages.success(
+                    request,
+                    f"Mock payment successful. ₹{contribution.amount} was added.",
+                )
+            else:
+                messages.error(request, "The mock payment failed. No balance was added.")
+            return redirect("schemes:my_scheme_detail", scheme_number=account.scheme_number)
+    return render(
+        request,
+        "schemes/contribution_form.html",
+        {"scheme_account": account, "form": form},
+    )
+
+
+@owner_required
+def contribution_list(request):
+    return render(
+        request,
+        "schemes/contribution_list.html",
+        {"contributions": get_owner_contributions()},
+    )

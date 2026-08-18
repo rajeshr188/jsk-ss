@@ -118,6 +118,8 @@ if not DATABASE_URL:
     raise ImproperlyConfigured("DATABASE_URL must be set to a PostgreSQL database")
 DATABASES = {"default": postgres_database_from_url(DATABASE_URL)}
 
+PAYMENT_GATEWAY = os.getenv("PAYMENT_GATEWAY", "").strip().lower()
+
 # Password validation
 # https://docs.djangoproject.com/en/dev/ref/settings/#auth-password-validators
 AUTH_PASSWORD_VALIDATORS = [
