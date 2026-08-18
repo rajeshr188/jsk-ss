@@ -30,3 +30,5 @@ Mock financial tests use `override_settings` for payment and rate configuration.
 - Confirm current gold/silver reference rates and indicative exposures update without changing historical allocations
 - Confirm contribution-today/month counts include successful payments only
 - Redemption checks are added in later milestones
+
+The complete checklist through owner liability reconciliation was exercised over live HTTP for the MVP Alpha checkpoint. The checkpoint created its plan, customer, three enrolments, and three payments through authenticated application forms, compared liability deltas against the pre-run dashboard, and removed all disposable records afterward.

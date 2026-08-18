@@ -2,7 +2,7 @@
 
 ## Current milestone
 
-Milestone 4 — Owner liability dashboard (complete)
+MVP Alpha checkpoint (complete)
 
 ## Completed
 
@@ -21,6 +21,7 @@ Milestone 4 — Owner liability dashboard (complete)
 - Owner dashboard with separately reconciled cash principal, gold grams, and silver grams.
 - Current gold/silver reference rates and separately rounded indicative INR exposures.
 - India-local successful-contribution counts for today and the current calendar month.
+- MVP Alpha live workflow verified across owner setup, all three savings modes, customer payments and entitlements, and owner liability reconciliation.
 - Future public-signup requirements documented under `AUTH-*` domain rules.
 
 ## In progress
@@ -41,8 +42,8 @@ Milestone 4 — Owner liability dashboard (complete)
 - 44 tests pass, including liability reconciliation, current-exposure rounding, independently unavailable rates, India-local activity periods, authorization, and prior financial regressions.
 - Django system check and migration drift check pass.
 - Production static collection and deployment check pass with preload explicitly enabled.
-- Live-server smoke flow passes for cash, gold, and silver mock payments, derived customer entitlements, and separately reconciled owner liabilities.
+- Live-server checkpoint passes for owner and customer login, UI-created plan/customer/CASH-GOLD-SILVER enrolments, three mock payments, customer entitlements, owner contribution visibility, and exact liability/activity deltas.
 
 ## Next recommended step
 
-MVP Alpha checkpoint — verify the complete owner enrolment, customer contribution, entitlement, and liability workflow end to end.
+Milestone 5 — integrate a live metal-rate provider behind the existing provider boundary.

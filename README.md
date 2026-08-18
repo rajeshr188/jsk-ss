@@ -1,6 +1,6 @@
 # Jai Shri Krishna Jewellery Savings Scheme
 
-A single-business Django application for managing customer cash, 24K gold, and silver savings schemes. It reuses the [Lithium](https://github.com/wsvincent/lithium) Django foundation and currently supports owner-managed enrolment, mock contributions, immutable metal allocations, customer balances, and an owner liability dashboard.
+A single-business Django application for managing customer cash, 24K gold, and silver savings schemes. It reuses the [Lithium](https://github.com/wsvincent/lithium) Django foundation and has reached MVP Alpha with owner-managed enrolment, mock contributions, immutable metal allocations, customer balances, and an owner liability dashboard.
 
 ## Technology
 
