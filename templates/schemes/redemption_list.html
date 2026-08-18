@@ -19,7 +19,7 @@
         <td>{{ redemption.scheme_account.scheme_number }}</td>
         <td>{{ redemption.get_settlement_type_display }}</td>
         <td>
-          {% if redemption.cash_amount is not None %}₹{{ redemption.cash_amount|floatformat:2 }}
+          {% if redemption.cash_amount is not None %}₹{{ redemption.cash_amount|floatformat:2 }}<br><small class="text-muted">Principal ₹{{ redemption.cash_principal_amount|floatformat:2 }} · Bonus ₹{{ redemption.cash_bonus_amount|floatformat:2 }}</small>
           {% elif redemption.gold_quantity is not None %}{{ redemption.gold_quantity|floatformat:6 }} g gold
           {% else %}{{ redemption.silver_quantity|floatformat:6 }} g silver{% endif %}
         </td>

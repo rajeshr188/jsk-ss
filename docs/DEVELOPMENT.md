@@ -15,6 +15,7 @@
 - Live rate adapters must use bounded network timeouts, validate provider identity/currency/timestamps/rates, avoid credentials in URLs or errors, and raise provider-neutral failures. Tests mock the HTTP boundary and never consume live quota.
 - Once payment is verified, allocation failure must preserve the payment as `PAID_UNALLOCATED`; owner retry must call the idempotent allocation service rather than editing records directly.
 - Redemption writes must go through `complete_redemption`, lock the scheme account, carry an idempotency key, and append an immutable record. Never edit historical contributions or allocations to represent settlement.
+- Cash bonus formulas belong in the versioned policy service and reads belong in selectors. Changing a formula requires a new supported policy version; never reinterpret an existing account's snapshotted version or add projected bonus to actual liability.
 
 ## Environment
 

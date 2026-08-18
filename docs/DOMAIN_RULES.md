@@ -44,6 +44,26 @@ This is the canonical source for stable business rules.
 - **METAL-010:** Provider, network, or configuration failure after payment confirmation is recoverable only through the owner-controlled, idempotent allocation retry workflow.
 - **METAL-011:** A successful retry changes `PAID_UNALLOCATED` to `PAID`, clears the current allocation error, and still permits at most one `RateSnapshot` and `MetalAllocation` for the contribution.
 
+## Cash bonus rules
+
+- **BON-001:** A scheme plan may define a cash bonus percentage from 0% through 100%
+  and a minimum qualifying duration of at least 12 months. Zero percent disables bonus.
+- **BON-002 / FIN-009:** Enrolment snapshots the bonus policy version, percentage, and
+  qualifying months. Later plan edits never change an existing agreement.
+- **BON-003:** Cash bonus applies only to `CASH` accounts whose agreed duration meets
+  the snapshotted minimum. Gold and silver entitlements never receive cash bonus.
+- **BON-004:** Before `eligible_from`, projected bonus is the snapshotted percentage of
+  cash principal paid so far, rounded to money precision. It is an estimate only: it
+  is not redeemable and is not an actual owner liability.
+- **BON-005:** On and after `eligible_from`, earned bonus is calculated from successful
+  cash principal paid no later than the end of the eligibility date. Contributions
+  made after that cutoff remain principal but do not retroactively earn bonus.
+- **BON-006:** Cash redeemable amount equals outstanding principal plus outstanding
+  earned bonus. Partial cash redemptions consume principal first and then earned
+  bonus; both immutable components must sum to the redemption's cash total.
+- **BON-007:** Bonus calculation uses the policy-version service and `Decimal` with
+  `ROUND_HALF_UP` to two decimal places.
+
 ## Redemption and financial invariants
 
 - **RED-001 / FIN-006:** A customer cannot redeem more than the outstanding entitlement.
@@ -51,7 +71,10 @@ This is the canonical source for stable business rules.
 - **RED-003:** Reaching `eligible_from` never closes an account, mutates its stored status, or creates a redemption. Only a completed redemption may make it `REDEEMED`.
 - **RED-004:** Owner forecast bands are exclusive: eligible now, days 1–30, days 31–60, and days 61–90. Redeemed accounts are excluded from every open-account band.
 - **RED-005:** A completed redemption is an immutable, owner-recorded financial event. Contributions, allocations, and earlier redemptions remain visible.
-- **RED-006:** Cash outstanding equals paid cash contributions minus completed cash redemptions. Gold and silver outstanding each equal paid allocated grams minus completed redemptions in the same metal.
+- **RED-006:** Cash principal outstanding equals paid cash contributions minus the
+  principal components of completed redemptions; cash redeemable amount adds only
+  outstanding earned bonus. Gold and silver outstanding each equal paid allocated
+  grams minus completed redemptions in the same metal.
 - **RED-007:** Cash accounts may settle as `CASH` or `JEWELLERY_PURCHASE`; gold and silver accounts may settle as `METAL` or `JEWELLERY_PURCHASE`. Metal-to-cash conversion is undefined and rejected.
 - **RED-008:** Partial redemption leaves an eligible account open. Redeeming the exact remaining entitlement changes its stored status to `REDEEMED`.
 - **RED-009:** Every redemption submission has a unique idempotency key. Replaying the same key and details returns the existing event; changing details with a used key is rejected.
@@ -71,7 +94,10 @@ This is the canonical source for stable business rules.
 - **LIA-004:** Cash principal, gold exposure, and silver exposure are never added into a single headline liability total.
 - **LIA-005:** If a current rate is unavailable, the dashboard must continue showing authoritative gram liabilities and explicitly mark reference rate and exposure as unavailable.
 - **LIA-006:** Dashboard contribution counts include both `PAID` and `PAID_UNALLOCATED` verified payments and use `paid_at` within India-local calendar-day and calendar-month boundaries.
+- **LIA-007:** Owner cash obligations show outstanding principal and earned bonus as
+  actual redeemable liability. Projected bonus exposure is shown separately and is
+  never added to actual cash liability.
 
 ## Precision
 
-Money uses 2 decimal places. Contribution and cash-redemption input with more than 2 decimal places is rejected rather than silently rounded. Metal quantities and metal-redemption input use 6 decimal places; excess precision is rejected. Allocation calculations use `ROUND_HALF_UP`. Rates and purity metadata use 4 decimal places; mock configuration is normalized with `ROUND_HALF_UP`.
+Money uses 2 decimal places. Contribution and cash-redemption input with more than 2 decimal places is rejected rather than silently rounded. Cash bonus calculations use `ROUND_HALF_UP` to 2 decimal places. Metal quantities and metal-redemption input use 6 decimal places; excess precision is rejected. Allocation calculations use `ROUND_HALF_UP`. Rates and purity metadata use 4 decimal places; mock configuration is normalized with `ROUND_HALF_UP`.

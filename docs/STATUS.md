@@ -2,7 +2,7 @@
 
 ## Current milestone
 
-MVP Beta checkpoint (complete)
+Milestone 9 — Cash bonus (complete)
 
 ## Completed
 
@@ -41,6 +41,14 @@ MVP Beta checkpoint (complete)
   HTTPS endpoint, with the signed `payment.captured` webhook processed exactly once.
 - The external-payment account completed owner-recorded redemption and reconciled
   customer outstanding cash and owner cash principal from ₹100.00 to ₹0.00.
+- Owner-configurable cash bonus percentage and minimum qualifying duration with a
+  safe zero-percent default and versioned terms snapshotted at enrolment.
+- Separate principal paid/outstanding, earned bonus, projected bonus, and redeemable
+  cash amounts on customer and owner views.
+- Eligibility-cutoff bonus calculation using `Decimal` and `ROUND_HALF_UP`; projected
+  bonus remains outside actual liability and redemption.
+- Immutable cash-redemption principal/bonus components with deterministic
+  principal-first allocation and exact owner-liability reconciliation.
 
 ## In progress
 
@@ -56,8 +64,12 @@ MVP Beta checkpoint (complete)
   owned HTTPS endpoint and synchronized webhook-secret configuration.
 - The application records redemptions but does not execute payouts, move inventory,
   create invoices, or convert metal to cash.
-- Bonus, compensating correction events, operational reconciliation, automated
+- Compensating correction events, operational reconciliation, automated
   alerts/retries, receipts, and statements remain scheduled work.
+- Cash bonus has one percentage policy with no caps, tiers, discretionary approval,
+  forfeiture, tax treatment, or expected-future-contribution projection.
+- Bonus liability reads are calculated per cash account; aggregate optimization is
+  deferred until measured account volume requires it.
 - Pricing policy, shared provider caching, payment-order expiry, eligibility
   reminders, public onboarding, and partial-settlement policy are not yet defined.
 - The detailed, prioritized backlog and milestone-by-milestone limitation history
@@ -65,15 +77,16 @@ MVP Beta checkpoint (complete)
 
 ## Deferred
 
-- See [Future work](FUTURE_WORK.md) for deployment gates and work mapped to Milestones 9–11.
+- See [Future work](FUTURE_WORK.md) for deployment gates and work mapped to Milestones 10–11.
 
 ## Verification
 
 - PostgreSQL 16 migrations applied successfully.
-- 101 tests pass, including Razorpay failure handling, redemption precision, over-redemption protection,
+- 112 tests pass, including cash-bonus boundaries/rounding, Razorpay failure handling, redemption precision, over-redemption protection,
   idempotency, partial/full closure, denomination separation, access control,
   PostgreSQL constraints, and all prior regressions.
-- Migration `schemes.0006_redemption` is applied to PostgreSQL.
+- Migration `schemes.0007_cash_bonus` is applied to PostgreSQL; historical cash
+  redemptions were preserved as principal-only components.
 - Migration drift check reports no changes.
 - Django system check and migration drift check pass.
 - Production static collection and deployment check pass with preload explicitly enabled.
@@ -88,8 +101,12 @@ MVP Beta checkpoint (complete)
   payment is captured, one signed `payment.captured` webhook is processed, one cash
   entitlement is created, an owner completes the full redemption through a
   CSRF-protected form, and customer/owner outstanding cash reconciles to zero.
+- Milestone 9 rollback-only authenticated smoke passes through owner plan creation and
+  enrolment, customer mock payment, eligibility transition, and owner redemption:
+  ₹100 principal earns ₹5, the immutable redemption stores both components, the
+  account closes, and owner liability returns exactly to baseline.
 
 ## Next recommended step
 
-Milestone 9 — implement the explicitly versioned cash-bonus policy after its business
-rules and rounding behavior are approved.
+Milestone 10 — add append-oriented audit, correction/reversal, approval, and exception
+workflows without silently rewriting financial history.

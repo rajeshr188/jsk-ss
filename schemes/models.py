@@ -3,9 +3,11 @@ from decimal import Decimal
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.core.validators import MinValueValidator
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils import timezone
+
+from .bonuses import CASH_BONUS_POLICY_VERSION
 
 
 class Customer(models.Model):
@@ -57,6 +59,19 @@ class SchemePlan(models.Model):
         max_digits=14, decimal_places=2, null=True, blank=True
     )
     allow_contributions_after_eligibility = models.BooleanField(default=False)
+    cash_bonus_percentage = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=Decimal("0.00"),
+        validators=[
+            MinValueValidator(Decimal("0")),
+            MaxValueValidator(Decimal("100")),
+        ],
+    )
+    cash_bonus_minimum_months = models.PositiveSmallIntegerField(
+        default=12,
+        validators=[MinValueValidator(12)],
+    )
     active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -90,6 +105,17 @@ class SchemePlan(models.Model):
                 ),
                 name="plan_fixed_amount_positive_when_fixed",
             ),
+            models.CheckConstraint(
+                condition=models.Q(
+                    cash_bonus_percentage__gte=Decimal("0"),
+                    cash_bonus_percentage__lte=Decimal("100"),
+                ),
+                name="plan_cash_bonus_percentage_valid",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(cash_bonus_minimum_months__gte=12),
+                name="plan_cash_bonus_months_gte_12",
+            ),
         ]
 
     def clean(self):
@@ -108,6 +134,20 @@ class SchemePlan(models.Model):
             and self.maximum_contribution < self.minimum_contribution
         ):
             errors["maximum_contribution"] = "Maximum cannot be below minimum."
+        if (
+            self.cash_bonus_percentage is not None
+            and not 0 <= self.cash_bonus_percentage <= 100
+        ):
+            errors["cash_bonus_percentage"] = (
+                "Cash bonus percentage must be between 0 and 100."
+            )
+        if (
+            self.cash_bonus_minimum_months is not None
+            and self.cash_bonus_minimum_months < 12
+        ):
+            errors["cash_bonus_minimum_months"] = (
+                "Cash bonus qualifying duration must be at least 12 months."
+            )
         if errors:
             raise ValidationError(errors)
 
@@ -146,6 +186,16 @@ class SchemeAccount(models.Model):
         max_digits=14, decimal_places=2, null=True, blank=True
     )
     allow_post_eligibility_contributions_snapshot = models.BooleanField(default=False)
+    cash_bonus_policy_version_snapshot = models.CharField(
+        max_length=30,
+        default=CASH_BONUS_POLICY_VERSION,
+    )
+    cash_bonus_percentage_snapshot = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=Decimal("0.00"),
+    )
+    cash_bonus_minimum_months_snapshot = models.PositiveSmallIntegerField(default=12)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -166,6 +216,17 @@ class SchemeAccount(models.Model):
                     | models.Q(maximum_amount_snapshot__gte=models.F("minimum_amount_snapshot"))
                 ),
                 name="account_maximum_gte_minimum",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(
+                    cash_bonus_percentage_snapshot__gte=Decimal("0"),
+                    cash_bonus_percentage_snapshot__lte=Decimal("100"),
+                ),
+                name="account_cash_bonus_percentage_valid",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(cash_bonus_minimum_months_snapshot__gte=12),
+                name="account_cash_bonus_months_gte_12",
             ),
         ]
 
@@ -410,6 +471,12 @@ class Redemption(models.Model):
     cash_amount = models.DecimalField(
         max_digits=14, decimal_places=2, null=True, blank=True
     )
+    cash_principal_amount = models.DecimalField(
+        max_digits=14, decimal_places=2, null=True, blank=True
+    )
+    cash_bonus_amount = models.DecimalField(
+        max_digits=14, decimal_places=2, null=True, blank=True
+    )
     gold_quantity = models.DecimalField(
         max_digits=18, decimal_places=6, null=True, blank=True
     )
@@ -454,6 +521,25 @@ class Redemption(models.Model):
                 ),
                 name="redemption_exactly_one_positive_entitlement",
             ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(
+                        cash_amount__isnull=True,
+                        cash_principal_amount__isnull=True,
+                        cash_bonus_amount__isnull=True,
+                    )
+                    | models.Q(
+                        cash_amount__gt=Decimal("0"),
+                        cash_principal_amount__gte=Decimal("0"),
+                        cash_bonus_amount__gte=Decimal("0"),
+                        cash_amount=(
+                            models.F("cash_principal_amount")
+                            + models.F("cash_bonus_amount")
+                        ),
+                    )
+                ),
+                name="redemption_cash_components_match_total",
+            ),
         ]
         indexes = [
             models.Index(
@@ -471,6 +557,17 @@ class Redemption(models.Model):
         if mode == SchemeAccount.SavingsMode.CASH:
             if self.cash_amount is None:
                 errors["cash_amount"] = "Cash schemes must redeem a cash entitlement."
+            elif (
+                self.cash_principal_amount is None
+                or self.cash_bonus_amount is None
+                or self.cash_principal_amount < 0
+                or self.cash_bonus_amount < 0
+                or self.cash_principal_amount + self.cash_bonus_amount
+                != self.cash_amount
+            ):
+                errors["cash_amount"] = (
+                    "Cash redemption principal and bonus components must match the total."
+                )
             if self.settlement_type == self.SettlementType.METAL:
                 errors["settlement_type"] = "Cash schemes cannot use metal settlement."
         elif mode == SchemeAccount.SavingsMode.GOLD:
@@ -480,6 +577,11 @@ class Redemption(models.Model):
                 errors["settlement_type"] = (
                     "Gold-to-cash conversion is not defined in the MVP."
                 )
+            if (
+                self.cash_principal_amount is not None
+                or self.cash_bonus_amount is not None
+            ):
+                errors["cash_amount"] = "Metal redemptions cannot contain cash components."
         elif mode == SchemeAccount.SavingsMode.SILVER:
             if self.silver_quantity is None:
                 errors["silver_quantity"] = "Silver schemes must redeem a silver entitlement."
@@ -487,6 +589,11 @@ class Redemption(models.Model):
                 errors["settlement_type"] = (
                     "Silver-to-cash conversion is not defined in the MVP."
                 )
+            if (
+                self.cash_principal_amount is not None
+                or self.cash_bonus_amount is not None
+            ):
+                errors["cash_amount"] = "Metal redemptions cannot contain cash components."
         if (
             self.settlement_type == self.SettlementType.JEWELLERY_PURCHASE
             and not self.external_reference.strip()

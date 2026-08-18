@@ -9,6 +9,7 @@ from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 
+from .bonuses import CASH_BONUS_POLICY_VERSION
 from .models import (
     Contribution,
     Customer,
@@ -21,7 +22,7 @@ from .models import (
 )
 from .payments import PaymentGatewayError, get_payment_gateway
 from .rates import MetalRateProviderError, get_metal_rate_provider
-from .selectors import get_outstanding_entitlement
+from .selectors import get_cash_bonus_summary, get_outstanding_entitlement
 
 
 MONEY_QUANTUM = Decimal("0.01")
@@ -113,6 +114,9 @@ def enroll_customer(*, customer, plan, savings_mode, start_date=None, agreed_mon
         allow_post_eligibility_contributions_snapshot=(
             plan.allow_contributions_after_eligibility
         ),
+        cash_bonus_policy_version_snapshot=CASH_BONUS_POLICY_VERSION,
+        cash_bonus_percentage_snapshot=plan.cash_bonus_percentage,
+        cash_bonus_minimum_months_snapshot=plan.cash_bonus_minimum_months,
     )
     account.full_clean()
     account.save()
@@ -685,6 +689,8 @@ def complete_redemption(
 
     values = {
         "cash_amount": None,
+        "cash_principal_amount": None,
+        "cash_bonus_amount": None,
         "gold_quantity": None,
         "silver_quantity": None,
     }
@@ -721,6 +727,15 @@ def complete_redemption(
         raise ValidationError(
             {"amount": f"Cannot redeem more than the outstanding {outstanding} {unit}."}
         )
+
+    if account.savings_mode == SchemeAccount.SavingsMode.CASH:
+        cash_summary = get_cash_bonus_summary(account)
+        principal_amount = min(
+            normalized_amount,
+            cash_summary.principal_outstanding,
+        )
+        values["cash_principal_amount"] = principal_amount
+        values["cash_bonus_amount"] = normalized_amount - principal_amount
 
     redemption = Redemption(
         redemption_number=_reference("RED", Redemption, "redemption_number"),

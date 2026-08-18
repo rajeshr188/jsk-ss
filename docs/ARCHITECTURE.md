@@ -25,7 +25,7 @@ graph TD
   U -->|processed by| D
 ```
 
-`SchemeAccount` snapshots plan terms during enrolment so later plan edits do not change existing agreements.
+`SchemeAccount` snapshots plan terms during enrolment so later plan edits do not change existing agreements. Cash agreements also snapshot the bonus policy version, percentage, and minimum qualifying duration.
 
 ## Layers
 
@@ -50,6 +50,8 @@ If public signup is introduced later, registration must create a complete custom
 
 Cash principal is derived by selectors from `PAID` contribution records less completed cash redemptions; pending and failed attempts contribute zero. Gold and silver balances are derived from immutable `MetalAllocation` quantities attached one-to-one to paid contributions less completed redemptions in the matching metal. Historical `RateSnapshot`, allocation, contribution, and `Redemption` records remain visible; rate snapshots, allocations, and redemptions reject application-level edits. There are no mutable balance fields.
 
+Cash bonus is derived from immutable paid contributions and the versioned policy snapshot on the agreement. Before eligibility it is projected exposure only. At eligibility it becomes earned from principal paid by the eligibility-date cutoff. Cash redemptions store immutable principal and bonus components whose sum equals the cash settlement total; partial settlement consumes principal first. There is no mutable bonus balance field.
+
 `MockPaymentGateway` remains available only when `DEBUG=True` and `PAYMENT_GATEWAY=mock`. `RazorpayPaymentGateway` is the external test-mode adapter. It creates orders through a fixed authenticated HTTPS API, verifies checkout HMAC signatures using the local order ID, fetches the payment server-side, and accepts only a captured payment matching the local amount and INR currency. Live key IDs are deliberately rejected.
 
 Razorpay webhooks are a CSRF-exempt provider endpoint protected by HMAC over the untouched request body. Only `payment.captured` changes financial state. `PaymentWebhookEvent` records a payload hash and provider event ID behind a database uniqueness constraint; duplicate or out-of-order deliveries therefore re-enter the same idempotent confirmation/allocation services without creating additional entitlement. Full webhook payloads are not retained.
@@ -59,6 +61,8 @@ Razorpay webhooks are a CSRF-exempt provider endpoint protected by HMAC over the
 Payment confirmation and metal allocation use separate transactions. If a verified metal payment cannot obtain or validate a quote, the contribution persists as `PAID_UNALLOCATED` with a safe current error description; it creates no `RateSnapshot` or `MetalAllocation`. The owner-only POST retry action re-enters the idempotent allocation service. A successful retry creates exactly one immutable snapshot/allocation and changes the contribution to `PAID`.
 
 ## Current request flows
+
+Cash bonus: plan percentage/minimum duration → versioned enrolment snapshot → projected amount before eligibility → earned amount from principal paid by the eligibility cutoff → customer and owner breakdowns. Post-eligibility contributions add principal but do not alter the matured bonus base. Cash redemption allocates principal first and earned bonus second.
 
 Owner: login → dashboard → customers → add customer → customer detail → enrol customer.
 
@@ -70,8 +74,8 @@ Razorpay contribution (test): customer account → validate → pending contribu
 
 Metal contribution: customer account → Pay now → verified contribution → configured rate quote → immutable rate snapshot → one immutable six-decimal allocation → derived gold or silver gram balance. Rate failure branches to paid/allocation-pending → owner review → controlled retry.
 
-Owner liability dashboard: paid cash contributions → outstanding INR principal; paid metal allocations → separate gold/silver grams → current provider quotes → separate indicative INR exposures. Reference quotes used for display do not create or alter historical allocation snapshots. Activity counters use successful payment timestamps in the India-local calendar day and month.
+Owner liability dashboard: paid cash contributions → outstanding INR principal plus earned bonus, with projected bonus exposure shown separately; paid metal allocations → separate gold/silver grams → current provider quotes → separate indicative INR exposures. Projected bonus and metal reference quotes used for display do not alter historical records. Activity counters use successful payment timestamps in the India-local calendar day and month.
 
 Eligibility: India-local current date plus each agreement's `eligible_from` snapshot → active/not-yet-eligible or redemption-eligible display state → exclusive owner windows for eligible now, days 1–30, 31–60, and 61–90. Eligibility is a read model; it does not create a redemption or persist an automatic status change.
 
-Redemption: owner eligibility review → denomination-specific outstanding balance → allowed settlement and precision validation → account row lock → idempotency check → immutable completed redemption → derived customer/owner balances. Partial redemption leaves the account eligible and open; exact final redemption stores `REDEEMED`. Jewellery purchase records a required external invoice/reference and settlement notes without creating inventory or invoicing subsystems.
+Redemption: owner eligibility review → denomination-specific outstanding balance → allowed settlement and precision validation → account row lock → idempotency check → immutable completed redemption → derived customer/owner balances. Cash settlement stores principal and earned-bonus components. Partial redemption leaves the account eligible and open; exact final redemption stores `REDEEMED`. Jewellery purchase records a required external invoice/reference and settlement notes without creating inventory or invoicing subsystems.

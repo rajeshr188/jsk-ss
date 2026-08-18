@@ -9,7 +9,7 @@ uv run --env-file .env python manage.py check
 uv run --env-file .env python manage.py makemigrations --check --dry-run
 ```
 
-Current regressions cover amount/frequency enforcement, failed-payment entitlement, confirmation/allocation idempotency, Razorpay order/API/HMAC boundaries, duplicate callbacks and webhooks, exact metal calculation, historical-rate stability, GoldAPI request/response validation, paid-unallocated recovery, customer isolation, owner liability reconciliation, current-exposure rounding, India-local activity periods, eligibility status and exact 30/60/90-day boundaries, redemption idempotency and precision, partial/full settlement, over-redemption prevention, denomination separation, immutable history, and database constraints.
+Current regressions cover amount/frequency enforcement, failed-payment entitlement, confirmation/allocation idempotency, Razorpay order/API/HMAC boundaries, duplicate callbacks and webhooks, exact metal calculation, historical-rate stability, GoldAPI request/response validation, paid-unallocated recovery, customer isolation, owner liability reconciliation, current-exposure rounding, India-local activity periods, eligibility status and exact 30/60/90-day boundaries, versioned cash-bonus snapshots, projection-versus-earned boundaries, eligibility cutoff, half-up bonus rounding, principal/bonus redemption allocation, redemption idempotency and precision, partial/full settlement, over-redemption prevention, denomination separation, immutable history, and database constraints.
 
 Mock financial tests use `override_settings` for payment and rate configuration. For manual testing, put `DEBUG=True`, `PAYMENT_GATEWAY=mock`, and `METAL_RATE_PROVIDER=mock` in the ignored `.env`, plus optional mock rates.
 
@@ -45,6 +45,10 @@ Razorpay tests likewise replace the HTTPS boundary with deterministic order and 
 - Confirm jewellery-purchase settlement requires an invoice/reference and records the supplied notes
 - Repeat a redemption submission with the same idempotency key and confirm it creates no duplicate event
 - Confirm customers cannot access owner redemption actions
+- Create a cash-bonus plan and confirm enrolment snapshots its policy version, percentage, and minimum duration
+- Before eligibility, confirm projected bonus is visible but excluded from redeemable amount and owner liability
+- At eligibility, confirm earned bonus includes only principal paid by the cutoff and post-eligibility contributions do not alter it
+- Redeem cash partially and fully; confirm principal is consumed before bonus and both immutable components reconcile
 
 The complete checklist through owner liability reconciliation was exercised over live HTTP for the MVP Alpha checkpoint. The checkpoint created its plan, customer, three enrolments, and three payments through authenticated application forms, compared liability deltas against the pre-run dashboard, and removed all disposable records afterward.
 
@@ -55,3 +59,5 @@ Milestone 7 exercised owner and customer sessions over live HTTP: the owner dash
 Milestone 8 exercised authenticated owner and customer request flows with CSRF enforcement against the configured PostgreSQL database. The owner recorded a partial cash settlement followed by final jewellery-purchase settlement; the account moved from eligible/open to redeemed only at zero outstanding, the customer retained contribution and redemption history with no further payment action, owner cash liability returned to its baseline, and all tagged records were removed.
 
 The MVP Beta checkpoint exercised a real Razorpay Test Mode order over a temporary public HTTPS endpoint. Razorpay reported the ₹100 payment as captured, the signed `payment.captured` webhook was stored and processed once, and Django created one paid cash contribution. The same eligible account was then fully redeemed through the CSRF-protected owner form; its outstanding cash and the owner cash-principal liability both returned to zero. Temporary quick tunnels are development-only and their URL and webhook secret must be synchronized in the Razorpay Test Mode dashboard for each run.
+
+Milestone 9 exercised authenticated owner/customer forms inside a rollback-only PostgreSQL transaction. The owner created a 5%/12-month plan and enrolment, the customer completed a ₹100 mock payment before eligibility, the account aged into eligibility with ₹5 earned bonus, and the owner redeemed ₹105. The immutable redemption stored ₹100 principal plus ₹5 bonus, closed the account, and returned owner cash liability exactly to its baseline; no smoke records persisted.

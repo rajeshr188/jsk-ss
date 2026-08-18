@@ -54,9 +54,14 @@
   <div class="col-12 col-lg-4">
     <div class="card h-100 border-dark">
       <div class="card-body">
-        <div class="text-muted">Cash principal</div>
-        <div class="display-6">₹{{ liabilities.cash_principal|floatformat:2 }}</div>
-        <div class="small text-muted">Outstanding INR principal</div>
+        <div class="text-muted">Cash redeemable obligation</div>
+        <div class="display-6">₹{{ liabilities.cash_redeemable_amount|floatformat:2 }}</div>
+        <dl class="row small mt-3 mb-0">
+          <dt class="col-7">Principal</dt><dd class="col-5 text-end">₹{{ liabilities.cash_principal|floatformat:2 }}</dd>
+          <dt class="col-7">Earned bonus</dt><dd class="col-5 text-end">₹{{ liabilities.cash_earned_bonus|floatformat:2 }}</dd>
+          <dt class="col-7">Projected bonus</dt><dd class="col-5 text-end">₹{{ liabilities.cash_projected_bonus|floatformat:2 }}</dd>
+        </dl>
+        <div class="small text-muted mt-2">Projected bonus is exposure only, not an actual liability.</div>
       </div>
     </div>
   </div>

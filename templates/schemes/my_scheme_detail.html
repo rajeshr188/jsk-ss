@@ -32,9 +32,15 @@
 
 {% if scheme_account.savings_mode == 'CASH' %}
 <div class="card mb-4"><div class="card-body">
-  <div class="text-muted">Outstanding cash principal</div>
-  <div class="display-6">₹{{ cash_balance|floatformat:2 }}</div>
-  <small class="text-muted">Successful cash contributions less completed redemptions.</small>
+  <div class="text-muted">Redeemable cash amount</div>
+  <div class="display-6">₹{{ cash_bonus.redeemable_amount|floatformat:2 }}</div>
+  <dl class="row mt-3 mb-0">
+    <dt class="col-sm-6">Total paid</dt><dd class="col-sm-6 text-sm-end">₹{{ cash_bonus.principal_paid|floatformat:2 }}</dd>
+    <dt class="col-sm-6">Outstanding principal</dt><dd class="col-sm-6 text-sm-end">₹{{ cash_bonus.principal_outstanding|floatformat:2 }}</dd>
+    <dt class="col-sm-6">Earned bonus</dt><dd class="col-sm-6 text-sm-end">₹{{ cash_bonus.earned_bonus|floatformat:2 }}</dd>
+    <dt class="col-sm-6">Projected bonus</dt><dd class="col-sm-6 text-sm-end">₹{{ cash_bonus.projected_bonus|floatformat:2 }}</dd>
+  </dl>
+  <small class="text-muted">Projected bonus is an estimate and is not redeemable or an actual liability.</small>
 </div></div>
 {% endif %}
 
@@ -86,7 +92,7 @@
         <td>{{ redemption.redemption_number }}</td>
         <td>{{ redemption.get_settlement_type_display }}</td>
         <td>
-          {% if redemption.cash_amount is not None %}₹{{ redemption.cash_amount|floatformat:2 }}
+          {% if redemption.cash_amount is not None %}₹{{ redemption.cash_amount|floatformat:2 }}<br><small class="text-muted">Principal ₹{{ redemption.cash_principal_amount|floatformat:2 }} · Bonus ₹{{ redemption.cash_bonus_amount|floatformat:2 }}</small>
           {% elif redemption.gold_quantity is not None %}{{ redemption.gold_quantity|floatformat:6 }} g gold
           {% else %}{{ redemption.silver_quantity|floatformat:6 }} g silver{% endif %}
         </td>

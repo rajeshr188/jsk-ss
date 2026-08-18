@@ -33,6 +33,7 @@ from .permissions import owner_required
 from .rates import MetalRateProviderError, metal_rate_provider_is_configured
 from .selectors import (
     get_cash_balance,
+    get_cash_bonus_summary,
     get_contribution_history,
     get_customer_scheme_account,
     get_customer_scheme_summary,
@@ -138,6 +139,11 @@ def redemption_create(request, scheme_number):
         scheme_number=scheme_number,
     )
     outstanding = get_outstanding_entitlement(account)
+    cash_bonus = (
+        get_cash_bonus_summary(account)
+        if account.savings_mode == SchemeAccount.SavingsMode.CASH
+        else None
+    )
     if (
         account.effective_status != SchemeAccount.Status.REDEMPTION_ELIGIBLE
         or outstanding <= 0
@@ -179,6 +185,7 @@ def redemption_create(request, scheme_number):
         {
             "scheme_account": account,
             "outstanding": outstanding,
+            "cash_bonus": cash_bonus,
             "form": form,
         },
     )
@@ -273,7 +280,10 @@ def plan_add(request):
 
 @login_required
 def my_schemes(request):
-    accounts = get_customer_scheme_summary(request.user)
+    accounts = list(get_customer_scheme_summary(request.user))
+    for account in accounts:
+        if account.savings_mode == SchemeAccount.SavingsMode.CASH:
+            account.cash_bonus = get_cash_bonus_summary(account)
     return render(
         request,
         "schemes/my_schemes.html",
@@ -297,6 +307,7 @@ def my_scheme_detail(request, scheme_number):
         {
             "scheme_account": account,
             "cash_balance": get_cash_balance(account),
+            "cash_bonus": get_cash_bonus_summary(account),
             "metal_balance": get_metal_balance(account),
             "contributions": get_contribution_history(account),
             "redemptions": get_redemption_history(account),

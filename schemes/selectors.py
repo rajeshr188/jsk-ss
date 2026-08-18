@@ -7,6 +7,7 @@ from django.db.models import Case, Count, DecimalField, F, OuterRef, Q, Subquery
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 
+from .bonuses import cash_bonus_policy_for_account
 from .models import (
     Contribution,
     Customer,
@@ -39,8 +40,27 @@ class MetalLiability:
 @dataclass(frozen=True)
 class OwnerLiabilitySummary:
     cash_principal: Decimal
+    cash_earned_bonus: Decimal
+    cash_projected_bonus: Decimal
     gold: MetalLiability
     silver: MetalLiability
+
+    @property
+    def cash_redeemable_amount(self):
+        return self.cash_principal + self.cash_earned_bonus
+
+
+@dataclass(frozen=True)
+class CashBonusSummary:
+    principal_paid: Decimal
+    principal_outstanding: Decimal
+    earned_bonus: Decimal
+    projected_bonus: Decimal
+    redeemable_amount: Decimal
+    policy_version: str
+    percentage: Decimal
+    minimum_qualifying_months: int
+    contract_qualifies: bool
 
 
 @dataclass(frozen=True)
@@ -106,7 +126,7 @@ def get_customer_scheme_summary(user):
             status=Redemption.Status.COMPLETED,
         )
         .values("scheme_account")
-        .annotate(total=Sum("cash_amount"))
+        .annotate(total=Sum("cash_principal_amount"))
         .values("total")
     )
     gold_redemptions = (
@@ -219,9 +239,30 @@ def get_owner_redemptions():
 def get_cash_balance(scheme_account):
     if scheme_account.savings_mode != SchemeAccount.SavingsMode.CASH:
         return Decimal("0.00")
-    contributed = scheme_account.contributions.filter(
+    return get_cash_bonus_summary(scheme_account).principal_outstanding
+
+
+def get_cash_bonus_summary(scheme_account, as_of=None):
+    if scheme_account.savings_mode != SchemeAccount.SavingsMode.CASH:
+        return CashBonusSummary(
+            principal_paid=Decimal("0.00"),
+            principal_outstanding=Decimal("0.00"),
+            earned_bonus=Decimal("0.00"),
+            projected_bonus=Decimal("0.00"),
+            redeemable_amount=Decimal("0.00"),
+            policy_version=scheme_account.cash_bonus_policy_version_snapshot,
+            percentage=scheme_account.cash_bonus_percentage_snapshot,
+            minimum_qualifying_months=(
+                scheme_account.cash_bonus_minimum_months_snapshot
+            ),
+            contract_qualifies=False,
+        )
+
+    policy = cash_bonus_policy_for_account(scheme_account)
+    paid_contributions = scheme_account.contributions.filter(
         status=Contribution.Status.PAID
-    ).aggregate(
+    )
+    principal_paid = paid_contributions.aggregate(
         total=Coalesce(
             Sum("amount"),
             Value(Decimal("0.00")),
@@ -231,13 +272,61 @@ def get_cash_balance(scheme_account):
     redeemed = scheme_account.redemptions.filter(
         status=Redemption.Status.COMPLETED
     ).aggregate(
-        total=Coalesce(
-            Sum("cash_amount"),
+        principal=Coalesce(
+            Sum("cash_principal_amount"),
             Value(Decimal("0.00")),
             output_field=DecimalField(max_digits=14, decimal_places=2),
+        ),
+        bonus=Coalesce(
+            Sum("cash_bonus_amount"),
+            Value(Decimal("0.00")),
+            output_field=DecimalField(max_digits=14, decimal_places=2),
+        ),
+    )
+    principal_outstanding = max(
+        principal_paid - redeemed["principal"],
+        Decimal("0.00"),
+    )
+    as_of = as_of or timezone.localdate()
+    contract_qualifies = policy.contract_qualifies(scheme_account.agreed_months)
+    earned_bonus = Decimal("0.00")
+    projected_bonus = Decimal("0.00")
+    if contract_qualifies and as_of >= scheme_account.eligible_from:
+        local_timezone = timezone.get_current_timezone()
+        cutoff = timezone.make_aware(
+            datetime.combine(
+                scheme_account.eligible_from + timedelta(days=1),
+                time.min,
+            ),
+            local_timezone,
         )
-    )["total"]
-    return contributed - redeemed
+        qualifying_principal = paid_contributions.filter(
+            paid_at__lt=cutoff
+        ).aggregate(
+            total=Coalesce(
+                Sum("amount"),
+                Value(Decimal("0.00")),
+                output_field=DecimalField(max_digits=14, decimal_places=2),
+            )
+        )["total"]
+        earned_bonus = max(
+            policy.calculate(qualifying_principal) - redeemed["bonus"],
+            Decimal("0.00"),
+        )
+    elif contract_qualifies:
+        projected_bonus = policy.calculate(principal_paid)
+
+    return CashBonusSummary(
+        principal_paid=principal_paid,
+        principal_outstanding=principal_outstanding,
+        earned_bonus=earned_bonus,
+        projected_bonus=projected_bonus,
+        redeemable_amount=principal_outstanding + earned_bonus,
+        policy_version=policy.version,
+        percentage=policy.percentage,
+        minimum_qualifying_months=policy.minimum_qualifying_months,
+        contract_qualifies=contract_qualifies,
+    )
 
 
 def get_metal_balance(scheme_account):
@@ -276,32 +365,24 @@ def get_metal_balance(scheme_account):
 
 def get_outstanding_entitlement(scheme_account):
     if scheme_account.savings_mode == SchemeAccount.SavingsMode.CASH:
-        return get_cash_balance(scheme_account)
+        return get_cash_bonus_summary(scheme_account).redeemable_amount
     return get_metal_balance(scheme_account)
 
 
 def get_owner_liability_summary(rate_provider=None):
-    cash_contributed = Contribution.objects.filter(
-        status=Contribution.Status.PAID,
-        scheme_account__savings_mode=SchemeAccount.SavingsMode.CASH,
-    ).aggregate(
-        total=Coalesce(
-            Sum("amount"),
-            Value(Decimal("0.00")),
-            output_field=DecimalField(max_digits=14, decimal_places=2),
+    cash_summaries = (
+        get_cash_bonus_summary(account)
+        for account in SchemeAccount.objects.filter(
+            savings_mode=SchemeAccount.SavingsMode.CASH
         )
-    )["total"]
-    cash_redeemed = Redemption.objects.filter(
-        status=Redemption.Status.COMPLETED,
-        scheme_account__savings_mode=SchemeAccount.SavingsMode.CASH,
-    ).aggregate(
-        total=Coalesce(
-            Sum("cash_amount"),
-            Value(Decimal("0.00")),
-            output_field=DecimalField(max_digits=14, decimal_places=2),
-        )
-    )["total"]
-    cash_principal = cash_contributed - cash_redeemed
+    )
+    cash_principal = Decimal("0.00")
+    cash_earned_bonus = Decimal("0.00")
+    cash_projected_bonus = Decimal("0.00")
+    for summary in cash_summaries:
+        cash_principal += summary.principal_outstanding
+        cash_earned_bonus += summary.earned_bonus
+        cash_projected_bonus += summary.projected_bonus
 
     metal_totals = MetalAllocation.objects.filter(
         contribution__status=Contribution.Status.PAID,
@@ -358,6 +439,8 @@ def get_owner_liability_summary(rate_provider=None):
 
     return OwnerLiabilitySummary(
         cash_principal=cash_principal,
+        cash_earned_bonus=cash_earned_bonus,
+        cash_projected_bonus=cash_projected_bonus,
         gold=gold,
         silver=silver,
     )

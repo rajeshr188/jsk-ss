@@ -21,7 +21,14 @@ class CustomerAdmin(admin.ModelAdmin):
 
 @admin.register(SchemePlan)
 class SchemePlanAdmin(admin.ModelAdmin):
-    list_display = ("code", "name", "amount_rule", "frequency_rule", "active")
+    list_display = (
+        "code",
+        "name",
+        "amount_rule",
+        "frequency_rule",
+        "cash_bonus_percentage",
+        "active",
+    )
     list_filter = ("amount_rule", "frequency_rule", "active")
     search_fields = ("code", "name")
     readonly_fields = ("created_at", "updated_at")
@@ -47,6 +54,9 @@ class SchemeAccountAdmin(admin.ModelAdmin):
         "minimum_amount_snapshot",
         "maximum_amount_snapshot",
         "allow_post_eligibility_contributions_snapshot",
+        "cash_bonus_policy_version_snapshot",
+        "cash_bonus_percentage_snapshot",
+        "cash_bonus_minimum_months_snapshot",
         "created_at",
         "updated_at",
     )
@@ -207,6 +217,8 @@ class RedemptionAdmin(admin.ModelAdmin):
         "scheme_account",
         "settlement_type",
         "cash_amount",
+        "cash_principal_amount",
+        "cash_bonus_amount",
         "gold_quantity",
         "silver_quantity",
         "external_reference",

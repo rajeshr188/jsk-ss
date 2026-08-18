@@ -11,7 +11,7 @@
 - [x] Milestone 7 — Redemption eligibility views
 - [x] Milestone 8 — Redemption
 - [x] MVP Beta checkpoint
-- [ ] Milestone 9 — Cash bonus
+- [x] Milestone 9 — Cash bonus
 - [ ] Milestone 10 — Audit and exceptions
 - [ ] Milestone 11 — Receipts and statements
 

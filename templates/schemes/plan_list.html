@@ -9,7 +9,7 @@
 </div>
 <div class="table-responsive">
   <table class="table align-middle">
-    <thead><tr><th>Plan</th><th>Amount</th><th>Frequency</th><th>Duration</th><th>Status</th></tr></thead>
+    <thead><tr><th>Plan</th><th>Amount</th><th>Frequency</th><th>Duration</th><th>Cash bonus</th><th>Status</th></tr></thead>
     <tbody>
       {% for plan in plans %}
       <tr>
@@ -17,11 +17,11 @@
         <td>{{ plan.get_amount_rule_display }}{% if plan.fixed_contribution_amount %} · ₹{{ plan.fixed_contribution_amount }}{% endif %}</td>
         <td>{{ plan.get_frequency_rule_display }}</td>
         <td>{{ plan.default_months }} months</td>
+        <td>{% if plan.cash_bonus_percentage %}{{ plan.cash_bonus_percentage|floatformat:2 }}% · minimum {{ plan.cash_bonus_minimum_months }} months{% else %}None{% endif %}</td>
         <td>{% if plan.active %}<span class="badge text-bg-success">Active</span>{% else %}<span class="badge text-bg-secondary">Inactive</span>{% endif %}</td>
       </tr>
-      {% empty %}<tr><td colspan="5" class="text-muted text-center py-4">No plans yet.</td></tr>{% endfor %}
+      {% empty %}<tr><td colspan="6" class="text-muted text-center py-4">No plans yet.</td></tr>{% endfor %}
     </tbody>
   </table>
 </div>
 {% endblock %}
-

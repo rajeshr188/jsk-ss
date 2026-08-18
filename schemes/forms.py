@@ -48,8 +48,19 @@ class SchemePlanForm(forms.ModelForm):
             "minimum_contribution",
             "maximum_contribution",
             "allow_contributions_after_eligibility",
+            "cash_bonus_percentage",
+            "cash_bonus_minimum_months",
             "active",
         ]
+
+        help_texts = {
+            "cash_bonus_percentage": (
+                "Applies only to cash schemes. Use 0 to disable cash bonus."
+            ),
+            "cash_bonus_minimum_months": (
+                "The customer's agreed duration must meet this minimum."
+            ),
+        }
 
 
 class EnrolmentForm(forms.Form):

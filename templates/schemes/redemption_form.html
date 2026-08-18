@@ -13,13 +13,17 @@
     <div class="text-muted">Outstanding {{ scheme_account.get_savings_mode_display|lower }} entitlement</div>
     {% if scheme_account.savings_mode == 'CASH' %}
     <div class="display-6">₹{{ outstanding|floatformat:2 }}</div>
+    <dl class="row small mt-3 mb-0">
+      <dt class="col-6">Principal</dt><dd class="col-6 text-end">₹{{ cash_bonus.principal_outstanding|floatformat:2 }}</dd>
+      <dt class="col-6">Earned bonus</dt><dd class="col-6 text-end">₹{{ cash_bonus.earned_bonus|floatformat:2 }}</dd>
+    </dl>
     {% else %}
     <div class="display-6">{{ outstanding|floatformat:6 }} g</div>
     {% endif %}
   </div></div>
 
   <div class="alert alert-warning" role="alert">
-    This creates an immutable completed financial record. Confirm the settlement details before submitting.
+    This creates an immutable completed financial record. Cash redemption is allocated to principal first, then earned bonus. Confirm the settlement details before submitting.
   </div>
   <form method="post" novalidate>
     {% csrf_token %}

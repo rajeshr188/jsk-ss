@@ -1,6 +1,6 @@
 # Jai Shri Krishna Jewellery Savings Scheme
 
-A single-business Django application for managing customer cash, 24K gold, and silver savings schemes. It reuses the [Lithium](https://github.com/wsvincent/lithium) Django foundation and now includes owner-managed enrolment, verified contributions, immutable metal allocations, eligibility, and audited redemption records.
+A single-business Django application for managing customer cash, 24K gold, and silver savings schemes. It reuses the [Lithium](https://github.com/wsvincent/lithium) Django foundation and now includes owner-managed enrolment, verified contributions, versioned cash bonus, immutable metal allocations, eligibility, and audited redemption records.
 
 ## Technology
 
@@ -72,11 +72,15 @@ MOCK_SILVER_RATE=150.0000
 
 The payment screen is unavailable unless a payment adapter is configured. Gold and silver payments additionally require a configured metal-rate provider. Mock payments record no real transfer; rates are snapshotted and INR is converted to six-decimal grams for local testing. `seed_demo` remains deferred.
 
-The owner dashboard derives outstanding cash principal and gold/silver gram obligations from successful financial records. Current mock rates provide separate indicative INR exposure for each metal; these display values never alter historical allocations and are never combined with cash into one liability total.
+The owner dashboard derives outstanding cash principal, earned cash bonus, and gold/silver gram obligations from successful financial records. Projected cash bonus is shown separately and is not an actual liability. Current mock rates provide separate indicative INR exposure for each metal; these display values never alter historical allocations and are never combined with cash into one liability total.
+
+## Cash bonus
+
+Scheme plans may define a cash bonus percentage and minimum qualifying duration; 0% disables bonus. Enrolment snapshots those terms and policy version, so later plan changes do not rewrite an agreement. Before eligibility, the customer sees a projected estimate based on principal paid so far. On eligibility, earned bonus is calculated from successful cash contributions paid by the eligibility-date cutoff and becomes redeemable. Later contributions remain principal without changing the matured bonus. Cash redemptions allocate principal first and then earned bonus while preserving both components in the immutable record.
 
 ## Redemption
 
-Once a scheme reaches its India-local eligibility date, an owner can record a partial or full redemption. Cash accounts support cash or jewellery-purchase settlement; gold and silver accounts support matching metal or jewellery-purchase settlement. Jewellery purchase requires an invoice or sales reference. Outstanding balances and owner liabilities subtract completed redemptions while retaining all historical contributions and allocations. A full redemption closes the account; partial redemption leaves it eligible.
+Once a scheme reaches its India-local eligibility date, an owner can record a partial or full redemption. Cash accounts support cash or jewellery-purchase settlement and may include earned bonus; gold and silver accounts support matching metal or jewellery-purchase settlement. Jewellery purchase requires an invoice or sales reference. Outstanding balances and owner liabilities subtract completed redemptions while retaining all historical contributions and allocations. A full redemption closes the account; partial redemption leaves it eligible.
 
 The MVP records settlement facts only. It does not execute payouts, convert metal to cash, manage inventory/invoices, or support editing/reversing a redemption.
 

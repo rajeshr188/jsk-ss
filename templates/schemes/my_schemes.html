@@ -19,7 +19,11 @@
       <dt class="col-sm-5">Agreed duration</dt><dd class="col-sm-7">{{ account.agreed_months }} months</dd>
       <dt class="col-sm-5">Eligible from</dt><dd class="col-sm-7">{{ account.eligible_from }}</dd>
       {% if account.savings_mode == 'CASH' %}
-      <dt class="col-sm-5">Cash principal</dt><dd class="col-sm-7 fw-semibold">₹{{ account.cash_balance|floatformat:2 }}</dd>
+      <dt class="col-sm-5">Total paid</dt><dd class="col-sm-7">₹{{ account.cash_bonus.principal_paid|floatformat:2 }}</dd>
+      <dt class="col-sm-5">Principal</dt><dd class="col-sm-7">₹{{ account.cash_bonus.principal_outstanding|floatformat:2 }}</dd>
+      <dt class="col-sm-5">Earned bonus</dt><dd class="col-sm-7">₹{{ account.cash_bonus.earned_bonus|floatformat:2 }}</dd>
+      <dt class="col-sm-5">Projected bonus</dt><dd class="col-sm-7">₹{{ account.cash_bonus.projected_bonus|floatformat:2 }}</dd>
+      <dt class="col-sm-5">Redeemable amount</dt><dd class="col-sm-7 fw-semibold">₹{{ account.cash_bonus.redeemable_amount|floatformat:2 }}</dd>
       {% elif account.savings_mode == 'GOLD' %}
       <dt class="col-sm-5">Gold accumulated</dt><dd class="col-sm-7 fw-semibold">{{ account.metal_balance|floatformat:6 }} g</dd>
       {% elif account.savings_mode == 'SILVER' %}
