@@ -31,9 +31,17 @@ Milestone 5 — Live metal-rate provider (complete)
 
 - None.
 
-## Known issues
+## Known limitations
 
-- None currently identified in implemented scope.
+- GoldAPI behavior is covered with deterministic HTTP-boundary tests, but a real
+  request has not been verified because no private provider key is stored here.
+- The applied metal rate currently equals the provider rate; store premiums,
+  margins, taxes, and manual rate approval are not implemented.
+- The short GoldAPI cache is process-local, so separate production workers do not
+  share quota protection.
+- Paid metal contributions that cannot obtain a valid rate require an owner to
+  retry allocation manually; automated retrying and external alert delivery are
+  deferred.
 
 ## Deferred
 
