@@ -10,7 +10,7 @@
     <div class="text-muted">{{ scheme_account.scheme_number }}</div>
     <span class="badge text-bg-secondary mt-2">{{ scheme_account.effective_status_label }}</span>
   </div>
-  {% if payment_gateway_enabled %}
+  {% if payment_gateway_enabled and scheme_account.effective_status != 'REDEEMED' %}
     {% if scheme_account.savings_mode == 'CASH' or metal_rate_provider_enabled %}
     <a class="btn btn-jsk" href="{% url 'schemes:pay_contribution' scheme_account.scheme_number %}">Pay now</a>
     {% endif %}
@@ -34,7 +34,7 @@
 <div class="card mb-4"><div class="card-body">
   <div class="text-muted">Outstanding cash principal</div>
   <div class="display-6">₹{{ cash_balance|floatformat:2 }}</div>
-  <small class="text-muted">Derived from successful contributions only.</small>
+  <small class="text-muted">Successful cash contributions less completed redemptions.</small>
 </div></div>
 {% endif %}
 
@@ -42,7 +42,7 @@
 <div class="card mb-4"><div class="card-body">
   <div class="text-muted">{{ scheme_account.get_savings_mode_display }} entitlement</div>
   <div class="display-6">{{ metal_balance|floatformat:6 }} g</div>
-  <small class="text-muted">Derived from immutable allocations at each contribution's historical rate.</small>
+  <small class="text-muted">Immutable allocations less completed metal redemptions.</small>
 </div></div>
 {% endif %}
 
@@ -71,6 +71,28 @@
         </td>
       </tr>
       {% empty %}<tr><td colspan="7" class="text-center text-muted py-4">No contributions yet.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<h2 class="h4 mt-5">Redemption history</h2>
+<div class="table-responsive">
+  <table class="table align-middle">
+    <thead><tr><th>Completed</th><th>Reference</th><th>Settlement</th><th>Entitlement redeemed</th><th>External reference</th></tr></thead>
+    <tbody>
+      {% for redemption in redemptions %}
+      <tr>
+        <td>{{ redemption.completed_at|date:'d M Y, g:i A' }}</td>
+        <td>{{ redemption.redemption_number }}</td>
+        <td>{{ redemption.get_settlement_type_display }}</td>
+        <td>
+          {% if redemption.cash_amount is not None %}₹{{ redemption.cash_amount|floatformat:2 }}
+          {% elif redemption.gold_quantity is not None %}{{ redemption.gold_quantity|floatformat:6 }} g gold
+          {% else %}{{ redemption.silver_quantity|floatformat:6 }} g silver{% endif %}
+        </td>
+        <td>{{ redemption.external_reference|default:'—' }}</td>
+      </tr>
+      {% empty %}<tr><td colspan="5" class="text-center text-muted py-4">No redemptions recorded.</td></tr>{% endfor %}
     </tbody>
   </table>
 </div>

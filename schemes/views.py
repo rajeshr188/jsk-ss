@@ -12,7 +12,13 @@ from django.views.decorators.csrf import csrf_exempt
 
 from accounts.models import CustomUser
 
-from .forms import ContributionForm, CustomerCreateForm, EnrolmentForm, SchemePlanForm
+from .forms import (
+    ContributionForm,
+    CustomerCreateForm,
+    EnrolmentForm,
+    RedemptionForm,
+    SchemePlanForm,
+)
 from .models import Contribution, Customer, SchemeAccount, SchemePlan
 from .payments import (
     PaymentGatewayError,
@@ -33,10 +39,14 @@ from .selectors import (
     get_owner_contributions,
     get_owner_customers,
     get_owner_liability_summary,
+    get_owner_redemptions,
     get_redemption_eligibility_summary,
+    get_redemption_history,
+    get_outstanding_entitlement,
 )
 from .services import (
     create_customer,
+    complete_redemption,
     enroll_customer,
     confirm_razorpay_contribution,
     initiate_razorpay_contribution,
@@ -67,6 +77,8 @@ def owner_dashboard(request):
 @owner_required
 def redemption_eligibility(request):
     eligibility = get_redemption_eligibility_summary()
+    for account in eligibility.eligible_now:
+        account.outstanding_entitlement = get_outstanding_entitlement(account)
     return render(
         request,
         "schemes/redemption_eligibility.html",
@@ -104,6 +116,68 @@ def redemption_eligibility(request):
                     eligibility.redeemed,
                 ),
             ),
+        },
+    )
+
+
+@owner_required
+def redemption_list(request):
+    return render(
+        request,
+        "schemes/redemption_list.html",
+        {"redemptions": get_owner_redemptions()},
+    )
+
+
+@owner_required
+def redemption_create(request, scheme_number):
+    account = get_object_or_404(
+        SchemeAccount.objects.select_related("customer", "plan"),
+        scheme_number=scheme_number,
+    )
+    outstanding = get_outstanding_entitlement(account)
+    if (
+        account.effective_status != SchemeAccount.Status.REDEMPTION_ELIGIBLE
+        or outstanding <= 0
+    ):
+        raise Http404
+    form = RedemptionForm(
+        request.POST or None,
+        scheme_account=account,
+        outstanding=outstanding,
+    )
+    if request.method == "POST" and form.is_valid():
+        try:
+            redemption = complete_redemption(
+                scheme_account=account,
+                settlement_type=form.cleaned_data["settlement_type"],
+                amount=form.cleaned_data["amount"],
+                external_reference=form.cleaned_data["external_reference"],
+                notes=form.cleaned_data["notes"],
+                idempotency_key=form.cleaned_data["idempotency_key"],
+                processed_by=request.user,
+            )
+        except ValidationError as error:
+            if hasattr(error, "message_dict"):
+                for field, field_errors in error.message_dict.items():
+                    for field_error in field_errors:
+                        form.add_error(field if field in form.fields else None, field_error)
+            else:
+                for field_error in error.messages:
+                    form.add_error(None, field_error)
+        else:
+            messages.success(
+                request,
+                f"Redemption {redemption.redemption_number} completed.",
+            )
+            return redirect("schemes:redemption_list")
+    return render(
+        request,
+        "schemes/redemption_form.html",
+        {
+            "scheme_account": account,
+            "outstanding": outstanding,
+            "form": form,
         },
     )
 
@@ -223,6 +297,7 @@ def my_scheme_detail(request, scheme_number):
             "cash_balance": get_cash_balance(account),
             "metal_balance": get_metal_balance(account),
             "contributions": get_contribution_history(account),
+            "redemptions": get_redemption_history(account),
             "mock_payment_enabled": mock_payment_is_enabled(),
             "payment_gateway_enabled": payment_gateway_is_configured(),
             "metal_rate_provider_enabled": metal_rate_provider_is_configured(),

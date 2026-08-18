@@ -3,11 +3,18 @@ from datetime import date, datetime, time, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 
 from django.core.exceptions import ImproperlyConfigured
-from django.db.models import Count, DecimalField, Q, Sum, Value
+from django.db.models import Case, Count, DecimalField, F, OuterRef, Q, Subquery, Sum, Value, When
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 
-from .models import Contribution, Customer, MetalAllocation, RateSnapshot, SchemeAccount
+from .models import (
+    Contribution,
+    Customer,
+    MetalAllocation,
+    RateSnapshot,
+    Redemption,
+    SchemeAccount,
+)
 from .rates import MetalRateProviderError, get_metal_rate_provider
 
 
@@ -73,28 +80,96 @@ class RedemptionEligibilitySummary:
 
 
 def get_customer_scheme_summary(user):
+    money_field = DecimalField(max_digits=14, decimal_places=2)
+    metal_field = DecimalField(max_digits=18, decimal_places=6)
+    cash_contributions = (
+        Contribution.objects.filter(
+            scheme_account=OuterRef("pk"),
+            status=Contribution.Status.PAID,
+        )
+        .values("scheme_account")
+        .annotate(total=Sum("amount"))
+        .values("total")
+    )
+    metal_allocations = (
+        MetalAllocation.objects.filter(
+            contribution__scheme_account=OuterRef("pk"),
+            contribution__status=Contribution.Status.PAID,
+        )
+        .values("contribution__scheme_account")
+        .annotate(total=Sum("quantity"))
+        .values("total")
+    )
+    cash_redemptions = (
+        Redemption.objects.filter(
+            scheme_account=OuterRef("pk"),
+            status=Redemption.Status.COMPLETED,
+        )
+        .values("scheme_account")
+        .annotate(total=Sum("cash_amount"))
+        .values("total")
+    )
+    gold_redemptions = (
+        Redemption.objects.filter(
+            scheme_account=OuterRef("pk"),
+            status=Redemption.Status.COMPLETED,
+        )
+        .values("scheme_account")
+        .annotate(total=Sum("gold_quantity"))
+        .values("total")
+    )
+    silver_redemptions = (
+        Redemption.objects.filter(
+            scheme_account=OuterRef("pk"),
+            status=Redemption.Status.COMPLETED,
+        )
+        .values("scheme_account")
+        .annotate(total=Sum("silver_quantity"))
+        .values("total")
+    )
     return (
         SchemeAccount.objects.filter(customer__user=user)
         .select_related("plan", "customer")
         .annotate(
-            cash_balance=Coalesce(
-                Sum(
-                    "contributions__amount",
-                    filter=Q(contributions__status=Contribution.Status.PAID),
-                ),
+            cash_contributed=Coalesce(
+                Subquery(cash_contributions, output_field=money_field),
                 Value(Decimal("0.00")),
-                output_field=DecimalField(max_digits=14, decimal_places=2),
+                output_field=money_field,
             ),
-            metal_balance=Coalesce(
-                Sum(
-                    "contributions__metal_allocation__quantity",
-                    filter=Q(
-                        contributions__status=Contribution.Status.PAID,
-                        contributions__metal_allocation__isnull=False,
-                    ),
-                ),
+            metal_allocated=Coalesce(
+                Subquery(metal_allocations, output_field=metal_field),
                 Value(Decimal("0.000000")),
-                output_field=DecimalField(max_digits=18, decimal_places=6),
+                output_field=metal_field,
+            ),
+            cash_redeemed=Coalesce(
+                Subquery(cash_redemptions, output_field=money_field),
+                Value(Decimal("0.00")),
+                output_field=money_field,
+            ),
+            gold_redeemed=Coalesce(
+                Subquery(gold_redemptions, output_field=metal_field),
+                Value(Decimal("0.000000")),
+                output_field=metal_field,
+            ),
+            silver_redeemed=Coalesce(
+                Subquery(silver_redemptions, output_field=metal_field),
+                Value(Decimal("0.000000")),
+                output_field=metal_field,
+            ),
+        )
+        .annotate(
+            cash_balance=F("cash_contributed") - F("cash_redeemed"),
+            metal_balance=Case(
+                When(
+                    savings_mode=SchemeAccount.SavingsMode.GOLD,
+                    then=F("metal_allocated") - F("gold_redeemed"),
+                ),
+                When(
+                    savings_mode=SchemeAccount.SavingsMode.SILVER,
+                    then=F("metal_allocated") - F("silver_redeemed"),
+                ),
+                default=Value(Decimal("0.000000")),
+                output_field=metal_field,
             ),
         )
     )
@@ -118,6 +193,10 @@ def get_contribution_history(scheme_account):
     return scheme_account.contributions.select_related("metal_allocation__rate_snapshot")
 
 
+def get_redemption_history(scheme_account):
+    return scheme_account.redemptions.select_related("processed_by")
+
+
 def get_owner_contributions():
     return Contribution.objects.select_related(
         "scheme_account",
@@ -128,16 +207,37 @@ def get_owner_contributions():
     )
 
 
+def get_owner_redemptions():
+    return Redemption.objects.select_related(
+        "scheme_account",
+        "scheme_account__customer",
+        "scheme_account__plan",
+        "processed_by",
+    )
+
+
 def get_cash_balance(scheme_account):
     if scheme_account.savings_mode != SchemeAccount.SavingsMode.CASH:
         return Decimal("0.00")
-    return scheme_account.contributions.filter(status=Contribution.Status.PAID).aggregate(
+    contributed = scheme_account.contributions.filter(
+        status=Contribution.Status.PAID
+    ).aggregate(
         total=Coalesce(
             Sum("amount"),
             Value(Decimal("0.00")),
             output_field=DecimalField(max_digits=14, decimal_places=2),
         )
     )["total"]
+    redeemed = scheme_account.redemptions.filter(
+        status=Redemption.Status.COMPLETED
+    ).aggregate(
+        total=Coalesce(
+            Sum("cash_amount"),
+            Value(Decimal("0.00")),
+            output_field=DecimalField(max_digits=14, decimal_places=2),
+        )
+    )["total"]
+    return contributed - redeemed
 
 
 def get_metal_balance(scheme_account):
@@ -146,7 +246,7 @@ def get_metal_balance(scheme_account):
         SchemeAccount.SavingsMode.SILVER,
     }:
         return Decimal("0.000000")
-    return MetalAllocation.objects.filter(
+    allocated = MetalAllocation.objects.filter(
         contribution__scheme_account=scheme_account,
         contribution__status=Contribution.Status.PAID,
         metal=scheme_account.savings_mode,
@@ -157,10 +257,31 @@ def get_metal_balance(scheme_account):
             output_field=DecimalField(max_digits=18, decimal_places=6),
         )
     )["total"]
+    field_name = (
+        "gold_quantity"
+        if scheme_account.savings_mode == SchemeAccount.SavingsMode.GOLD
+        else "silver_quantity"
+    )
+    redeemed = scheme_account.redemptions.filter(
+        status=Redemption.Status.COMPLETED
+    ).aggregate(
+        total=Coalesce(
+            Sum(field_name),
+            Value(Decimal("0.000000")),
+            output_field=DecimalField(max_digits=18, decimal_places=6),
+        )
+    )["total"]
+    return allocated - redeemed
+
+
+def get_outstanding_entitlement(scheme_account):
+    if scheme_account.savings_mode == SchemeAccount.SavingsMode.CASH:
+        return get_cash_balance(scheme_account)
+    return get_metal_balance(scheme_account)
 
 
 def get_owner_liability_summary(rate_provider=None):
-    cash_principal = Contribution.objects.filter(
+    cash_contributed = Contribution.objects.filter(
         status=Contribution.Status.PAID,
         scheme_account__savings_mode=SchemeAccount.SavingsMode.CASH,
     ).aggregate(
@@ -170,6 +291,17 @@ def get_owner_liability_summary(rate_provider=None):
             output_field=DecimalField(max_digits=14, decimal_places=2),
         )
     )["total"]
+    cash_redeemed = Redemption.objects.filter(
+        status=Redemption.Status.COMPLETED,
+        scheme_account__savings_mode=SchemeAccount.SavingsMode.CASH,
+    ).aggregate(
+        total=Coalesce(
+            Sum("cash_amount"),
+            Value(Decimal("0.00")),
+            output_field=DecimalField(max_digits=14, decimal_places=2),
+        )
+    )["total"]
+    cash_principal = cash_contributed - cash_redeemed
 
     metal_totals = MetalAllocation.objects.filter(
         contribution__status=Contribution.Status.PAID,
@@ -185,6 +317,22 @@ def get_owner_liability_summary(rate_provider=None):
             output_field=DecimalField(max_digits=18, decimal_places=6),
         ),
     )
+    metal_redeemed = Redemption.objects.filter(
+        status=Redemption.Status.COMPLETED,
+    ).aggregate(
+        gold=Coalesce(
+            Sum("gold_quantity"),
+            Value(Decimal("0.000000")),
+            output_field=DecimalField(max_digits=18, decimal_places=6),
+        ),
+        silver=Coalesce(
+            Sum("silver_quantity"),
+            Value(Decimal("0.000000")),
+            output_field=DecimalField(max_digits=18, decimal_places=6),
+        ),
+    )
+    metal_totals["gold"] -= metal_redeemed["gold"]
+    metal_totals["silver"] -= metal_redeemed["silver"]
 
     try:
         provider = rate_provider or get_metal_rate_provider()

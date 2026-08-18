@@ -1,3 +1,4 @@
+import uuid
 from decimal import Decimal
 
 from django.conf import settings
@@ -387,3 +388,131 @@ class MetalAllocation(models.Model):
 
     def __str__(self):
         return f"{self.quantity} g {self.get_metal_display()}"
+
+
+class Redemption(models.Model):
+    class SettlementType(models.TextChoices):
+        JEWELLERY_PURCHASE = "JEWELLERY_PURCHASE", "Jewellery purchase"
+        CASH = "CASH", "Cash"
+        METAL = "METAL", "Metal"
+
+    class Status(models.TextChoices):
+        COMPLETED = "COMPLETED", "Completed"
+
+    redemption_number = models.CharField(max_length=24, unique=True)
+    idempotency_key = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    scheme_account = models.ForeignKey(
+        SchemeAccount,
+        on_delete=models.PROTECT,
+        related_name="redemptions",
+    )
+    settlement_type = models.CharField(max_length=24, choices=SettlementType.choices)
+    cash_amount = models.DecimalField(
+        max_digits=14, decimal_places=2, null=True, blank=True
+    )
+    gold_quantity = models.DecimalField(
+        max_digits=18, decimal_places=6, null=True, blank=True
+    )
+    silver_quantity = models.DecimalField(
+        max_digits=18, decimal_places=6, null=True, blank=True
+    )
+    external_reference = models.CharField(max_length=120, blank=True)
+    notes = models.TextField(blank=True)
+    processed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="processed_redemptions",
+    )
+    completed_at = models.DateTimeField(default=timezone.now)
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.COMPLETED,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-completed_at", "-pk"]
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    models.Q(
+                        cash_amount__gt=Decimal("0"),
+                        gold_quantity__isnull=True,
+                        silver_quantity__isnull=True,
+                    )
+                    | models.Q(
+                        cash_amount__isnull=True,
+                        gold_quantity__gt=Decimal("0"),
+                        silver_quantity__isnull=True,
+                    )
+                    | models.Q(
+                        cash_amount__isnull=True,
+                        gold_quantity__isnull=True,
+                        silver_quantity__gt=Decimal("0"),
+                    )
+                ),
+                name="redemption_exactly_one_positive_entitlement",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=["scheme_account", "status", "completed_at"],
+                name="redemption_account_status_idx",
+            ),
+        ]
+
+    def clean(self):
+        super().clean()
+        if not self.scheme_account_id:
+            return
+        mode = self.scheme_account.savings_mode
+        errors = {}
+        if mode == SchemeAccount.SavingsMode.CASH:
+            if self.cash_amount is None:
+                errors["cash_amount"] = "Cash schemes must redeem a cash entitlement."
+            if self.settlement_type == self.SettlementType.METAL:
+                errors["settlement_type"] = "Cash schemes cannot use metal settlement."
+        elif mode == SchemeAccount.SavingsMode.GOLD:
+            if self.gold_quantity is None:
+                errors["gold_quantity"] = "Gold schemes must redeem a gold entitlement."
+            if self.settlement_type == self.SettlementType.CASH:
+                errors["settlement_type"] = (
+                    "Gold-to-cash conversion is not defined in the MVP."
+                )
+        elif mode == SchemeAccount.SavingsMode.SILVER:
+            if self.silver_quantity is None:
+                errors["silver_quantity"] = "Silver schemes must redeem a silver entitlement."
+            if self.settlement_type == self.SettlementType.CASH:
+                errors["settlement_type"] = (
+                    "Silver-to-cash conversion is not defined in the MVP."
+                )
+        if (
+            self.settlement_type == self.SettlementType.JEWELLERY_PURCHASE
+            and not self.external_reference.strip()
+        ):
+            errors["external_reference"] = (
+                "An invoice or sales reference is required for a jewellery purchase."
+            )
+        if errors:
+            raise ValidationError(errors)
+
+    def save(self, *args, **kwargs):
+        if self.pk and type(self).objects.filter(pk=self.pk).exists():
+            raise ValidationError("Historical redemptions are immutable.")
+        return super().save(*args, **kwargs)
+
+    @property
+    def entitlement_amount(self):
+        return self.cash_amount or self.gold_quantity or self.silver_quantity
+
+    @property
+    def entitlement_unit(self):
+        if self.cash_amount is not None:
+            return "INR"
+        if self.gold_quantity is not None:
+            return "g gold"
+        return "g silver"
+
+    def __str__(self):
+        return f"{self.redemption_number} — {self.scheme_account.scheme_number}"

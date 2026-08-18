@@ -20,7 +20,7 @@
   <p class="small text-muted">{{ description }}</p>
   <div class="table-responsive">
     <table class="table align-middle">
-      <thead><tr><th>Eligible from</th><th>Scheme</th><th>Customer</th><th>Mode</th><th>Status</th></tr></thead>
+      <thead><tr><th>Eligible from</th><th>Scheme</th><th>Customer</th><th>Mode</th><th>Status</th><th>Action</th></tr></thead>
       <tbody>
         {% for account in accounts %}
         <tr>
@@ -29,9 +29,15 @@
           <td><a href="{% url 'schemes:customer_detail' account.customer.pk %}">{{ account.customer.full_name }}</a></td>
           <td>{{ account.get_savings_mode_display }}</td>
           <td><span class="badge text-bg-secondary">{{ account.effective_status_label }}</span></td>
+          <td>
+            {% if account.effective_status == 'REDEMPTION_ELIGIBLE' and account.outstanding_entitlement > 0 %}
+            <a class="btn btn-sm btn-jsk" href="{% url 'schemes:redemption_create' account.scheme_number %}">Record redemption</a>
+            {% elif account.effective_status == 'REDEMPTION_ELIGIBLE' %}<span class="small text-muted">No outstanding entitlement</span>
+            {% else %}—{% endif %}
+          </td>
         </tr>
         {% empty %}
-        <tr><td colspan="5" class="text-center text-muted py-3">No scheme accounts in this category.</td></tr>
+        <tr><td colspan="6" class="text-center text-muted py-3">No scheme accounts in this category.</td></tr>
         {% endfor %}
       </tbody>
     </table>

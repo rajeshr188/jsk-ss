@@ -18,9 +18,11 @@ graph TD
   C -->|one-to-many| A[SchemeAccount]
   P[SchemePlan] -->|one-to-many| A
   A -->|one-to-many| N[Contribution]
+  A -->|one-to-many| D[Redemption]
   W[PaymentWebhookEvent] -->|zero-or-many| N
   N -->|zero-or-one| M[MetalAllocation]
   M -->|one-to-one| R[RateSnapshot]
+  U -->|processed by| D
 ```
 
 `SchemeAccount` snapshots plan terms during enrolment so later plan edits do not change existing agreements.
@@ -28,7 +30,7 @@ graph TD
 ## Layers
 
 - Views authorize, validate forms, call services/selectors, and render or redirect.
-- Services own transactional mutations such as customer creation and enrolment.
+- Services own transactional mutations such as customer creation, enrolment, and redemption.
 - Selectors own reusable reads such as customer scheme summaries.
 - The owner liability selector derives separate INR, gold, and silver obligations and applies current reference quotes only for indicative metal exposure.
 - The redemption eligibility selector partitions open accounts from their snapshotted `eligible_from` dates into non-overlapping owner forecast windows without mutating account state.
@@ -46,7 +48,7 @@ If public signup is introduced later, registration must create a complete custom
 
 ## Financial source of truth
 
-Cash principal is derived by selectors from `PAID` contribution records; pending and failed attempts contribute zero. Gold and silver balances are derived from immutable `MetalAllocation` quantities attached one-to-one to paid contributions. Historical `RateSnapshot` and allocation records reject application-level edits. Future redemption balances must likewise be derived from redemptions and auditable corrections—not mutable balance fields.
+Cash principal is derived by selectors from `PAID` contribution records less completed cash redemptions; pending and failed attempts contribute zero. Gold and silver balances are derived from immutable `MetalAllocation` quantities attached one-to-one to paid contributions less completed redemptions in the matching metal. Historical `RateSnapshot`, allocation, contribution, and `Redemption` records remain visible; rate snapshots, allocations, and redemptions reject application-level edits. There are no mutable balance fields.
 
 `MockPaymentGateway` remains available only when `DEBUG=True` and `PAYMENT_GATEWAY=mock`. `RazorpayPaymentGateway` is the external test-mode adapter. It creates orders through a fixed authenticated HTTPS API, verifies checkout HMAC signatures using the local order ID, fetches the payment server-side, and accepts only a captured payment matching the local amount and INR currency. Live key IDs are deliberately rejected.
 
@@ -71,3 +73,5 @@ Metal contribution: customer account → Pay now → verified contribution → c
 Owner liability dashboard: paid cash contributions → outstanding INR principal; paid metal allocations → separate gold/silver grams → current provider quotes → separate indicative INR exposures. Reference quotes used for display do not create or alter historical allocation snapshots. Activity counters use successful payment timestamps in the India-local calendar day and month.
 
 Eligibility: India-local current date plus each agreement's `eligible_from` snapshot → active/not-yet-eligible or redemption-eligible display state → exclusive owner windows for eligible now, days 1–30, 31–60, and 61–90. Eligibility is a read model; it does not create a redemption or persist an automatic status change.
+
+Redemption: owner eligibility review → denomination-specific outstanding balance → allowed settlement and precision validation → account row lock → idempotency check → immutable completed redemption → derived customer/owner balances. Partial redemption leaves the account eligible and open; exact final redemption stores `REDEEMED`. Jewellery purchase records a required external invoice/reference and settlement notes without creating inventory or invoicing subsystems.

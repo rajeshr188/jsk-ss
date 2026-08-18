@@ -1,8 +1,11 @@
+import uuid
+from decimal import Decimal
+
 from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 
-from .models import SchemeAccount, SchemePlan
+from .models import Redemption, SchemeAccount, SchemePlan
 from .services import validate_contribution_allowed
 
 
@@ -97,3 +100,71 @@ class ContributionForm(forms.Form):
         amount = self.cleaned_data["amount"]
         validated_amount, _ = validate_contribution_allowed(self.scheme_account, amount)
         return validated_amount
+
+
+class RedemptionForm(forms.Form):
+    settlement_type = forms.ChoiceField(choices=())
+    amount = forms.DecimalField(label="Amount to redeem", min_value=Decimal("0.01"))
+    external_reference = forms.CharField(
+        label="Invoice / settlement reference",
+        max_length=120,
+        required=False,
+    )
+    notes = forms.CharField(widget=forms.Textarea(attrs={"rows": 3}), required=False)
+    idempotency_key = forms.UUIDField(widget=forms.HiddenInput)
+
+    def __init__(self, *args, scheme_account, outstanding, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.scheme_account = scheme_account
+        self.outstanding = outstanding
+        self.fields["idempotency_key"].initial = uuid.uuid4()
+        if scheme_account.savings_mode == SchemeAccount.SavingsMode.CASH:
+            self.fields["settlement_type"].choices = [
+                choice
+                for choice in Redemption.SettlementType.choices
+                if choice[0]
+                in {
+                    Redemption.SettlementType.CASH,
+                    Redemption.SettlementType.JEWELLERY_PURCHASE,
+                }
+            ]
+            self.fields["amount"] = forms.DecimalField(
+                label="Cash principal to redeem",
+                max_digits=14,
+                decimal_places=2,
+                min_value=Decimal("0.01"),
+                max_value=outstanding,
+                help_text=f"Outstanding principal: ₹{outstanding:.2f}",
+            )
+        else:
+            metal_name = scheme_account.get_savings_mode_display()
+            self.fields["settlement_type"].choices = [
+                choice
+                for choice in Redemption.SettlementType.choices
+                if choice[0]
+                in {
+                    Redemption.SettlementType.METAL,
+                    Redemption.SettlementType.JEWELLERY_PURCHASE,
+                }
+            ]
+            self.fields["amount"] = forms.DecimalField(
+                label=f"{metal_name} quantity to redeem (g)",
+                max_digits=18,
+                decimal_places=6,
+                min_value=Decimal("0.000001"),
+                max_value=outstanding,
+                help_text=f"Outstanding entitlement: {outstanding:.6f} g",
+            )
+
+    def clean(self):
+        cleaned = super().clean()
+        if (
+            cleaned.get("settlement_type")
+            == Redemption.SettlementType.JEWELLERY_PURCHASE
+            and not cleaned.get("external_reference", "").strip()
+        ):
+            self.add_error(
+                "external_reference",
+                "Enter the jewellery invoice or sales reference.",
+            )
+        return cleaned

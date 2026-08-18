@@ -12,6 +12,12 @@ urlpatterns = [
         views.redemption_eligibility,
         name="redemption_eligibility",
     ),
+    path("owner/redemptions/", views.redemption_list, name="redemption_list"),
+    path(
+        "owner/schemes/<str:scheme_number>/redeem/",
+        views.redemption_create,
+        name="redemption_create",
+    ),
     path("owner/customers/", views.customer_list, name="customer_list"),
     path("owner/customers/add/", views.customer_add, name="customer_add"),
     path(

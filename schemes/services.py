@@ -15,11 +15,13 @@ from .models import (
     MetalAllocation,
     PaymentWebhookEvent,
     RateSnapshot,
+    Redemption,
     SchemeAccount,
     SchemePlan,
 )
 from .payments import PaymentGatewayError, get_payment_gateway
 from .rates import MetalRateProviderError, get_metal_rate_provider
+from .selectors import get_outstanding_entitlement
 
 
 MONEY_QUANTUM = Decimal("0.01")
@@ -150,6 +152,27 @@ def validate_contribution_amount(scheme_account, amount):
             raise ValidationError(
                 {"amount": f"Maximum contribution is ₹{scheme_account.maximum_amount_snapshot}."}
             )
+    return normalized_amount
+
+
+def validate_redemption_amount(scheme_account, amount):
+    quantum = (
+        MONEY_QUANTUM
+        if scheme_account.savings_mode == SchemeAccount.SavingsMode.CASH
+        else METAL_QUANTUM
+    )
+    try:
+        amount = Decimal(str(amount))
+        normalized_amount = amount.quantize(quantum)
+    except (InvalidOperation, TypeError, ValueError):
+        raise ValidationError({"amount": "Enter a valid redemption amount."}) from None
+    if amount != normalized_amount:
+        decimal_places = 2 if quantum == MONEY_QUANTUM else 6
+        raise ValidationError(
+            {"amount": f"Redemption supports at most {decimal_places} decimal places."}
+        )
+    if normalized_amount <= 0:
+        raise ValidationError({"amount": "Redemption amount must be greater than zero."})
     return normalized_amount
 
 
@@ -608,3 +631,110 @@ def process_mock_contribution(*, scheme_account, amount, contribution_date=None)
         verified=result.verified,
     )
     return _apply_contribution_entitlement(contribution)
+
+
+@transaction.atomic
+def complete_redemption(
+    *,
+    scheme_account,
+    settlement_type,
+    amount,
+    processed_by,
+    idempotency_key,
+    external_reference="",
+    notes="",
+):
+    account = (
+        SchemeAccount.objects.select_for_update()
+        .select_related("customer")
+        .get(pk=scheme_account.pk)
+    )
+    normalized_amount = validate_redemption_amount(account, amount)
+    external_reference = external_reference.strip()
+    notes = notes.strip()
+    allowed_settlements = {
+        SchemeAccount.SavingsMode.CASH: {
+            Redemption.SettlementType.CASH,
+            Redemption.SettlementType.JEWELLERY_PURCHASE,
+        },
+        SchemeAccount.SavingsMode.GOLD: {
+            Redemption.SettlementType.METAL,
+            Redemption.SettlementType.JEWELLERY_PURCHASE,
+        },
+        SchemeAccount.SavingsMode.SILVER: {
+            Redemption.SettlementType.METAL,
+            Redemption.SettlementType.JEWELLERY_PURCHASE,
+        },
+    }
+    if settlement_type not in allowed_settlements[account.savings_mode]:
+        raise ValidationError(
+            "The settlement type is not supported for this savings mode."
+        )
+    if (
+        settlement_type == Redemption.SettlementType.JEWELLERY_PURCHASE
+        and not external_reference
+    ):
+        raise ValidationError(
+            {"external_reference": "Enter the jewellery invoice or sales reference."}
+        )
+    if not processed_by.is_active or not (
+        processed_by.is_superuser
+        or processed_by.role == get_user_model().Role.OWNER
+    ):
+        raise ValidationError("Only an active owner can complete a redemption.")
+
+    values = {
+        "cash_amount": None,
+        "gold_quantity": None,
+        "silver_quantity": None,
+    }
+    if account.savings_mode == SchemeAccount.SavingsMode.CASH:
+        values["cash_amount"] = normalized_amount
+    elif account.savings_mode == SchemeAccount.SavingsMode.GOLD:
+        values["gold_quantity"] = normalized_amount
+    else:
+        values["silver_quantity"] = normalized_amount
+
+    existing = Redemption.objects.filter(idempotency_key=idempotency_key).first()
+    if existing is not None:
+        if (
+            existing.scheme_account_id == account.pk
+            and existing.settlement_type == settlement_type
+            and existing.cash_amount == values["cash_amount"]
+            and existing.gold_quantity == values["gold_quantity"]
+            and existing.silver_quantity == values["silver_quantity"]
+            and existing.external_reference == external_reference
+            and existing.notes == notes
+        ):
+            return existing
+        raise ValidationError("The redemption submission token was already used.")
+
+    if account.status == SchemeAccount.Status.REDEEMED:
+        raise ValidationError("This scheme has already been fully redeemed.")
+    if timezone.localdate() < account.eligible_from:
+        raise ValidationError("This scheme is not yet eligible for redemption.")
+    outstanding = get_outstanding_entitlement(account)
+    if outstanding <= 0:
+        raise ValidationError("This scheme has no outstanding entitlement to redeem.")
+    if normalized_amount > outstanding:
+        unit = "INR" if account.savings_mode == SchemeAccount.SavingsMode.CASH else "g"
+        raise ValidationError(
+            {"amount": f"Cannot redeem more than the outstanding {outstanding} {unit}."}
+        )
+
+    redemption = Redemption(
+        redemption_number=_reference("RED", Redemption, "redemption_number"),
+        idempotency_key=idempotency_key,
+        scheme_account=account,
+        settlement_type=settlement_type,
+        external_reference=external_reference,
+        notes=notes,
+        processed_by=processed_by,
+        **values,
+    )
+    redemption.full_clean()
+    redemption.save()
+    if normalized_amount == outstanding:
+        account.status = SchemeAccount.Status.REDEEMED
+        account.save(update_fields=["status", "updated_at"])
+    return redemption

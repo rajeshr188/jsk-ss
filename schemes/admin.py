@@ -6,6 +6,7 @@ from .models import (
     MetalAllocation,
     PaymentWebhookEvent,
     RateSnapshot,
+    Redemption,
     SchemeAccount,
     SchemePlan,
 )
@@ -173,6 +174,46 @@ class MetalAllocationAdmin(admin.ModelAdmin):
         "rate_snapshot",
         "metal",
         "quantity",
+        "created_at",
+    )
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(Redemption)
+class RedemptionAdmin(admin.ModelAdmin):
+    list_display = (
+        "redemption_number",
+        "scheme_account",
+        "settlement_type",
+        "status",
+        "completed_at",
+        "processed_by",
+    )
+    list_filter = ("settlement_type", "status", "completed_at")
+    search_fields = (
+        "redemption_number",
+        "external_reference",
+        "scheme_account__scheme_number",
+        "scheme_account__customer__full_name",
+    )
+    readonly_fields = (
+        "redemption_number",
+        "idempotency_key",
+        "scheme_account",
+        "settlement_type",
+        "cash_amount",
+        "gold_quantity",
+        "silver_quantity",
+        "external_reference",
+        "notes",
+        "processed_by",
+        "completed_at",
+        "status",
         "created_at",
     )
 

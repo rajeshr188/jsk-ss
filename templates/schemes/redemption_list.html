@@ -1,0 +1,34 @@
+{% extends '_base.html' %}
+
+{% block title %}Redemptions | Jai Shri Krishna Jewellery{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-4">
+  <div><h1 class="mb-1">Redemptions</h1><p class="text-muted mb-0">Completed customer entitlement settlements</p></div>
+  <a class="btn btn-jsk" href="{% url 'schemes:redemption_eligibility' %}">Review eligible accounts</a>
+</div>
+<div class="table-responsive">
+  <table class="table align-middle">
+    <thead><tr><th>Completed</th><th>Reference</th><th>Customer</th><th>Scheme</th><th>Settlement</th><th>Entitlement redeemed</th><th>External reference</th><th>Notes</th><th>Processed by</th></tr></thead>
+    <tbody>
+      {% for redemption in redemptions %}
+      <tr>
+        <td>{{ redemption.completed_at|date:'d M Y, g:i A' }}</td>
+        <td>{{ redemption.redemption_number }}</td>
+        <td><a href="{% url 'schemes:customer_detail' redemption.scheme_account.customer.pk %}">{{ redemption.scheme_account.customer.full_name }}</a></td>
+        <td>{{ redemption.scheme_account.scheme_number }}</td>
+        <td>{{ redemption.get_settlement_type_display }}</td>
+        <td>
+          {% if redemption.cash_amount is not None %}₹{{ redemption.cash_amount|floatformat:2 }}
+          {% elif redemption.gold_quantity is not None %}{{ redemption.gold_quantity|floatformat:6 }} g gold
+          {% else %}{{ redemption.silver_quantity|floatformat:6 }} g silver{% endif %}
+        </td>
+        <td>{{ redemption.external_reference|default:'—' }}</td>
+        <td>{{ redemption.notes|default:'—' }}</td>
+        <td>{{ redemption.processed_by.email }}</td>
+      </tr>
+      {% empty %}<tr><td colspan="9" class="text-center text-muted py-4">No redemptions recorded.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

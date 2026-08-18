@@ -50,6 +50,12 @@ This is the canonical source for stable business rules.
 - **RED-002:** Before redemption, effective status is derived in the India-local calendar: before `eligible_from` is `ACTIVE / NOT YET ELIGIBLE`; on or after `eligible_from` is `REDEMPTION_ELIGIBLE`.
 - **RED-003:** Reaching `eligible_from` never closes an account, mutates its stored status, or creates a redemption. Only a completed redemption may make it `REDEEMED`.
 - **RED-004:** Owner forecast bands are exclusive: eligible now, days 1–30, days 31–60, and days 61–90. Redeemed accounts are excluded from every open-account band.
+- **RED-005:** A completed redemption is an immutable, owner-recorded financial event. Contributions, allocations, and earlier redemptions remain visible.
+- **RED-006:** Cash outstanding equals paid cash contributions minus completed cash redemptions. Gold and silver outstanding each equal paid allocated grams minus completed redemptions in the same metal.
+- **RED-007:** Cash accounts may settle as `CASH` or `JEWELLERY_PURCHASE`; gold and silver accounts may settle as `METAL` or `JEWELLERY_PURCHASE`. Metal-to-cash conversion is undefined and rejected.
+- **RED-008:** Partial redemption leaves an eligible account open. Redeeming the exact remaining entitlement changes its stored status to `REDEEMED`.
+- **RED-009:** Every redemption submission has a unique idempotency key. Replaying the same key and details returns the existing event; changing details with a used key is rejected.
+- **RED-010:** Jewellery-purchase redemption requires an external invoice or sales reference. The MVP records the reference, entitlement settled, and notes but does not manage inventory or invoices.
 - **FIN-007:** Gold, silver, and INR liabilities are never combined into a single balance.
 - **FIN-008:** All financial calculations use `Decimal` with explicit rounding.
 - **FIN-009:** Editing a plan does not rewrite existing account economic terms.
@@ -59,8 +65,8 @@ This is the canonical source for stable business rules.
 
 ## Owner liability reporting
 
-- **LIA-001:** Outstanding cash principal is the sum of `PAID` contributions for cash scheme accounts. Pending and failed attempts contribute zero.
-- **LIA-002:** Outstanding gold and silver quantities are summed independently from allocations attached to `PAID` contributions. The primary metal liabilities remain grams.
+- **LIA-001:** Outstanding cash principal is paid cash contributions minus completed cash redemptions. Pending and failed attempts contribute zero.
+- **LIA-002:** Outstanding gold and silver quantities are paid allocations minus completed redemptions in the matching metal. The primary metal liabilities remain grams.
 - **LIA-003:** Indicative metal exposure equals outstanding grams multiplied by the current applied reference rate, rounded to 2 money decimal places with `ROUND_HALF_UP`. It does not rewrite historical allocations.
 - **LIA-004:** Cash principal, gold exposure, and silver exposure are never added into a single headline liability total.
 - **LIA-005:** If a current rate is unavailable, the dashboard must continue showing authoritative gram liabilities and explicitly mark reference rate and exposure as unavailable.
@@ -68,4 +74,4 @@ This is the canonical source for stable business rules.
 
 ## Precision
 
-Money uses 2 decimal places. Contribution input with more than 2 decimal places is rejected rather than silently rounded. Metal quantities use 6 decimal places and `ROUND_HALF_UP`. Rates and purity metadata use 4 decimal places; mock configuration is normalized with `ROUND_HALF_UP`.
+Money uses 2 decimal places. Contribution and cash-redemption input with more than 2 decimal places is rejected rather than silently rounded. Metal quantities and metal-redemption input use 6 decimal places; excess precision is rejected. Allocation calculations use `ROUND_HALF_UP`. Rates and purity metadata use 4 decimal places; mock configuration is normalized with `ROUND_HALF_UP`.
