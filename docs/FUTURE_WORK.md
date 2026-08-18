@@ -93,3 +93,20 @@ here are not implemented behavior and do not relax the financial invariants in
 Complete the MVP Beta deployment gate before Milestone 9. Then follow the milestone
 order in the [MVP plan](MVP_PLAN.md). Any production use involving real funds should
 prioritize the operational and audit items above feature expansion.
+
+## Historical milestone ledger
+
+This ledger preserves what was documented at each checkpoint. “Resolved” means a
+later milestone implemented the deferred capability; it remains here for provenance
+and is not current work.
+
+| Checkpoint | Limitations or deferred scope recorded then | Current disposition |
+| --- | --- | --- |
+| Milestones 0–1 | No issue was identified inside the implemented foundation/enrolment slice. Contributions, providers, rates, allocations, liabilities, and redemption were deferred. | Resolved by Milestones 2–8. |
+| Milestone 2 | Real payment providers, rates, metal allocations, liability reporting, and redemption were deferred. | Mock/live rates, allocations, liabilities, and redemption are resolved. Razorpay test mode is resolved; live-mode readiness remains `FW-BETA-001`, `FW-BETA-003`, and `FW-PAY-001`. |
+| Milestone 3 | Real payment/rate providers, paid-unallocated retry handling, liability reporting, and redemption were deferred. | Manual allocation recovery, liabilities, and redemption are resolved. External-provider validation and automated recovery remain `FW-BETA-001`, `FW-BETA-002`, and `FW-AUDIT-004`. |
+| Milestone 4 / MVP Alpha | Real providers, paid-unallocated retry handling, and redemption remained deferred. | Test-mode payment, live-rate adapter, manual recovery, and redemption are resolved. Production validation and automated recovery remain in the Beta and audit items above. |
+| Milestone 5 | GoldAPI had deterministic boundary tests but no private-key live smoke; applied rate had no premium/margin/tax/approval policy; cache was process-local; allocation retry and alerts were manual. Razorpay, redemption, bonus, and audit/corrections were deferred. | Tracked by `FW-BETA-002`, `FW-RATE-001`, `FW-RATE-002`, `FW-AUDIT-004`, `FW-PAY-001`, the Milestone 9 bonus items, and the Milestone 10 audit items. Redemption was resolved by Milestone 8. |
+| Milestone 6 | No external Razorpay transaction/webhook had been exercised; live keys were rejected pending live operations; abandoned monthly orders had no expiry/cancellation. Earlier Milestone 5 limitations remained. | Tracked by `FW-BETA-001`, `FW-BETA-003`, `FW-PAY-001`, and `FW-PAY-002`, plus the carried-forward rate and recovery items. |
+| Milestone 7 | Eligibility had no reminders and did not initiate/complete redemption. The later review also noted exact-calendar behavior with no business-day or grace-period policy. | Redemption execution was resolved by Milestone 8. Communication and calendar policy remain `FW-ELIG-001` and `FW-ELIG-002`. |
+| Milestone 8 | Redemption only recorded settlement; no payout, metal handover, POS, inventory, invoice validation, or metal-to-cash policy existed. Bonus, correction/reversal/approval, and configurable partial-settlement policies remained deferred. Receipts/statements were also deferred. | Tracked by `FW-SETTLE-001` through `FW-SETTLE-004`, all Milestone 9 bonus items, all Milestone 10 audit items, and all Milestone 11 document items. |

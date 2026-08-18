@@ -52,7 +52,8 @@ Milestone 8 — Redemption (complete)
   alerts/retries, receipts, and statements remain scheduled work.
 - Pricing policy, shared provider caching, payment-order expiry, eligibility
   reminders, public onboarding, and partial-settlement policy are not yet defined.
-- The detailed, prioritized backlog is maintained in [Future work](FUTURE_WORK.md).
+- The detailed, prioritized backlog and milestone-by-milestone limitation history
+  are maintained in [Future work](FUTURE_WORK.md).
 
 ## Deferred
 
