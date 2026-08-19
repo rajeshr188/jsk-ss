@@ -122,8 +122,53 @@ separate change.
 
 ### Prepare the Compute Instance
 
-Install the supported Docker Engine and Compose plugin from Docker's official Ubuntu
-repository. Then place the checkout and environment under `/opt/jsk`:
+Use a named, non-root, sudo-capable deployment account. Keep the existing SSH session
+open while testing a new account or firewall rule in a second session. On Ubuntu
+24.04, install operating-system updates and the required host tools:
+
+```bash
+sudo apt update
+sudo apt full-upgrade
+sudo apt install -y git curl ca-certificates openssl postgresql-client unattended-upgrades
+sudo timedatectl set-timezone UTC
+sudo systemctl enable --now unattended-upgrades
+```
+
+Install Docker Engine, Buildx, and the Compose plugin from Docker's official Ubuntu
+repository rather than the convenience script:
+
+```bash
+sudo install -m 0755 -d /etc/apt/keyrings
+sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg \
+  -o /etc/apt/keyrings/docker.asc
+sudo chmod a+r /etc/apt/keyrings/docker.asc
+sudo tee /etc/apt/sources.list.d/docker.sources >/dev/null <<EOF
+Types: deb
+URIs: https://download.docker.com/linux/ubuntu
+Suites: $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}")
+Components: stable
+Architectures: $(dpkg --print-architecture)
+Signed-By: /etc/apt/keyrings/docker.asc
+EOF
+sudo apt update
+sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+sudo systemctl enable --now docker containerd
+sudo docker run --rm hello-world
+sudo docker compose version
+```
+
+Add only the deployment operator to the `docker` group, then log out and back in:
+
+```bash
+sudo usermod -aG docker "$USER"
+```
+
+Membership in this group is effectively root-level host access. Do not add application
+users or general staff. Keep the Linode Cloud Firewall as the public perimeter;
+Docker-published ports can bypass uncomplicated host-firewall expectations.
+
+After the approved commit exists on the remote, place an exact detached checkout under
+`/opt/jsk`. Replace the example value with the full 40-character approved commit SHA:
 
 ```bash
 sudo mkdir -p /opt/jsk/app /opt/jsk/secrets
@@ -131,16 +176,60 @@ sudo chown -R "$USER":"$USER" /opt/jsk/app
 sudo chmod 700 /opt/jsk/secrets
 git clone https://github.com/rajeshr188/jsk-ss.git /opt/jsk/app
 cd /opt/jsk/app
-git checkout <approved-commit>
+git fetch --prune origin
+export JSK_RELEASE_SHA=FULL_40_CHARACTER_APPROVED_COMMIT_SHA
+git checkout --detach "$JSK_RELEASE_SHA"
+test "$(git rev-parse HEAD)" = "$JSK_RELEASE_SHA"
 cp .env.production.example .env.production
 chmod 600 .env.production
-sudo install -m 600 <downloaded-ca-file> /opt/jsk/secrets/linode-db-ca.pem
 ```
+
+Transfer the downloaded Linode CA from the administrator workstation to a temporary
+host path using `scp`, then install and validate it on the Compute Instance:
+
+```text
+scp "C:\path\to\database-ca-certificate.crt" deploy@COMPUTE_IPV4:/tmp/linode-db-ca.crt
+```
+
+```bash
+sudo install -o root -g root -m 0644 /tmp/linode-db-ca.crt \
+  /opt/jsk/secrets/linode-db-ca.crt
+sudo openssl x509 -in /opt/jsk/secrets/linode-db-ca.crt \
+  -noout -subject -issuer -dates
+sudo grep -q "PRIVATE KEY" /opt/jsk/secrets/linode-db-ca.crt \
+  && echo "ERROR: private key found" || echo "CA certificate only"
+rm /tmp/linode-db-ca.crt
+```
+
+The CA is public trust material, not a database credential. It must be readable by
+the image's non-root `app` user because Compose implements a file-backed secret as a
+bind mount and cannot remap its permissions. Keep `/opt/jsk/secrets` mode `0700`, keep
+the database password only in the protected environment/secret store, and set:
+
+```dotenv
+LINODE_DB_CA_FILE=/opt/jsk/secrets/linode-db-ca.crt
+DATABASE_URL=postgresql://jsk_app:<url-encoded-password>@<managed-host>:<port>/jsk_savings?sslmode=verify-full&sslrootcert=/run/secrets/linode_db_ca.pem
+```
+
+The `.crt` host filename and `.pem` container target deliberately differ; both are
+PEM-encoded certificate files. Do not replace the managed hostname with its current
+IP address because `verify-full` verifies the hostname and failover may change IPs.
 
 Fill `.env.production` locally on the server without printing it into logs. Generate
 a new Django signing key, percent-encode reserved database-password characters, and
 use fresh Razorpay Test Mode credentials. Credentials previously pasted into chat or
-shared in screenshots must be rotated rather than reused.
+shared in screenshots must be rotated rather than reused. `ACME_EMAIL` must be a real,
+syntactically valid, monitored address; a placeholder prevents Caddy from registering
+with its certificate authority. Before starting, check for template placeholders
+without printing the environment:
+
+```bash
+if grep -qE 'replace-with|replace_me' .env.production; then
+  echo "ERROR: production placeholders remain"
+else
+  echo "No template placeholders found"
+fi
+```
 
 A mode-`600` environment file is a practical single-host staging baseline, not an
 audited secret manager. Before financial go-live, select the controlled secret store,
@@ -152,10 +241,11 @@ GitHub billing lock is resolved and registry publishing exists, a staging-only i
 can be built from the checked-out approved commit and tagged locally:
 
 ```bash
-docker build --pull --tag jsk-savings:<approved-commit> .
+docker build --pull --tag "jsk-savings:${JSK_RELEASE_SHA}" .
 ```
 
-Set `APP_IMAGE=jsk-savings:<approved-commit>` and set `APP_RELEASE` to the same commit.
+Set `APP_IMAGE` to `jsk-savings:` followed by the approved commit and set
+`APP_RELEASE` to that same full commit.
 Record `docker image inspect` output. Do not call a locally rebuilt image the promoted
 production artifact; real go-live still requires green CI and an approved immutable
 registry digest.
@@ -186,6 +276,20 @@ curl --fail-with-body https://jaishrikrishnajewellery.com/health/ready/
 curl -I http://jaishrikrishnajewellery.com/
 curl -I https://www.jaishrikrishnajewellery.com/
 ```
+
+Also inspect bounded startup logs. The image disables Gunicorn's unused control
+socket because Gunicorn 25.1 and newer otherwise tries to create `$HOME/.gunicorn`
+on the deliberately read-only application filesystem:
+
+```bash
+docker compose --env-file .env.production -f compose.production.yml logs --tail=100 web
+docker compose --env-file .env.production -f compose.production.yml logs --tail=100 caddy
+```
+
+If `ACME_EMAIL`, application environment, or another Compose-injected value changes,
+`docker compose restart` is insufficient because it retains the old container
+environment. Re-run `config --quiet` and use `up -d --force-recreate` for the affected
+service.
 
 The first two responses must contain the expected `APP_RELEASE`; HTTP and `www` must
 redirect once to the canonical HTTPS origin. Configure Razorpay Test Mode to deliver
@@ -258,7 +362,7 @@ Any target platform must provide all of the following:
 The container listens on port `8000`, runs as the unprivileged `app` user, and starts:
 
 ```text
-gunicorn --bind :8000 --workers 2 --timeout 30 --graceful-timeout 30 \
+gunicorn --no-control-socket --bind :8000 --workers 2 --timeout 30 --graceful-timeout 30 \
   --max-requests 1000 --max-requests-jitter 100 \
   --access-logfile - --error-logfile - django_project.wsgi
 ```
@@ -434,6 +538,219 @@ After the build:
 
 Static files are collected in the builder stage and served by WhiteNoise from the
 image. A runtime `collectstatic` job is neither required nor desired.
+
+## Repository change to Linode deployment workflow
+
+Follow this workflow for every application, dependency, configuration-template, or
+deployment-file change. Never edit tracked source code directly in `/opt/jsk/app` on
+the server, never deploy an uncommitted worktree, and never use a mutable `latest`
+tag as release identity.
+
+### 1. Make and validate the change locally
+
+Start from an up-to-date `main` after the current release PR has been merged. Use a
+short-lived branch; do not commit directly to `main`:
+
+```powershell
+git switch main
+git pull --ff-only origin main
+git switch -c agent/example-change
+```
+
+Implement one coherent change. Add tests for changed behavior and for every change
+affecting payments, rates, allocations, balances, bonuses, redemptions, or other
+financial invariants. When models change, create and inspect the migration locally;
+never hand-edit an applied migration. Update canonical documentation when behavior or
+operational state changes.
+
+Run the release-candidate checks against a disposable local PostgreSQL database:
+
+```powershell
+uv sync --frozen
+uv run --env-file .env python manage.py makemigrations --check --dry-run
+uv run --env-file .env python manage.py check
+uv run --env-file .env python manage.py test
+docker build --pull --tag jsk-savings:local-candidate .
+```
+
+Never point these tests at the Linode production database. If a migration exists,
+review its SQL/operations, expected locks, runtime, reversibility, and compatibility
+with both the old and new application image.
+
+### 2. Review, stage, commit, and push intentionally
+
+Review the complete worktree and stage explicit paths so unrelated user work and
+secrets cannot be swept into a commit:
+
+```powershell
+git status --short
+git diff --check
+git diff
+git add -- path/to/changed-file another/changed-file
+git diff --cached --check
+git diff --cached
+git commit -m "Describe the change"
+git push -u origin HEAD
+gh pr create --draft --fill
+```
+
+Do not stage `.env`, `.env.production`, CA files, database URLs, provider keys,
+webhook secrets, SMTP passwords, exports, backups, or customer data. A tracked
+`.env*.example` file must contain placeholders only. The pull request must describe:
+
+- the behavior and reason for the change;
+- migrations and old/new-image compatibility;
+- financial-invariant and access-control impact;
+- tests and manual checks performed;
+- provider/configuration changes;
+- the exact rollback image and any condition that makes application rollback unsafe.
+
+### 3. Pass the repository release gate
+
+Both GitHub Actions jobs (`django` and `container`) must pass for the exact pull-request
+head commit. Review the diff, resolve conversations, and merge to `main`; record the
+resulting full commit SHA. Configure GitHub branch protection to require a pull
+request and successful checks before merging and to disallow force pushes.
+
+An Actions run that did not start is not a passing run. The current GitHub account
+billing lock must be resolved before this repository can claim a production-grade CI
+gate. Until then, locally validated builds may be used only for the documented
+staging/infrastructure exercise, not a real-funds deployment.
+
+### 4. Build once and identify the release immutably
+
+The production target is a CI-published GHCR image built once from the merged commit,
+scanned, and promoted by immutable digest, for example:
+
+```dotenv
+APP_IMAGE=ghcr.io/rajeshr188/jsk-ss@sha256:<approved-manifest-digest>
+APP_RELEASE=<full-merged-commit-sha>
+```
+
+Record the commit, CI run, image digest, scan result, migration plan, and previous
+production digest in the release evidence. A digest pins exact image content; a tag
+alone can be moved.
+
+Until registry publishing exists, the only permitted substitute is a staging-only
+build performed on the Linode from the exact detached commit:
+
+```bash
+docker build --pull --tag "jsk-savings:${JSK_RELEASE_SHA}" .
+docker image inspect "jsk-savings:${JSK_RELEASE_SHA}"
+```
+
+Do not rebuild separately for staging and real production because the resulting
+artifact would no longer be the one that passed the gate.
+
+### 5. Prepare the Linode release
+
+Open a planned change window. Record the current `APP_IMAGE`, `APP_RELEASE`, container
+status, owner-dashboard customer/account counts, cash principal, earned bonus, gold
+grams, silver grams, and exception counts. Confirm a current managed recovery point
+and that the previous image remains present or pullable.
+
+Fetch source metadata and detach at the approved merged commit. A fetch alone does not
+change the running container:
+
+```bash
+cd /opt/jsk/app
+git status --short
+git fetch --prune origin
+export JSK_RELEASE_SHA=FULL_40_CHARACTER_APPROVED_COMMIT_SHA
+git checkout --detach "$JSK_RELEASE_SHA"
+test "$(git rev-parse HEAD)" = "$JSK_RELEASE_SHA"
+```
+
+For a registry release, pull the recorded digest. For the staging-only fallback,
+build the local tag shown above. Edit only the two release identity values in the
+protected server environment; do not replace the file from the example and thereby
+erase production secrets:
+
+```bash
+nano .env.production
+```
+
+Set `APP_IMAGE` to the approved digest or local staging tag and set `APP_RELEASE` to
+the matching full commit SHA. Then validate the exact candidate against the real
+production configuration and review database state without mutation:
+
+```bash
+docker compose --env-file .env.production -f compose.production.yml config --quiet
+docker compose --env-file .env.production -f compose.production.yml \
+  run --rm --no-deps web python manage.py check --deploy --fail-level ERROR
+docker compose --env-file .env.production -f compose.production.yml \
+  run --rm --no-deps web python manage.py showmigrations --plan
+docker compose --env-file .env.production -f compose.production.yml \
+  run --rm --no-deps web python manage.py migrate --plan
+```
+
+Stop if any output differs from the reviewed plan. A non-backward-compatible migration
+requires its own maintenance and recovery procedure; do not apply it while the old
+image serves traffic.
+
+### 6. Apply once, deploy, and verify
+
+After the backup/recovery point, migration plan, rollback image, operator, and business
+reconciler are confirmed, run migrations exactly once:
+
+```bash
+docker compose --env-file .env.production -f compose.production.yml \
+  run --rm --no-deps web python manage.py migrate --noinput
+```
+
+On the current single-host topology, expect a brief maintenance window. Replace the
+web container, wait until it is healthy, then recreate Caddy so its upstream resolution
+cannot retain the prior container address. Caddy's named volumes preserve certificates:
+
+```bash
+docker compose --env-file .env.production -f compose.production.yml \
+  up -d --no-deps web
+docker compose --env-file .env.production -f compose.production.yml ps
+docker compose --env-file .env.production -f compose.production.yml \
+  up -d --force-recreate --no-deps caddy
+```
+
+Do not proceed until `web` reports healthy. Verify the public release and recent logs:
+
+```bash
+curl --fail-with-body https://jaishrikrishnajewellery.com/health/live/
+curl --fail-with-body https://jaishrikrishnajewellery.com/health/ready/
+curl --fail-with-body https://jaishrikrishnajewellery.com/static/css/base.css
+docker compose --env-file .env.production -f compose.production.yml logs --since=10m web
+docker compose --env-file .env.production -f compose.production.yml logs --since=10m caddy
+```
+
+The health JSON must contain the new `APP_RELEASE`. Complete the production-safe smoke
+test and compare post-release liabilities and exception counts with the baseline,
+accounting for legitimate activity. Observe through the stabilization window before
+closing the release record.
+
+### 7. Propagate configuration-only changes
+
+Validate configuration changes through the same review and change-window controls.
+`restart` does not load changed environment values:
+
+| Changed item | Required action after validation |
+| --- | --- |
+| Django/provider environment | `up -d --force-recreate --no-deps web`, then readiness and provider-specific verification |
+| `ACME_EMAIL` or Caddy environment | `up -d --force-recreate --no-deps caddy`, then inspect ACME/TLS logs |
+| `deploy/Caddyfile` | Validate with the pinned Caddy image, recreate Caddy, then test redirects/TLS |
+| Managed database CA | Validate with OpenSSL, install mode `0644`, recreate `web`, then test readiness |
+| Database/SMTP/provider credential | Activate replacement, recreate `web`, verify the affected path, then revoke the old credential |
+| Application code/dependency | Build and deploy a new immutable release; never edit the running container |
+
+### 8. Roll back safely
+
+If the schema remains compatible, edit `.env.production` to restore the recorded
+previous `APP_IMAGE` and `APP_RELEASE`, then replace `web`, wait for readiness, and
+recreate Caddy as in the deployment step. Repeat health, smoke, liability, and
+exception checks and preserve the failed release's logs and provider identifiers.
+
+Do not run reverse migrations casually, and do not restore an older database merely
+to roll back code. If the applied schema is incompatible with the previous image,
+keep traffic stopped or use the migration-specific compatible image/recovery plan.
+Any database timeline change after financial events requires full provider-event and
+denomination-specific reconciliation.
 
 ## Pre-deployment gate
 
@@ -786,6 +1103,11 @@ not a completed control.
 - [Django 6 deployment checklist](https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/)
 - [Django 6 with Gunicorn](https://docs.djangoproject.com/en/6.0/howto/deployment/wsgi/gunicorn/)
 - [Docker build best practices](https://docs.docker.com/build/building/best-practices/)
+- [Docker Engine on Ubuntu](https://docs.docker.com/engine/install/ubuntu/)
+- [Docker Compose file-backed secrets](https://docs.docker.com/reference/compose-file/services/#secrets)
+- [Docker image pulls by digest](https://docs.docker.com/reference/cli/docker/image/pull/#pull-an-image-by-digest-immutable-identifier)
+- [GitHub protected branches and required checks](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches)
+- [Gunicorn control-socket settings](https://github.com/benoitc/gunicorn/blob/master/docs/content/reference/settings.md#control)
 - [PostgreSQL backup and restore](https://www.postgresql.org/docs/current/backup.html)
 - [PostgreSQL `pg_dump`](https://www.postgresql.org/docs/current/app-pgdump.html)
 - [PostgreSQL `pg_restore`](https://www.postgresql.org/docs/current/app-pgrestore.html)

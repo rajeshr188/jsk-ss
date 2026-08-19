@@ -80,6 +80,9 @@ Production hardening — repository baseline complete; deployment exercises pend
 - A Linode-specific deployment profile for `jaishrikrishnajewellery.com`: pinned
   Caddy TLS proxy, private/read-only Django service, restricted Docker capabilities,
   CA-verified Managed PostgreSQL, bounded local logs, and production environment template.
+- The canonical runbook now preserves the exact Ubuntu/Docker/CA bootstrap procedure
+  and the reviewed branch-to-PR/CI-to-immutable-image-to-Linode deployment, verification,
+  configuration-reload, and rollback workflow for future releases.
 
 ## In progress
 
@@ -88,8 +91,9 @@ Production hardening — repository baseline complete; deployment exercises pend
   coordinated secret-rotation drills.
 - The Ubuntu 24.04 Compute Instance and three-node Managed PostgreSQL 16 cluster are
   provisioned in one region. Database/Cloud Firewall access controls and the database
-  CA are in place, SSH access is verified, and Docker is installed; application
-  checkout, production configuration, DNS/TLS, and provider validation remain.
+  CA are in place, SSH access is verified, Docker is installed, and the owned domain
+  returns liveness and PostgreSQL readiness `200` through Caddy-managed HTTPS;
+  production email, external alerts, and provider validation remain.
 
 ## Known limitations
 
@@ -101,8 +105,8 @@ Production hardening — repository baseline complete; deployment exercises pend
   owned HTTPS endpoint and synchronized webhook-secret configuration.
 - Repository health checks and logging now exist, but an actual production platform
   must still retain logs and exercise uptime/error/financial-exception alerts.
-- Backup and rollback procedures are documented but no managed production snapshot or
-  isolated restoration drill can be proven until the production database exists.
+- Backup and rollback procedures are documented, but the provisioned managed cluster
+  has not yet completed an evidenced isolated restoration/reconciliation drill.
 - The application records redemptions but does not execute payouts, move inventory,
   create invoices, or convert metal to cash.
 - Manual payment/rate correction, voids, refunds/disputes, dual approval, broader
@@ -143,11 +147,17 @@ Production hardening — repository baseline complete; deployment exercises pend
   static files (403 post-processed), and is configured to run as user `app`.
 - A disposable container smoke returned HTTP 200 from `/health/live/`, reported
   release `hardening-smoke`, and confirmed the running process user is `app`.
+- The corrected `jsk-savings:deployment-guide-check` image builds successfully and a
+  disposable liveness smoke returns `200` with the expected release; Gunicorn 25.3
+  starts without attempting a control socket on the read-only application filesystem.
 - GitHub Actions CI is defined with SHA-pinned checkout/setup actions, PostgreSQL 16,
   migrations, drift/system/deploy checks, the regression suite, static collection,
   and an independent production-image build.
 - The Linode production Compose model passes `docker compose config --quiet`, and
   Caddy 2.11.4 validates the exact apex-domain and `www` redirect configuration.
+- The deployed Linode application returns `200` from both liveness and PostgreSQL
+  readiness over `https://jaishrikrishnajewellery.com`; the valid ACME contact and
+  Caddy-managed certificate corrected the initial placeholder-contact failure.
 - Live-server checkpoint passes for owner and customer login, UI-created plan/customer/CASH-GOLD-SILVER enrolments, three mock payments, customer entitlements, owner contribution visibility, and exact liability/activity deltas.
 - Live GoldAPI HTTP behavior is verified at the adapter boundary with deterministic mocked responses; no real provider request was made because no API key is stored in the repository.
 - Live-server recovery smoke passes across a rate-failure/server-restart/rate-restoration sequence: verified payment remains unallocated, owner retry creates exactly one 0.800000 g allocation, and all disposable records are removed.
@@ -173,8 +183,8 @@ Production hardening — repository baseline complete; deployment exercises pend
 
 ## Next recommended step
 
-Finish the Linode host bootstrap, deploy the hardened image through the checked-in
-Compose profile, validate owned DNS/TLS, and complete
+Deploy the corrected immutable image through the checked-in Compose profile, retain
+the owned DNS/TLS evidence, and complete
 `FW-PROD-001` through `FW-PROD-003`: a recorded database restore/reconciliation drill,
 stable owned HTTPS plus alerts, real email delivery, and secret-rotation rehearsal.
 Separately validate GoldAPI privately and define Razorpay live-mode reconciliation,
