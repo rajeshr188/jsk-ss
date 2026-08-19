@@ -71,7 +71,6 @@ class EnrolmentServiceTests(TestCase):
                 start_date=date(2026, 1, 1),
                 agreed_months=12,
             )
-
     def test_inactive_plan_is_rejected(self):
         self.plan.active = False
         self.plan.save(update_fields=["active"])
@@ -82,4 +81,3 @@ class EnrolmentServiceTests(TestCase):
                 savings_mode=SchemeAccount.SavingsMode.GOLD,
                 agreed_months=12,
             )
-

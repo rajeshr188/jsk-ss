@@ -11,4 +11,3 @@ Reuse Lithium's `CustomUser`, authentication, Bootstrap templates, crispy forms,
 ## Consequences
 
 Delivery starts from a proven conventional base and avoids a risky authentication migration. Product-specific domain apps and branding are added incrementally.
-

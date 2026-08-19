@@ -36,4 +36,3 @@ Any change affecting payments, metal quantity, rates, balances, redemption, bonu
 Do not introduce multi-tenancy, PostgreSQL RLS/schema tenancy, React, an internal REST API, microservices, Celery, Redis, double-entry accounting, inventory, a generic event bus/repository, a new authentication framework, or a replacement `CustomUser` without an explicit architecture decision.
 
 Do not create Markdown files casually. Update canonical documentation unless a significant, hard-to-reverse decision requires an ADR.
-

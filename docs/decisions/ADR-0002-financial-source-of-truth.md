@@ -11,4 +11,3 @@ Derive balances from successful contributions, metal allocations, redemptions, a
 ## Consequences
 
 Historical allocations remain stable, aggregates can be reconciled to individual records, and corrections remain visible. Read-time aggregation may later be optimized with rebuildable projections without changing the source of truth.
-
