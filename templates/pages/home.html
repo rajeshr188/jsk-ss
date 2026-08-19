@@ -1,15 +1,25 @@
 {% extends '_base.html' %}
 {% block title %}Jai Shri Krishna Jewellery{% endblock title %}
+{% block meta_description %}Explore transparent cash, gold, and silver jewellery savings schemes from Jai Shri Krishna Jewellery in Vellore.{% endblock %}
 
 {% block content %}
 <div class="hero-card px-4 py-5 my-4 text-center rounded-4">
   <p class="text-uppercase small fw-semibold mb-2">Savings with clarity</p>
   <h1 class="display-5 fw-bold">Jai Shri Krishna Jewellery</h1>
   <p class="lead mx-auto">Build your jewellery savings through cash, 24K gold, or silver schemes.</p>
-  {% if user.is_authenticated %}
-  <a class="btn btn-jsk btn-lg" href="{% url 'schemes:post_login' %}">Open dashboard</a>
-  {% else %}
-  <a class="btn btn-jsk btn-lg" href="{% url 'account_login' %}">Customer login</a>
-  {% endif %}
+  <div class="d-flex flex-wrap gap-2 justify-content-center">
+    <a class="btn btn-jsk btn-lg" href="{% url 'pricing' %}">View plans &amp; pricing</a>
+    {% if user.is_authenticated %}
+    <a class="btn btn-outline-dark btn-lg" href="{% url 'schemes:post_login' %}">Open dashboard</a>
+    {% else %}
+    <a class="btn btn-outline-dark btn-lg" href="{% url 'account_login' %}">Customer login</a>
+    {% endif %}
+  </div>
+</div>
+
+<div class="row g-4 mb-4">
+  <div class="col-md-4"><div class="card h-100"><div class="card-body"><h2 class="h5">Choose a savings mode</h2><p class="mb-0">Keep cash, gold, and silver scheme entitlements clearly separated.</p></div></div></div>
+  <div class="col-md-4"><div class="card h-100"><div class="card-body"><h2 class="h5">Pay securely online</h2><p class="mb-0">Enrolled customers can sign in and make eligible INR contributions through Razorpay Checkout.</p></div></div></div>
+  <div class="col-md-4"><div class="card h-100"><div class="card-body"><h2 class="h5">Track every contribution</h2><p class="mb-0">View payment history, metal allocations, eligibility, receipts, statements, and completed redemptions.</p></div></div></div>
 </div>
 {% endblock content %}

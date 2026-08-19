@@ -1,0 +1,68 @@
+{% extends '_base.html' %}
+
+{% block title %}Plans and pricing | Jai Shri Krishna Jewellery{% endblock %}
+{% block meta_description %}View active cash, gold, and silver jewellery savings plan contribution amounts, frequency, duration, and eligibility terms.{% endblock %}
+
+{% block content %}
+<div class="text-center pricing-header mx-auto mb-5">
+  <p class="text-uppercase small fw-semibold text-secondary mb-2">Savings plans</p>
+  <h1>Plans and pricing</h1>
+  <p class="lead">All contributions are collected in INR. Choose cash, gold, or silver as the savings mode when the showroom enrols you.</p>
+</div>
+
+<div class="row g-4">
+  {% for plan in plans %}
+  <div class="col-md-6">
+    <article class="card plan-card h-100 shadow-sm">
+      <div class="card-body p-4">
+        <h2 class="h4">{{ plan.name }}</h2>
+        {% if plan.description %}<p>{{ plan.description|linebreaksbr }}</p>{% endif %}
+        <dl class="row mb-0">
+          <dt class="col-5">Contribution</dt>
+          <dd class="col-7">
+            {% if plan.amount_rule == 'FIXED' %}
+              ₹{{ plan.fixed_contribution_amount|floatformat:2 }}
+            {% elif plan.maximum_contribution %}
+              ₹{{ plan.minimum_contribution|floatformat:2 }}–₹{{ plan.maximum_contribution|floatformat:2 }}
+            {% else %}
+              ₹{{ plan.minimum_contribution|floatformat:2 }} or more
+            {% endif %}
+          </dd>
+          <dt class="col-5">Frequency</dt><dd class="col-7">{{ plan.get_frequency_rule_display }}</dd>
+          <dt class="col-5">Standard duration</dt><dd class="col-7">{{ plan.default_months }} months</dd>
+          <dt class="col-5">Minimum duration</dt><dd class="col-7">{{ plan.minimum_months }} months</dd>
+          <dt class="col-5">Cash-plan bonus</dt>
+          <dd class="col-7">
+            {% if plan.cash_bonus_percentage %}
+              {{ plan.cash_bonus_percentage|floatformat:2 }}% after at least {{ plan.cash_bonus_minimum_months }} months
+            {% else %}
+              No bonus
+            {% endif %}
+          </dd>
+        </dl>
+      </div>
+    </article>
+  </div>
+  {% empty %}
+  <div class="col-12"><div class="alert alert-info">No savings plans are currently open for new enrolment. Please contact the showroom for availability.</div></div>
+  {% endfor %}
+</div>
+
+<section class="card bg-light border-0 mt-5">
+  <div class="card-body p-4">
+    <h2 class="h4">How to join and contribute</h2>
+    <p>Enrolment is completed at the showroom after you review and accept the applicable terms. The store then creates your customer login. Online payment is available only after enrolment and only for amounts allowed by your recorded plan.</p>
+    <p>For gold or silver modes, a verified INR contribution is converted into the corresponding metal quantity using the recorded applicable rate. Rates can change, so the final allocated quantity is shown after payment verification.</p>
+    <div class="d-flex flex-wrap gap-2">
+      <a class="btn btn-jsk" href="{% url 'contact' %}">Contact us to enrol</a>
+      {% if user.is_authenticated %}
+      <a class="btn btn-outline-dark" href="{% url 'schemes:post_login' %}">Open my dashboard</a>
+      {% else %}
+      <a class="btn btn-outline-dark" href="{% url 'account_login' %}">Existing customer login</a>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+<p class="small text-muted mt-4">Plan availability and displayed terms apply to new enrolments. Your signed or recorded enrolment terms remain applicable to your existing scheme. Jewellery prices, making charges, wastage/value addition, taxes, and product availability are determined at showroom purchase and are not included in the contribution amount unless expressly stated.</p>
+{% endblock %}

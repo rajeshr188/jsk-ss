@@ -7,7 +7,7 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
   <meta name="viewport" content="width=device-width,minimum-scale=1,initial-scale=1">
   <title>{% block title %}Jai Shri Krishna Jewellery{% endblock title %}</title>
-  <meta name="description" content="Jai Shri Krishna Jewellery Savings Scheme">
+  <meta name="description" content="{% block meta_description %}Jai Shri Krishna Jewellery savings schemes in Vellore, Tamil Nadu.{% endblock %}">
   <meta name="author" content="">
   <link rel="shortcut icon" type="image/x-icon" href="{% static 'images/favicon.ico' %}">
 
@@ -35,6 +35,12 @@
           </li>
           <li class="nav-item">
             <a class="nav-link" href="{% url 'about' %}">About</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'pricing' %}">Plans &amp; pricing</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'contact' %}">Contact</a>
           </li>
           {% if user.is_authenticated %}
             {% if user.is_superuser or user.role == 'OWNER' %}
@@ -90,9 +96,25 @@
     {% endblock content %}
   </main>
 
-  <footer class="footer d-print-none">
-    <div class="container">
-      <span class="text-muted">Jai Shri Krishna Jewellery Savings Scheme</span>
+  <footer class="footer border-top d-print-none">
+    <div class="container py-4">
+      <div class="row g-3 align-items-start">
+        <div class="col-lg-5">
+          <p class="fw-semibold mb-1">Jai Shri Krishna Jewellery</p>
+          <p class="small text-muted mb-0">No. 155, Azad Road, Thorapadi, Vellore, Tamil Nadu 632001, India</p>
+        </div>
+        <div class="col-lg-7">
+          <nav class="footer-links" aria-label="Legal and business information">
+            <a href="{% url 'about' %}">About</a>
+            <a href="{% url 'contact' %}">Contact</a>
+            <a href="{% url 'pricing' %}">Plans &amp; pricing</a>
+            <a href="{% url 'terms' %}">Terms</a>
+            <a href="{% url 'privacy' %}">Privacy</a>
+            <a href="{% url 'cancellation_refund' %}">Cancellation &amp; refunds</a>
+            <a href="{% url 'shipping_delivery' %}">Shipping &amp; delivery</a>
+          </nav>
+        </div>
+      </div>
     </div>
   </footer>
 

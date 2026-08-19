@@ -4,7 +4,9 @@ from django.conf import settings
 from django.db import DatabaseError, connection
 from django.http import JsonResponse
 from django.views.decorators.http import require_GET
-from django.views.generic import TemplateView
+from django.views.generic import ListView, TemplateView
+
+from schemes.models import SchemePlan
 
 logger = logging.getLogger(__name__)
 
@@ -40,3 +42,33 @@ class HomePageView(TemplateView):
 
 class AboutPageView(TemplateView):
     template_name = "pages/about.html"
+
+
+class ContactPageView(TemplateView):
+    template_name = "pages/contact.html"
+
+
+class PricingPageView(ListView):
+    template_name = "pages/pricing.html"
+    context_object_name = "plans"
+
+    def get_queryset(self):
+        return SchemePlan.objects.filter(active=True, publicly_listed=True).order_by(
+            "name", "code"
+        )
+
+
+class TermsPageView(TemplateView):
+    template_name = "pages/terms.html"
+
+
+class PrivacyPageView(TemplateView):
+    template_name = "pages/privacy.html"
+
+
+class CancellationRefundPageView(TemplateView):
+    template_name = "pages/cancellation_refund.html"
+
+
+class ShippingDeliveryPageView(TemplateView):
+    template_name = "pages/shipping_delivery.html"

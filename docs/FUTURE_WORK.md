@@ -34,6 +34,12 @@ here are not implemented behavior and do not relax the financial invariants in
 - **FW-PROD-004 — Image-build confirmation (completed locally 2026-08-18):** The
   hardened image builds with production static assets and runs as the unprivileged
   `app` user. The same build is an independent CI gate on the next GitHub run.
+- **FW-PROD-005 — Public-policy approval and live review:** Public business,
+  contact, privacy, terms, cancellation/refund, fulfilment, and database-backed
+  pricing pages are implemented. Before submitting them as binding business terms,
+  obtain appropriate Indian legal/accounting review, verify the displayed contact
+  channels, publish at least one reviewed active plan, and confirm the manual
+  payment-error refund process can meet the stated response timelines.
 
 ## Milestone 9 — cash bonus
 
@@ -109,6 +115,14 @@ here are not implemented behavior and do not relax the financial invariants in
 
 ## Rates and pricing
 
+- **FW-PRICE-001 (completed 2026-08-19):** Display only active plans explicitly
+  approved with `publicly_listed`, using their structured INR amount/range,
+  frequency, duration, description, and cash-bonus terms. Existing plans migrate as
+  private and owner plan edits continue to be audited.
+- **FW-PRICE-002:** Define and model the exact plan-specific early-discontinuation
+  wastage/value-addition discount schedule before advertising a numeric scaled
+  discount. Until then, the public policy promises no additional discount unless a
+  schedule is present in the customer's written enrolment terms.
 - **FW-RATE-001:** Define how store premium, margin, tax, and manual rate approval
   affect the applied rate while retaining the provider quote as immutable evidence.
 - **FW-RATE-002:** Replace the process-local GoldAPI cache with shared quota

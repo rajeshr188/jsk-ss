@@ -131,6 +131,7 @@ class AuditAndExceptionTests(TestCase):
                 "cash_bonus_percentage": "0.00",
                 "cash_bonus_minimum_months": 12,
                 "active": "on",
+                "publicly_listed": "on",
                 "audit_reason": "New terms apply to future enrolments only.",
             },
         )
@@ -143,6 +144,10 @@ class AuditAndExceptionTests(TestCase):
         self.assertEqual(
             event.details["changes"]["minimum_contribution"],
             {"from": "100.00", "to": "250.00"},
+        )
+        self.assertEqual(
+            event.details["changes"]["publicly_listed"],
+            {"from": "False", "to": "True"},
         )
 
     def test_redemption_reversal_restores_liability_without_editing_original(self):

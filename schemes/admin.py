@@ -30,10 +30,11 @@ class SchemePlanAdmin(admin.ModelAdmin):
         "frequency_rule",
         "cash_bonus_percentage",
         "active",
+        "publicly_listed",
     )
-    list_filter = ("amount_rule", "frequency_rule", "active")
+    list_filter = ("amount_rule", "frequency_rule", "active", "publicly_listed")
     search_fields = ("code", "name")
-    readonly_fields = ("created_at", "updated_at")
+    readonly_fields = ("publicly_listed", "created_at", "updated_at")
 
 
 @admin.register(SchemeAccount)

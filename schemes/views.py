@@ -518,7 +518,7 @@ def plan_edit(request, plan_id):
     plan = get_object_or_404(SchemePlan, pk=plan_id)
     form = SchemePlanChangeForm(request.POST or None, instance=plan)
     if request.method == "POST" and form.is_valid():
-        tracked_fields = SchemePlanForm.Meta.fields
+        tracked_fields = SchemePlanChangeForm.Meta.fields
         stored_plan = SchemePlan.objects.get(pk=plan.pk)
         before = {field: getattr(stored_plan, field) for field in tracked_fields}
         with transaction.atomic():

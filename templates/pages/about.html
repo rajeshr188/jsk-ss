@@ -1,8 +1,29 @@
 {% extends '_base.html' %}
 
 {% block title %}About | Jai Shri Krishna Jewellery{% endblock %}
+{% block meta_description %}Learn about Jai Shri Krishna Jewellery and its owner-managed jewellery savings schemes in Vellore.{% endblock %}
 
 {% block content %}
-<h1>About our savings scheme</h1>
-<p class="lead">A simple, transparent way for Jai Shri Krishna Jewellery customers to track their agreed cash, gold, or silver savings scheme.</p>
+<div class="policy-page">
+  <p class="text-uppercase small fw-semibold text-secondary mb-2">About us</p>
+  <h1>About Jai Shri Krishna Jewellery</h1>
+  <p class="lead">We are a jewellery business based in Thorapadi, Vellore, offering owner-managed savings schemes that help customers plan eligible jewellery or coin purchases over time.</p>
+
+  <h2>Our savings schemes</h2>
+  <p>Customers may be enrolled in cash, gold, or silver savings modes. Each enrolment records its contribution amount or range, frequency, duration, eligibility date, and any applicable cash bonus terms. Gold and silver contributions are allocated using the recorded rate applicable when a verified payment is processed.</p>
+  <p>The online service lets enrolled customers make contributions, review their history and balances, and access acknowledgements and statements. It does not operate as a public deposit account, investment-trading service, or online jewellery inventory.</p>
+
+  <h2>How enrolment works</h2>
+  <ol>
+    <li>Review the currently available <a href="{% url 'pricing' %}">plans and pricing</a>.</li>
+    <li>Contact or visit our showroom to discuss the suitable plan and savings mode.</li>
+    <li>After the terms are agreed, the store creates the customer login and scheme enrolment.</li>
+    <li>The enrolled customer signs in to make eligible contributions and track the scheme.</li>
+  </ol>
+  <p>Public self-registration is not currently offered. A login alone does not create a scheme agreement.</p>
+
+  <h2>Visit us</h2>
+  <p>Jai Shri Krishna Jewellery<br>No. 155, Azad Road<br>Thorapadi, Vellore<br>Tamil Nadu 632001, India</p>
+  <p><a class="btn btn-outline-dark" href="{% url 'contact' %}">Contact the showroom</a></p>
+</div>
 {% endblock content %}

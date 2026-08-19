@@ -64,6 +64,16 @@ class SchemePlanForm(forms.ModelForm):
 
 
 class SchemePlanChangeForm(SchemePlanForm):
+    class Meta(SchemePlanForm.Meta):
+        fields = [*SchemePlanForm.Meta.fields, "publicly_listed"]
+        help_texts = {
+            **SchemePlanForm.Meta.help_texts,
+            "publicly_listed": (
+                "Publishes this plan's name, description, contribution pricing, "
+                "frequency, duration, and cash-bonus terms when the plan is active."
+            ),
+        }
+
     audit_reason = forms.CharField(
         label="Reason for change",
         widget=forms.Textarea(attrs={"rows": 2}),
