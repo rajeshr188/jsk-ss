@@ -1,5 +1,5 @@
 [project]
-name = "lithium"
+name = "jsk-savings-scheme"
 version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = [
@@ -11,6 +11,9 @@ dependencies = [
   "psycopg[binary] ~=3.3",
   "whitenoise ~=6.12",
 ]
+
+[tool.uv]
+package = false
 
 [dependency-groups]
 dev = [

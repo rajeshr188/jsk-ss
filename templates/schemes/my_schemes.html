@@ -1,0 +1,46 @@
+{% extends '_base.html' %}
+
+{% block title %}My schemes | Jai Shri Krishna Jewellery{% endblock %}
+
+{% block content %}
+<h1>My schemes</h1>
+<p class="text-muted">Your current Jai Shri Krishna Jewellery savings agreements.</p>
+
+<div class="row g-3">
+  {% for account in scheme_accounts %}
+  <div class="col-12"><div class="card shadow-sm"><div class="card-body">
+    <div class="d-flex flex-wrap justify-content-between gap-2 mb-3">
+      <div><h2 class="h5 mb-1">{{ account.get_savings_mode_display }}</h2><div class="text-muted">{{ account.scheme_number }}</div></div>
+      <span class="badge text-bg-secondary align-self-start">{{ account.effective_status_label }}</span>
+    </div>
+    <dl class="row mb-0">
+      <dt class="col-sm-5">Plan</dt><dd class="col-sm-7">{{ account.plan.name }}</dd>
+      <dt class="col-sm-5">Start date</dt><dd class="col-sm-7">{{ account.start_date }}</dd>
+      <dt class="col-sm-5">Agreed duration</dt><dd class="col-sm-7">{{ account.agreed_months }} months</dd>
+      <dt class="col-sm-5">Eligible from</dt><dd class="col-sm-7">{{ account.eligible_from }}</dd>
+      {% if account.savings_mode == 'CASH' %}
+      <dt class="col-sm-5">Total paid</dt><dd class="col-sm-7">₹{{ account.cash_bonus.principal_paid|floatformat:2 }}</dd>
+      <dt class="col-sm-5">Principal</dt><dd class="col-sm-7">₹{{ account.cash_bonus.principal_outstanding|floatformat:2 }}</dd>
+      <dt class="col-sm-5">Earned bonus</dt><dd class="col-sm-7">₹{{ account.cash_bonus.earned_bonus|floatformat:2 }}</dd>
+      <dt class="col-sm-5">Projected bonus</dt><dd class="col-sm-7">₹{{ account.cash_bonus.projected_bonus|floatformat:2 }}</dd>
+      <dt class="col-sm-5">Redeemable amount</dt><dd class="col-sm-7 fw-semibold">₹{{ account.cash_bonus.redeemable_amount|floatformat:2 }}</dd>
+      {% elif account.savings_mode == 'GOLD' %}
+      <dt class="col-sm-5">Gold accumulated</dt><dd class="col-sm-7 fw-semibold">{{ account.metal_balance|floatformat:6 }} g</dd>
+      {% elif account.savings_mode == 'SILVER' %}
+      <dt class="col-sm-5">Silver accumulated</dt><dd class="col-sm-7 fw-semibold">{{ account.metal_balance|floatformat:6 }} g</dd>
+      {% endif %}
+    </dl>
+    <div class="mt-3">
+      <a class="btn btn-outline-dark" href="{% url 'schemes:my_scheme_detail' account.scheme_number %}">View history</a>
+      {% if payment_gateway_enabled and account.effective_status != 'REDEEMED' %}
+        {% if account.savings_mode == 'CASH' or metal_rate_provider_enabled %}
+        <a class="btn btn-jsk" href="{% url 'schemes:pay_contribution' account.scheme_number %}">Pay now</a>
+        {% endif %}
+      {% endif %}
+    </div>
+  </div></div></div>
+  {% empty %}
+  <div class="col-12"><div class="alert alert-info">No savings scheme has been enrolled for this login yet. Please contact Jai Shri Krishna Jewellery.</div></div>
+  {% endfor %}
+</div>
+{% endblock %}

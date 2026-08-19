@@ -1,2 +1,24 @@
-# Exclude the project virtual environment from image builds
+.git
+.github
+.agents
+.codex
 .venv
+.env
+.env.*
+*.env
+.env.example
+__pycache__/
+*.py[cod]
+**/tests/
+.pytest_cache/
+.ruff_cache/
+.uv-cache/
+*.log
+media/
+staticfiles/
+docs/
+deploy/
+AGENTS.md
+README.md
+docker-compose.yml
+compose.production.yml

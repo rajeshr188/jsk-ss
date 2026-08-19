@@ -6,14 +6,31 @@ services:
       - .:/code
     ports:
       - 8000:8000
+    environment:
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?Set DJANGO_SECRET_KEY}
+      DJANGO_DEBUG: ${DJANGO_DEBUG:-True}
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-localhost,127.0.0.1,0.0.0.0}
+      DATABASE_URL: postgresql://jsk_user:jsk_local_only@db:5432/jsk_savings
+      PAYMENT_GATEWAY: ${PAYMENT_GATEWAY:-mock}
+      METAL_RATE_PROVIDER: ${METAL_RATE_PROVIDER:-mock}
     depends_on:
-      - db
+      db:
+        condition: service_healthy
   db:
     image: postgres:16
+    ports:
+      - "55432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data/
     environment:
-      - "POSTGRES_HOST_AUTH_METHOD=trust"
+      POSTGRES_DB: jsk_savings
+      POSTGRES_USER: jsk_user
+      POSTGRES_PASSWORD: jsk_local_only
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U jsk_user -d jsk_savings"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
 volumes:
   postgres_data:

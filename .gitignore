@@ -10,9 +10,19 @@ __pycache__/
 *.log
 db.sqlite3
 media
+staticfiles/
 
 # Virtual environment
 .venv
+.env
+.env.*
+!.env.example
+!.env.production.example
+*.env
+.uv-cache/
+
+# Deployment secrets
+deploy/secrets/
 
 # Screencast
 Lithium_Demo_2025.mp4

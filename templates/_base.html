@@ -6,8 +6,8 @@
   <meta charset="utf-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
   <meta name="viewport" content="width=device-width,minimum-scale=1,initial-scale=1">
-  <title>{% block title %}Lithium{% endblock title %}</title>
-  <meta name="description" content="A framework for launching new Django projects quickly.">
+  <title>{% block title %}Jai Shri Krishna Jewellery{% endblock title %}</title>
+  <meta name="description" content="Jai Shri Krishna Jewellery Savings Scheme">
   <meta name="author" content="">
   <link rel="shortcut icon" type="image/x-icon" href="{% static 'images/favicon.ico' %}">
 
@@ -21,9 +21,9 @@
 </head>
 
 <body>
-  <nav class="navbar navbar-expand-lg bg-body-tertiary">
-    <div class="container-fluid">
-      <a class="navbar-brand" href="{% url 'home' %}">Lithium</a>
+  <nav class="navbar navbar-expand-lg navbar-dark bg-jsk shadow-sm d-print-none">
+    <div class="container">
+      <a class="navbar-brand" href="{% url 'home' %}">Jai Shri Krishna Jewellery</a>
       <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
         aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
         <span class="navbar-toggler-icon"></span>
@@ -31,11 +31,23 @@
       <div class="collapse navbar-collapse" id="navbarSupportedContent">
         <ul class="navbar-nav me-auto mb-2 mb-lg-0">
           <li class="nav-item">
-            <a class="nav-link active" aria-current="page" href="{% url 'home' %}">Home</a>
+            <a class="nav-link" href="{% url 'home' %}">Home</a>
           </li>
           <li class="nav-item">
             <a class="nav-link" href="{% url 'about' %}">About</a>
           </li>
+          {% if user.is_authenticated %}
+            {% if user.is_superuser or user.role == 'OWNER' %}
+            <li class="nav-item"><a class="nav-link" href="{% url 'schemes:owner_dashboard' %}">Owner dashboard</a></li>
+            <li class="nav-item"><a class="nav-link" href="{% url 'schemes:customer_list' %}">Customers</a></li>
+            <li class="nav-item"><a class="nav-link" href="{% url 'schemes:contribution_list' %}">Contributions</a></li>
+            <li class="nav-item"><a class="nav-link" href="{% url 'schemes:redemption_list' %}">Redemptions</a></li>
+            <li class="nav-item"><a class="nav-link" href="{% url 'schemes:exception_queue' %}">Exceptions</a></li>
+            <li class="nav-item"><a class="nav-link" href="{% url 'schemes:audit_log' %}">Audit log</a></li>
+            {% else %}
+            <li class="nav-item"><a class="nav-link" href="{% url 'schemes:my_schemes' %}">My schemes</a></li>
+            {% endif %}
+          {% endif %}
         </ul>
         {% if user.is_authenticated %}
         <div class="mr-auto">
@@ -58,25 +70,29 @@
         </div>
         {% else %}
         <div class="mr-auto">
-          <form class="form d-flex">
+          <div class="d-flex">
             <a href="{% url 'account_login' %}" class="btn btn-outline-secondary">Log in</a>
-            <a href="{% url 'account_signup' %}" class="btn btn-primary ms-2">Sign up</a>
-          </form>
+          </div>
         </div>
         {% endif %}
       </div>
     </div>
   </nav>
 
-  <div class="container">
+  <main class="container py-4">
+    {% if messages %}
+      {% for message in messages %}
+      <div class="alert alert-{{ message.tags|default:'info' }}" role="alert">{{ message }}</div>
+      {% endfor %}
+    {% endif %}
     {% block content %}
     <p>Default content...</p>
     {% endblock content %}
-  </div>
+  </main>
 
-  <footer class="footer">
+  <footer class="footer d-print-none">
     <div class="container">
-      <span class="text-muted">Footer...</span>
+      <span class="text-muted">Jai Shri Krishna Jewellery Savings Scheme</span>
     </div>
   </footer>
 

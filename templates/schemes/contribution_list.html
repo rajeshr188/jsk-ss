@@ -1,0 +1,47 @@
+{% extends '_base.html' %}
+
+{% block title %}Contributions | Jai Shri Krishna Jewellery{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-4">
+  <div><h1 class="mb-1">Contributions</h1><p class="text-muted mb-0">All customer payment attempts</p></div>
+  <a class="btn btn-outline-dark" href="{% url 'schemes:contribution_export' %}">Download CSV</a>
+</div>
+<div class="table-responsive">
+  <table class="table align-middle">
+    <thead><tr><th>Created</th><th>Customer</th><th>Scheme</th><th>Period</th><th>Amount</th><th>Entitlement</th><th>Status</th><th>Action</th></tr></thead>
+    <tbody>
+      {% for contribution in contributions %}
+      <tr>
+        <td>{{ contribution.created_at|date:'d M Y, g:i A' }}</td>
+        <td><a href="{% url 'schemes:customer_detail' contribution.scheme_account.customer.pk %}">{{ contribution.scheme_account.customer.full_name }}</a></td>
+        <td>{{ contribution.scheme_account.scheme_number }}</td>
+        <td>{{ contribution.contribution_period|date:'F Y' }}</td>
+        <td>₹{{ contribution.amount|floatformat:2 }}</td>
+        <td>{% if contribution.metal_allocation %}{{ contribution.metal_allocation.quantity|floatformat:6 }} g {{ contribution.metal_allocation.get_metal_display }}{% else %}—{% endif %}</td>
+        <td>
+          {% if contribution.status == 'PAID' %}<span class="badge text-bg-success">Paid</span>
+          {% elif contribution.status == 'PAID_UNALLOCATED' %}<span class="badge text-bg-warning">Paid — allocation pending</span>
+          {% if contribution.allocation_error %}<div class="small text-danger mt-1">{{ contribution.allocation_error }}</div>{% endif %}
+          {% elif contribution.status == 'FAILED' %}<span class="badge text-bg-danger">Failed</span>
+          {% else %}<span class="badge text-bg-warning">Pending</span>{% endif %}
+        </td>
+        <td>
+          {% if contribution.status == 'PAID' or contribution.status == 'PAID_UNALLOCATED' %}
+          <a class="btn btn-sm btn-outline-dark mb-2" href="{% url 'schemes:contribution_receipt' contribution.pk %}">Receipt</a>
+          {% endif %}
+          {% if contribution.status == 'PAID_UNALLOCATED' %}
+          <form method="post" action="{% url 'schemes:retry_contribution_allocation' contribution.pk %}">
+            {% csrf_token %}
+            <label class="visually-hidden" for="reason-{{ contribution.pk }}">Retry reason</label>
+            <input class="form-control form-control-sm mb-2" id="reason-{{ contribution.pk }}" name="reason" placeholder="Reason for retry" required>
+            <button class="btn btn-sm btn-outline-dark" type="submit">Retry allocation</button>
+          </form>
+          {% elif contribution.status != 'PAID' %}—{% endif %}
+        </td>
+      </tr>
+      {% empty %}<tr><td colspan="8" class="text-center text-muted py-4">No contributions yet.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

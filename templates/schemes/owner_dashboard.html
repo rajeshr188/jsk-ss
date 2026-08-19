@@ -1,0 +1,123 @@
+{% extends '_base.html' %}
+
+{% block title %}Owner dashboard | Jai Shri Krishna Jewellery{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+  <div>
+    <h1 class="mb-1">Owner dashboard</h1>
+    <p class="text-muted mb-0">Current customer obligations and scheme activity</p>
+  </div>
+  <div>
+    <a class="btn btn-outline-dark" href="{% url 'schemes:plan_list' %}">Scheme plans</a>
+    <a class="btn btn-jsk" href="{% url 'schemes:customer_add' %}">Add customer</a>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-6 col-lg-3"><div class="card h-100"><div class="card-body"><div class="text-muted">Customers</div><div class="display-6">{{ activity.customer_count }}</div></div></div></div>
+  <div class="col-6 col-lg-3"><div class="card h-100"><div class="card-body"><div class="text-muted">Open scheme accounts</div><div class="display-6">{{ activity.active_account_count }}</div></div></div></div>
+  <div class="col-6 col-lg-3"><div class="card h-100"><div class="card-body"><div class="text-muted">Contributions today</div><div class="display-6">{{ activity.contribution_count_today }}</div><div class="small text-muted">Successful payments</div></div></div></div>
+  <div class="col-6 col-lg-3"><div class="card h-100"><div class="card-body"><div class="text-muted">Contributions this month</div><div class="display-6">{{ activity.contribution_count_month }}</div><div class="small text-muted">Successful payments</div></div></div></div>
+</div>
+
+{% if activity.unallocated_payment_count %}
+<div class="alert alert-warning mt-3 mb-0" role="alert">
+  <strong>{{ activity.unallocated_payment_count }} verified payment{{ activity.unallocated_payment_count|pluralize }} awaiting metal allocation.</strong>
+  <a class="alert-link" href="{% url 'schemes:contribution_list' %}">Review and retry</a>
+</div>
+{% endif %}
+
+{% if exception_count %}
+<div class="alert alert-danger mt-3 mb-0" role="alert">
+  <strong>{{ exception_count }} unresolved operational exception{{ exception_count|pluralize }}.</strong>
+  <a class="alert-link" href="{% url 'schemes:exception_queue' %}">Open exception queue</a>
+</div>
+{% endif %}
+
+<div class="d-flex justify-content-between align-items-end mt-5 mb-3">
+  <div>
+    <h2 class="h4 mb-1">Redemption eligibility</h2>
+    <p class="text-muted mb-0">Non-overlapping forecast windows from today.</p>
+  </div>
+  <a class="btn btn-sm btn-outline-dark" href="{% url 'schemes:redemption_eligibility' %}">View accounts</a>
+</div>
+
+<div class="row g-3">
+  <div class="col-6 col-lg-3"><div class="card h-100 border-success"><div class="card-body"><div class="text-muted">Eligible now</div><div class="display-6">{{ eligibility.eligible_now_count }}</div></div></div></div>
+  <div class="col-6 col-lg-3"><div class="card h-100"><div class="card-body"><div class="text-muted">Next 30 days</div><div class="display-6">{{ eligibility.next_30_days_count }}</div><div class="small text-muted">Days 1–30</div></div></div></div>
+  <div class="col-6 col-lg-3"><div class="card h-100"><div class="card-body"><div class="text-muted">Next 60 days</div><div class="display-6">{{ eligibility.next_60_days_count }}</div><div class="small text-muted">Days 31–60</div></div></div></div>
+  <div class="col-6 col-lg-3"><div class="card h-100"><div class="card-body"><div class="text-muted">Next 90 days</div><div class="display-6">{{ eligibility.next_90_days_count }}</div><div class="small text-muted">Days 61–90</div></div></div></div>
+</div>
+
+<div class="d-flex justify-content-between align-items-end mt-5 mb-3">
+  <div>
+    <h2 class="h4 mb-1">Outstanding customer liabilities</h2>
+    <p class="text-muted mb-0">Cash, gold, and silver remain separate obligations.</p>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-12 col-lg-4">
+    <div class="card h-100 border-dark">
+      <div class="card-body">
+        <div class="text-muted">Cash redeemable obligation</div>
+        <div class="display-6">₹{{ liabilities.cash_redeemable_amount|floatformat:2 }}</div>
+        <dl class="row small mt-3 mb-0">
+          <dt class="col-7">Principal</dt><dd class="col-5 text-end">₹{{ liabilities.cash_principal|floatformat:2 }}</dd>
+          <dt class="col-7">Earned bonus</dt><dd class="col-5 text-end">₹{{ liabilities.cash_earned_bonus|floatformat:2 }}</dd>
+          <dt class="col-7">Projected bonus</dt><dd class="col-5 text-end">₹{{ liabilities.cash_projected_bonus|floatformat:2 }}</dd>
+        </dl>
+        <div class="small text-muted mt-2">Projected bonus is exposure only, not an actual liability.</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-lg-4">
+    <div class="card h-100 border-warning">
+      <div class="card-body">
+        <div class="text-muted">Gold obligation</div>
+        <div class="display-6">{{ liabilities.gold.quantity|floatformat:6 }} g</div>
+        {% if liabilities.gold.reference_rate is not None %}
+        <dl class="row small mt-3 mb-0">
+          <dt class="col-6">Reference rate</dt><dd class="col-6 text-end">₹{{ liabilities.gold.reference_rate|floatformat:4 }}/g</dd>
+          <dt class="col-6">Indicative exposure</dt><dd class="col-6 text-end fw-semibold">₹{{ liabilities.gold.indicative_exposure|floatformat:2 }}</dd>
+        </dl>
+        <div class="small text-muted mt-2">{{ liabilities.gold.rate_provider }} · {{ liabilities.gold.rate_timestamp|date:"d M Y, h:i A" }}</div>
+        {% else %}
+        <div class="alert alert-warning small mt-3 mb-0">Reference rate unavailable. Gram liability remains authoritative.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-lg-4">
+    <div class="card h-100 border-secondary">
+      <div class="card-body">
+        <div class="text-muted">Silver obligation</div>
+        <div class="display-6">{{ liabilities.silver.quantity|floatformat:6 }} g</div>
+        {% if liabilities.silver.reference_rate is not None %}
+        <dl class="row small mt-3 mb-0">
+          <dt class="col-6">Reference rate</dt><dd class="col-6 text-end">₹{{ liabilities.silver.reference_rate|floatformat:4 }}/g</dd>
+          <dt class="col-6">Indicative exposure</dt><dd class="col-6 text-end fw-semibold">₹{{ liabilities.silver.indicative_exposure|floatformat:2 }}</dd>
+        </dl>
+        <div class="small text-muted mt-2">{{ liabilities.silver.rate_provider }} · {{ liabilities.silver.rate_timestamp|date:"d M Y, h:i A" }}</div>
+        {% else %}
+        <div class="alert alert-warning small mt-3 mb-0">Reference rate unavailable. Gram liability remains authoritative.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<p class="small text-muted mt-3 mb-0">Metal exposure is indicative at the current configured reference rate. Historical allocations remain unchanged, and metal exposure is not added to cash principal.</p>
+
+<div class="mt-4">
+  <a class="btn btn-outline-dark" href="{% url 'schemes:customer_list' %}">View customers</a>
+  <a class="btn btn-outline-dark" href="{% url 'schemes:contribution_list' %}">View contributions</a>
+  <a class="btn btn-outline-dark" href="{% url 'schemes:redemption_eligibility' %}">View redemption eligibility</a>
+  <a class="btn btn-outline-dark" href="{% url 'schemes:redemption_list' %}">View redemptions</a>
+  <a class="btn btn-outline-dark" href="{% url 'schemes:exception_queue' %}">Review exceptions</a>
+  <a class="btn btn-outline-dark" href="{% url 'schemes:audit_log' %}">View audit log</a>
+  <a class="btn btn-outline-dark" href="{% url 'schemes:contribution_export' %}">Export contributions</a>
+  <a class="btn btn-outline-dark" href="{% url 'schemes:redemption_export' %}">Export redemptions</a>
+</div>
+{% endblock %}

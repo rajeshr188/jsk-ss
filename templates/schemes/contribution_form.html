@@ -1,0 +1,29 @@
+{% extends '_base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Pay now | Jai Shri Krishna Jewellery{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center"><div class="col-lg-6">
+  <a class="small" href="{% url 'schemes:my_scheme_detail' scheme_account.scheme_number %}">← Back to scheme</a>
+  <h1>Scheme contribution</h1>
+  <p class="text-muted">{{ scheme_account.scheme_number }} · {{ scheme_account.plan.name }}</p>
+  <div class="alert alert-warning" role="alert">
+    {% if mock_payment_enabled %}
+    Development mock payment only. No real payment will be collected.
+    {% else %}
+    Razorpay test mode only. This checkout simulates payment and does not move real money.
+    {% endif %}
+    {% if scheme_account.savings_mode == 'GOLD' or scheme_account.savings_mode == 'SILVER' %}
+    The INR amount will use the configured {{ scheme_account.get_savings_mode_display|lower }} rate provider.
+    {% endif %}
+  </div>
+  <form method="post" novalidate>
+    {% csrf_token %}
+    {{ form|crispy }}
+    <button class="btn btn-jsk" type="submit">
+      {% if mock_payment_enabled %}Complete mock payment{% else %}Continue to Razorpay test checkout{% endif %}
+    </button>
+  </form>
+</div></div>
+{% endblock %}

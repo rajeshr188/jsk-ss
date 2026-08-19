@@ -1,0 +1,112 @@
+{% extends '_base.html' %}
+
+{% block title %}{{ scheme_account.scheme_number }} | Jai Shri Krishna Jewellery{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-4">
+  <div>
+    <a class="small" href="{% url 'schemes:my_schemes' %}">← All schemes</a>
+    <h1 class="mb-1">{{ scheme_account.get_savings_mode_display }}</h1>
+    <div class="text-muted">{{ scheme_account.scheme_number }}</div>
+    <span class="badge text-bg-secondary mt-2">{{ scheme_account.effective_status_label }}</span>
+  </div>
+  <div class="d-flex gap-2 d-print-none">
+  <a class="btn btn-outline-dark" href="{% url 'schemes:scheme_statement' scheme_account.scheme_number %}">Print statement</a>
+  {% if payment_gateway_enabled and scheme_account.effective_status != 'REDEEMED' %}
+    {% if scheme_account.savings_mode == 'CASH' or metal_rate_provider_enabled %}
+    <a class="btn btn-jsk" href="{% url 'schemes:pay_contribution' scheme_account.scheme_number %}">Pay now</a>
+    {% endif %}
+  {% endif %}
+  </div>
+</div>
+
+{% if scheme_account.effective_status == 'REDEMPTION_ELIGIBLE' %}
+<div class="alert alert-success" role="alert">
+  This scheme became eligible for redemption on {{ scheme_account.eligible_from|date:'d M Y' }}.
+  It remains open until the store completes a redemption.
+</div>
+{% elif scheme_account.effective_status == 'REDEEMED' %}
+<div class="alert alert-secondary" role="alert">This scheme has been redeemed.</div>
+{% else %}
+<div class="alert alert-info" role="alert">
+  Redemption eligibility begins on {{ scheme_account.eligible_from|date:'d M Y' }}.
+</div>
+{% endif %}
+
+{% if scheme_account.savings_mode == 'CASH' %}
+<div class="card mb-4"><div class="card-body">
+  <div class="text-muted">Redeemable cash amount</div>
+  <div class="display-6">₹{{ cash_bonus.redeemable_amount|floatformat:2 }}</div>
+  <dl class="row mt-3 mb-0">
+    <dt class="col-sm-6">Total paid</dt><dd class="col-sm-6 text-sm-end">₹{{ cash_bonus.principal_paid|floatformat:2 }}</dd>
+    <dt class="col-sm-6">Outstanding principal</dt><dd class="col-sm-6 text-sm-end">₹{{ cash_bonus.principal_outstanding|floatformat:2 }}</dd>
+    <dt class="col-sm-6">Earned bonus</dt><dd class="col-sm-6 text-sm-end">₹{{ cash_bonus.earned_bonus|floatformat:2 }}</dd>
+    <dt class="col-sm-6">Projected bonus</dt><dd class="col-sm-6 text-sm-end">₹{{ cash_bonus.projected_bonus|floatformat:2 }}</dd>
+  </dl>
+  <small class="text-muted">Projected bonus is an estimate and is not redeemable or an actual liability.</small>
+</div></div>
+{% endif %}
+
+{% if scheme_account.savings_mode == 'GOLD' or scheme_account.savings_mode == 'SILVER' %}
+<div class="card mb-4"><div class="card-body">
+  <div class="text-muted">{{ scheme_account.get_savings_mode_display }} entitlement</div>
+  <div class="display-6">{{ metal_balance|floatformat:6 }} g</div>
+  <small class="text-muted">Immutable allocations less completed metal redemptions.</small>
+</div></div>
+{% endif %}
+
+<h2 class="h4">Contribution history</h2>
+<div class="table-responsive">
+  <table class="table align-middle">
+    <thead><tr><th>Date</th><th>Period</th><th>Amount</th><th>Entitlement</th><th>Rate</th><th>Status</th><th>Reference</th></tr></thead>
+    <tbody>
+      {% for contribution in contributions %}
+      <tr>
+        <td>{{ contribution.created_at|date:'d M Y, g:i A' }}</td>
+        <td>{{ contribution.contribution_period|date:'F Y' }}</td>
+        <td>₹{{ contribution.amount|floatformat:2 }}</td>
+        <td>{% if contribution.metal_allocation %}{{ contribution.metal_allocation.quantity|floatformat:6 }} g{% else %}—{% endif %}</td>
+        <td>{% if contribution.metal_allocation %}₹{{ contribution.metal_allocation.rate_snapshot.applied_rate|floatformat:4 }}/g{% else %}—{% endif %}</td>
+        <td>
+          {% if contribution.status == 'PAID' %}<span class="badge text-bg-success">Paid</span>
+          {% elif contribution.status == 'PAID_UNALLOCATED' %}<span class="badge text-bg-warning">Paid — allocation pending</span>
+          {% elif contribution.status == 'FAILED' %}<span class="badge text-bg-danger">Failed</span>
+          {% else %}<span class="badge text-bg-warning">Pending</span>{% endif %}
+        </td>
+        <td><small>{{ contribution.gateway_reference|default:'—' }}</small>
+          {% if contribution.status == 'PAID' or contribution.status == 'PAID_UNALLOCATED' %}
+          <br><a href="{% url 'schemes:contribution_receipt' contribution.pk %}">Receipt</a>
+          {% endif %}
+          {% if contribution.status == 'PENDING' and contribution.payment_gateway == 'razorpay' and contribution.gateway_order_id %}
+          <br><a href="{% url 'schemes:razorpay_checkout' contribution.pk %}">Resume test payment</a>
+          {% endif %}
+        </td>
+      </tr>
+      {% empty %}<tr><td colspan="7" class="text-center text-muted py-4">No contributions yet.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<h2 class="h4 mt-5">Redemption history</h2>
+<div class="table-responsive">
+  <table class="table align-middle">
+    <thead><tr><th>Completed</th><th>Reference</th><th>Settlement</th><th>Entitlement redeemed</th><th>External reference</th><th>Status</th></tr></thead>
+    <tbody>
+      {% for redemption in redemptions %}
+      <tr>
+        <td>{{ redemption.completed_at|date:'d M Y, g:i A' }}</td>
+        <td>{{ redemption.redemption_number }}</td>
+        <td>{{ redemption.get_settlement_type_display }}</td>
+        <td>
+          {% if redemption.cash_amount is not None %}₹{{ redemption.cash_amount|floatformat:2 }}<br><small class="text-muted">Principal ₹{{ redemption.cash_principal_amount|floatformat:2 }} · Bonus ₹{{ redemption.cash_bonus_amount|floatformat:2 }}</small>
+          {% elif redemption.gold_quantity is not None %}{{ redemption.gold_quantity|floatformat:6 }} g gold
+          {% else %}{{ redemption.silver_quantity|floatformat:6 }} g silver{% endif %}
+        </td>
+        <td>{{ redemption.external_reference|default:'—' }}</td>
+        <td>{% if redemption.reversal %}<span class="badge text-bg-secondary">Reversed</span><br><small class="text-muted">{{ redemption.reversal.reason }}</small>{% else %}<span class="badge text-bg-success">Completed</span>{% endif %}</td>
+      </tr>
+      {% empty %}<tr><td colspan="6" class="text-center text-muted py-4">No redemptions recorded.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

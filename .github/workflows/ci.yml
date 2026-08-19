@@ -1,0 +1,85 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  django:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: jsk_ci
+          POSTGRES_USER: jsk_ci
+          POSTGRES_PASSWORD: jsk_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U jsk_ci -d jsk_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DJANGO_SECRET_KEY: q7N4xP9mK2vR8cT5yH1jF6dG3aZ0uE7iL4wQ9sB2nM8pV5kC1rX6tY3oA7eD9fU
+      DJANGO_DEBUG: "True"
+      DATABASE_URL: postgresql://jsk_ci:jsk_ci@127.0.0.1:5432/jsk_ci
+      PAYMENT_GATEWAY: mock
+      METAL_RATE_PROVIDER: mock
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install uv and Python
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "0.12.5"
+          python-version: "3.12"
+          enable-cache: true
+      - name: Install dependencies
+        run: uv sync --frozen
+      - name: Apply migrations
+        run: uv run python manage.py migrate --noinput
+      - name: Check migration drift
+        run: uv run python manage.py makemigrations --check --dry-run
+      - name: Run application checks
+        run: uv run python manage.py check
+      - name: Run tests
+        run: uv run python manage.py test
+      - name: Run production deployment checks
+        run: uv run python manage.py check --deploy --fail-level ERROR
+        env:
+          DJANGO_DEBUG: "False"
+          ALLOWED_HOSTS: savings.example.invalid
+          CSRF_TRUSTED_ORIGINS: https://savings.example.invalid
+          APP_RELEASE: ci
+          DATABASE_URL: postgresql://jsk_ci:jsk_ci@127.0.0.1:5432/jsk_ci?sslmode=disable
+          PAYMENT_GATEWAY: razorpay
+          RAZORPAY_KEY_ID: rzp_test_ci_only
+          RAZORPAY_KEY_SECRET: ci-only-not-a-real-secret
+          RAZORPAY_WEBHOOK_SECRET: ci-only-not-a-real-webhook-secret
+          METAL_RATE_PROVIDER: goldapi
+          GOLDAPI_API_KEY: ci-only-not-a-real-token
+          EMAIL_BACKEND: django.core.mail.backends.smtp.EmailBackend
+          EMAIL_HOST: smtp.example.invalid
+          DEFAULT_FROM_EMAIL: noreply@example.invalid
+          SECURE_HSTS_SECONDS: "31536000"
+          SECURE_HSTS_INCLUDE_SUBDOMAINS: "True"
+          SECURE_HSTS_PRELOAD: "True"
+      - name: Collect production static files
+        run: uv run python manage.py collectstatic --noinput
+        env:
+          DJANGO_DEBUG: "False"
+
+  container:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Build production image
+        run: docker build --tag jsk-savings:${{ github.sha }} .

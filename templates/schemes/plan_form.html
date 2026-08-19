@@ -1,0 +1,17 @@
+{% extends '_base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}{% if plan %}Edit{% else %}Add{% endif %} scheme plan | Jai Shri Krishna Jewellery{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center"><div class="col-lg-8">
+  <h1>{% if plan %}Edit scheme plan{% else %}Add scheme plan{% endif %}</h1>
+  <p class="text-muted">For fixed plans, set minimum contribution equal to the fixed amount. Existing enrolments will retain a snapshot if this plan changes later.</p>
+  <form method="post" novalidate>
+    {% csrf_token %}
+    {{ form|crispy }}
+    <button class="btn btn-jsk" type="submit">{% if plan %}Save audited change{% else %}Create plan{% endif %}</button>
+    <a class="btn btn-link" href="{% url 'schemes:plan_list' %}">Cancel</a>
+  </form>
+</div></div>
+{% endblock %}

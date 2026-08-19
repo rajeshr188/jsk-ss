@@ -13,6 +13,7 @@ html {
 
 body {
   margin-bottom: 60px; /* Margin bottom by footer height */
+  background: #fffdf8;
 }
 
 .container {
@@ -30,4 +31,29 @@ body {
   height: 60px; /* Set the fixed height of the footer here */
   line-height: 60px; /* Vertically center the text there */
   background-color: #f5f5f5;
+}
+
+.bg-jsk {
+  background-color: #4b2718;
+}
+
+.hero-card {
+  background: linear-gradient(135deg, #fff3cf, #f4d58d);
+  color: #442214;
+}
+
+.hero-card .lead {
+  max-width: 650px;
+}
+
+.btn-jsk {
+  color: #fff;
+  background-color: #7b3f1d;
+  border-color: #7b3f1d;
+}
+
+.btn-jsk:hover {
+  color: #fff;
+  background-color: #5c2f16;
+  border-color: #5c2f16;
 }
