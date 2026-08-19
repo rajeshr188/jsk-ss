@@ -1,8 +1,11 @@
+from decimal import Decimal
 from unittest.mock import patch
 
 from django.db import OperationalError
 from django.test import SimpleTestCase, TestCase, override_settings
 from django.urls import reverse
+
+from schemes.models import SchemePlan
 
 
 class PublicPageTests(SimpleTestCase):
@@ -13,7 +16,92 @@ class PublicPageTests(SimpleTestCase):
 
     def test_about_page(self):
         response = self.client.get(reverse("about"))
-        self.assertContains(response, "About our savings scheme")
+        self.assertContains(response, "About Jai Shri Krishna Jewellery")
+
+    def test_public_business_and_policy_pages_are_available(self):
+        expected_content = {
+            "contact": "No. 155, Azad Road",
+            "terms": "Terms and conditions",
+            "privacy": "Privacy policy",
+            "cancellation_refund": "Cancellation and refund policy",
+            "shipping_delivery": "Showroom pickup only",
+        }
+
+        for route_name, text in expected_content.items():
+            with self.subTest(route_name=route_name):
+                response = self.client.get(reverse(route_name))
+                self.assertContains(response, text)
+                self.assertContains(response, "admin@jaishrikrishnajewellery.com")
+
+    def test_footer_exposes_all_compliance_links(self):
+        response = self.client.get(reverse("home"))
+
+        for route_name in (
+            "about",
+            "contact",
+            "pricing",
+            "terms",
+            "privacy",
+            "cancellation_refund",
+            "shipping_delivery",
+        ):
+            self.assertContains(response, f'href="{reverse(route_name)}"')
+
+
+class PublicPricingPageTests(TestCase):
+    def make_plan(self, *, code, active=True, publicly_listed=False, variable=False):
+        values = {
+            "name": f"Plan {code}",
+            "code": code,
+            "description": f"Customer description for {code}",
+            "minimum_months": 12,
+            "default_months": 12,
+            "amount_rule": (
+                SchemePlan.AmountRule.VARIABLE
+                if variable
+                else SchemePlan.AmountRule.FIXED
+            ),
+            "frequency_rule": SchemePlan.FrequencyRule.ONCE_PER_MONTH,
+            "fixed_contribution_amount": (
+                None if variable else Decimal("1000.00")
+            ),
+            "minimum_contribution": Decimal("500.00") if variable else Decimal("1000.00"),
+            "maximum_contribution": Decimal("5000.00") if variable else Decimal("1000.00"),
+            "active": active,
+            "publicly_listed": publicly_listed,
+        }
+        return SchemePlan.objects.create(**values)
+
+    def test_only_active_explicitly_published_plans_are_public(self):
+        published = self.make_plan(code="PUBLIC", publicly_listed=True)
+        private = self.make_plan(code="PRIVATE", publicly_listed=False)
+        inactive = self.make_plan(
+            code="INACTIVE", active=False, publicly_listed=True
+        )
+
+        response = self.client.get(reverse("pricing"))
+
+        self.assertContains(response, published.name)
+        self.assertContains(response, "₹1000.00")
+        self.assertNotContains(response, private.name)
+        self.assertNotContains(response, inactive.name)
+
+    def test_variable_plan_displays_public_inr_range_and_enrolment_flow(self):
+        plan = self.make_plan(code="VARIABLE", publicly_listed=True, variable=True)
+
+        response = self.client.get(reverse("pricing"))
+
+        self.assertContains(response, plan.name)
+        self.assertContains(response, "₹500.00–₹5000.00")
+        self.assertContains(response, "Contact us to enrol")
+        self.assertContains(response, "Existing customer login")
+
+    def test_unpublished_plan_is_private_by_default(self):
+        plan = self.make_plan(code="DEFAULT")
+
+        self.assertFalse(plan.publicly_listed)
+        response = self.client.get(reverse("pricing"))
+        self.assertNotContains(response, plan.name)
 
 
 @override_settings(APP_RELEASE="test-release")

@@ -75,6 +75,15 @@ class OwnerFlowTests(TestCase):
         response = self.client.get(reverse("schemes:owner_dashboard"))
         self.assertEqual(response.status_code, 403)
 
+    def test_new_plan_must_be_saved_before_owner_can_publish_it(self):
+        add_response = self.client.get(reverse("schemes:plan_add"))
+        self.assertNotContains(add_response, 'id="id_publicly_listed"')
+
+        plan = make_plan()
+        edit_response = self.client.get(reverse("schemes:plan_edit", args=[plan.pk]))
+        self.assertContains(edit_response, 'id="id_publicly_listed"')
+        self.assertFalse(plan.publicly_listed)
+
 
 class CustomerIsolationTests(TestCase):
     def test_customer_sees_only_their_own_scheme(self):

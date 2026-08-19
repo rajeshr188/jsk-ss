@@ -9,7 +9,7 @@
 </div>
 <div class="table-responsive">
   <table class="table align-middle">
-    <thead><tr><th>Plan</th><th>Amount</th><th>Frequency</th><th>Duration</th><th>Cash bonus</th><th>Status</th><th>Action</th></tr></thead>
+    <thead><tr><th>Plan</th><th>Amount</th><th>Frequency</th><th>Duration</th><th>Cash bonus</th><th>Status</th><th>Public page</th><th>Action</th></tr></thead>
     <tbody>
       {% for plan in plans %}
       <tr>
@@ -19,9 +19,10 @@
         <td>{{ plan.default_months }} months</td>
         <td>{% if plan.cash_bonus_percentage %}{{ plan.cash_bonus_percentage|floatformat:2 }}% · minimum {{ plan.cash_bonus_minimum_months }} months{% else %}None{% endif %}</td>
         <td>{% if plan.active %}<span class="badge text-bg-success">Active</span>{% else %}<span class="badge text-bg-secondary">Inactive</span>{% endif %}</td>
+        <td>{% if plan.active and plan.publicly_listed %}<span class="badge text-bg-success">Published</span>{% elif plan.publicly_listed %}<span class="badge text-bg-warning">Hidden while inactive</span>{% else %}<span class="badge text-bg-secondary">Not listed</span>{% endif %}</td>
         <td><a class="btn btn-sm btn-outline-dark" href="{% url 'schemes:plan_edit' plan.pk %}">Edit</a></td>
       </tr>
-      {% empty %}<tr><td colspan="7" class="text-muted text-center py-4">No plans yet.</td></tr>{% endfor %}
+      {% empty %}<tr><td colspan="8" class="text-muted text-center py-4">No plans yet.</td></tr>{% endfor %}
     </tbody>
   </table>
 </div>

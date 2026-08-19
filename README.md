@@ -95,6 +95,20 @@ Once a scheme reaches its India-local eligibility date, an owner can record a pa
 
 The MVP records settlement facts only. It does not execute payouts, convert metal to cash, manage inventory/invoices, or edit a historical redemption.
 
+## Public business and policy pages
+
+The public site provides About, Contact, Terms, Privacy, Cancellation and Refund,
+Shipping and Delivery, and Plans and Pricing pages. Pricing is sourced from
+`SchemePlan`; a plan is public only when both `active` and `publicly_listed` are
+selected. New and migrated plans default to private. Review every customer-facing
+field before publishing a plan, and use the owner plan list to confirm its public
+status. Existing enrolments retain their snapshotted terms when a public plan changes.
+
+Public self-registration remains closed. Prospective customers contact the showroom
+for enrolment, while enrolled customers sign in to access the contribution checkout.
+The policy pages describe showroom pickup only and a manual payment-error refund
+process; the application does not yet initiate Razorpay refunds automatically.
+
 ## Audit and exceptions
 
 Owner enrolment, plan changes, redemptions, redemption reversals, and manual allocation retries require or retain an actor, timestamp, and reason in immutable audit records. Plan changes apply only to future enrolments; existing agreement snapshots remain unchanged. The exception queue derives unresolved `PAID_UNALLOCATED` contributions and failed Razorpay webhook reconciliation records from their source records, so successful allocation recovery removes the live allocation exception without deleting its audit history.

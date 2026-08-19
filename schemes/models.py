@@ -73,6 +73,12 @@ class SchemePlan(models.Model):
         validators=[MinValueValidator(12)],
     )
     active = models.BooleanField(default=True)
+    publicly_listed = models.BooleanField(
+        default=False,
+        help_text=(
+            "Show this plan on the public plans and pricing page when it is active."
+        ),
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

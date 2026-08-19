@@ -6,7 +6,7 @@
 {% block content %}
 <div class="row justify-content-center"><div class="col-lg-8">
   <h1>{% if plan %}Edit scheme plan{% else %}Add scheme plan{% endif %}</h1>
-  <p class="text-muted">For fixed plans, set minimum contribution equal to the fixed amount. Existing enrolments will retain a snapshot if this plan changes later.</p>
+  <p class="text-muted">For fixed plans, set minimum contribution equal to the fixed amount. Existing enrolments retain their snapshots when this plan changes. {% if plan %}Review all customer-facing fields before selecting publicly listed.{% else %}New plans start off the public page; review and edit the saved plan to publish it.{% endif %}</p>
   <form method="post" novalidate>
     {% csrf_token %}
     {{ form|crispy }}

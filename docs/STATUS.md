@@ -83,6 +83,14 @@ Production hardening — repository baseline complete; deployment exercises pend
 - The canonical runbook now preserves the exact Ubuntu/Docker/CA bootstrap procedure
   and the reviewed branch-to-PR/CI-to-immutable-image-to-Linode deployment, verification,
   configuration-reload, and rollback workflow for future releases.
+- Public About, Contact, Terms, Privacy, Cancellation and Refund, and showroom-only
+  Shipping and Delivery pages expose consistent business identity and support details.
+- Public plans and INR pricing come from structured `SchemePlan` terms only when a
+  plan is active and explicitly marked `publicly_listed`; all existing plans migrate
+  as private, and publishing changes are included in the immutable plan-change audit.
+- Public policy wording distinguishes voluntary early discontinuation from
+  duplicate/erroneous payment refunds and remains consistent with eligible CASH,
+  GOLD, SILVER, and jewellery-purchase settlement paths.
 
 ## In progress
 
@@ -111,6 +119,9 @@ Production hardening — repository baseline complete; deployment exercises pend
   create invoices, or convert metal to cash.
 - Manual payment/rate correction, voids, refunds/disputes, dual approval, broader
   provider reconciliation, and automated alerts/retries remain.
+- Public policy pages require business/legal approval before they are treated as
+  binding terms. The exact plan-specific 6+ month wastage/value-addition discount
+  schedule is not modeled and no numeric partial discount is advertised.
 - Documents are on-demand HTML acknowledgements, not archived statutory tax invoices;
   PDF generation, signatures, tax identity, delivery/reissue logs, and date-filtered
   exports remain future production/legal work.
@@ -118,8 +129,9 @@ Production hardening — repository baseline complete; deployment exercises pend
   forfeiture, tax treatment, or expected-future-contribution projection.
 - Bonus liability reads are calculated per cash account; aggregate optimization is
   deferred until measured account volume requires it.
-- Pricing policy, shared provider caching, payment-order expiry, eligibility
-  reminders, public onboarding, and partial-settlement policy are not yet defined.
+- Plan-specific early-discontinuation pricing, shared provider caching, payment-order
+  expiry, eligibility reminders, public onboarding, and partial-settlement policy are
+  not yet defined.
 - The detailed, prioritized backlog and milestone-by-milestone limitation history
   are maintained in [Future work](FUTURE_WORK.md).
 
@@ -130,15 +142,17 @@ Production hardening — repository baseline complete; deployment exercises pend
 ## Verification
 
 - PostgreSQL 16 migrations applied successfully.
-- 138 tests pass, including health/readiness failure sanitization, deploy-configuration
+- 144 tests pass, including public-policy route/link coverage, explicit active-plan
+  publishing and INR pricing visibility, health/readiness failure sanitization, deploy-configuration
   gates, document access, receipt stability, unallocated disclosure, CSV
   denomination/formula safety, audit immutability, exception classification,
   reversal reconciliation, cash-bonus boundaries/rounding, Razorpay failure handling,
   redemption precision, over-redemption protection,
   idempotency, partial/full closure, denomination separation, access control,
   PostgreSQL constraints, and all prior regressions.
-- Migrations through `schemes.0008_auditevent_redemptionreversal` are applied to
-  PostgreSQL; Milestone 11 adds read-only documents and requires no schema change.
+- Migrations through `schemes.0008_auditevent_redemptionreversal` are applied to the
+  current deployment. `schemes.0009_schemeplan_publicly_listed` is generated and
+  regression-tested; it must be applied during the next release.
 - Migration drift check reports no changes.
 - Django system check and migration drift check pass.
 - Production deployment checks pass with a synthetic secure configuration and no
@@ -183,8 +197,10 @@ Production hardening — repository baseline complete; deployment exercises pend
 
 ## Next recommended step
 
-Deploy the corrected immutable image through the checked-in Compose profile, retain
-the owned DNS/TLS evidence, and complete
+Review the new customer-facing policies, create a PR, pass required CI, deploy the
+immutable image, apply migration `schemes.0009`, and explicitly publish at least one
+reviewed active plan before submitting the URLs to Razorpay. Then retain the owned
+DNS/TLS evidence and complete
 `FW-PROD-001` through `FW-PROD-003`: a recorded database restore/reconciliation drill,
 stable owned HTTPS plus alerts, real email delivery, and secret-rotation rehearsal.
 Separately validate GoldAPI privately and define Razorpay live-mode reconciliation,
