@@ -612,10 +612,57 @@ head commit. Review the diff, resolve conversations, and merge to `main`; record
 resulting full commit SHA. Configure GitHub branch protection to require a pull
 request and successful checks before merging and to disallow force pushes.
 
-An Actions run that did not start is not a passing run. The current GitHub account
-billing lock must be resolved before this repository can claim a production-grade CI
-gate. Until then, locally validated builds may be used only for the documented
-staging/infrastructure exercise, not a real-funds deployment.
+An Actions run that did not start is not a passing run. If GitHub Actions is disabled
+or blocked by an account/billing problem, restore it before treating CI as a
+production release gate. Locally validated builds alone may be used only for the
+documented staging/infrastructure exercise, not a real-funds deployment.
+
+### 3a. Realign the local checkout after merge
+
+A branch name is not the production release identity. Production runs the immutable
+image and `APP_RELEASE` commit recorded during deployment; `main` is the protected
+source branch from which that release was approved. After the pull request is merged,
+refresh the developer checkout instead of continuing work on the merged feature
+branch:
+
+```powershell
+git status --short
+git fetch origin
+git switch main
+git pull --ff-only origin main
+git status -sb
+```
+
+The final status should show `main...origin/main` with no tracked changes. An expected
+untracked file may remain, but it is not part of `main` and must not be swept into a
+later commit. If `git status` shows unfinished tracked or untracked work, do not use
+`reset --hard`, forced checkout, or an indiscriminate stash. Move intentional work to
+its own branch or stash only explicitly selected paths before switching.
+
+After confirming that the pull request is merged and the production stabilization
+window is complete, the merged local feature branch may be deleted safely:
+
+```powershell
+git branch -d agent/completed-feature
+```
+
+Deleting the remote feature branch is optional and should wait until the release is
+stable. It does not affect the merge commit or deployed image. Do not reverse local
+database migrations merely because a feature branch is deleted; the local schema
+should match the migrations on updated `main`.
+
+Start every later change from a freshly updated protected branch and use a new,
+descriptive branch:
+
+```powershell
+git switch main
+git pull --ff-only origin main
+git switch -c agent/descriptive-feature-name
+```
+
+`--ff-only` is intentional: it stops instead of creating an accidental merge commit
+when the local `main` has diverged. Never deploy by referring only to the current
+feature branch; build and deploy the exact merged 40-character commit SHA.
 
 ### 4. Build once and identify the release immutably
 
