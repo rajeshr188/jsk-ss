@@ -5,7 +5,7 @@ from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 
-from .models import Redemption, SchemeAccount, SchemePlan
+from .models import Redemption, SchemeAccount, SchemePlan, SchemeRate
 from .services import validate_contribution_allowed
 
 
@@ -134,6 +134,58 @@ class ContributionForm(forms.Form):
         amount = self.cleaned_data["amount"]
         validated_amount, _ = validate_contribution_allowed(self.scheme_account, amount)
         return validated_amount
+
+
+class SchemeRatePublishForm(forms.Form):
+    LARGE_CHANGE_PERCENT = Decimal("5.00")
+
+    metal = forms.ChoiceField(choices=SchemeRate.Metal.choices)
+    rate_per_gram = forms.DecimalField(
+        label="New Scheme Rate per gram",
+        max_digits=14,
+        decimal_places=4,
+        min_value=Decimal("0.0001"),
+    )
+    notes = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={"rows": 2}),
+        help_text="Optional operational note recorded with this publication.",
+    )
+    confirm_large_change = forms.BooleanField(
+        required=False,
+        label="I have checked and confirm this unusually large rate change.",
+    )
+
+    def __init__(self, *args, current_rates=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.current_rates = current_rates or {}
+        self.current_rate = None
+        self.difference = None
+        self.percentage_difference = None
+        self.requires_confirmation = False
+
+    def clean(self):
+        cleaned = super().clean()
+        metal = cleaned.get("metal")
+        new_rate = cleaned.get("rate_per_gram")
+        self.current_rate = self.current_rates.get(metal)
+        if self.current_rate is None or new_rate is None:
+            return cleaned
+
+        self.difference = new_rate - self.current_rate.rate_per_gram
+        self.percentage_difference = (
+            self.difference / self.current_rate.rate_per_gram * Decimal("100")
+        ).quantize(Decimal("0.01"))
+        self.requires_confirmation = (
+            abs(self.percentage_difference) > self.LARGE_CHANGE_PERCENT
+        )
+        if self.requires_confirmation and not cleaned.get("confirm_large_change"):
+            self.add_error(
+                "confirm_large_change",
+                f"This change exceeds {self.LARGE_CHANGE_PERCENT:.0f}%. "
+                "Check the values and confirm before publishing.",
+            )
+        return cleaned
 
 
 class RedemptionForm(forms.Form):

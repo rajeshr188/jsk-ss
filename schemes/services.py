@@ -16,15 +16,18 @@ from .models import (
     Customer,
     MetalAllocation,
     PaymentWebhookEvent,
-    RateSnapshot,
+    SchemeRate,
     Redemption,
     RedemptionReversal,
     SchemeAccount,
     SchemePlan,
 )
 from .payments import PaymentGatewayError, get_payment_gateway
-from .rates import MetalRateProviderError, get_metal_rate_provider
-from .selectors import get_cash_bonus_summary, get_outstanding_entitlement
+from .selectors import (
+    get_cash_bonus_summary,
+    get_current_scheme_rate,
+    get_outstanding_entitlement,
+)
 
 
 MONEY_QUANTUM = Decimal("0.01")
@@ -33,11 +36,11 @@ SUCCESSFUL_PAYMENT_STATUSES = (
     Contribution.Status.PAID,
     Contribution.Status.PAID_UNALLOCATED,
 )
-EXPECTED_ALLOCATION_ERRORS = (
-    ImproperlyConfigured,
-    MetalRateProviderError,
-    ValidationError,
-)
+EXPECTED_ALLOCATION_ERRORS = (ValidationError,)
+SCHEME_RATE_PURITY = {
+    SchemeRate.Metal.GOLD: Decimal("0.9999"),
+    SchemeRate.Metal.SILVER: Decimal("0.9990"),
+}
 
 
 def _actor_label(actor):
@@ -68,6 +71,53 @@ def record_audit_event(*, action, reason, actor=None, **targets):
     event.full_clean()
     event.save()
     return event
+
+
+@transaction.atomic
+def publish_scheme_rate(
+    *, metal, rate_per_gram, published_by, notes="", effective_from=None
+):
+    _validate_owner(published_by)
+    if metal not in SCHEME_RATE_PURITY:
+        raise ValidationError({"metal": "Select gold or silver."})
+    try:
+        normalized_rate = Decimal(str(rate_per_gram))
+    except (InvalidOperation, TypeError, ValueError):
+        raise ValidationError({"rate_per_gram": "Enter a valid scheme rate."}) from None
+    if not normalized_rate.is_finite() or normalized_rate <= 0:
+        raise ValidationError(
+            {"rate_per_gram": "Scheme rate must be greater than zero."}
+        )
+
+    effective_from = effective_from or timezone.now()
+    if timezone.is_naive(effective_from):
+        effective_from = timezone.make_aware(
+            effective_from, timezone.get_current_timezone()
+        )
+    scheme_rate = SchemeRate(
+        metal=metal,
+        rate_per_gram=normalized_rate,
+        purity=SCHEME_RATE_PURITY[metal],
+        effective_from=effective_from,
+        published_by=published_by,
+        notes=notes.strip(),
+    )
+    scheme_rate.full_clean()
+    scheme_rate.save()
+    record_audit_event(
+        action=AuditEvent.Action.SCHEME_RATE_PUBLICATION,
+        actor=published_by,
+        reason=f"Published a new {metal.lower()} Scheme Rate.",
+        scheme_rate=scheme_rate,
+        details={
+            "metal": metal,
+            "rate_per_gram": str(scheme_rate.rate_per_gram),
+            "purity": str(scheme_rate.purity),
+            "effective_from": scheme_rate.effective_from.isoformat(),
+            "notes": scheme_rate.notes,
+        },
+    )
+    return scheme_rate
 
 
 def _reference(prefix, model, field_name):
@@ -283,6 +333,24 @@ def validate_contribution_confirmation_allowed(contribution):
         )
 
 
+def _lock_current_scheme_rate(contribution):
+    metal = contribution.scheme_account.savings_mode
+    if metal not in {SchemeRate.Metal.GOLD, SchemeRate.Metal.SILVER}:
+        return contribution
+    if contribution.scheme_rate_id:
+        return contribution
+    scheme_rate = get_current_scheme_rate(metal)
+    if scheme_rate is None:
+        metal_name = contribution.scheme_account.get_savings_mode_display().split()[0]
+        raise ValidationError(
+            f"{metal_name} contributions are temporarily unavailable because the "
+            "current Scheme Rate has not been published."
+        )
+    contribution.scheme_rate = scheme_rate
+    contribution.rate_locked_at = timezone.now()
+    return contribution
+
+
 @transaction.atomic
 def initiate_contribution(
     *, scheme_account, amount, payment_gateway, contribution_date=None
@@ -299,6 +367,7 @@ def initiate_contribution(
         status=Contribution.Status.PENDING,
         payment_gateway=payment_gateway,
     )
+    _lock_current_scheme_rate(contribution)
     contribution.full_clean()
     contribution.save()
     return contribution
@@ -340,7 +409,15 @@ def confirm_contribution(
         raise ValidationError("A verified gateway reference is required.")
 
     validate_contribution_confirmation_allowed(contribution)
-    contribution.status = Contribution.Status.PAID
+    is_metal_contribution = contribution.scheme_account.savings_mode in {
+        SchemeAccount.SavingsMode.GOLD,
+        SchemeAccount.SavingsMode.SILVER,
+    }
+    contribution.status = (
+        Contribution.Status.PAID_UNALLOCATED
+        if is_metal_contribution
+        else Contribution.Status.PAID
+    )
     contribution.gateway_reference = gateway_reference
     contribution.gateway_signature = gateway_signature
     contribution.paid_at = timezone.now()
@@ -370,15 +447,17 @@ def fail_contribution(*, contribution_id, gateway_reference=None):
 
 
 @transaction.atomic
-def allocate_metal(*, contribution, rate_provider=None):
+def allocate_metal(*, contribution):
     locked_contribution = (
         Contribution.objects.select_for_update()
         .select_related("scheme_account")
         .get(pk=contribution.pk)
     )
-    existing = MetalAllocation.objects.filter(contribution=locked_contribution).select_related(
-        "rate_snapshot"
-    ).first()
+    existing = (
+        MetalAllocation.objects.filter(contribution=locked_contribution)
+        .select_related("scheme_rate")
+        .first()
+    )
     if existing is not None:
         if locked_contribution.status == Contribution.Status.PAID_UNALLOCATED:
             locked_contribution.status = Contribution.Status.PAID
@@ -389,34 +468,24 @@ def allocate_metal(*, contribution, rate_provider=None):
         raise ValidationError("Only a paid contribution can receive a metal allocation.")
 
     metal = locked_contribution.scheme_account.savings_mode
-    if metal not in {RateSnapshot.Metal.GOLD, RateSnapshot.Metal.SILVER}:
+    if metal not in {SchemeRate.Metal.GOLD, SchemeRate.Metal.SILVER}:
         raise ValidationError("Cash contributions do not receive a metal allocation.")
-    provider = rate_provider or get_metal_rate_provider()
-    quote = provider.get_rate(metal)
-    if quote.metal != metal:
-        raise ValidationError("The rate quote metal does not match the scheme.")
-    if quote.applied_rate <= 0 or quote.provider_rate <= 0:
-        raise ValidationError("Metal rates must be greater than zero.")
+    scheme_rate = locked_contribution.scheme_rate
+    if scheme_rate is None:
+        raise ValidationError("This paid contribution has no locked Scheme Rate.")
+    if scheme_rate.metal != metal:
+        raise ValidationError("The locked Scheme Rate metal does not match the scheme.")
+    if scheme_rate.rate_per_gram <= 0:
+        raise ValidationError("The locked Scheme Rate must be greater than zero.")
 
-    snapshot = RateSnapshot(
-        metal=quote.metal,
-        provider=quote.provider,
-        provider_timestamp=quote.provider_timestamp,
-        provider_rate=quote.provider_rate,
-        applied_rate=quote.applied_rate,
-        purity=quote.purity,
-    )
-    snapshot.full_clean()
-    snapshot.save()
-
-    quantity = (locked_contribution.amount / snapshot.applied_rate).quantize(
+    quantity = (locked_contribution.amount / scheme_rate.rate_per_gram).quantize(
         METAL_QUANTUM, rounding=ROUND_HALF_UP
     )
     if quantity <= 0:
         raise ValidationError("The contribution is too small to allocate at 6 decimal places.")
     allocation = MetalAllocation(
         contribution=locked_contribution,
-        rate_snapshot=snapshot,
+        scheme_rate=scheme_rate,
         metal=metal,
         quantity=quantity,
     )
@@ -465,18 +534,13 @@ def mark_contribution_paid_unallocated(*, contribution_id, error):
     return contribution
 
 
-def retry_metal_allocation(
-    *, contribution, rate_provider=None, performed_by=None, reason=""
-):
+def retry_metal_allocation(*, contribution, performed_by=None, reason=""):
     if performed_by is not None:
         _validate_owner(performed_by)
         if not reason.strip():
             raise ValidationError({"reason": "Enter a reason for retrying allocation."})
     try:
-        allocation = allocate_metal(
-            contribution=contribution,
-            rate_provider=rate_provider,
-        )
+        allocation = allocate_metal(contribution=contribution)
     except Exception as error:
         mark_contribution_paid_unallocated(
             contribution_id=contribution.pk,
@@ -499,11 +563,11 @@ def retry_metal_allocation(
             reason=reason,
             scheme_account=contribution.scheme_account,
             contribution=contribution,
-            rate_snapshot=allocation.rate_snapshot,
+            scheme_rate=allocation.scheme_rate,
             details={
                 "outcome": "SUCCEEDED",
                 "quantity": str(allocation.quantity),
-                "applied_rate": str(allocation.rate_snapshot.applied_rate),
+                "scheme_rate": str(allocation.scheme_rate.rate_per_gram),
             },
         )
     return allocation
@@ -517,9 +581,10 @@ def _apply_contribution_entitlement(contribution):
         try:
             retry_metal_allocation(contribution=contribution)
         except EXPECTED_ALLOCATION_ERRORS:
-            return Contribution.objects.select_related("scheme_account").get(
-                pk=contribution.pk
-            )
+            pass
+        return Contribution.objects.select_related("scheme_account").get(
+            pk=contribution.pk
+        )
     return contribution
 
 
@@ -567,7 +632,15 @@ def initiate_razorpay_contribution(
 
     order_error = None
     with transaction.atomic():
-        contribution = Contribution.objects.select_for_update().get(pk=contribution.pk)
+        contribution = (
+            Contribution.objects.select_for_update()
+            .select_related("scheme_account")
+            .get(pk=contribution.pk)
+        )
+        if not contribution.scheme_rate_id:
+            _lock_current_scheme_rate(contribution)
+            contribution.full_clean()
+            contribution.save(update_fields=["scheme_rate", "rate_locked_at"])
         if contribution.gateway_order_id:
             return contribution
         try:

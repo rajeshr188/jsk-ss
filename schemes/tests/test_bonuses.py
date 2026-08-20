@@ -40,7 +40,7 @@ def make_paid_contribution(account, amount, reference, payment_date):
     )
 
 
-@override_settings(DEBUG=True, METAL_RATE_PROVIDER="mock")
+@override_settings(DEBUG=True)
 class CashBonusTests(TestCase):
     def setUp(self):
         self.today = timezone.localdate()

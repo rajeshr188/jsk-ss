@@ -9,14 +9,13 @@ class ProductionConfigurationCheckTests(SimpleTestCase):
 
     @override_settings(
         PAYMENT_GATEWAY="mock",
-        METAL_RATE_PROVIDER="mock",
         EMAIL_BACKEND="django.core.mail.backends.console.EmailBackend",
         ALLOWED_HOSTS=["*"],
         CSRF_TRUSTED_ORIGINS=["http://example.com"],
     )
     def test_unsafe_production_adapters_and_origins_are_errors(self):
         self.assertTrue(
-            {"jsk.E001", "jsk.E002", "jsk.E003", "jsk.E004", "jsk.E005"}
+            {"jsk.E001", "jsk.E003", "jsk.E004", "jsk.E005"}
             <= self.issue_ids()
         )
 
@@ -25,8 +24,6 @@ class ProductionConfigurationCheckTests(SimpleTestCase):
         RAZORPAY_KEY_ID="rzp_test_example",
         RAZORPAY_KEY_SECRET="not-a-real-secret",
         RAZORPAY_WEBHOOK_SECRET="not-a-real-webhook-secret",
-        METAL_RATE_PROVIDER="goldapi",
-        GOLDAPI_API_KEY="not-a-real-token",
         EMAIL_BACKEND="django.core.mail.backends.smtp.EmailBackend",
         EMAIL_HOST="smtp.example.com",
         ALLOWED_HOSTS=["savings.example.com"],
@@ -49,8 +46,6 @@ class ProductionConfigurationCheckTests(SimpleTestCase):
         RAZORPAY_KEY_ID="",
         RAZORPAY_KEY_SECRET="",
         RAZORPAY_WEBHOOK_SECRET="",
-        METAL_RATE_PROVIDER="goldapi",
-        GOLDAPI_API_KEY="",
     )
-    def test_missing_provider_credentials_are_errors(self):
-        self.assertTrue({"jsk.E006", "jsk.E009"} <= self.issue_ids())
+    def test_missing_payment_credentials_are_errors(self):
+        self.assertIn("jsk.E006", self.issue_ids())

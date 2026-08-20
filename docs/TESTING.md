@@ -9,11 +9,9 @@ uv run --env-file .env python manage.py check
 uv run --env-file .env python manage.py makemigrations --check --dry-run
 ```
 
-Current regressions cover amount/frequency enforcement, failed-payment entitlement, confirmation/allocation idempotency, Razorpay order/API/HMAC boundaries, duplicate callbacks and webhooks, exact metal calculation, historical-rate stability, GoldAPI request/response validation, paid-unallocated recovery, customer isolation, owner liability reconciliation, current-exposure rounding, India-local activity periods, eligibility status and exact 30/60/90-day boundaries, versioned cash-bonus snapshots, projection-versus-earned boundaries, eligibility cutoff, half-up bonus rounding, principal/bonus redemption allocation, redemption idempotency and precision, partial/full settlement, over-redemption prevention, denomination separation, immutable audit/reversal history, exception classification, reversal liability restoration, stable receipt numbering, unallocated-document disclosure, statement source filtering, document/export access control, CSV denomination/formula safety, and database constraints.
+Current regressions cover amount/frequency enforcement, failed-payment entitlement, confirmation/allocation idempotency, Razorpay order/API/HMAC boundaries, duplicate callbacks and webhooks, owner-only Scheme Rate publication, publication validation/warnings, GOLD/SILVER no-rate payment blocking with unaffected CASH orders, pre-order rate locking, durable verified-metal-payment recovery, exact metal calculation, historical-rate stability, paid-unallocated recovery from the original lock, production-shaped `schemes.0009` to `0010` history backfill and blocker behavior, customer isolation, owner liability reconciliation, current-exposure rounding, India-local activity periods, eligibility status and exact 30/60/90-day boundaries, versioned cash-bonus snapshots, projection-versus-earned boundaries, eligibility cutoff, half-up bonus rounding, principal/bonus redemption allocation, redemption idempotency and precision, partial/full settlement, over-redemption prevention, denomination separation, immutable audit/reversal history, exception classification, reversal liability restoration, stable receipt numbering, unallocated-document disclosure, statement source filtering, document/export access control, CSV denomination/formula safety, and database constraints.
 
-Mock financial tests use `override_settings` for payment and rate configuration. For manual testing, put `DJANGO_DEBUG=True`, `PAYMENT_GATEWAY=mock`, and `METAL_RATE_PROVIDER=mock` in the ignored `.env`, plus optional mock rates.
-
-GoldAPI tests replace the standard-library HTTP opener with deterministic responses; they never use a real key or consume provider quota. To perform an optional live check, set `METAL_RATE_PROVIDER=goldapi` and `GOLDAPI_API_KEY` in the ignored `.env`, open the owner dashboard, and confirm both cards show `goldapi` with recent provider timestamps. Do not put the token in a command, test fixture, screenshot, or committed file.
+Mock financial tests use `override_settings` only for payment configuration. For manual testing, put `DJANGO_DEBUG=True` and `PAYMENT_GATEWAY=mock` in the ignored `.env`, sign in as the owner, and publish gold and silver rates before testing metal payments.
 
 Razorpay tests likewise replace the HTTPS boundary with deterministic order and payment responses. They verify raw-body webhook HMAC, invalid-callback rejection, captured-payment matching, duplicate callback/webhook idempotency, one metal allocation, and customer isolation without using provider credentials. For an external test-mode smoke, use private test keys, expose the webhook endpoint over HTTPS, subscribe to `payment.captured`, and confirm one test payment produces one contribution benefit and one processed webhook event. Use Razorpay's documented Test Mode instruments: select Netbanking and choose **Success**, enter `success@razorpay` for UPI, or use a documented domestic test card and complete the simulated OTP page. A payment left at provider status `created` has not been authorized and must not create entitlement.
 
@@ -28,13 +26,15 @@ Razorpay tests likewise replace the HTTPS boundary with deterministic order and 
 - Make a cash mock contribution and confirm the cash principal/history update
 - Confirm a second monthly contribution is rejected while flexible contributions can repeat
 - Confirm the owner contribution list shows the payment
-- Make gold and silver contributions and confirm gram balances/history use their captured rates
-- Change a mock rate and confirm earlier allocations remain unchanged
+- Publish gold and silver Scheme Rates as the owner and confirm the append-only history and audit entry
+- Attempt a large rate change and confirm the extra warning/confirmation is required
+- Make gold and silver contributions and confirm gram balances/history use their locked Scheme Rates
+- Start a metal checkout, publish a new rate, complete the original payment, and confirm it uses the old lock while a new checkout uses the new rate
 - Confirm the owner dashboard reconciles cash principal, gold grams, and silver grams separately
-- Confirm current gold/silver reference rates and indicative exposures update without changing historical allocations
+- Confirm current gold/silver Scheme Rates and indicative exposures update without changing historical allocations
 - Confirm contribution-today/month counts include successful payments only
-- Simulate a rate failure and confirm payment remains visibly paid/allocation-pending with no invented grams
-- Restore the provider and confirm the owner retry creates one allocation and clears the exception
+- Remove all applicable rates in a disposable database and confirm metal payment/order creation is blocked while cash remains available
+- Simulate an unexpected allocation exception and confirm owner retry reuses the original locked rate
 - Switch to private Razorpay test credentials, create an order, complete Standard Checkout, and confirm the callback and `payment.captured` webhook still produce exactly one benefit
 - Repeat the same signed webhook and confirm the contribution, balance, and allocation counts remain unchanged
 - Confirm the owner eligibility view groups accounts into eligible now, days 1–30, 31–60, 61–90, later, and redeemed without overlap
@@ -60,7 +60,9 @@ Razorpay tests likewise replace the HTTPS boundary with deterministic order and 
 
 The complete checklist through owner liability reconciliation was exercised over live HTTP for the MVP Alpha checkpoint. The checkpoint created its plan, customer, three enrolments, and three payments through authenticated application forms, compared liability deltas against the pre-run dashboard, and removed all disposable records afterward.
 
-Milestone 5 additionally exercised the recovery path over live HTTP across a development-server restart: a verified payment with an invalid rate remained paid/allocation-pending, both roles saw the correct state, and an owner-only retry after restoring the rate created one 0.800000 g allocation. The smoke harness and tagged records were removed afterward.
+Historical Milestone 5 testing exercised the former provider-recovery path. ADR-0003
+supersedes that architecture; current tests instead cover owner publication,
+pre-payment locking, no-rate blocking, and retry from an existing lock.
 
 Milestone 7 exercised owner and customer sessions over live HTTP: the owner dashboard and grouped eligibility view showed the tagged account in eligible-now, the customer saw redemption-eligible guidance, and a direct database check confirmed the account remained stored as `ACTIVE`. The temporary server and tagged records were removed afterward.
 

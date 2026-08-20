@@ -36,7 +36,7 @@
     <h2 class="h5">Metal allocation</h2>
     <dl class="row mb-0">
       <dt class="col-sm-4">Metal</dt><dd class="col-sm-8">{{ receipt.allocation.get_metal_display }}</dd>
-      <dt class="col-sm-4">Applied rate</dt><dd class="col-sm-8">₹{{ receipt.allocation.rate_snapshot.applied_rate|floatformat:4 }} per g</dd>
+      <dt class="col-sm-4">Scheme Rate</dt><dd class="col-sm-8">₹{{ receipt.allocation.scheme_rate.rate_per_gram|floatformat:4 }} per g</dd>
       <dt class="col-sm-4">Quantity allocated</dt><dd class="col-sm-8 fw-semibold">{{ receipt.allocation.quantity|floatformat:6 }} g</dd>
     </dl>
   </div>

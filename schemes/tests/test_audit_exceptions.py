@@ -18,6 +18,7 @@ from schemes.models import (
     Redemption,
     SchemeAccount,
     SchemePlan,
+    SchemeRate,
 )
 from schemes.selectors import (
     get_cash_balance,
@@ -32,6 +33,7 @@ from schemes.services import (
     enroll_customer,
     reverse_redemption,
     retry_metal_allocation,
+    publish_scheme_rate,
 )
 
 
@@ -89,12 +91,12 @@ def make_paid_contribution(account, *, status=Contribution.Status.PAID):
         payment_gateway="mock",
         gateway_reference=f"pay-{uuid.uuid4()}",
         paid_at=timezone.now(),
-        allocation_error=("Provider unavailable" if status == Contribution.Status.PAID_UNALLOCATED else ""),
+        allocation_error=("Unexpected allocation failure" if status == Contribution.Status.PAID_UNALLOCATED else ""),
         allocation_attempted_at=(timezone.now() if status == Contribution.Status.PAID_UNALLOCATED else None),
     )
 
 
-@override_settings(DEBUG=True, METAL_RATE_PROVIDER="mock", MOCK_GOLD_RATE="10000.0000")
+@override_settings(DEBUG=True)
 class AuditAndExceptionTests(TestCase):
     def test_enrolment_records_actor_timestamp_reason_and_snapshot(self):
         owner = make_owner()
@@ -263,23 +265,31 @@ class AuditAndExceptionTests(TestCase):
             output.getvalue(),
         )
 
-    def test_owner_retry_is_audited_with_resulting_rate_snapshot(self):
+    def test_owner_retry_is_audited_with_resulting_scheme_rate(self):
         owner = make_owner()
         account = make_account(mode=SchemeAccount.SavingsMode.GOLD, owner=owner)
+        scheme_rate = publish_scheme_rate(
+            metal=SchemeRate.Metal.GOLD,
+            rate_per_gram=Decimal("10000.0000"),
+            published_by=owner,
+        )
         contribution = make_paid_contribution(
             account, status=Contribution.Status.PAID_UNALLOCATED
         )
+        contribution.scheme_rate = scheme_rate
+        contribution.rate_locked_at = contribution.created_at
+        contribution.save(update_fields=["scheme_rate", "rate_locked_at"])
 
         allocation = retry_metal_allocation(
             contribution=contribution,
             performed_by=owner,
-            reason="Provider recovered; retrying verified payment.",
+            reason="Investigated exception; retrying the locked allocation.",
         )
 
         event = AuditEvent.objects.get(action=AuditEvent.Action.ALLOCATION_RETRY)
         self.assertEqual(event.actor, owner)
         self.assertEqual(event.contribution, contribution)
-        self.assertEqual(event.rate_snapshot, allocation.rate_snapshot)
+        self.assertEqual(event.scheme_rate, allocation.scheme_rate)
         self.assertEqual(event.details["outcome"], "SUCCEEDED")
 
     def test_customer_cannot_access_owner_audit_or_exception_views(self):

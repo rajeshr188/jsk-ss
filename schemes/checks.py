@@ -48,30 +48,6 @@ def production_configuration(app_configs, **kwargs):
                 id="jsk.E008",
             )
         )
-    if settings.METAL_RATE_PROVIDER == "mock":
-        issues.append(
-            Error(
-                "The mock metal-rate provider must not be deployed.",
-                hint="Configure GoldAPI or disable metal contributions.",
-                id="jsk.E002",
-            )
-        )
-    elif settings.METAL_RATE_PROVIDER == "goldapi" and not settings.GOLDAPI_API_KEY:
-        issues.append(
-            Error(
-                "GoldAPI is selected but GOLDAPI_API_KEY is missing.",
-                id="jsk.E009",
-            )
-        )
-    elif settings.METAL_RATE_PROVIDER not in {"", "goldapi"}:
-        issues.append(
-            Error(
-                "The configured metal-rate provider is unsupported.",
-                hint="Use goldapi or leave the setting empty to disable metal rates.",
-                id="jsk.E010",
-            )
-        )
-
     unsafe_email_backends = {
         "django.core.mail.backends.console.EmailBackend",
         "django.core.mail.backends.dummy.EmailBackend",

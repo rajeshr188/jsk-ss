@@ -35,16 +35,22 @@ This is the canonical source for stable business rules.
 - **PAY-007:** A once-per-month account may have at most one pending Razorpay contribution for a calendar period. Reopening the payment flow resumes the existing order.
 - **PAY-008:** Provider callbacks are matched to a customer-owned local contribution; the browser-supplied order ID is never trusted in place of the database value.
 - **METAL-001 / FIN-002:** A metal contribution creates at most one successful allocation.
-- **METAL-002 / FIN-003:** A rate snapshot used by an allocation is immutable.
-- **METAL-003 / FIN-004:** Historical allocated grams never change with current market rates.
-- **METAL-004:** A successful metal payment with no valid rate becomes `PAID_UNALLOCATED`; it retains payment confirmation, creates no snapshot/allocation, and no rate may be invented.
-- **METAL-005:** Mock rates are available only with `DEBUG=True` and `METAL_RATE_PROVIDER=mock`.
-- **METAL-006:** Allocation quantity equals INR contribution divided by the snapshotted applied rate per gram, rounded to 6 decimal places using `ROUND_HALF_UP`.
-- **METAL-007:** Provider rate, applied rate, provider timestamp, fetched timestamp, purity, and metal are stored with each rate snapshot. Changing configured rates affects only future allocations.
-- **METAL-008:** `METAL_RATE_PROVIDER=goldapi` uses authenticated HTTPS XAU/XAG-to-INR requests. The API key is sent in a header and must remain outside source control.
-- **METAL-009:** Live responses must match the requested metal and INR currency and contain a positive per-gram rate and valid provider timestamp before allocation.
-- **METAL-010:** Provider, network, or configuration failure after payment confirmation is recoverable only through the owner-controlled, idempotent allocation retry workflow.
-- **METAL-011:** A successful retry changes `PAID_UNALLOCATED` to `PAID`, clears the current allocation error, and still permits at most one `RateSnapshot` and `MetalAllocation` for the contribution.
+- **METAL-002 / FIN-003:** A Scheme Rate used by an allocation is immutable.
+- **METAL-003 / FIN-004:** Historical allocated grams never change when a newer Scheme Rate is published.
+- **METAL-004:** Allocation quantity equals INR contribution divided by the locked Scheme Rate per gram, rounded to 6 decimal places using `ROUND_HALF_UP`.
+- **METAL-005:** A verified metal payment is durably recorded as `PAID_UNALLOCATED`
+  until its allocation is stored, then transitions to `PAID`. This recovery state
+  covers allocation exceptions and process interruption; it is not a missing-rate
+  workflow. Retry must reuse the contribution's original lock.
+- **RATE-001:** Only a manually published Jai Shri Krishna Jewellery `SchemeRate` may be used for a new gold or silver allocation.
+- **RATE-002:** A metal contribution must lock its current applicable `SchemeRate` before mock payment initiation or Razorpay order creation.
+- **RATE-003:** Publishing a new `SchemeRate` never changes an already locked contribution.
+- **RATE-004:** Publishing a new `SchemeRate` never changes historical `MetalAllocation` quantity.
+- **RATE-005:** A gold or silver payment cannot be initiated when no valid current `SchemeRate` exists. Cash payment remains unaffected.
+- **RATE-006:** Published Scheme Rates used by financial allocations are immutable and protected from deletion.
+- **RATE-007:** Current rate means the latest applicable record for the metal ordered by `effective_from`, publication time, and ID. Publication appends a record; there is no mutable active flag.
+- **RATE-008:** Gold uses the established 24K fineness `0.9999`; silver uses `0.9990`. Publication accepts a positive `Decimal` rate only.
+- **RATE-009:** Only an active owner or superuser may publish. Every publication records publisher, timestamp, optional note, and immutable audit event.
 
 ## Cash bonus rules
 
@@ -92,10 +98,10 @@ This is the canonical source for stable business rules.
 
 ## Audit and exception rules
 
-- **AUD-001:** Customer enrolment, scheme-plan change, redemption, redemption reversal, and owner-triggered allocation retry retain an actor label, timestamp, reason, target, and action details in an immutable audit event.
+- **AUD-001:** Customer enrolment, scheme-plan change, Scheme Rate publication, redemption, redemption reversal, and owner-triggered allocation retry retain an actor label, timestamp, reason, target, and action details in an immutable audit event.
 - **AUD-002:** System-service actions may retain a stable system actor label when no authenticated user initiated them. Owner UI actions always reference the authenticated owner as actor.
 - **AUD-003:** Audited plan changes affect only future enrolments; existing agreement snapshots remain unchanged.
-- **AUD-004:** Manual payment correction and manual rate override must not be enabled until explicit accounting/pricing and approval rules exist. Reserved audit action names do not authorize those mutations.
+- **AUD-004:** Manual payment correction must not be enabled until explicit accounting and approval rules exist. Scheme Rate publication is a supported append-only workflow, not a historical-rate override.
 - **EXC-001:** The owner exception queue derives unresolved paid-unallocated/failed-allocation contributions and failed or mismatched webhook reconciliation from their authoritative source records.
 - **EXC-002:** Resolving an allocation exception uses the existing idempotent retry service. A queue display or acknowledgement must never itself create entitlement.
 
@@ -103,9 +109,9 @@ This is the canonical source for stable business rules.
 
 - **LIA-001:** Outstanding cash principal is paid cash contributions minus completed cash redemptions. Pending and failed attempts contribute zero.
 - **LIA-002:** Outstanding gold and silver quantities are paid allocations minus completed redemptions in the matching metal. The primary metal liabilities remain grams.
-- **LIA-003:** Indicative metal exposure equals outstanding grams multiplied by the current applied reference rate, rounded to 2 money decimal places with `ROUND_HALF_UP`. It does not rewrite historical allocations.
+- **LIA-003:** Indicative metal exposure equals outstanding grams multiplied by the current Scheme Rate, rounded to 2 money decimal places with `ROUND_HALF_UP`. It does not rewrite historical allocations.
 - **LIA-004:** Cash principal, gold exposure, and silver exposure are never added into a single headline liability total.
-- **LIA-005:** If a current rate is unavailable, the dashboard must continue showing authoritative gram liabilities and explicitly mark reference rate and exposure as unavailable.
+- **LIA-005:** If a current Scheme Rate is unavailable, the dashboard must continue showing authoritative gram liabilities and explicitly mark the rate and exposure as unavailable.
 - **LIA-006:** Dashboard contribution counts include both `PAID` and `PAID_UNALLOCATED` verified payments and use `paid_at` within India-local calendar-day and calendar-month boundaries.
 - **LIA-007:** Owner cash obligations show outstanding principal and earned bonus as
   actual redeemable liability. Projected bonus exposure is shown separately and is
@@ -115,7 +121,7 @@ This is the canonical source for stable business rules.
 
 - **DOC-001:** Only verified `PAID` or `PAID_UNALLOCATED` contributions receive a receipt. Pending and failed attempts are not acknowledged as received funds.
 - **DOC-002:** A receipt reference is deterministic and stable as `JSK-RCT-<paid year>-<zero-padded contribution ID>`; reprinting does not create or renumber a financial event.
-- **DOC-003:** Metal receipts and statements use the immutable allocation's applied rate and quantity. A paid-unallocated record displays allocation pending with no invented rate or grams.
+- **DOC-003:** Metal receipts and statements use the immutable allocation's Scheme Rate and quantity. A paid-unallocated record displays allocation pending with no invented rate or grams.
 - **DOC-004:** A scheme statement includes verified payments, allocations, redemptions, and reversals and reports the current remaining entitlement in the scheme's denomination. Projected cash bonus remains separately labelled and non-redeemable.
 - **DOC-005:** Customer documents are accessible only to that customer or an owner. Owner CSV exports require owner authorization and neutralize spreadsheet-formula text.
 - **DOC-006:** INR amounts, gold grams, and silver grams remain separate in documents and exports. Indicative current metal exposure is not exported as booked cash liability.
@@ -123,4 +129,4 @@ This is the canonical source for stable business rules.
 
 ## Precision
 
-Money uses 2 decimal places. Contribution and cash-redemption input with more than 2 decimal places is rejected rather than silently rounded. Cash bonus calculations use `ROUND_HALF_UP` to 2 decimal places. Metal quantities and metal-redemption input use 6 decimal places; excess precision is rejected. Allocation calculations use `ROUND_HALF_UP`. Rates and purity metadata use 4 decimal places; mock configuration is normalized with `ROUND_HALF_UP`.
+Money uses 2 decimal places. Contribution and cash-redemption input with more than 2 decimal places is rejected rather than silently rounded. Cash bonus calculations use `ROUND_HALF_UP` to 2 decimal places. Metal quantities and metal-redemption input use 6 decimal places; excess precision is rejected. Allocation calculations use `ROUND_HALF_UP`. Scheme Rates and purity metadata use 4 decimal places.

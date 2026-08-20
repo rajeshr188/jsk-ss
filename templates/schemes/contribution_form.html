@@ -15,9 +15,17 @@
     Razorpay test mode only. This checkout simulates payment and does not move real money.
     {% endif %}
     {% if scheme_account.savings_mode == 'GOLD' or scheme_account.savings_mode == 'SILVER' %}
-    The INR amount will use the configured {{ scheme_account.get_savings_mode_display|lower }} rate provider.
+      {% if current_scheme_rate %}
+      Current Scheme Rate: <strong>₹{{ current_scheme_rate.rate_per_gram|floatformat:4 }}/g</strong>.
+      The applicable current rate will be locked when you continue, before payment starts.
+      {% endif %}
     {% endif %}
   </div>
+  {% if rate_unavailable %}
+  <div class="alert alert-danger" role="alert">
+    {{ scheme_account.get_savings_mode_display|cut:" Savings" }} contributions are temporarily unavailable because the current Scheme Rate has not been published.
+  </div>
+  {% else %}
   <form method="post" novalidate>
     {% csrf_token %}
     {{ form|crispy }}
@@ -25,5 +33,6 @@
       {% if mock_payment_enabled %}Complete mock payment{% else %}Continue to Razorpay test checkout{% endif %}
     </button>
   </form>
+  {% endif %}
 </div></div>
 {% endblock %}
