@@ -22,10 +22,18 @@ from .forms import (
     EnrolmentForm,
     RedemptionForm,
     RedemptionReversalForm,
+    SchemeRatePublishForm,
     SchemePlanChangeForm,
     SchemePlanForm,
 )
-from .models import Contribution, Customer, Redemption, SchemeAccount, SchemePlan
+from .models import (
+    Contribution,
+    Customer,
+    Redemption,
+    SchemeAccount,
+    SchemePlan,
+    SchemeRate,
+)
 from .payments import (
     PaymentGatewayAuthenticationError,
     PaymentGatewayError,
@@ -35,7 +43,6 @@ from .payments import (
     razorpay_payment_is_enabled,
 )
 from .permissions import owner_required
-from .rates import MetalRateProviderError, metal_rate_provider_is_configured
 from .selectors import (
     get_cash_balance,
     get_cash_bonus_summary,
@@ -43,6 +50,8 @@ from .selectors import (
     get_contribution_receipt_summary,
     get_customer_scheme_account,
     get_customer_scheme_summary,
+    get_current_scheme_rate,
+    get_current_scheme_rates,
     get_metal_balance,
     get_owner_activity_summary,
     get_owner_audit_events,
@@ -54,6 +63,7 @@ from .selectors import (
     get_redemption_eligibility_summary,
     get_redemption_history,
     get_scheme_statement,
+    get_scheme_rate_history,
     get_outstanding_entitlement,
 )
 from .services import (
@@ -64,6 +74,7 @@ from .services import (
     initiate_razorpay_contribution,
     process_razorpay_webhook,
     process_mock_contribution,
+    publish_scheme_rate,
     record_scheme_plan_change,
     reverse_redemption,
     retry_metal_allocation,
@@ -109,6 +120,44 @@ def owner_dashboard(request):
         "liabilities": get_owner_liability_summary(),
     }
     return render(request, "schemes/owner_dashboard.html", context)
+
+
+@owner_required
+def scheme_rates(request):
+    current_rates = get_current_scheme_rates()
+    selected_metal = request.POST.get("metal") or request.GET.get(
+        "metal", SchemeRate.Metal.GOLD
+    )
+    if selected_metal not in SchemeRate.Metal.values:
+        selected_metal = SchemeRate.Metal.GOLD
+    form = SchemeRatePublishForm(
+        request.POST or None,
+        current_rates=current_rates,
+        initial={"metal": selected_metal},
+    )
+    if request.method == "POST" and form.is_valid():
+        scheme_rate = publish_scheme_rate(
+            metal=form.cleaned_data["metal"],
+            rate_per_gram=form.cleaned_data["rate_per_gram"],
+            notes=form.cleaned_data["notes"],
+            published_by=request.user,
+        )
+        messages.success(
+            request,
+            f"Published {scheme_rate.get_metal_display()} Scheme Rate at "
+            f"₹{scheme_rate.rate_per_gram:.4f}/g.",
+        )
+        return redirect("schemes:scheme_rates")
+    return render(
+        request,
+        "schemes/scheme_rates.html",
+        {
+            "current_rates": current_rates,
+            "rate_history": get_scheme_rate_history(),
+            "form": form,
+            "selected_metal": selected_metal,
+        },
+    )
 
 
 @owner_required
@@ -192,7 +241,7 @@ def contribution_receipt(request, contribution_id):
             "scheme_account__customer",
             "scheme_account__customer__user",
             "metal_allocation",
-            "metal_allocation__rate_snapshot",
+            "metal_allocation__scheme_rate",
         ),
         pk=contribution_id,
         status__in=[
@@ -244,7 +293,7 @@ def contribution_export(request):
             "payment_reference",
             "payment_status",
             "metal",
-            "applied_rate_inr_per_g",
+            "scheme_rate_inr_per_g",
             "quantity_g",
         ]
     )
@@ -270,7 +319,7 @@ def contribution_export(request):
                 _safe_csv_cell(contribution.gateway_reference),
                 contribution.status,
                 allocation.metal if allocation else "",
-                f"{allocation.rate_snapshot.applied_rate:.4f}" if allocation else "",
+                f"{allocation.scheme_rate.rate_per_gram:.4f}" if allocation else "",
                 f"{allocation.quantity:.6f}" if allocation else "",
             ]
         )
@@ -547,6 +596,8 @@ def my_schemes(request):
     for account in accounts:
         if account.savings_mode == SchemeAccount.SavingsMode.CASH:
             account.cash_bonus = get_cash_bonus_summary(account)
+        else:
+            account.current_scheme_rate = get_current_scheme_rate(account.savings_mode)
     return render(
         request,
         "schemes/my_schemes.html",
@@ -554,7 +605,6 @@ def my_schemes(request):
             "scheme_accounts": accounts,
             "mock_payment_enabled": mock_payment_is_enabled(),
             "payment_gateway_enabled": payment_gateway_is_configured(),
-            "metal_rate_provider_enabled": metal_rate_provider_is_configured(),
         },
     )
 
@@ -564,6 +614,11 @@ def my_scheme_detail(request, scheme_number):
     account = get_customer_scheme_account(request.user, scheme_number)
     if account is None:
         raise Http404
+    current_scheme_rate = (
+        get_current_scheme_rate(account.savings_mode)
+        if account.savings_mode != SchemeAccount.SavingsMode.CASH
+        else None
+    )
     return render(
         request,
         "schemes/my_scheme_detail.html",
@@ -576,7 +631,7 @@ def my_scheme_detail(request, scheme_number):
             "redemptions": get_redemption_history(account),
             "mock_payment_enabled": mock_payment_is_enabled(),
             "payment_gateway_enabled": payment_gateway_is_configured(),
-            "metal_rate_provider_enabled": metal_rate_provider_is_configured(),
+            "current_scheme_rate": current_scheme_rate,
         },
     )
 
@@ -588,17 +643,28 @@ def pay_contribution(request, scheme_number):
     account = get_customer_scheme_account(request.user, scheme_number)
     if account is None:
         raise Http404
-    if (
-        account.savings_mode in {
-            SchemeAccount.SavingsMode.GOLD,
-            SchemeAccount.SavingsMode.SILVER,
-        }
-        and not metal_rate_provider_is_configured()
-    ):
-        raise Http404
+    current_scheme_rate = (
+        get_current_scheme_rate(account.savings_mode)
+        if account.savings_mode
+        in {SchemeAccount.SavingsMode.GOLD, SchemeAccount.SavingsMode.SILVER}
+        else None
+    )
 
     response_status = 200
     form = ContributionForm(request.POST or None, scheme_account=account)
+    if current_scheme_rate is None and account.savings_mode != SchemeAccount.SavingsMode.CASH:
+        return render(
+            request,
+            "schemes/contribution_form.html",
+            {
+                "scheme_account": account,
+                "form": form,
+                "mock_payment_enabled": mock_payment_is_enabled(),
+                "current_scheme_rate": None,
+                "rate_unavailable": True,
+            },
+            status=503,
+        )
     if request.method == "POST" and form.is_valid():
         try:
             if mock_payment_is_enabled():
@@ -655,6 +721,7 @@ def pay_contribution(request, scheme_number):
             "scheme_account": account,
             "form": form,
             "mock_payment_enabled": mock_payment_is_enabled(),
+            "current_scheme_rate": current_scheme_rate,
         },
         status=response_status,
     )
@@ -827,7 +894,7 @@ def retry_contribution_allocation(request, contribution_id):
             performed_by=request.user,
             reason=form.cleaned_data["reason"],
         )
-    except (ImproperlyConfigured, MetalRateProviderError, ValidationError) as error:
+    except (ImproperlyConfigured, ValidationError) as error:
         messages.error(request, f"Allocation retry failed: {error}")
     else:
         messages.success(

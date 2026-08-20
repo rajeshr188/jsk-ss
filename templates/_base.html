@@ -45,6 +45,7 @@
           {% if user.is_authenticated %}
             {% if user.is_superuser or user.role == 'OWNER' %}
             <li class="nav-item"><a class="nav-link" href="{% url 'schemes:owner_dashboard' %}">Owner dashboard</a></li>
+            <li class="nav-item"><a class="nav-link" href="{% url 'schemes:scheme_rates' %}">Scheme rates</a></li>
             <li class="nav-item"><a class="nav-link" href="{% url 'schemes:customer_list' %}">Customers</a></li>
             <li class="nav-item"><a class="nav-link" href="{% url 'schemes:contribution_list' %}">Contributions</a></li>
             <li class="nav-item"><a class="nav-link" href="{% url 'schemes:redemption_list' %}">Redemptions</a></li>

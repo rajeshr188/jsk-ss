@@ -15,15 +15,21 @@ Production hardening — repository baseline complete; deployment exercises pend
 - Fixed/variable amount validation and once-per-month/flexible frequency rules.
 - Debug-only mock payment adapter with verified, idempotent confirmation.
 - Customer cash balance/history and owner contribution visibility.
-- Debug-only mock gold/silver rate provider with configurable rates and purity.
-- Immutable rate snapshots and one six-decimal metal allocation per paid contribution.
-- Customer gold/silver gram balances and historical allocation-rate visibility.
+- Owner-published, append-only gold/silver Scheme Rates with fixed established purity,
+  effective timestamps, optional notes, publication identity, and immutable audit records.
+- Current-rate selection from the database with a 5% large-change confirmation safeguard.
+- Scheme Rate locking before mock payment or Razorpay order creation; no rate means no
+  metal payment/order, while cash contributions remain available.
+- Immutable Scheme Rates and one six-decimal metal allocation per paid contribution.
+- Customer gold/silver gram balances and historical locked-rate visibility.
 - Owner dashboard with separately reconciled cash principal, gold grams, and silver grams.
-- Current gold/silver reference rates and separately rounded indicative INR exposures.
+- Current gold/silver Scheme Rates and separately rounded indicative INR exposures.
 - India-local successful-contribution counts for today and the current calendar month.
 - MVP Alpha live workflow verified across owner setup, all three savings modes, customer payments and entitlements, and owner liability reconciliation.
-- GoldAPI.io live adapter for XAU/XAG rates in INR with header-only secrets, bounded timeout, strict validation, and short quota-protection cache.
-- Recoverable `PAID_UNALLOCATED` state when a verified payment cannot obtain a valid rate.
+- External metal-rate providers, API credentials, provider settings, quote caching, and
+  provider-failure allocation paths removed from the authoritative workflow.
+- `PAID_UNALLOCATED` retained only for unexpected post-payment allocation exceptions;
+  owner retry is idempotent and reuses the original locked Scheme Rate.
 - Owner alerts, diagnostics, and an authorized idempotent allocation-retry action.
 - Future public-signup requirements documented under `AUTH-*` domain rules.
 - Razorpay test-mode order creation and customer Standard Checkout flow.
@@ -68,7 +74,7 @@ Production hardening — repository baseline complete; deployment exercises pend
   secure cookie/header defaults, proxy trust opt-in, and timestamped stdout logging.
 - Uncached liveness and PostgreSQL-readiness endpoints that expose the immutable
   application release without returning database error details.
-- Deploy-only checks reject mock/unsupported providers, missing selected-provider
+- Deploy-only checks reject mock/unsupported payment gateways, missing selected-payment
   credentials, non-delivering email, wildcard hosts, and insecure CSRF origins.
 - A non-root production image with build-time static collection and bounded Gunicorn
   worker recycling/timeouts, plus PostgreSQL-backed CI, deploy-check, and image-build gates.
@@ -101,6 +107,10 @@ Production hardening — repository baseline complete; deployment exercises pend
 
 ## In progress
 
+- Manual Scheme Rate refactor is implemented on the development branch with forward
+  migration `schemes.0010_manual_scheme_rates`; it is not yet deployed. Production
+  remains on migration `schemes.0009` until the branch is reviewed, merged, backed up,
+  and promoted through the documented release workflow.
 - Environment-specific production proof: isolated database restoration, real email
   delivery, external alert routing/exercises, and coordinated secret-rotation drills.
   The stable owned domain/TLS/proxy path and repository observability foundation are
@@ -110,15 +120,15 @@ Production hardening — repository baseline complete; deployment exercises pend
   provisioned in one region. Database/Cloud Firewall access controls and the database
   CA are in place, SSH access is verified, Docker is installed, and the owned domain
   returns liveness and PostgreSQL readiness `200` through Caddy-managed HTTPS;
-  production email, external alerts, and provider validation remain.
+  production email, external alerts, and Razorpay live-mode readiness remain.
 - Production release `0545e3ced606c0d31ddec27ba70bb768f952c6d6` is healthy with
   migration `schemes.0009_schemeplan_publicly_listed` applied. All public compliance
   routes return `200`, and an owner-reviewed active plan is publicly listed.
 
 ## Known limitations
 
-- GoldAPI has deterministic boundary coverage but still requires private-credential
-  verification before production deployment.
+- Quote expiry is deferred: a pending contribution retains its locked Scheme Rate until
+  it is paid or failed. Add expiry only with a reviewed payment-order lifecycle design.
 - Razorpay is verified only in Test Mode. Live keys remain rejected until production
   payment, reconciliation, refund, dispute, monitoring, and secret-rotation procedures exist.
 - Temporary quick-tunnel URLs have no uptime guarantee; deployment requires a stable,
@@ -130,8 +140,8 @@ Production hardening — repository baseline complete; deployment exercises pend
   has not yet completed an evidenced isolated restoration/reconciliation drill.
 - The application records redemptions but does not execute payouts, move inventory,
   create invoices, or convert metal to cash.
-- Manual payment/rate correction, voids, refunds/disputes, dual approval, broader
-  provider reconciliation, and automated alerts/retries remain.
+- Manual payment correction, voids, refunds/disputes, dual approval, broader payment
+  reconciliation, and automated alerts/retries remain.
 - Public policy pages require business/legal approval before they are treated as
   binding terms. The exact plan-specific 6+ month wastage/value-addition discount
   schedule is not modeled and no numeric partial discount is advertised.
@@ -142,7 +152,7 @@ Production hardening — repository baseline complete; deployment exercises pend
   forfeiture, tax treatment, or expected-future-contribution projection.
 - Bonus liability reads are calculated per cash account; aggregate optimization is
   deferred until measured account volume requires it.
-- Plan-specific early-discontinuation pricing, shared provider caching, payment-order
+- Plan-specific early-discontinuation pricing, payment-order
   expiry, eligibility reminders, public onboarding, and partial-settlement policy are
   not yet defined.
 - The detailed, prioritized backlog and milestone-by-milestone limitation history
@@ -155,17 +165,21 @@ Production hardening — repository baseline complete; deployment exercises pend
 ## Verification
 
 - PostgreSQL 16 migrations applied successfully.
-- 145 tests pass, including aggregate financial-exception monitoring with redacted
-  output, public-policy route/link coverage, explicit active-plan
-  publishing and INR pricing visibility, health/readiness failure sanitization, deploy-configuration
-  gates, document access, receipt stability, unallocated disclosure, CSV
+- 137 tests pass, including owner-only Scheme Rate publication, large-change
+  confirmation, no-rate payment blocking, pre-order locking, rate-change race
+  behavior, historical immutability, aggregate financial-exception monitoring with
+  redacted output, public-policy route/link coverage, explicit active-plan
+  publishing and INR pricing visibility, health/readiness failure sanitization,
+  deploy-configuration gates, document access, receipt stability, unallocated disclosure, CSV
   denomination/formula safety, audit immutability, exception classification,
   reversal reconciliation, cash-bonus boundaries/rounding, Razorpay failure handling,
   redemption precision, over-redemption protection,
   idempotency, partial/full closure, denomination separation, access control,
   PostgreSQL constraints, and all prior regressions.
 - Migrations through `schemes.0009_schemeplan_publicly_listed` are applied to the
-  current production deployment and the local PostgreSQL environment.
+  current production deployment. The local development database is migrated through
+  `schemes.0010_manual_scheme_rates`; that forward migration is tested and pending
+  normal release deployment to production.
 - Migration drift check reports no changes.
 - Django system check and migration drift check pass.
 - Production deployment checks pass with a synthetic secure configuration and no
@@ -188,8 +202,9 @@ Production hardening — repository baseline complete; deployment exercises pend
   readiness over `https://jaishrikrishnajewellery.com`; the valid ACME contact and
   Caddy-managed certificate corrected the initial placeholder-contact failure.
 - Live-server checkpoint passes for owner and customer login, UI-created plan/customer/CASH-GOLD-SILVER enrolments, three mock payments, customer entitlements, owner contribution visibility, and exact liability/activity deltas.
-- Live GoldAPI HTTP behavior is verified at the adapter boundary with deterministic mocked responses; no real provider request was made because no API key is stored in the repository.
-- Live-server recovery smoke passes across a rate-failure/server-restart/rate-restoration sequence: verified payment remains unallocated, owner retry creates exactly one 0.800000 g allocation, and all disposable records are removed.
+- Manual Scheme Rate regressions verify owner-only gold/silver publication, validation,
+  append-only history, latest-applicable selection, large-change confirmation,
+  no-rate payment blocking, pre-order locking, and old-lock/new-rate race behavior.
 - Milestone 7 live-HTTP smoke passes for owner forecast/detail views and customer redemption-eligible guidance; the database status remains `ACTIVE`, and all disposable records are removed.
 - Milestone 8 authenticated request smoke passes with CSRF enforcement: an owner
   records partial cash and final jewellery settlement, the customer sees both
@@ -217,7 +232,7 @@ keys disabled until live-mode operating procedures are approved. Retain the owne
 DNS/TLS and release evidence and complete
 `FW-PROD-001` through `FW-PROD-003`: a recorded database restore/reconciliation drill,
 stable owned HTTPS plus alerts, real email delivery, and secret-rotation rehearsal.
-Separately validate GoldAPI privately and define Razorpay live-mode reconciliation,
-refund, and dispute operations before handling real customer funds. Follow the
+Define Razorpay live-mode reconciliation, refund, and dispute operations before
+handling real customer funds. Follow the
 [Production and deployment guide](PRODUCTION_DEPLOYMENT.md) and retain evidence for
 each environment-specific gate.

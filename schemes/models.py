@@ -275,6 +275,14 @@ class Contribution(models.Model):
     )
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
     payment_gateway = models.CharField(max_length=30)
+    scheme_rate = models.ForeignKey(
+        "SchemeRate",
+        on_delete=models.PROTECT,
+        related_name="locked_contributions",
+        null=True,
+        blank=True,
+    )
+    rate_locked_at = models.DateTimeField(null=True, blank=True)
     gateway_order_id = models.CharField(max_length=120, null=True, blank=True, unique=True)
     gateway_reference = models.CharField(max_length=120, null=True, blank=True, unique=True)
     gateway_signature = models.CharField(max_length=128, blank=True)
@@ -293,6 +301,13 @@ class Contribution(models.Model):
             models.CheckConstraint(
                 condition=models.Q(contribution_period__day=1),
                 name="contribution_period_first_day",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(scheme_rate__isnull=True, rate_locked_at__isnull=True)
+                    | models.Q(scheme_rate__isnull=False, rate_locked_at__isnull=False)
+                ),
+                name="contribution_scheme_rate_lock_complete",
             ),
             models.CheckConstraint(
                 condition=(
@@ -377,47 +392,56 @@ class PaymentWebhookEvent(models.Model):
         return f"{self.gateway} — {self.event_type} — {self.status}"
 
 
-class RateSnapshot(models.Model):
+class SchemeRate(models.Model):
     class Metal(models.TextChoices):
         GOLD = "GOLD", "24K Gold"
         SILVER = "SILVER", "Silver"
 
     metal = models.CharField(max_length=10, choices=Metal.choices)
-    provider = models.CharField(max_length=50)
-    provider_timestamp = models.DateTimeField()
-    fetched_at = models.DateTimeField(auto_now_add=True)
-    provider_rate = models.DecimalField(max_digits=14, decimal_places=4)
-    applied_rate = models.DecimalField(max_digits=14, decimal_places=4)
+    rate_per_gram = models.DecimalField(max_digits=14, decimal_places=4)
     purity = models.DecimalField(max_digits=6, decimal_places=4)
+    effective_from = models.DateTimeField(default=timezone.now)
+    published_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="published_scheme_rates",
+        null=True,
+        blank=True,
+        help_text="Null only for rate history migrated from the former provider architecture.",
+    )
+    published_at = models.DateTimeField(auto_now_add=True)
+    notes = models.TextField(blank=True)
 
     class Meta:
-        ordering = ["-fetched_at", "-pk"]
+        ordering = ["-effective_from", "-published_at", "-pk"]
         constraints = [
             models.CheckConstraint(
                 condition=models.Q(metal__in=["GOLD", "SILVER"]),
-                name="rate_snapshot_valid_metal",
+                name="scheme_rate_valid_metal",
             ),
             models.CheckConstraint(
-                condition=models.Q(provider_rate__gt=Decimal("0")),
-                name="provider_rate_positive",
-            ),
-            models.CheckConstraint(
-                condition=models.Q(applied_rate__gt=Decimal("0")),
-                name="applied_rate_positive",
+                condition=models.Q(rate_per_gram__gt=Decimal("0")),
+                name="scheme_rate_positive",
             ),
             models.CheckConstraint(
                 condition=models.Q(purity__gt=Decimal("0"), purity__lte=Decimal("1")),
-                name="rate_snapshot_valid_purity",
+                name="scheme_rate_valid_purity",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=["metal", "effective_from"],
+                name="scheme_rate_metal_time_idx",
             ),
         ]
 
     def save(self, *args, **kwargs):
         if self.pk and type(self).objects.filter(pk=self.pk).exists():
-            raise ValidationError("Historical rate snapshots are immutable.")
+            raise ValidationError("Published scheme rates are immutable.")
         return super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.get_metal_display()} at ₹{self.applied_rate}/g ({self.provider})"
+        return f"{self.get_metal_display()} scheme rate at ₹{self.rate_per_gram}/g"
 
 
 class MetalAllocation(models.Model):
@@ -426,12 +450,12 @@ class MetalAllocation(models.Model):
         on_delete=models.PROTECT,
         related_name="metal_allocation",
     )
-    rate_snapshot = models.OneToOneField(
-        RateSnapshot,
+    scheme_rate = models.ForeignKey(
+        SchemeRate,
         on_delete=models.PROTECT,
-        related_name="metal_allocation",
+        related_name="metal_allocations",
     )
-    metal = models.CharField(max_length=10, choices=RateSnapshot.Metal.choices)
+    metal = models.CharField(max_length=10, choices=SchemeRate.Metal.choices)
     quantity = models.DecimalField(max_digits=18, decimal_places=6)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -673,7 +697,7 @@ class AuditEvent(models.Model):
             "MANUAL_PAYMENT_CORRECTION",
             "Manual payment correction",
         )
-        MANUAL_RATE_OVERRIDE = "MANUAL_RATE_OVERRIDE", "Manual rate override"
+        SCHEME_RATE_PUBLICATION = "SCHEME_RATE_PUBLICATION", "Scheme rate publication"
         REDEMPTION = "REDEMPTION", "Redemption"
         REVERSAL = "REVERSAL", "Reversal"
         ALLOCATION_RETRY = "ALLOCATION_RETRY", "Allocation retry"
@@ -709,8 +733,8 @@ class AuditEvent(models.Model):
         null=True,
         blank=True,
     )
-    rate_snapshot = models.ForeignKey(
-        RateSnapshot,
+    scheme_rate = models.ForeignKey(
+        SchemeRate,
         on_delete=models.PROTECT,
         related_name="audit_events",
         null=True,

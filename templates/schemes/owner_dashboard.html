@@ -9,6 +9,7 @@
     <p class="text-muted mb-0">Current customer obligations and scheme activity</p>
   </div>
   <div>
+    <a class="btn btn-outline-dark" href="{% url 'schemes:scheme_rates' %}">Scheme rates</a>
     <a class="btn btn-outline-dark" href="{% url 'schemes:plan_list' %}">Scheme plans</a>
     <a class="btn btn-jsk" href="{% url 'schemes:customer_add' %}">Add customer</a>
   </div>
@@ -77,14 +78,14 @@
       <div class="card-body">
         <div class="text-muted">Gold obligation</div>
         <div class="display-6">{{ liabilities.gold.quantity|floatformat:6 }} g</div>
-        {% if liabilities.gold.reference_rate is not None %}
+        {% if liabilities.gold.scheme_rate is not None %}
         <dl class="row small mt-3 mb-0">
-          <dt class="col-6">Reference rate</dt><dd class="col-6 text-end">₹{{ liabilities.gold.reference_rate|floatformat:4 }}/g</dd>
+          <dt class="col-6">Current Scheme Rate</dt><dd class="col-6 text-end">₹{{ liabilities.gold.scheme_rate|floatformat:4 }}/g</dd>
           <dt class="col-6">Indicative exposure</dt><dd class="col-6 text-end fw-semibold">₹{{ liabilities.gold.indicative_exposure|floatformat:2 }}</dd>
         </dl>
-        <div class="small text-muted mt-2">{{ liabilities.gold.rate_provider }} · {{ liabilities.gold.rate_timestamp|date:"d M Y, h:i A" }}</div>
+        <div class="small text-muted mt-2">Published {{ liabilities.gold.rate_published_at|date:"d M Y, h:i A" }}</div>
         {% else %}
-        <div class="alert alert-warning small mt-3 mb-0">Reference rate unavailable. Gram liability remains authoritative.</div>
+        <div class="alert alert-warning small mt-3 mb-0">Scheme Rate unavailable. Gram liability remains authoritative.</div>
         {% endif %}
       </div>
     </div>
@@ -94,21 +95,21 @@
       <div class="card-body">
         <div class="text-muted">Silver obligation</div>
         <div class="display-6">{{ liabilities.silver.quantity|floatformat:6 }} g</div>
-        {% if liabilities.silver.reference_rate is not None %}
+        {% if liabilities.silver.scheme_rate is not None %}
         <dl class="row small mt-3 mb-0">
-          <dt class="col-6">Reference rate</dt><dd class="col-6 text-end">₹{{ liabilities.silver.reference_rate|floatformat:4 }}/g</dd>
+          <dt class="col-6">Current Scheme Rate</dt><dd class="col-6 text-end">₹{{ liabilities.silver.scheme_rate|floatformat:4 }}/g</dd>
           <dt class="col-6">Indicative exposure</dt><dd class="col-6 text-end fw-semibold">₹{{ liabilities.silver.indicative_exposure|floatformat:2 }}</dd>
         </dl>
-        <div class="small text-muted mt-2">{{ liabilities.silver.rate_provider }} · {{ liabilities.silver.rate_timestamp|date:"d M Y, h:i A" }}</div>
+        <div class="small text-muted mt-2">Published {{ liabilities.silver.rate_published_at|date:"d M Y, h:i A" }}</div>
         {% else %}
-        <div class="alert alert-warning small mt-3 mb-0">Reference rate unavailable. Gram liability remains authoritative.</div>
+        <div class="alert alert-warning small mt-3 mb-0">Scheme Rate unavailable. Gram liability remains authoritative.</div>
         {% endif %}
       </div>
     </div>
   </div>
 </div>
 
-<p class="small text-muted mt-3 mb-0">Metal exposure is indicative at the current configured reference rate. Historical allocations remain unchanged, and metal exposure is not added to cash principal.</p>
+<p class="small text-muted mt-3 mb-0">Metal exposure is indicative at the current published Scheme Rate. Historical allocations remain unchanged, and metal exposure is not added to cash principal.</p>
 
 <div class="mt-4">
   <a class="btn btn-outline-dark" href="{% url 'schemes:customer_list' %}">View customers</a>

@@ -9,11 +9,12 @@
 - Views must not contain substantial financial domain logic; signals must not orchestrate money workflows.
 - Use class-based or function-based views according to clarity, server-rendered Bootstrap templates, named URLs, and crispy Django forms.
 - Keep migrations committed and run `makemigrations --check --dry-run` before handoff.
-- Keep payment and metal-rate providers behind their explicit boundaries; provider-specific fields must not leak through views or scheme models.
+- Keep the Razorpay payment provider behind its explicit boundary. Metal allocation has no external rate-provider boundary: it uses only immutable database-backed `SchemeRate` records.
 - Razorpay secrets remain server-side. Verify browser callbacks against the locally stored order, verify captured payment details through the server API, and validate webhooks against the unmodified request body before parsing.
 - Webhook handlers must use the provider event ID for idempotency and route entitlement changes through the same contribution services as browser callbacks.
-- Live rate adapters must use bounded network timeouts, validate provider identity/currency/timestamps/rates, avoid credentials in URLs or errors, and raise provider-neutral failures. Tests mock the HTTP boundary and never consume live quota.
-- Once payment is verified, allocation failure must preserve the payment as `PAID_UNALLOCATED`; owner retry must call the idempotent allocation service rather than editing records directly.
+- Publish Scheme Rates only through `publish_scheme_rate`; owner authorization, positive `Decimal` validation, fixed metal fineness, publication metadata, and audit recording belong in that service.
+- A gold/silver contribution must lock the current applicable Scheme Rate before any payment or Razorpay order is created. Allocation must use only that lock. Never query a current rate after payment confirmation to calculate historical entitlement.
+- `PAID_UNALLOCATED` is a narrow unexpected post-payment exception state. Owner retry must call the idempotent allocation service and reuse the original locked Scheme Rate rather than editing records or selecting a newer rate.
 - Redemption writes must go through `complete_redemption`, lock the scheme account, carry an idempotency key, and append an immutable record. Never edit historical contributions or allocations to represent settlement.
 - Redemption corrections must go through `reverse_redemption`; append one immutable compensating record and exclude it through selectors rather than changing the original redemption.
 - Sensitive owner workflows must append an `AuditEvent` in the same transaction as the supported mutation. Retain a stable actor label, timestamp, reason, target, and compact before/after or outcome details; do not store secrets or full provider payloads.
@@ -101,7 +102,7 @@ timeline, and reconciliation result.
 
 ### Secrets, logs, and monitoring
 
-Rotate database, email, GoldAPI, Razorpay API, and Razorpay webhook credentials
+Rotate database, email, Razorpay API, and Razorpay webhook credentials
 independently. Coordinate webhook-secret changes with the Razorpay endpoint and
 verify a signed Test Mode delivery. To rotate Django signing material without an
 immediate session cutover, deploy a new `DJANGO_SECRET_KEY` with the previous value

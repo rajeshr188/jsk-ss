@@ -21,8 +21,10 @@ graph TD
   A -->|one-to-many| D[Redemption]
   D -->|zero-or-one| V[RedemptionReversal]
   W[PaymentWebhookEvent] -->|zero-or-many| N
+  U -->|publishes| R[SchemeRate]
+  R -->|locked by many| N
   N -->|zero-or-one| M[MetalAllocation]
-  M -->|one-to-one| R[RateSnapshot]
+  R -->|used by many| M
   U -->|processed by| D
   U -->|actor| E[AuditEvent]
   E -->|references| A
@@ -36,7 +38,7 @@ graph TD
 - Views authorize, validate forms, call services/selectors, and render or redirect.
 - Services own transactional mutations such as customer creation, enrolment, and redemption.
 - Selectors own reusable reads such as customer scheme summaries.
-- The owner liability selector derives separate INR, gold, and silver obligations and applies current reference quotes only for indicative metal exposure.
+- The owner liability selector derives separate INR, gold, and silver obligations and applies current published Scheme Rates only for indicative metal exposure.
 - The redemption eligibility selector partitions open accounts from their snapshotted `eligible_from` dates into non-overlapping owner forecast windows without mutating account state.
 - Document selectors assemble printable receipts and lifetime statements directly from verified contributions, immutable allocation snapshots, redemptions, reversals, and current derived entitlement. They do not copy financial data into a reporting ledger.
 - Models and database constraints protect structural invariants.
@@ -53,7 +55,7 @@ If public signup is introduced later, registration must create a complete custom
 
 ## Financial source of truth
 
-Cash principal is derived by selectors from `PAID` contribution records less completed, unreversed cash redemptions; pending and failed attempts contribute zero. Gold and silver balances are derived from immutable `MetalAllocation` quantities attached one-to-one to paid contributions less completed, unreversed redemptions in the matching metal. Historical `RateSnapshot`, allocation, contribution, `Redemption`, and `RedemptionReversal` records remain visible and reject application-level edits. There are no mutable balance fields.
+Cash principal is derived by selectors from `PAID` contribution records less completed, unreversed cash redemptions; pending and failed attempts contribute zero. Gold and silver balances are derived from immutable `MetalAllocation` quantities attached one-to-one to paid contributions less completed, unreversed redemptions in the matching metal. Historical `SchemeRate`, allocation, contribution, `Redemption`, and `RedemptionReversal` records remain visible and reject application-level edits. There are no mutable balance fields.
 
 Cash bonus is derived from immutable paid contributions and the versioned policy snapshot on the agreement. Before eligibility it is projected exposure only. At eligibility it becomes earned from principal paid by the eligibility-date cutoff. Cash redemptions store immutable principal and bonus components whose sum equals the cash settlement total; partial settlement consumes principal first. There is no mutable bonus balance field.
 
@@ -61,9 +63,9 @@ Cash bonus is derived from immutable paid contributions and the versioned policy
 
 Razorpay webhooks are a CSRF-exempt provider endpoint protected by HMAC over the untouched request body. Only `payment.captured` changes financial state. `PaymentWebhookEvent` records a payload hash and provider event ID behind a database uniqueness constraint; duplicate or out-of-order deliveries therefore re-enter the same idempotent confirmation/allocation services without creating additional entitlement. Full webhook payloads are not retained.
 
-`MockMetalRateProvider` can be resolved only when `DEBUG=True` and `METAL_RATE_PROVIDER=mock`. `GoldApiMetalRateProvider` is the live implementation selected with `METAL_RATE_PROVIDER=goldapi`; it calls fixed HTTPS XAU/XAG-to-INR endpoints with header authentication, bounded timeouts, strict response validation, and a short process-local cache. Both return the same provider-neutral quote containing provider/applied rates, provider timestamp, and purity metadata.
+`SchemeRate` is the only authoritative conversion rate for gold and silver. An active owner publishes append-only, timestamped gold or silver records through a service-layer mutation and audited owner UI. Current means the latest rate for that metal whose `effective_from` is applicable. There is no mutable active flag and no external rate provider in the allocation path.
 
-Payment confirmation and metal allocation use separate transactions. If a verified metal payment cannot obtain or validate a quote, the contribution persists as `PAID_UNALLOCATED` with a safe current error description; it creates no `RateSnapshot` or `MetalAllocation`. The owner-only POST retry action re-enters the idempotent allocation service. A successful retry creates exactly one immutable snapshot/allocation and changes the contribution to `PAID`.
+A metal contribution selects and stores its `SchemeRate` and `rate_locked_at` before mock payment initiation or Razorpay order creation. A missing current rate blocks the contribution before any payable order exists. Payment confirmation and metal allocation use separate transactions, but allocation reads only the stored lock and creates at most one immutable `MetalAllocation`; a later publication cannot affect it. `PAID_UNALLOCATED` remains only as a narrow recovery state for an unexpected post-payment allocation exception. Owner retry reuses the original locked rate and never obtains a replacement quote.
 
 ## Current request flows
 
@@ -75,11 +77,11 @@ Customer: login → My Schemes → account terms. Login routing is role-aware.
 
 Cash contribution (mock): customer account → Pay now → validate snapshotted amount/frequency rules → create pending contribution → verified mock result → idempotent confirmation → derived cash balance.
 
-Razorpay contribution (test): customer account → validate → pending contribution → server-created order → Standard Checkout → HMAC callback plus captured-payment API check and/or signed `payment.captured` webhook → idempotent confirmation → cash entitlement or one metal allocation. A once-per-month account resumes its single pending Razorpay order instead of creating parallel payable orders.
+Razorpay contribution (test): customer account → validate → lock current Scheme Rate when metal → pending contribution → server-created order → Standard Checkout → HMAC callback plus captured-payment API check and/or signed `payment.captured` webhook → idempotent confirmation → cash entitlement or one metal allocation from the lock. A once-per-month account resumes its single pending Razorpay order instead of creating parallel payable orders.
 
-Metal contribution: customer account → Pay now → verified contribution → configured rate quote → immutable rate snapshot → one immutable six-decimal allocation → derived gold or silver gram balance. Rate failure branches to paid/allocation-pending → owner review → controlled retry.
+Metal contribution: owner publishes Scheme Rate → customer selects Pay now → current applicable rate is locked → payment starts and is verified → one immutable six-decimal allocation uses the lock → derived gold or silver gram balance. No published rate means no payment initiation.
 
-Owner liability dashboard: paid cash contributions → outstanding INR principal plus earned bonus, with projected bonus exposure shown separately; paid metal allocations → separate gold/silver grams → current provider quotes → separate indicative INR exposures. Projected bonus and metal reference quotes used for display do not alter historical records. Activity counters use successful payment timestamps in the India-local calendar day and month.
+Owner liability dashboard: paid cash contributions → outstanding INR principal plus earned bonus, with projected bonus exposure shown separately; paid metal allocations → separate gold/silver grams → current published Scheme Rates → separate indicative INR exposures. Projected bonus and Scheme Rates used for display do not alter historical records. Activity counters use successful payment timestamps in the India-local calendar day and month.
 
 Eligibility: India-local current date plus each agreement's `eligible_from` snapshot → active/not-yet-eligible or redemption-eligible display state → exclusive owner windows for eligible now, days 1–30, 31–60, and 61–90. Eligibility is a read model; it does not create a redemption or persist an automatic status change.
 

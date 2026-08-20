@@ -54,14 +54,6 @@ Alternatively, set `DJANGO_SECRET_KEY` and run `docker compose up --build`; Comp
 | `RAZORPAY_KEY_SECRET` | Razorpay | Test key secret; server-side only and never committed |
 | `RAZORPAY_WEBHOOK_SECRET` | Razorpay | Secret configured separately for webhook signing |
 | `RAZORPAY_TIMEOUT_SECONDS` | no | Razorpay API timeout; defaults to `10`, maximum `30` |
-| `METAL_RATE_PROVIDER` | metal schemes | `mock` in debug or `goldapi` for live XAU/XAG-to-INR rates |
-| `GOLDAPI_API_KEY` | live rates | Required when `METAL_RATE_PROVIDER=goldapi`; never commit it |
-| `GOLDAPI_TIMEOUT_SECONDS` | no | GoldAPI HTTPS timeout; defaults to `10`, maximum `30` |
-| `GOLDAPI_CACHE_SECONDS` | no | Per-metal live quote cache; defaults to `60`, maximum `3600` |
-| `MOCK_GOLD_RATE` | no | Development 24K gold rate per gram; defaults to `12500.0000` |
-| `MOCK_SILVER_RATE` | no | Development silver rate per gram; defaults to `150.0000` |
-| `MOCK_GOLD_PURITY` | no | Development gold fineness metadata; defaults to `0.9999` |
-| `MOCK_SILVER_PURITY` | no | Development silver fineness metadata; defaults to `0.9990` |
 | `SECURE_SSL_REDIRECT` | no | Defaults on outside debug; set for the deployment's TLS topology |
 | `SECURE_HSTS_SECONDS` | no | Defaults to 3600 outside debug |
 | `SECURE_HSTS_INCLUDE_SUBDOMAINS` | no | Explicit opt-in after every affected subdomain is HTTPS-capable |
@@ -76,14 +68,11 @@ Set both of these values:
 ```dotenv
 DJANGO_DEBUG=True
 PAYMENT_GATEWAY=mock
-METAL_RATE_PROVIDER=mock
-MOCK_GOLD_RATE=12500.0000
-MOCK_SILVER_RATE=150.0000
 ```
 
-The payment screen is unavailable unless a payment adapter is configured. Gold and silver payments additionally require a configured metal-rate provider. Mock payments record no real transfer; rates are snapshotted and INR is converted to six-decimal grams for local testing. `seed_demo` remains deferred.
+The payment screen is unavailable unless a payment adapter is configured. Before a gold or silver payment can start, an owner must publish the corresponding Scheme Rate from **Owner → Scheme rates**. Mock payments record no real transfer; the current database-backed Scheme Rate is locked to the contribution before payment and INR is converted to six-decimal grams for local testing. `seed_demo` remains deferred.
 
-The owner dashboard derives outstanding cash principal, earned cash bonus, and gold/silver gram obligations from successful financial records. Projected cash bonus is shown separately and is not an actual liability. Current mock rates provide separate indicative INR exposure for each metal; these display values never alter historical allocations and are never combined with cash into one liability total.
+The owner dashboard derives outstanding cash principal, earned cash bonus, and gold/silver gram obligations from successful financial records. Projected cash bonus is shown separately and is not an actual liability. Current published Scheme Rates provide separate indicative INR exposure for each metal; these display values never alter historical allocations and are never combined with cash into one liability total.
 
 ## Cash bonus
 
@@ -111,32 +100,23 @@ process; the application does not yet initiate Razorpay refunds automatically.
 
 ## Audit and exceptions
 
-Owner enrolment, plan changes, redemptions, redemption reversals, and manual allocation retries require or retain an actor, timestamp, and reason in immutable audit records. Plan changes apply only to future enrolments; existing agreement snapshots remain unchanged. The exception queue derives unresolved `PAID_UNALLOCATED` contributions and failed Razorpay webhook reconciliation records from their source records, so successful allocation recovery removes the live allocation exception without deleting its audit history.
+Owner enrolment, plan changes, Scheme Rate publications, redemptions, redemption reversals, and manual allocation retries require or retain an actor, timestamp, and reason in immutable audit records. Plan and rate changes apply only to future enrolments or contributions as appropriate; existing agreement snapshots and locked contributions remain unchanged. The exception queue derives unresolved `PAID_UNALLOCATED` contributions and failed Razorpay webhook reconciliation records from their source records, so successful allocation recovery removes the live allocation exception without deleting its audit history.
 
-Manual payment correction and manual rate override actions are deliberately unavailable until their accounting, pricing, approval, and customer-disclosure rules are defined. Refunds, disputes, automated retries/alerts, and dual approval also remain future operational work.
+Manual payment correction remains unavailable until its accounting, approval, and customer-disclosure rules are defined. Refunds, disputes, automated retries/alerts, dual approval, and quote expiry also remain future operational work.
 
 ## Receipts, statements, and exports
 
-Each verified contribution has a printable HTML acknowledgement with a stable `JSK-RCT-<year>-<contribution id>` reference, customer and scheme details, INR amount, payment reference, and—when allocated—the captured metal, applied rate, and quantity. Paid-unallocated metal receipts explicitly show allocation pending and never invent missing values. Pending and failed payment attempts have no receipt.
+Each verified contribution has a printable HTML acknowledgement with a stable `JSK-RCT-<year>-<contribution id>` reference, customer and scheme details, INR amount, payment reference, and—when allocated—the locked Scheme Rate, metal, and quantity. Paid-unallocated metal receipts explicitly show allocation pending and never invent missing values. Pending and failed payment attempts have no receipt.
 
 Customers can print a lifetime statement for each of their own schemes. It lists verified payments, immutable allocation rates/quantities, redemptions, and reversals, followed by the current denomination-specific entitlement. Owners can view the same documents and download separate contribution and redemption CSV exports; INR, gold grams, and silver grams remain separate columns. Spreadsheet formula-like text is neutralized in CSV output.
 
 Documents are generated on demand from source records and are acknowledgements, not tax invoices. The MVP does not generate PDFs, email documents, archive rendered copies, add signatures, or include statutory business/tax fields.
 
-## Live metal rates
+## Manual Scheme Rates
 
-Create a GoldAPI.io account and keep its token only in your ignored `.env` or deployment secret manager. The official endpoint supports gold (`XAU`) and silver (`XAG`) in INR and supplies per-gram prices.
+Only an active owner may publish gold or silver Scheme Rates. Each publication creates a new immutable timestamped record with the established fineness; it never edits an earlier publication. The owner screen shows current rates, recent history, and the difference from the previous rate. Changes greater than 5% require an additional confirmation.
 
-```dotenv
-METAL_RATE_PROVIDER=goldapi
-GOLDAPI_API_KEY=replace-with-your-real-token
-GOLDAPI_TIMEOUT_SECONDS=10
-GOLDAPI_CACHE_SECONDS=60
-```
-
-The adapter calls `https://www.goldapi.io/api/XAU/INR` or `XAG/INR` over HTTPS and sends the key in the `x-access-token` header, never in the URL. It validates metal, currency, timestamp, and the per-gram rate before creating a snapshot. Quotes are cached briefly to protect provider quota. See the [official GoldAPI documentation](https://www.goldapi.io/api-documentation) and [official integration examples](https://github.com/goldapi-io).
-
-If payment verification succeeds but a rate cannot be obtained, the contribution becomes **Paid — allocation pending**. No rate or grams are invented. The owner dashboard warns about the exception, and the owner can retry safely from the contributions page after restoring provider access.
+For a metal contribution, the current applicable Scheme Rate is locked to the pending contribution before mock payment initiation or Razorpay order creation. Payment confirmation and webhook processing calculate the allocation only from that lock, so a later publication cannot change an in-progress checkout or historical grams. If no applicable rate exists, no payment or Razorpay order is created. `PAID_UNALLOCATED` is retained only for unexpected allocation exceptions after a verified payment, not for rate retrieval.
 
 ## Razorpay test mode
 

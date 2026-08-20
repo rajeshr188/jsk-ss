@@ -2,7 +2,7 @@
 
 This is the canonical production runbook for the Jai Shri Krishna Jewellery
 Savings Scheme. It covers the current Django 6, PostgreSQL, Gunicorn, WhiteNoise,
-Razorpay Test Mode, and GoldAPI build. Development setup remains in the
+Razorpay Test Mode, and manually published Scheme Rate build. Development setup remains in the
 [README](../README.md); business invariants remain in [Domain rules](DOMAIN_RULES.md).
 
 ## Production-readiness boundary
@@ -15,8 +15,8 @@ is **not yet approved to handle real customer funds**:
 - Live-mode payment reconciliation, refunds, disputes, incident handling, and
   credential rotation must be approved and tested before the code is changed to
   accept live keys.
-- GoldAPI has boundary tests but still needs a private authenticated XAU/INR and
-  XAG/INR smoke test in the target environment.
+- An owner must publish reviewed gold and silver Scheme Rates before metal
+  contributions are enabled in an environment.
 - `FW-PROD-001` through `FW-PROD-003` in [Future work](FUTURE_WORK.md) require an
   evidenced restore drill, stable HTTPS and alerting, real email delivery, and
   secret-rotation rehearsal.
@@ -42,7 +42,7 @@ Django container(s): Gunicorn -> WSGI application
    v
 managed PostgreSQL with TLS, snapshots, PITR, and restricted network access
 
-External services: SMTP provider, Razorpay Test Mode webhook/API, GoldAPI
+External services: SMTP provider, Razorpay Test Mode webhook/API
 ```
 
 The application is stateless between requests except for PostgreSQL. Do not place
@@ -489,7 +489,7 @@ responsibility should be implicit.
 | Release owner | Approves the commit, image digest, migration plan, and rollout |
 | Database owner | Confirms backup/PITR status and can perform a restore |
 | Domain/TLS owner | Controls DNS, certificates, proxy rules, and HSTS changes |
-| Provider owner | Controls SMTP, Razorpay, and GoldAPI configuration |
+| Provider owner | Controls SMTP and Razorpay configuration |
 | Incident owner | Receives alerts and can disable contributions or roll back |
 | Business reconciler | Verifies INR principal/bonus, gold grams, and silver grams separately |
 
@@ -546,8 +546,7 @@ Provision these resources before the first build is promoted:
 5. An owned DNS name and TLS endpoint.
 6. An SMTP or transactional email account with an authorized sender domain.
 7. Razorpay Test Mode keys and a separate webhook signing secret.
-8. A GoldAPI key with enough quota for expected XAU and XAG quote traffic.
-9. Uptime, error, database, backup, and financial-exception alert destinations.
+8. Uptime, error, database, backup, and financial-exception alert destinations.
 
 ## Production environment
 
@@ -591,11 +590,6 @@ RAZORPAY_KEY_SECRET=<test-key-secret>
 RAZORPAY_WEBHOOK_SECRET=<separate-webhook-secret>
 RAZORPAY_TIMEOUT_SECONDS=10
 
-METAL_RATE_PROVIDER=goldapi
-GOLDAPI_API_KEY=<provider-key>
-GOLDAPI_TIMEOUT_SECONDS=10
-GOLDAPI_CACHE_SECONDS=60
-
 SECURE_SSL_REDIRECT=True
 TRUST_PROXY_SSL_HEADER=True
 SECURE_HSTS_SECONDS=3600
@@ -623,9 +617,9 @@ Configuration rules:
   Enable subdomains and preload only after every affected hostname is permanently
   HTTPS-capable and the domain owner accepts the long-lived consequences.
 - `EMAIL_USE_TLS` and `EMAIL_USE_SSL` are mutually exclusive.
-- Leave `PAYMENT_GATEWAY` empty to disable new contribution checkout. Leave
-  `METAL_RATE_PROVIDER` empty to disable live metal quotes. Never use either mock
-  adapter outside debug mode.
+- Leave `PAYMENT_GATEWAY` empty to disable new contribution checkout. Never use the
+  mock payment adapter outside debug mode. Metal contributions are independently
+  unavailable until an owner has published the applicable Scheme Rate.
 - Keep each Razorpay API secret distinct from the webhook secret. Do not log request
   signatures, secret values, full provider payloads, or database URLs.
 - `APP_RELEASE` must identify exactly one source/image build and must be identical in
@@ -887,6 +881,21 @@ Stop if any output differs from the reviewed plan. A non-backward-compatible mig
 requires its own maintenance and recovery procedure; do not apply it while the old
 image serves traffic.
 
+Before applying `schemes.0010_manual_scheme_rates`, confirm the old architecture has
+no unresolved paid metal allocation and no open metal Razorpay order. Complete or
+reconcile those records on the old release first. The migration intentionally stops
+instead of inventing a rate if either count is non-zero:
+
+```bash
+docker compose --env-file .env.production -f compose.production.yml \
+  run --rm --no-deps web python manage.py shell -c \
+  "from schemes.models import Contribution; modes=['GOLD','SILVER']; print('paid_unallocated=', Contribution.objects.filter(status='PAID_UNALLOCATED', scheme_account__savings_mode__in=modes).count()); print('open_metal_orders=', Contribution.objects.filter(status='PENDING', payment_gateway='razorpay', gateway_order_id__isnull=False, scheme_account__savings_mode__in=modes).count())"
+```
+
+Record both zero results with the release evidence. This migration renames/removes
+provider-era schema, so the previous image is not schema-compatible after it runs;
+use the reviewed maintenance window, database recovery point, and roll-forward plan.
+
 ### 6. Apply once, deploy, and verify
 
 After the backup/recovery point, migration plan, rollback image, operator, and business
@@ -961,8 +970,8 @@ python manage.py check --deploy --fail-level ERROR
 ```
 
 The command must have no errors. Review every warning explicitly; a warning is not
-automatically safe. The project's custom checks reject mock or unsupported providers,
-missing selected-provider credentials, non-delivering email backends, wildcard hosts,
+automatically safe. The project's custom checks reject mock or unsupported payment
+gateways, missing selected-payment credentials, non-delivering email backends, wildcard hosts,
 and non-HTTPS CSRF origins. They also warn if `APP_RELEASE` is unknown or database TLS
 is not required.
 
@@ -1053,9 +1062,10 @@ Confirm the health JSON contains the expected release. Then test in a browser:
 6. Verify the exception queue and audit log load without exposing provider secrets.
 7. In staging, complete one Razorpay Test Mode contribution and confirm both browser
    callback verification and a signed `payment.captured` webhook are idempotent.
-8. For a controlled staging metal account, verify a GoldAPI-backed allocation captures
-   a rate and six-decimal grams. Confirm a provider failure leaves a recoverable
-   `PAID_UNALLOCATED` record rather than inventing a rate.
+8. Publish reviewed gold and silver Scheme Rates as the staging owner. Start a
+   controlled metal checkout, publish a newer rate, complete the original payment,
+   and verify it uses the old lock while a new checkout uses the new rate. Also verify
+   that no metal order can be created when no applicable rate exists.
 9. Verify a contribution acknowledgement, customer statement, and owner CSV export.
 
 Record time, operator, release, URLs, test identities, provider event identifiers,
@@ -1097,11 +1107,10 @@ Create actionable alerts for:
 | Readiness failure | Remove from traffic; inspect PostgreSQL health and connection capacity |
 | Sustained 5xx or latency increase | Correlate by release and endpoint; consider image rollback |
 | Failed/mismatched Razorpay webhook | Preserve ledger evidence; compare provider and local IDs |
-| Any new `PAID_UNALLOCATED` record | Restore rate-provider access and use the owner retry workflow |
+| Any new `PAID_UNALLOCATED` record | Investigate the unexpected allocation exception; retry only from its original locked Scheme Rate |
 | Database storage/CPU/connections near limit | Stop scaling web replicas blindly; restore capacity margin |
 | Backup/PITR failure or missed snapshot | Treat production recovery as degraded and repair immediately |
 | SMTP delivery/authentication failure | Verify provider status and credentials; test password reset |
-| GoldAPI quota, timeout, or validation failure | Protect quota, inspect provider status, and monitor allocations |
 | Certificate expiry or TLS failure | Renew/replace at the edge before customer access is affected |
 
 Choose thresholds from measured staging/production baselines. Every page-level alert
@@ -1201,14 +1210,16 @@ reconciliation of every event after the chosen recovery point.
    application does not implement those operations.
 6. Re-enable checkout only after reconciliation and a signed Test Mode webhook test.
 
-### Metal-rate or allocation incident
+### Scheme Rate or allocation incident
 
 1. Leave verified but unallocated payments in `PAID_UNALLOCATED`.
-2. Restore GoldAPI credentials, quota, network access, or valid response handling.
-3. Use the owner-controlled allocation retry action, which is idempotent and audited.
-4. Confirm exactly one immutable rate snapshot and allocation exist and that gold and
+2. Confirm the contribution already has the expected locked Scheme Rate. Do not
+   substitute the newest rate after payment.
+3. Correct the underlying application/database issue and use the owner-controlled
+   allocation retry action, which is idempotent and audited.
+4. Confirm exactly one immutable Scheme Rate link and allocation exist and that gold and
    silver remain separate.
-5. Never invent, manually overwrite, or backdate a rate.
+5. Never edit, replace, or backdate the contribution's locked rate.
 
 ### Database incident
 
@@ -1235,10 +1246,10 @@ Rotate one credential class at a time and keep a tested rollback path.
 If a key is known to be exposed, do not preserve it merely for session continuity;
 rotate immediately and accept the required session/token invalidation.
 
-### Database, SMTP, and GoldAPI credentials
+### Database and SMTP credentials
 
 Create or activate the replacement credential, update the secret manager, roll the
-web service, verify the relevant readiness/email/quote path, then revoke the old
+web service, verify the relevant readiness/email path, then revoke the old
 credential. Check that release jobs and administrative identities do not share the
 web application's secret unnecessarily.
 
@@ -1262,7 +1273,7 @@ failed deliveries for reconciliation; never accept unsigned events during the ga
 | --- | --- |
 | Every release | Green CI, image scan, deploy check, migration review, backup/PITR confirmation, smoke test, reconciliation |
 | Daily | Review alerts, failed webhooks, allocation exceptions, backup success, database capacity |
-| Weekly | Review error trends, certificate status, provider quota, email delivery, and run expired-session cleanup |
+| Weekly | Review error trends, certificate status, payment/email provider status, email delivery, and run expired-session cleanup |
 | Monthly | Patch/rebuild base images and locked dependencies through a tested release; review access and secret age |
 | Quarterly | Perform and evidence an isolated restore/reconciliation drill and an incident/alert exercise |
 | After any incident | Preserve timeline/evidence, reconcile financial state, document cause/actions, and test prevention |
@@ -1282,9 +1293,10 @@ Real customer use remains blocked until every applicable item is evidenced:
       plus denomination-specific reconciliation are proven.
 - [ ] Real password-reset email delivery and sender-domain authentication are proven.
 - [ ] Logs are retained and tested alerts reach named responders.
-- [ ] GoldAPI XAU/INR and XAG/INR requests are privately verified.
+- [ ] Reviewed gold and silver Scheme Rates are published by an authorized owner,
+      and rate-lock/no-rate staging smokes are evidenced.
 - [ ] Razorpay uses a stable HTTPS webhook with signed, idempotent delivery testing.
-- [ ] Separate Django, database, SMTP, GoldAPI, Razorpay API, and webhook rotations
+- [ ] Separate Django, database, SMTP, Razorpay API, and webhook rotations
       have been rehearsed.
 - [ ] Owner/customer access, documents, exports, audit, exceptions, and rollback have
       been smoke-tested.

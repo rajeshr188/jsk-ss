@@ -12,7 +12,6 @@ services:
       ALLOWED_HOSTS: ${ALLOWED_HOSTS:-localhost,127.0.0.1,0.0.0.0}
       DATABASE_URL: postgresql://jsk_user:jsk_local_only@db:5432/jsk_savings
       PAYMENT_GATEWAY: ${PAYMENT_GATEWAY:-mock}
-      METAL_RATE_PROVIDER: ${METAL_RATE_PROVIDER:-mock}
     depends_on:
       db:
         condition: service_healthy

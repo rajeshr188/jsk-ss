@@ -1,0 +1,133 @@
+{% extends '_base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Scheme rates | Jai Shri Krishna Jewellery{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-4">
+  <div>
+    <h1 class="mb-1">Scheme rates</h1>
+    <p class="text-muted mb-0">Publish the rates used to convert new gold and silver contributions.</p>
+  </div>
+  <a class="btn btn-outline-dark" href="{% url 'schemes:owner_dashboard' %}">Owner dashboard</a>
+</div>
+
+<div class="row g-3 mb-5">
+  <div class="col-md-6">
+    <div class="card h-100 border-warning"><div class="card-body">
+      <div class="text-muted">Current Gold Scheme Rate</div>
+      {% if current_rates.GOLD %}
+      <div class="display-6">₹{{ current_rates.GOLD.rate_per_gram|floatformat:4 }}/g</div>
+      <div class="small text-muted mt-2">
+        Effective {{ current_rates.GOLD.effective_from|date:"d M Y, h:i A" }} ·
+        published by {{ current_rates.GOLD.published_by|default:"historical import" }}
+      </div>
+      {% else %}
+      <div class="alert alert-warning mt-3 mb-0">No Gold Scheme Rate has been published.</div>
+      {% endif %}
+      <a class="btn btn-sm btn-outline-dark mt-3" href="?metal=GOLD#publish-rate">Publish new gold rate</a>
+    </div></div>
+  </div>
+  <div class="col-md-6">
+    <div class="card h-100 border-secondary"><div class="card-body">
+      <div class="text-muted">Current Silver Scheme Rate</div>
+      {% if current_rates.SILVER %}
+      <div class="display-6">₹{{ current_rates.SILVER.rate_per_gram|floatformat:4 }}/g</div>
+      <div class="small text-muted mt-2">
+        Effective {{ current_rates.SILVER.effective_from|date:"d M Y, h:i A" }} ·
+        published by {{ current_rates.SILVER.published_by|default:"historical import" }}
+      </div>
+      {% else %}
+      <div class="alert alert-warning mt-3 mb-0">No Silver Scheme Rate has been published.</div>
+      {% endif %}
+      <a class="btn btn-sm btn-outline-dark mt-3" href="?metal=SILVER#publish-rate">Publish new silver rate</a>
+    </div></div>
+  </div>
+</div>
+
+<div class="row g-4" id="publish-rate">
+  <div class="col-lg-5">
+    <h2 class="h4">Publish a new Scheme Rate</h2>
+    <p class="text-muted">Publication creates a new immutable record. It never edits an earlier rate.</p>
+    <form method="post" novalidate data-gold-rate="{% if current_rates.GOLD %}{{ current_rates.GOLD.rate_per_gram }}{% endif %}" data-silver-rate="{% if current_rates.SILVER %}{{ current_rates.SILVER.rate_per_gram }}{% endif %}">
+      {% csrf_token %}
+      {{ form|crispy }}
+      <div class="card bg-light mb-3" id="rate-comparison"><div class="card-body small">
+        <dl class="row mb-0">
+          <dt class="col-7">Current rate</dt><dd class="col-5 text-end" id="comparison-current">—</dd>
+          <dt class="col-7">New rate</dt><dd class="col-5 text-end" id="comparison-new">—</dd>
+          <dt class="col-7">Difference</dt><dd class="col-5 text-end" id="comparison-difference">—</dd>
+          <dt class="col-7">Percentage difference</dt><dd class="col-5 text-end" id="comparison-percentage">—</dd>
+        </dl>
+        <div class="alert alert-warning mt-3 mb-0 d-none" id="large-change-warning">
+          This change exceeds 5%. Check the metal and both values carefully before confirming.
+        </div>
+      </div></div>
+      <button class="btn btn-jsk" type="submit">Publish Scheme Rate</button>
+    </form>
+  </div>
+
+  <div class="col-lg-7">
+    <h2 class="h4">Recent publication history</h2>
+    <div class="table-responsive">
+      <table class="table align-middle">
+        <thead><tr><th>Effective</th><th>Metal</th><th>Scheme Rate</th><th>Purity</th><th>Published by</th><th>Notes</th></tr></thead>
+        <tbody>
+          {% for rate in rate_history %}
+          <tr>
+            <td>{{ rate.effective_from|date:"d M Y, h:i A" }}</td>
+            <td>{{ rate.get_metal_display }}</td>
+            <td>₹{{ rate.rate_per_gram|floatformat:4 }}/g</td>
+            <td>{{ rate.purity }}</td>
+            <td>{{ rate.published_by|default:"Historical import" }}</td>
+            <td>{{ rate.notes|default:"—" }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="6" class="text-center text-muted py-4">No Scheme Rates have been published.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block javascript %}
+{{ block.super }}
+<script>
+  (() => {
+    const form = document.querySelector("form[data-gold-rate]");
+    if (!form) return;
+    const metal = document.getElementById("id_metal");
+    const newRate = document.getElementById("id_rate_per_gram");
+    const warning = document.getElementById("large-change-warning");
+    const output = {
+      current: document.getElementById("comparison-current"),
+      next: document.getElementById("comparison-new"),
+      difference: document.getElementById("comparison-difference"),
+      percentage: document.getElementById("comparison-percentage")
+    };
+    const refresh = () => {
+      const currentText = metal.value === "GOLD" ? form.dataset.goldRate : form.dataset.silverRate;
+      const current = Number(currentText);
+      const next = Number(newRate.value);
+      output.current.textContent = Number.isFinite(current) ? `₹${current.toFixed(4)}/g` : "Not published";
+      output.next.textContent = Number.isFinite(next) && next > 0 ? `₹${next.toFixed(4)}/g` : "—";
+      if (!Number.isFinite(current) || !Number.isFinite(next) || current <= 0 || next <= 0) {
+        output.difference.textContent = "—";
+        output.percentage.textContent = "—";
+        warning.classList.add("d-none");
+        return;
+      }
+      const difference = next - current;
+      const percentage = difference / current * 100;
+      output.difference.textContent = `${difference < 0 ? "−" : "+"}₹${Math.abs(difference).toFixed(4)}`;
+      output.percentage.textContent = `${percentage > 0 ? "+" : ""}${percentage.toFixed(2)}%`;
+      warning.classList.toggle("d-none", Math.abs(percentage) <= 5);
+    };
+    metal.addEventListener("change", refresh);
+    newRate.addEventListener("input", refresh);
+    refresh();
+  })();
+</script>
+{% endblock %}

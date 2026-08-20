@@ -6,6 +6,7 @@ from types import SimpleNamespace
 from unittest.mock import patch
 from urllib.error import HTTPError
 
+from django.contrib.auth import get_user_model
 from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.test import TestCase, override_settings
 from django.urls import reverse
@@ -17,6 +18,7 @@ from schemes.models import (
     PaymentWebhookEvent,
     SchemeAccount,
     SchemePlan,
+    SchemeRate,
 )
 from schemes.payments import (
     PaymentGatewayAuthenticationError,
@@ -33,6 +35,7 @@ from schemes.services import (
     initiate_contribution,
     initiate_razorpay_contribution,
     process_razorpay_webhook,
+    publish_scheme_rate,
 )
 
 
@@ -233,12 +236,7 @@ class RazorpayGatewayTests(TestCase):
         )
 
 
-@override_settings(
-    DEBUG=True,
-    METAL_RATE_PROVIDER="mock",
-    MOCK_GOLD_RATE="12500.0000",
-    MOCK_GOLD_PURITY="0.9999",
-)
+@override_settings(DEBUG=True)
 class RazorpayServiceTests(TestCase):
     def test_monthly_pending_order_is_reused(self):
         _, account = make_account(email="pending@example.com")
@@ -308,6 +306,17 @@ class RazorpayServiceTests(TestCase):
         self.assertEqual(get_cash_balance(account), Decimal("5000.00"))
 
     def test_duplicate_webhook_creates_one_metal_allocation(self):
+        owner = get_user_model().objects.create_user(
+            username="webhook-rate-owner@example.com",
+            email="webhook-rate-owner@example.com",
+            password="owner-password-strong",
+            role=get_user_model().Role.OWNER,
+        )
+        publish_scheme_rate(
+            metal=SchemeRate.Metal.GOLD,
+            rate_per_gram=Decimal("12500.0000"),
+            published_by=owner,
+        )
         _, account = make_account(
             email="webhook-metal@example.com",
             mode=SchemeAccount.SavingsMode.GOLD,
@@ -346,6 +355,23 @@ class RazorpayServiceTests(TestCase):
         self.assertEqual(
             contribution.metal_allocation.quantity, Decimal("0.400000")
         )
+
+    def test_no_gold_rate_prevents_razorpay_order_creation(self):
+        _, account = make_account(
+            email="no-rate-order@example.com",
+            mode=SchemeAccount.SavingsMode.GOLD,
+        )
+        gateway = FakeRazorpayGateway()
+
+        with self.assertRaisesMessage(ValidationError, "has not been published"):
+            initiate_razorpay_contribution(
+                scheme_account=account,
+                amount=Decimal("5000.00"),
+                gateway=gateway,
+            )
+
+        self.assertEqual(gateway.order_calls, 0)
+        self.assertFalse(Contribution.objects.filter(scheme_account=account).exists())
 
 
 @override_settings(**RAZORPAY_SETTINGS)

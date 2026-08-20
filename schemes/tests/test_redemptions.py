@@ -12,12 +12,11 @@ from django.utils import timezone
 from schemes.models import (
     Contribution,
     MetalAllocation,
-    RateSnapshot,
+    SchemeRate,
     Redemption,
     SchemeAccount,
     SchemePlan,
 )
-from schemes.rates import MetalRateQuote
 from schemes.selectors import (
     get_cash_balance,
     get_customer_scheme_summary,
@@ -25,23 +24,6 @@ from schemes.selectors import (
     get_owner_liability_summary,
 )
 from schemes.services import complete_redemption, create_customer, enroll_customer
-
-
-class FixedRateProvider:
-    def get_rate(self, metal):
-        rate = (
-            Decimal("14000.0000")
-            if metal == RateSnapshot.Metal.GOLD
-            else Decimal("155.0000")
-        )
-        return MetalRateQuote(
-            metal=metal,
-            provider="redemption-test",
-            provider_timestamp=timezone.now(),
-            provider_rate=rate,
-            applied_rate=rate,
-            purity=Decimal("0.9999"),
-        )
 
 
 def make_redemption_fixture():
@@ -95,17 +77,22 @@ def make_paid_contribution(account, amount, reference):
 
 def make_metal_entitlement(account, quantity, reference):
     contribution = make_paid_contribution(account, Decimal("10000.00"), reference)
-    snapshot = RateSnapshot.objects.create(
+    scheme_rate = SchemeRate.objects.create(
         metal=account.savings_mode,
-        provider="redemption-test",
-        provider_timestamp=timezone.now(),
-        provider_rate=Decimal("12500.0000"),
-        applied_rate=Decimal("12500.0000"),
-        purity=Decimal("0.9999"),
+        rate_per_gram=Decimal("12500.0000"),
+        purity=(
+            Decimal("0.9999")
+            if account.savings_mode == SchemeRate.Metal.GOLD
+            else Decimal("0.9990")
+        ),
+        effective_from=timezone.now(),
     )
+    contribution.scheme_rate = scheme_rate
+    contribution.rate_locked_at = contribution.created_at
+    contribution.save(update_fields=["scheme_rate", "rate_locked_at"])
     return MetalAllocation.objects.create(
         contribution=contribution,
-        rate_snapshot=snapshot,
+        scheme_rate=scheme_rate,
         metal=account.savings_mode,
         quantity=quantity,
     )
@@ -264,7 +251,7 @@ class RedemptionServiceTests(TestCase):
                 self.assertEqual(redemption.silver_quantity, amount)
                 self.assertIsNone(redemption.gold_quantity)
 
-        summary = get_owner_liability_summary(rate_provider=FixedRateProvider())
+        summary = get_owner_liability_summary()
         self.assertEqual(summary.gold.quantity, Decimal("0.500000"))
         self.assertEqual(summary.silver.quantity, Decimal("50.000000"))
 
@@ -383,7 +370,7 @@ class RedemptionServiceTests(TestCase):
             redemption.save()
 
 
-@override_settings(DEBUG=True, PAYMENT_GATEWAY="mock", METAL_RATE_PROVIDER="mock")
+@override_settings(DEBUG=True, PAYMENT_GATEWAY="mock")
 class RedemptionViewTests(TestCase):
     def setUp(self):
         self.owner, self.customer, self.plan = make_redemption_fixture()

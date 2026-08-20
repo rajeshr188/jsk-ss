@@ -6,7 +6,7 @@ from .models import (
     Customer,
     MetalAllocation,
     PaymentWebhookEvent,
-    RateSnapshot,
+    SchemeRate,
     Redemption,
     RedemptionReversal,
     SchemeAccount,
@@ -75,6 +75,8 @@ class ContributionAdmin(admin.ModelAdmin):
         "frequency_rule_snapshot",
         "status",
         "payment_gateway",
+        "scheme_rate",
+        "rate_locked_at",
         "created_at",
     )
     list_filter = ("status", "payment_gateway", "contribution_period")
@@ -144,26 +146,26 @@ class PaymentWebhookEventAdmin(admin.ModelAdmin):
         return False
 
 
-@admin.register(RateSnapshot)
-class RateSnapshotAdmin(admin.ModelAdmin):
+@admin.register(SchemeRate)
+class SchemeRateAdmin(admin.ModelAdmin):
     list_display = (
         "id",
         "metal",
-        "provider",
-        "provider_rate",
-        "applied_rate",
+        "rate_per_gram",
         "purity",
-        "fetched_at",
+        "effective_from",
+        "published_by",
+        "published_at",
     )
-    list_filter = ("metal", "provider")
+    list_filter = ("metal",)
     readonly_fields = (
         "metal",
-        "provider",
-        "provider_timestamp",
-        "fetched_at",
-        "provider_rate",
-        "applied_rate",
+        "rate_per_gram",
         "purity",
+        "effective_from",
+        "published_by",
+        "published_at",
+        "notes",
     )
 
     def has_add_permission(self, request):
@@ -184,7 +186,7 @@ class MetalAllocationAdmin(admin.ModelAdmin):
     )
     readonly_fields = (
         "contribution",
-        "rate_snapshot",
+        "scheme_rate",
         "metal",
         "quantity",
         "created_at",
@@ -286,7 +288,7 @@ class AuditEventAdmin(admin.ModelAdmin):
         "scheme_plan",
         "scheme_account",
         "contribution",
-        "rate_snapshot",
+        "scheme_rate",
         "redemption",
         "details",
         "occurred_at",

@@ -9,7 +9,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from accounts.models import CustomUser
-from schemes.models import Contribution, Redemption, SchemeAccount, SchemePlan
+from schemes.models import Contribution, Redemption, SchemeAccount, SchemePlan, SchemeRate
 from schemes.selectors import (
     contribution_receipt_number,
     get_scheme_statement,
@@ -20,6 +20,7 @@ from schemes.services import (
     create_customer,
     enroll_customer,
     process_mock_contribution,
+    publish_scheme_rate,
     reverse_redemption,
 )
 
@@ -82,7 +83,7 @@ def make_paid_contribution(account, amount="100.00", *, status=Contribution.Stat
             Contribution.Status.PAID_UNALLOCATED,
         } else None,
         allocation_error=(
-            "Rate provider unavailable"
+            "Unexpected allocation failure"
             if status == Contribution.Status.PAID_UNALLOCATED
             else ""
         ),
@@ -92,9 +93,6 @@ def make_paid_contribution(account, amount="100.00", *, status=Contribution.Stat
 @override_settings(
     DEBUG=True,
     PAYMENT_GATEWAY="mock",
-    METAL_RATE_PROVIDER="mock",
-    MOCK_GOLD_RATE="12500.0000",
-    MOCK_SILVER_RATE="150.0000",
 )
 class ReceiptAndStatementTests(TestCase):
     def setUp(self):
@@ -105,6 +103,16 @@ class ReceiptAndStatementTests(TestCase):
             customer=self.customer,
             plan=self.plan,
             owner=self.owner,
+        )
+        publish_scheme_rate(
+            metal=SchemeRate.Metal.SILVER,
+            rate_per_gram=Decimal("150.0000"),
+            published_by=self.owner,
+        )
+        publish_scheme_rate(
+            metal=SchemeRate.Metal.GOLD,
+            rate_per_gram=Decimal("12500.0000"),
+            published_by=self.owner,
         )
 
     def test_cash_receipt_has_stable_number_and_required_fields(self):
@@ -239,7 +247,7 @@ class ReceiptAndStatementTests(TestCase):
         entry = statement.entries[0]
 
         self.assertEqual(entry.amount_inr, Decimal("300.00"))
-        self.assertEqual(entry.applied_rate, Decimal("150.0000"))
+        self.assertEqual(entry.scheme_rate, Decimal("150.0000"))
         self.assertEqual(entry.metal_allocation, Decimal("2.000000"))
         self.assertEqual(statement.remaining_entitlement, Decimal("2.000000"))
         self.assertEqual(statement.entitlement_unit, "g silver")
@@ -255,7 +263,7 @@ class ReceiptAndStatementTests(TestCase):
         self.assertEqual(statement.entries[0].reference, paid.gateway_reference)
 
 
-@override_settings(DEBUG=True, METAL_RATE_PROVIDER="mock")
+@override_settings(DEBUG=True)
 class OwnerDocumentExportTests(TestCase):
     def setUp(self):
         self.owner = make_owner()

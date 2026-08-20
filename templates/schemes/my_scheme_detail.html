@@ -13,7 +13,7 @@
   <div class="d-flex gap-2 d-print-none">
   <a class="btn btn-outline-dark" href="{% url 'schemes:scheme_statement' scheme_account.scheme_number %}">Print statement</a>
   {% if payment_gateway_enabled and scheme_account.effective_status != 'REDEEMED' %}
-    {% if scheme_account.savings_mode == 'CASH' or metal_rate_provider_enabled %}
+    {% if scheme_account.savings_mode == 'CASH' or current_scheme_rate %}
     <a class="btn btn-jsk" href="{% url 'schemes:pay_contribution' scheme_account.scheme_number %}">Pay now</a>
     {% endif %}
   {% endif %}
@@ -51,6 +51,7 @@
 <div class="card mb-4"><div class="card-body">
   <div class="text-muted">{{ scheme_account.get_savings_mode_display }} entitlement</div>
   <div class="display-6">{{ metal_balance|floatformat:6 }} g</div>
+  <div class="mt-3"><strong>Current Scheme Rate:</strong> {% if current_scheme_rate %}₹{{ current_scheme_rate.rate_per_gram|floatformat:4 }}/g{% else %}Not published{% endif %}</div>
   <small class="text-muted">Immutable allocations less completed metal redemptions.</small>
 </div></div>
 {% endif %}
@@ -58,7 +59,7 @@
 <h2 class="h4">Contribution history</h2>
 <div class="table-responsive">
   <table class="table align-middle">
-    <thead><tr><th>Date</th><th>Period</th><th>Amount</th><th>Entitlement</th><th>Rate</th><th>Status</th><th>Reference</th></tr></thead>
+    <thead><tr><th>Date</th><th>Period</th><th>Amount paid</th><th>Metal credited</th><th>Scheme Rate</th><th>Status</th><th>Reference</th></tr></thead>
     <tbody>
       {% for contribution in contributions %}
       <tr>
@@ -66,7 +67,7 @@
         <td>{{ contribution.contribution_period|date:'F Y' }}</td>
         <td>₹{{ contribution.amount|floatformat:2 }}</td>
         <td>{% if contribution.metal_allocation %}{{ contribution.metal_allocation.quantity|floatformat:6 }} g{% else %}—{% endif %}</td>
-        <td>{% if contribution.metal_allocation %}₹{{ contribution.metal_allocation.rate_snapshot.applied_rate|floatformat:4 }}/g{% else %}—{% endif %}</td>
+        <td>{% if contribution.metal_allocation %}₹{{ contribution.metal_allocation.scheme_rate.rate_per_gram|floatformat:4 }}/g{% elif contribution.scheme_rate %}₹{{ contribution.scheme_rate.rate_per_gram|floatformat:4 }}/g locked{% else %}—{% endif %}</td>
         <td>
           {% if contribution.status == 'PAID' %}<span class="badge text-bg-success">Paid</span>
           {% elif contribution.status == 'PAID_UNALLOCATED' %}<span class="badge text-bg-warning">Paid — allocation pending</span>

@@ -129,14 +129,7 @@ class RedemptionEligibilitySelectorTests(TestCase):
             )
 
 
-@override_settings(
-    DEBUG=True,
-    METAL_RATE_PROVIDER="mock",
-    MOCK_GOLD_RATE="14000.0000",
-    MOCK_GOLD_PURITY="0.9999",
-    MOCK_SILVER_RATE="155.0000",
-    MOCK_SILVER_PURITY="0.9990",
-)
+@override_settings(DEBUG=True)
 class RedemptionEligibilityViewTests(TestCase):
     def setUp(self):
         self.owner = get_user_model().objects.create_user(

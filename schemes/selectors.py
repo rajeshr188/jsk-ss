@@ -2,7 +2,6 @@ from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 
-from django.core.exceptions import ImproperlyConfigured
 from django.db.models import Case, Count, DecimalField, F, OuterRef, Q, Subquery, Sum, Value, When
 from django.db.models.functions import Coalesce
 from django.utils import timezone
@@ -14,11 +13,10 @@ from .models import (
     Customer,
     MetalAllocation,
     PaymentWebhookEvent,
-    RateSnapshot,
+    SchemeRate,
     Redemption,
     SchemeAccount,
 )
-from .rates import MetalRateProviderError, get_metal_rate_provider
 
 
 MONEY_QUANTUM = Decimal("0.01")
@@ -32,11 +30,9 @@ SUCCESSFUL_PAYMENT_STATUSES = (
 class MetalLiability:
     metal: str
     quantity: Decimal
-    reference_rate: Decimal | None = None
+    scheme_rate: Decimal | None = None
     indicative_exposure: Decimal | None = None
-    rate_provider: str | None = None
-    rate_timestamp: datetime | None = None
-    rate_error: str | None = None
+    rate_published_at: datetime | None = None
 
 
 @dataclass(frozen=True)
@@ -143,7 +139,7 @@ class StatementEntry:
     reference: str
     status: str
     amount_inr: Decimal | None = None
-    applied_rate: Decimal | None = None
+    scheme_rate: Decimal | None = None
     metal_allocation: Decimal | None = None
     redemption: Decimal | None = None
     restoration: Decimal | None = None
@@ -274,8 +270,33 @@ def get_customer_scheme_account(user, scheme_number):
     return get_customer_scheme_summary(user).filter(scheme_number=scheme_number).first()
 
 
+def get_current_scheme_rate(metal, at=None):
+    at = at or timezone.now()
+    return (
+        SchemeRate.objects.filter(metal=metal, effective_from__lte=at)
+        .select_related("published_by")
+        .order_by("-effective_from", "-published_at", "-pk")
+        .first()
+    )
+
+
+def get_current_scheme_rates(at=None):
+    return {
+        metal: get_current_scheme_rate(metal, at=at)
+        for metal in (SchemeRate.Metal.GOLD, SchemeRate.Metal.SILVER)
+    }
+
+
+def get_scheme_rate_history(limit=50):
+    return SchemeRate.objects.select_related("published_by").order_by(
+        "-effective_from", "-published_at", "-pk"
+    )[:limit]
+
+
 def get_contribution_history(scheme_account):
-    return scheme_account.contributions.select_related("metal_allocation__rate_snapshot")
+    return scheme_account.contributions.select_related(
+        "scheme_rate", "metal_allocation__scheme_rate"
+    )
 
 
 def get_redemption_history(scheme_account):
@@ -290,7 +311,8 @@ def get_owner_contributions():
         "scheme_account__customer",
         "scheme_account__plan",
         "metal_allocation",
-        "metal_allocation__rate_snapshot",
+        "scheme_rate",
+        "metal_allocation__scheme_rate",
     )
 
 
@@ -312,7 +334,7 @@ def get_owner_audit_events():
         "scheme_account",
         "scheme_account__customer",
         "contribution",
-        "rate_snapshot",
+        "scheme_rate",
         "redemption",
     )
 
@@ -425,8 +447,8 @@ def get_scheme_statement(scheme_account):
                 reference=contribution.gateway_reference or "",
                 status=contribution.get_status_display(),
                 amount_inr=contribution.amount,
-                applied_rate=(
-                    allocation.rate_snapshot.applied_rate if allocation else None
+                scheme_rate=(
+                    allocation.scheme_rate.rate_per_gram if allocation else None
                 ),
                 metal_allocation=allocation.quantity if allocation else None,
                 entitlement_unit=unit,
@@ -614,7 +636,7 @@ def get_outstanding_entitlement(scheme_account):
     return get_metal_balance(scheme_account)
 
 
-def get_owner_liability_summary(rate_provider=None):
+def get_owner_liability_summary():
     cash_summaries = (
         get_cash_bonus_summary(account)
         for account in SchemeAccount.objects.filter(
@@ -633,12 +655,12 @@ def get_owner_liability_summary(rate_provider=None):
         contribution__status=Contribution.Status.PAID,
     ).aggregate(
         gold=Coalesce(
-            Sum("quantity", filter=Q(metal=RateSnapshot.Metal.GOLD)),
+            Sum("quantity", filter=Q(metal=SchemeRate.Metal.GOLD)),
             Value(Decimal("0.000000")),
             output_field=DecimalField(max_digits=18, decimal_places=6),
         ),
         silver=Coalesce(
-            Sum("quantity", filter=Q(metal=RateSnapshot.Metal.SILVER)),
+            Sum("quantity", filter=Q(metal=SchemeRate.Metal.SILVER)),
             Value(Decimal("0.000000")),
             output_field=DecimalField(max_digits=18, decimal_places=6),
         ),
@@ -661,27 +683,12 @@ def get_owner_liability_summary(rate_provider=None):
     metal_totals["gold"] -= metal_redeemed["gold"]
     metal_totals["silver"] -= metal_redeemed["silver"]
 
-    try:
-        provider = rate_provider or get_metal_rate_provider()
-    except (ImproperlyConfigured, MetalRateProviderError) as error:
-        rate_error = str(error)
-        gold = MetalLiability(
-            metal=SchemeAccount.SavingsMode.GOLD,
-            quantity=metal_totals["gold"],
-            rate_error=rate_error,
-        )
-        silver = MetalLiability(
-            metal=SchemeAccount.SavingsMode.SILVER,
-            quantity=metal_totals["silver"],
-            rate_error=rate_error,
-        )
-    else:
-        gold = _get_current_metal_liability(
-            provider, SchemeAccount.SavingsMode.GOLD, metal_totals["gold"]
-        )
-        silver = _get_current_metal_liability(
-            provider, SchemeAccount.SavingsMode.SILVER, metal_totals["silver"]
-        )
+    gold = _get_current_metal_liability(
+        SchemeAccount.SavingsMode.GOLD, metal_totals["gold"]
+    )
+    silver = _get_current_metal_liability(
+        SchemeAccount.SavingsMode.SILVER, metal_totals["silver"]
+    )
 
     return OwnerLiabilitySummary(
         cash_principal=cash_principal,
@@ -692,21 +699,18 @@ def get_owner_liability_summary(rate_provider=None):
     )
 
 
-def _get_current_metal_liability(provider, metal, quantity):
-    try:
-        quote = provider.get_rate(metal)
-    except (ImproperlyConfigured, MetalRateProviderError) as error:
-        return MetalLiability(metal=metal, quantity=quantity, rate_error=str(error))
-
+def _get_current_metal_liability(metal, quantity):
+    scheme_rate = get_current_scheme_rate(metal)
+    if scheme_rate is None:
+        return MetalLiability(metal=metal, quantity=quantity)
     return MetalLiability(
         metal=metal,
         quantity=quantity,
-        reference_rate=quote.applied_rate,
-        indicative_exposure=(quantity * quote.applied_rate).quantize(
+        scheme_rate=scheme_rate.rate_per_gram,
+        indicative_exposure=(quantity * scheme_rate.rate_per_gram).quantize(
             MONEY_QUANTUM, rounding=ROUND_HALF_UP
         ),
-        rate_provider=quote.provider,
-        rate_timestamp=quote.provider_timestamp,
+        rate_published_at=scheme_rate.published_at,
     )
 
 
