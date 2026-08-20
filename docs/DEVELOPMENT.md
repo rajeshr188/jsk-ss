@@ -114,3 +114,9 @@ mismatched webhooks, `PAID_UNALLOCATED` records, database capacity/connection li
 and backup failures. Include `APP_RELEASE` in incident searches. External error
 aggregation and alert routing are deployment integrations and must be exercised
 before real customer funds are enabled.
+
+Production operations may run `python manage.py check_financial_exceptions`. It
+prints only the release and aggregate unresolved `PAID_UNALLOCATED`/failed-webhook
+counts, returns success when all counts are zero, and exits non-zero when owner action
+is required. The Linode systemd timer reports that result to an external heartbeat;
+do not expand the command to emit customer details, exception text, or provider IDs.

@@ -83,6 +83,13 @@ Production hardening — repository baseline complete; deployment exercises pend
 - The canonical runbook now preserves the exact Ubuntu/Docker/CA bootstrap procedure
   and the reviewed branch-to-PR/CI-to-immutable-image-to-Linode deployment, verification,
   configuration-reload, and rollback workflow for future releases.
+- The runbook also records post-merge local checkout hygiene: distinguish deployed
+  SHA from branch names, preserve unrelated work, fast-forward local `main`, retire
+  merged branches only after stabilization, and start each change on a fresh branch.
+- The Linode observability profile now defines privacy-reduced structured Caddy access
+  logs, Better Stack off-host retention and independent live/ready/5xx checks, Linode
+  capacity/backup notifications, and an aggregate financial-exception command driven
+  by a hardened five-minute systemd heartbeat timer.
 - Public About, Contact, Terms, Privacy, Cancellation and Refund, and showroom-only
   Shipping and Delivery pages expose consistent business identity and support details.
 - Public plans and INR pricing come from structured `SchemePlan` terms only when a
@@ -94,14 +101,19 @@ Production hardening — repository baseline complete; deployment exercises pend
 
 ## In progress
 
-- Environment-specific production proof: isolated database restoration, stable
-  domain/TLS/proxy validation, real email delivery, external alert routing, and
-  coordinated secret-rotation drills.
+- Environment-specific production proof: isolated database restoration, real email
+  delivery, external alert routing/exercises, and coordinated secret-rotation drills.
+  The stable owned domain/TLS/proxy path and repository observability foundation are
+  operational; Better Stack and Linode alert activation still require account-side
+  configuration and retained test evidence.
 - The Ubuntu 24.04 Compute Instance and three-node Managed PostgreSQL 16 cluster are
   provisioned in one region. Database/Cloud Firewall access controls and the database
   CA are in place, SSH access is verified, Docker is installed, and the owned domain
   returns liveness and PostgreSQL readiness `200` through Caddy-managed HTTPS;
   production email, external alerts, and provider validation remain.
+- Production release `0545e3ced606c0d31ddec27ba70bb768f952c6d6` is healthy with
+  migration `schemes.0009_schemeplan_publicly_listed` applied. All public compliance
+  routes return `200`, and an owner-reviewed active plan is publicly listed.
 
 ## Known limitations
 
@@ -111,8 +123,9 @@ Production hardening — repository baseline complete; deployment exercises pend
   payment, reconciliation, refund, dispute, monitoring, and secret-rotation procedures exist.
 - Temporary quick-tunnel URLs have no uptime guarantee; deployment requires a stable,
   owned HTTPS endpoint and synchronized webhook-secret configuration.
-- Repository health checks and logging now exist, but an actual production platform
-  must still retain logs and exercise uptime/error/financial-exception alerts.
+- Repository health checks, privacy-reduced edge access logs, and a financial-
+  exception heartbeat now exist, but Better Stack/Linode must still be configured to
+  retain logs and exercise uptime, 5xx, capacity, backup, TLS, and financial alerts.
 - Backup and rollback procedures are documented, but the provisioned managed cluster
   has not yet completed an evidenced isolated restoration/reconciliation drill.
 - The application records redemptions but does not execute payouts, move inventory,
@@ -142,7 +155,8 @@ Production hardening — repository baseline complete; deployment exercises pend
 ## Verification
 
 - PostgreSQL 16 migrations applied successfully.
-- 144 tests pass, including public-policy route/link coverage, explicit active-plan
+- 145 tests pass, including aggregate financial-exception monitoring with redacted
+  output, public-policy route/link coverage, explicit active-plan
   publishing and INR pricing visibility, health/readiness failure sanitization, deploy-configuration
   gates, document access, receipt stability, unallocated disclosure, CSV
   denomination/formula safety, audit immutability, exception classification,
@@ -150,9 +164,8 @@ Production hardening — repository baseline complete; deployment exercises pend
   redemption precision, over-redemption protection,
   idempotency, partial/full closure, denomination separation, access control,
   PostgreSQL constraints, and all prior regressions.
-- Migrations through `schemes.0008_auditevent_redemptionreversal` are applied to the
-  current deployment. `schemes.0009_schemeplan_publicly_listed` is generated and
-  regression-tested; it must be applied during the next release.
+- Migrations through `schemes.0009_schemeplan_publicly_listed` are applied to the
+  current production deployment and the local PostgreSQL environment.
 - Migration drift check reports no changes.
 - Django system check and migration drift check pass.
 - Production deployment checks pass with a synthetic secure configuration and no
@@ -168,7 +181,9 @@ Production hardening — repository baseline complete; deployment exercises pend
   migrations, drift/system/deploy checks, the regression suite, static collection,
   and an independent production-image build.
 - The Linode production Compose model passes `docker compose config --quiet`, and
-  Caddy 2.11.4 validates the exact apex-domain and `www` redirect configuration.
+  Caddy 2.11.4 validates the exact apex-domain, `www` redirect, masked JSON access
+  log, and release-label configuration. The financial heartbeat shell script passes
+  a non-executing syntax check.
 - The deployed Linode application returns `200` from both liveness and PostgreSQL
   readiness over `https://jaishrikrishnajewellery.com`; the valid ACME contact and
   Caddy-managed certificate corrected the initial placeholder-contact failure.
@@ -197,10 +212,9 @@ Production hardening — repository baseline complete; deployment exercises pend
 
 ## Next recommended step
 
-Review the new customer-facing policies, create a PR, pass required CI, deploy the
-immutable image, apply migration `schemes.0009`, and explicitly publish at least one
-reviewed active plan before submitting the URLs to Razorpay. Then retain the owned
-DNS/TLS evidence and complete
+Submit the verified public website and policy URLs to Razorpay, while keeping live
+keys disabled until live-mode operating procedures are approved. Retain the owned
+DNS/TLS and release evidence and complete
 `FW-PROD-001` through `FW-PROD-003`: a recorded database restore/reconciliation drill,
 stable owned HTTPS plus alerts, real email delivery, and secret-rotation rehearsal.
 Separately validate GoldAPI privately and define Razorpay live-mode reconciliation,

@@ -23,23 +23,27 @@ here are not implemented behavior and do not relax the financial invariants in
   Managed PostgreSQL provides daily retained backups and forked-cluster restoration;
   complete and record the actual isolated restore with denomination-specific
   liability reconciliation after the cluster exists.
-- **FW-PROD-002 — Stable edge and observability (Linode configuration prepared):**
-  Deploy Caddy to the owned `jaishrikrishnajewellery.com` host, validate automatic
-  HTTPS/proxy trust and staged HSTS, then select durable log retention and exercise
-  external alerts for 5xx/readiness, webhook failures, allocation exceptions,
-  database capacity, certificate renewal, and backup failure.
+- **FW-PROD-002 — Observability foundation implemented; activation remains:** Caddy
+  serves the owned domain with automatic HTTPS, verified proxy trust, masked
+  structured access logs, and release labels. The repository includes an aggregate
+  financial-exception check plus a five-minute external-heartbeat systemd timer, and
+  the runbook selects Better Stack for external checks/log retention and Linode for
+  capacity/backup events. Configure the two provider accounts and retain exercised
+  evidence for 5xx/readiness, failed webhooks, allocation exceptions, database
+  capacity, certificate renewal, backup failure, escalation, and retention before
+  marking this item complete.
 - **FW-PROD-003 — Delivery and rotation drill:** Verify real password-reset email
   delivery and rehearse separate Django, database, email, GoldAPI, Razorpay API, and
   Razorpay webhook secret rotations without exposing credentials.
 - **FW-PROD-004 — Image-build confirmation (completed locally 2026-08-18):** The
   hardened image builds with production static assets and runs as the unprivileged
   `app` user. The same build is an independent CI gate on the next GitHub run.
-- **FW-PROD-005 — Public-policy approval and live review:** Public business,
-  contact, privacy, terms, cancellation/refund, fulfilment, and database-backed
-  pricing pages are implemented. Before submitting them as binding business terms,
-  obtain appropriate Indian legal/accounting review, verify the displayed contact
-  channels, publish at least one reviewed active plan, and confirm the manual
-  payment-error refund process can meet the stated response timelines.
+- **FW-PROD-005 — Public-policy deployment completed; formal review remains:** Public
+  business, contact, privacy, terms, cancellation/refund, fulfilment, and
+  database-backed pricing pages are deployed; the displayed contact channels and one
+  owner-reviewed active plan have been verified. Before treating the pages as binding
+  business terms, obtain appropriate Indian legal/accounting review and confirm the
+  manual payment-error refund process can meet the stated response timelines.
 
 ## Milestone 9 — cash bonus
 
@@ -99,9 +103,9 @@ here are not implemented behavior and do not relax the financial invariants in
 - **FW-PAY-002:** Add expiry/cancellation and reconciliation handling for abandoned
   Razorpay orders, including flexible-frequency attempts, while retaining a safe
   resume path and preserving provider references for audit.
-- **FW-PAY-003:** Replace development quick tunnels with a stable owned HTTPS endpoint;
-  document webhook-secret synchronization and rotation, retry behavior, monitoring,
-  and recovery for invalid or delayed webhook deliveries.
+- **FW-PAY-003:** The stable owned HTTPS endpoint has replaced development quick
+  tunnels. Complete webhook-secret synchronization and rotation evidence, retry
+  behavior, monitoring, and recovery for invalid or delayed webhook deliveries.
 - **FW-SETTLE-001:** Integrate actual payout, metal handover, or point-of-sale
   confirmation if the business later requires the application to execute rather
   than merely record settlement.

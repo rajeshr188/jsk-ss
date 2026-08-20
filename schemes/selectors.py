@@ -119,6 +119,17 @@ class OwnerExceptionItem:
 
 
 @dataclass(frozen=True)
+class FinancialExceptionCounts:
+    paid_unallocated: int
+    failed_webhooks: int
+    mismatched_webhooks: int
+
+    @property
+    def total(self):
+        return self.paid_unallocated + self.failed_webhooks
+
+
+@dataclass(frozen=True)
 class ContributionReceiptSummary:
     receipt_number: str
     contribution: Contribution
@@ -349,6 +360,22 @@ def get_owner_exception_queue():
             )
         )
     return tuple(sorted(items, key=lambda item: item.detected_at, reverse=True))
+
+
+def get_financial_exception_counts():
+    webhook_counts = PaymentWebhookEvent.objects.filter(
+        status=PaymentWebhookEvent.Status.FAILED
+    ).aggregate(
+        failed=Count("pk"),
+        mismatched=Count("pk", filter=Q(error__icontains="match")),
+    )
+    return FinancialExceptionCounts(
+        paid_unallocated=Contribution.objects.filter(
+            status=Contribution.Status.PAID_UNALLOCATED
+        ).count(),
+        failed_webhooks=webhook_counts["failed"],
+        mismatched_webhooks=webhook_counts["mismatched"],
+    )
 
 
 def contribution_receipt_number(contribution):

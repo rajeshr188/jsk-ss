@@ -1,0 +1,20 @@
+[Unit]
+Description=Jai Shri Krishna financial exception heartbeat
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=deploy
+Group=deploy
+WorkingDirectory=/opt/jsk/app
+EnvironmentFile=/opt/jsk/secrets/observability.env
+ExecStart=/usr/bin/bash /opt/jsk/app/deploy/check-financial-exceptions.sh
+TimeoutStartSec=90s
+
+# The check needs Docker access but no interactive session or writable home.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
