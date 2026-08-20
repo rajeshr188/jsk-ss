@@ -38,7 +38,10 @@ This is the canonical source for stable business rules.
 - **METAL-002 / FIN-003:** A Scheme Rate used by an allocation is immutable.
 - **METAL-003 / FIN-004:** Historical allocated grams never change when a newer Scheme Rate is published.
 - **METAL-004:** Allocation quantity equals INR contribution divided by the locked Scheme Rate per gram, rounded to 6 decimal places using `ROUND_HALF_UP`.
-- **METAL-005:** `PAID_UNALLOCATED` is reserved for an unexpected allocation exception after a verified payment; it is not a missing-rate workflow. Retry must reuse the contribution's original lock.
+- **METAL-005:** A verified metal payment is durably recorded as `PAID_UNALLOCATED`
+  until its allocation is stored, then transitions to `PAID`. This recovery state
+  covers allocation exceptions and process interruption; it is not a missing-rate
+  workflow. Retry must reuse the contribution's original lock.
 - **RATE-001:** Only a manually published Jai Shri Krishna Jewellery `SchemeRate` may be used for a new gold or silver allocation.
 - **RATE-002:** A metal contribution must lock its current applicable `SchemeRate` before mock payment initiation or Razorpay order creation.
 - **RATE-003:** Publishing a new `SchemeRate` never changes an already locked contribution.

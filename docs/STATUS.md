@@ -28,8 +28,9 @@ Production hardening — repository baseline complete; deployment exercises pend
 - MVP Alpha live workflow verified across owner setup, all three savings modes, customer payments and entitlements, and owner liability reconciliation.
 - External metal-rate providers, API credentials, provider settings, quote caching, and
   provider-failure allocation paths removed from the authoritative workflow.
-- `PAID_UNALLOCATED` retained only for unexpected post-payment allocation exceptions;
-  owner retry is idempotent and reuses the original locked Scheme Rate.
+- Verified metal payments are durably `PAID_UNALLOCATED` until allocation succeeds,
+  so exceptions or process interruption remain visible; owner retry is idempotent
+  and reuses the original locked Scheme Rate.
 - Owner alerts, diagnostics, and an authorized idempotent allocation-retry action.
 - Future public-signup requirements documented under `AUTH-*` domain rules.
 - Razorpay test-mode order creation and customer Standard Checkout flow.
@@ -165,9 +166,11 @@ Production hardening — repository baseline complete; deployment exercises pend
 ## Verification
 
 - PostgreSQL 16 migrations applied successfully.
-- 137 tests pass, including owner-only Scheme Rate publication, large-change
+- 139 tests pass, including owner-only Scheme Rate publication, large-change
   confirmation, no-rate payment blocking, pre-order locking, rate-change race
-  behavior, historical immutability, aggregate financial-exception monitoring with
+  behavior, durable verified-payment/allocation transition, production-shaped
+  `0009` to `0010` history backfill and blocker checks, historical immutability,
+  aggregate financial-exception monitoring with
   redacted output, public-policy route/link coverage, explicit active-plan
   publishing and INR pricing visibility, health/readiness failure sanitization,
   deploy-configuration gates, document access, receipt stability, unallocated disclosure, CSV
@@ -204,7 +207,8 @@ Production hardening — repository baseline complete; deployment exercises pend
 - Live-server checkpoint passes for owner and customer login, UI-created plan/customer/CASH-GOLD-SILVER enrolments, three mock payments, customer entitlements, owner contribution visibility, and exact liability/activity deltas.
 - Manual Scheme Rate regressions verify owner-only gold/silver publication, validation,
   append-only history, latest-applicable selection, large-change confirmation,
-  no-rate payment blocking, pre-order locking, and old-lock/new-rate race behavior.
+  GOLD/SILVER no-rate payment blocking with unaffected CASH orders, pre-order locking,
+  old-lock/new-rate race behavior, legacy history preservation, and deployment blockers.
 - Milestone 7 live-HTTP smoke passes for owner forecast/detail views and customer redemption-eligible guidance; the database status remains `ACTIVE`, and all disposable records are removed.
 - Milestone 8 authenticated request smoke passes with CSRF enforcement: an owner
   records partial cash and final jewellery settlement, the customer sees both

@@ -25,8 +25,10 @@ applicable publication for that metal; there is no mutable active flag.
 The current `SchemeRate` is locked to a pending metal contribution before mock
 payment initiation or Razorpay order creation. Payment confirmation and webhook
 processing allocate only from that lock. Without an applicable rate, the system
-creates no payable metal contribution or order. `PAID_UNALLOCATED` remains only for
-unexpected post-payment allocation exceptions, and retry reuses the original lock.
+creates no payable metal contribution or order. A verified metal payment is first
+durably recorded as `PAID_UNALLOCATED` and becomes `PAID` only after allocation;
+exceptions or process interruption therefore remain visible, and retry reuses the
+original lock.
 
 Migration `schemes.0010_manual_scheme_rates` converts existing `RateSnapshot` rows
 to historical `SchemeRate` rows, links existing allocations and contributions, and

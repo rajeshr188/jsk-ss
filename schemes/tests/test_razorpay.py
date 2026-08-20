@@ -238,8 +238,9 @@ class RazorpayGatewayTests(TestCase):
 
 @override_settings(DEBUG=True)
 class RazorpayServiceTests(TestCase):
-    def test_monthly_pending_order_is_reused(self):
+    def test_monthly_pending_cash_order_is_reused_without_scheme_rate(self):
         _, account = make_account(email="pending@example.com")
+        self.assertEqual(account.savings_mode, SchemeAccount.SavingsMode.CASH)
         gateway = FakeRazorpayGateway()
         first = initiate_razorpay_contribution(
             scheme_account=account, amount=Decimal("5000.00"), gateway=gateway
@@ -356,22 +357,26 @@ class RazorpayServiceTests(TestCase):
             contribution.metal_allocation.quantity, Decimal("0.400000")
         )
 
-    def test_no_gold_rate_prevents_razorpay_order_creation(self):
-        _, account = make_account(
-            email="no-rate-order@example.com",
-            mode=SchemeAccount.SavingsMode.GOLD,
-        )
-        gateway = FakeRazorpayGateway()
+    def test_no_metal_rate_prevents_gold_and_silver_razorpay_orders(self):
+        for metal in (SchemeAccount.SavingsMode.GOLD, SchemeAccount.SavingsMode.SILVER):
+            with self.subTest(metal=metal):
+                _, account = make_account(
+                    email=f"no-rate-{metal.lower()}-order@example.com",
+                    mode=metal,
+                )
+                gateway = FakeRazorpayGateway()
 
-        with self.assertRaisesMessage(ValidationError, "has not been published"):
-            initiate_razorpay_contribution(
-                scheme_account=account,
-                amount=Decimal("5000.00"),
-                gateway=gateway,
-            )
+                with self.assertRaisesMessage(ValidationError, "has not been published"):
+                    initiate_razorpay_contribution(
+                        scheme_account=account,
+                        amount=Decimal("5000.00"),
+                        gateway=gateway,
+                    )
 
-        self.assertEqual(gateway.order_calls, 0)
-        self.assertFalse(Contribution.objects.filter(scheme_account=account).exists())
+                self.assertEqual(gateway.order_calls, 0)
+                self.assertFalse(
+                    Contribution.objects.filter(scheme_account=account).exists()
+                )
 
 
 @override_settings(**RAZORPAY_SETTINGS)

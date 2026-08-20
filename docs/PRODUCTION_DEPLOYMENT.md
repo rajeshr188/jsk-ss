@@ -882,19 +882,34 @@ requires its own maintenance and recovery procedure; do not apply it while the o
 image serves traffic.
 
 Before applying `schemes.0010_manual_scheme_rates`, confirm the old architecture has
-no unresolved paid metal allocation and no open metal Razorpay order. Complete or
-reconcile those records on the old release first. The migration intentionally stops
-instead of inventing a rate if either count is non-zero:
+no verified metal payment without an allocation and no open metal Razorpay order.
+This deliberately includes both `PAID` and `PAID_UNALLOCATED`: an interrupted legacy
+worker could have committed payment confirmation before recording the allocation.
+Complete or reconcile those records on the old release first. The migration
+intentionally stops instead of inventing a rate if either count is non-zero:
 
 ```bash
 docker compose --env-file .env.production -f compose.production.yml \
   run --rm --no-deps web python manage.py shell -c \
-  "from schemes.models import Contribution; modes=['GOLD','SILVER']; print('paid_unallocated=', Contribution.objects.filter(status='PAID_UNALLOCATED', scheme_account__savings_mode__in=modes).count()); print('open_metal_orders=', Contribution.objects.filter(status='PENDING', payment_gateway='razorpay', gateway_order_id__isnull=False, scheme_account__savings_mode__in=modes).count())"
+  "from schemes.models import Contribution; modes=['GOLD','SILVER']; print('verified_metal_without_allocation=', Contribution.objects.filter(status__in=['PAID','PAID_UNALLOCATED'], scheme_account__savings_mode__in=modes, metal_allocation__isnull=True).count()); print('open_metal_orders=', Contribution.objects.filter(status='PENDING', payment_gateway='razorpay', gateway_order_id__isnull=False, scheme_account__savings_mode__in=modes).count())"
 ```
 
 Record both zero results with the release evidence. This migration renames/removes
 provider-era schema, so the previous image is not schema-compatible after it runs;
 use the reviewed maintenance window, database recovery point, and roll-forward plan.
+After recording the preflight, prevent a new payment or allocation from racing the
+migration by stopping public traffic and the old web process:
+
+```bash
+docker compose --env-file .env.production -f compose.production.yml stop caddy
+docker compose --env-file .env.production -f compose.production.yml stop web
+docker compose --env-file .env.production -f compose.production.yml ps
+```
+
+Confirm both services are stopped. Keep them stopped until the migration succeeds and
+the candidate web container is healthy. If migration fails, do not start the candidate;
+retain the failed output, restore the recorded previous `APP_IMAGE` and `APP_RELEASE`,
+start the previous web and Caddy services, and follow the incident/recovery procedure.
 
 ### 6. Apply once, deploy, and verify
 
@@ -906,19 +921,25 @@ docker compose --env-file .env.production -f compose.production.yml \
   run --rm --no-deps web python manage.py migrate --noinput
 ```
 
-On the current single-host topology, expect a brief maintenance window. Replace the
-web container, wait until it is healthy, then recreate Caddy so its upstream resolution
-cannot retain the prior container address. Caddy's named volumes preserve certificates:
+On the current single-host topology, expect a brief maintenance window. Start the
+candidate web container while Caddy remains stopped, and wait until `web` reports
+healthy. Do not restore public traffic before that health gate:
 
 ```bash
 docker compose --env-file .env.production -f compose.production.yml \
   up -d --no-deps web
 docker compose --env-file .env.production -f compose.production.yml ps
+```
+
+Repeat `ps` until `web` is healthy. Then recreate Caddy so its upstream resolution
+cannot retain the prior container address. Caddy's named volumes preserve certificates:
+
+```bash
 docker compose --env-file .env.production -f compose.production.yml \
   up -d --force-recreate --no-deps caddy
 ```
 
-Do not proceed until `web` reports healthy. Verify the public release and recent logs:
+Verify the public release and recent logs:
 
 ```bash
 curl --fail-with-body https://jaishrikrishnajewellery.com/health/live/

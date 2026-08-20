@@ -14,16 +14,21 @@ def backfill_locked_scheme_rates(apps, schema_editor):
     SchemeRate.objects.filter(notes="").update(
         notes="Historical rate migrated from the former provider-backed architecture."
     )
-    for allocation in MetalAllocation.objects.select_related("contribution").iterator():
+    for allocation in MetalAllocation.objects.select_related(
+        "contribution", "scheme_rate"
+    ).iterator():
         Contribution.objects.filter(pk=allocation.contribution_id).update(
             scheme_rate_id=allocation.scheme_rate_id,
-            rate_locked_at=allocation.contribution.created_at,
+            # The legacy architecture selected its rate during allocation rather than
+            # at contribution creation. The former fetched_at value (now published_at)
+            # is therefore the closest truthful timestamp for the historical lock.
+            rate_locked_at=allocation.scheme_rate.published_at,
         )
 
-    unresolved_paid = Contribution.objects.filter(
-        status="PAID_UNALLOCATED",
-        scheme_rate__isnull=True,
+    verified_without_allocation = Contribution.objects.filter(
+        status__in=["PAID", "PAID_UNALLOCATED"],
         scheme_account__savings_mode__in=["GOLD", "SILVER"],
+        metal_allocation__isnull=True,
     ).count()
     open_legacy_orders = Contribution.objects.filter(
         status="PENDING",
@@ -32,10 +37,11 @@ def backfill_locked_scheme_rates(apps, schema_editor):
         scheme_rate__isnull=True,
         scheme_account__savings_mode__in=["GOLD", "SILVER"],
     ).count()
-    if unresolved_paid or open_legacy_orders:
+    if verified_without_allocation or open_legacy_orders:
         raise RuntimeError(
             "Manual Scheme Rate migration blocked: reconcile legacy metal records "
-            f"before deployment (paid_unallocated={unresolved_paid}, "
+            "before deployment "
+            f"(verified_metal_without_allocation={verified_without_allocation}, "
             f"open_razorpay_orders={open_legacy_orders})."
         )
 

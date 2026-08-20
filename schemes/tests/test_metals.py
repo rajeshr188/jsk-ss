@@ -107,13 +107,18 @@ class MetalAllocationTests(TestCase):
             gateway_reference="mock_locked_rate",
             verified=True,
         )
+        self.assertEqual(contribution.status, Contribution.Status.PAID_UNALLOCATED)
+        self.assertFalse(MetalAllocation.objects.filter(contribution=contribution).exists())
+
         allocation = allocate_metal(contribution=contribution)
+        contribution.refresh_from_db()
         next_contribution = initiate_contribution(
             scheme_account=account,
             amount=Decimal("10000.00"),
             payment_gateway="mock",
         )
 
+        self.assertEqual(contribution.status, Contribution.Status.PAID)
         self.assertEqual(contribution.scheme_rate, first_rate)
         self.assertEqual(allocation.scheme_rate, first_rate)
         self.assertEqual(allocation.quantity, Decimal("0.800000"))
@@ -145,15 +150,22 @@ class MetalAllocationTests(TestCase):
         with self.assertRaises(ValidationError):
             allocation.save()
 
-    def test_no_published_rate_blocks_contribution_before_payment(self):
-        account = make_metal_account(suffix="no-rate")
-        with self.assertRaisesMessage(ValidationError, "has not been published"):
-            initiate_contribution(
-                scheme_account=account,
-                amount=Decimal("10000.00"),
-                payment_gateway="mock",
-            )
-        self.assertFalse(Contribution.objects.filter(scheme_account=account).exists())
+    def test_no_published_rate_blocks_gold_and_silver_before_payment(self):
+        for metal in (SchemeAccount.SavingsMode.GOLD, SchemeAccount.SavingsMode.SILVER):
+            with self.subTest(metal=metal):
+                account = make_metal_account(
+                    metal=metal,
+                    suffix=f"no-rate-{metal.lower()}",
+                )
+                with self.assertRaisesMessage(ValidationError, "has not been published"):
+                    initiate_contribution(
+                        scheme_account=account,
+                        amount=Decimal("10000.00"),
+                        payment_gateway="mock",
+                    )
+                self.assertFalse(
+                    Contribution.objects.filter(scheme_account=account).exists()
+                )
 
     def test_failed_metal_payment_creates_no_allocation(self):
         self.publish(SchemeRate.Metal.GOLD, "12500.0000")

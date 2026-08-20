@@ -116,7 +116,7 @@ Documents are generated on demand from source records and are acknowledgements, 
 
 Only an active owner may publish gold or silver Scheme Rates. Each publication creates a new immutable timestamped record with the established fineness; it never edits an earlier publication. The owner screen shows current rates, recent history, and the difference from the previous rate. Changes greater than 5% require an additional confirmation.
 
-For a metal contribution, the current applicable Scheme Rate is locked to the pending contribution before mock payment initiation or Razorpay order creation. Payment confirmation and webhook processing calculate the allocation only from that lock, so a later publication cannot change an in-progress checkout or historical grams. If no applicable rate exists, no payment or Razorpay order is created. `PAID_UNALLOCATED` is retained only for unexpected allocation exceptions after a verified payment, not for rate retrieval.
+For a metal contribution, the current applicable Scheme Rate is locked to the pending contribution before mock payment initiation or Razorpay order creation. Payment confirmation and webhook processing calculate the allocation only from that lock, so a later publication cannot change an in-progress checkout or historical grams. If no applicable rate exists, no payment or Razorpay order is created. A verified metal payment is durably `PAID_UNALLOCATED` until its allocation is stored, then becomes `PAID`; this makes exceptions and process interruption recoverable without using the state for rate retrieval.
 
 ## Razorpay test mode
 

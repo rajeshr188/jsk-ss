@@ -14,7 +14,10 @@
 - Webhook handlers must use the provider event ID for idempotency and route entitlement changes through the same contribution services as browser callbacks.
 - Publish Scheme Rates only through `publish_scheme_rate`; owner authorization, positive `Decimal` validation, fixed metal fineness, publication metadata, and audit recording belong in that service.
 - A gold/silver contribution must lock the current applicable Scheme Rate before any payment or Razorpay order is created. Allocation must use only that lock. Never query a current rate after payment confirmation to calculate historical entitlement.
-- `PAID_UNALLOCATED` is a narrow unexpected post-payment exception state. Owner retry must call the idempotent allocation service and reuse the original locked Scheme Rate rather than editing records or selecting a newer rate.
+- A verified metal payment is durably `PAID_UNALLOCATED` until allocation succeeds.
+  The state covers allocation exceptions and process interruption. Owner retry must
+  call the idempotent allocation service and reuse the original locked Scheme Rate
+  rather than editing records or selecting a newer rate.
 - Redemption writes must go through `complete_redemption`, lock the scheme account, carry an idempotency key, and append an immutable record. Never edit historical contributions or allocations to represent settlement.
 - Redemption corrections must go through `reverse_redemption`; append one immutable compensating record and exclude it through selectors rather than changing the original redemption.
 - Sensitive owner workflows must append an `AuditEvent` in the same transaction as the supported mutation. Retain a stable actor label, timestamp, reason, target, and compact before/after or outcome details; do not store secrets or full provider payloads.

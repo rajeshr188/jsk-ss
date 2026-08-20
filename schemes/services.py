@@ -409,7 +409,15 @@ def confirm_contribution(
         raise ValidationError("A verified gateway reference is required.")
 
     validate_contribution_confirmation_allowed(contribution)
-    contribution.status = Contribution.Status.PAID
+    is_metal_contribution = contribution.scheme_account.savings_mode in {
+        SchemeAccount.SavingsMode.GOLD,
+        SchemeAccount.SavingsMode.SILVER,
+    }
+    contribution.status = (
+        Contribution.Status.PAID_UNALLOCATED
+        if is_metal_contribution
+        else Contribution.Status.PAID
+    )
     contribution.gateway_reference = gateway_reference
     contribution.gateway_signature = gateway_signature
     contribution.paid_at = timezone.now()
@@ -573,9 +581,10 @@ def _apply_contribution_entitlement(contribution):
         try:
             retry_metal_allocation(contribution=contribution)
         except EXPECTED_ALLOCATION_ERRORS:
-            return Contribution.objects.select_related("scheme_account").get(
-                pk=contribution.pk
-            )
+            pass
+        return Contribution.objects.select_related("scheme_account").get(
+            pk=contribution.pk
+        )
     return contribution
 
 
