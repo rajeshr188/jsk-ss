@@ -320,12 +320,164 @@ Maintain both controls and test them independently.
 
 ### Linode monitoring boundary
 
-Use Akamai Cloud Pulse for available database/platform metrics and an external HTTPS
-monitor for `/health/ready/`. The Compose profile bounds local Docker logs, but local
-rotation is not durable centralized retention. Before go-live, select and configure
-a log/error service and alert destination for the signals in this guide. Likewise,
-select an SMTP provider and prove password-reset delivery. These choices cannot be
-completed merely by provisioning the Linode instance.
+The selected baseline is Better Stack for independent HTTPS monitoring, Docker log
+retention, incident routing, and the financial-exception heartbeat. Akamai Cloud
+Pulse and Cloud Manager remain authoritative for Managed PostgreSQL and Compute
+metrics and provider backup events. This split avoids making an application outage
+invisible to the system that is supposed to detect it. An equivalent external
+service may replace Better Stack only if it supports the same checks, retained logs,
+explicit failure heartbeats, escalation, and exercised evidence.
+
+The Compose profile still bounds local Docker logs so a collector outage cannot fill
+the host disk. Local rotation is not durable retention. Before sending logs off-host,
+approve the data region and retention period. A 30-day searchable baseline is
+recommended for incident investigation; this is operational evidence, not a
+substitute for immutable financial records or the separately approved legal record
+retention policy. Caddy access logs mask IPv4 addresses to `/24`, IPv6 addresses to
+`/48`, remove user-agent headers, retain the release label, and rely on Caddy's
+default credential-header redaction. Request/response bodies, cookies, payment
+signatures, and database URLs must never be added.
+
+### Configure Better Stack monitoring and retained logs
+
+1. Create a Better Stack team protected by multi-factor authentication. Name a
+   primary incident responder and a backup responder using private operational
+   contact details. Do not assume that the public shop support number is an on-call
+   number.
+2. In **Telemetry -> Sources**, connect a Docker source named `jsk-production`.
+   Choose the approved region and retention period, then copy its source token. On
+   the Compute Instance, keep the token out of shell history while using Better
+   Stack's generated Vector installer:
+
+   ```bash
+   read -rsp "Better Stack source token: " JSK_BS_SOURCE_TOKEN
+   echo
+   curl -fsS \
+     "https://telemetry.betterstack.com/setup-vector/docker/${JSK_BS_SOURCE_TOKEN}" \
+     -o /tmp/jsk-vector-install.sh
+   unset JSK_BS_SOURCE_TOKEN
+   less /tmp/jsk-vector-install.sh
+   sudo bash /tmp/jsk-vector-install.sh
+   rm /tmp/jsk-vector-install.sh
+   sudo usermod -aG docker vector
+   sudo systemctl restart vector
+   sudo systemctl --no-pager --full status vector
+   ```
+
+   The generated `/etc/vector` configuration contains ingestion credentials; keep it
+   root-controlled and never commit it. In Live tail, confirm both `web` and `edge`
+   container logs arrive and that `com.jsk.release`/the Caddy `release` field matches
+   the deployed `APP_RELEASE`. Search for a known health request, then verify no
+   cookie, authorization header, signature, full webhook body, or unmasked client IP
+   is present.
+3. Create two HTTP monitors using the production hostname:
+
+   | Monitor | URL | Expected result | Initial timing |
+   | --- | --- | --- | --- |
+   | `JSK production liveness` | `https://jaishrikrishnajewellery.com/health/live/` | HTTP 200 and body contains `"status": "ok"` | 60-second checks; alert after 2 minutes; recover after 2 minutes |
+   | `JSK production readiness` | `https://jaishrikrishnajewellery.com/health/ready/` | HTTP 200 and body contains `"status": "ok"` | 60-second checks; alert after 2 minutes; recover after 2 minutes |
+
+   Do not match a fixed release value because a valid deployment changes it. Enable
+   TLS certificate-expiry notification at 14 days and domain-expiry notification at
+   30 days on the liveness monitor. Assign the production escalation policy to both.
+4. Create a log alert named `JSK sustained edge 5xx`. Use the Caddy access-log schema
+   shown in Live tail (parse the JSON `message` first if the collector has not done
+   so) and select production `edge` events whose HTTP status is 500 through 599.
+   Start with 5 events in 5 minutes and tune only from measured traffic. Include the
+   release, status, method, and path in the incident; do not include headers or bodies.
+5. Create a heartbeat named `JSK financial exceptions`, expected every 5 minutes
+   with a 2-minute grace period, and assign the production escalation policy. Store
+   its secret URL separately from the application environment:
+
+   ```bash
+   sudo install -o root -g root -m 0600 /dev/null \
+     /opt/jsk/secrets/observability.env
+   sudoedit /opt/jsk/secrets/observability.env
+   ```
+
+   The file contains one line and must never be committed or printed:
+
+   ```dotenv
+   FINANCIAL_EXCEPTIONS_HEARTBEAT_URL=https://uptime.betterstack.com/api/v1/heartbeat/REPLACE_WITH_SECRET_TOKEN
+   ```
+
+   Install the versioned service and timer after each relevant deployment:
+
+   ```bash
+   cd /opt/jsk/app
+   docker compose --env-file .env.production -f compose.production.yml \
+     exec -T web python manage.py check_financial_exceptions
+   sudo install -o root -g root -m 0644 \
+     deploy/systemd/jsk-financial-exceptions.service \
+     /etc/systemd/system/jsk-financial-exceptions.service
+   sudo install -o root -g root -m 0644 \
+     deploy/systemd/jsk-financial-exceptions.timer \
+     /etc/systemd/system/jsk-financial-exceptions.timer
+   sudo systemctl daemon-reload
+   sudo systemctl enable --now jsk-financial-exceptions.timer
+   sudo systemctl start jsk-financial-exceptions.service
+   sudo systemctl --no-pager --full status jsk-financial-exceptions.timer
+   sudo journalctl -u jsk-financial-exceptions.service -n 30 --no-pager
+   ```
+
+   The check reads authoritative database state, emits aggregate counts only, and
+   exits non-zero for any unresolved failed webhook or `PAID_UNALLOCATED` payment.
+   The wrapper reports `/fail` to the heartbeat and never transmits exception text,
+   customer data, or provider IDs. A database, Docker, or app failure also prevents a
+   healthy heartbeat.
+
+6. Exercise the heartbeat route without creating or changing a financial record:
+
+   ```bash
+   sudo bash -c 'set -a; source /opt/jsk/secrets/observability.env; set +a; \
+     /usr/bin/bash /opt/jsk/app/deploy/check-financial-exceptions.sh --test-alert'
+   ```
+
+   Confirm the named responder receives and acknowledges the test incident, then
+   resolve it in Better Stack. Confirm the next normal timer run returns the
+   heartbeat to healthy. This tests delivery, not the owner resolution workflow;
+   separately retain the existing paid-unallocated recovery smoke evidence.
+
+### Configure Linode capacity and backup alerts
+
+In Cloud Manager, confirm the account's Read-Write notification recipients include
+the named incident responder and subscribe to relevant Akamai status notifications.
+Enable Compute Instance CPU, disk-I/O, traffic, and transfer-quota email alerts. Use
+measured baselines; an initial CPU threshold is 80% of total core capacity sustained
+for 15 minutes.
+
+Managed Database metrics and custom alerts may require Akamai Cloud Pulse access. If
+the database Metrics/Alerts pages are unavailable, open a support ticket requesting
+access rather than pretending the control exists. Once available, route alerts to
+the incident responder and start with warning/critical database disk usage at 75% and
+85%, CPU at 80% for 15 minutes, and memory at 85% for 15 minutes. Review the plan's
+PostgreSQL connection limit and the application's worker/connection budget alongside
+readiness failures; do not infer connection capacity from CPU alone.
+
+Managed PostgreSQL creates daily restore points, but the application cannot verify
+provider-owned backup execution. Confirm a fresh restore point in the Backups tab
+each day during initial go-live and at least weekly after stability, and ensure any
+provider backup/system alert or support ticket reaches the incident responder. A
+missed restore point or backup alert immediately marks recovery as degraded. This
+notification control complements, but does not complete, the isolated restore drill
+in `FW-PROD-001`.
+
+Record screenshots or exported incident timestamps for each test below without
+capturing secrets or customer data:
+
+| Evidence | Pass condition |
+| --- | --- |
+| Liveness and readiness monitor test | Named responder receives, acknowledges, and resolves the test |
+| Financial heartbeat `/fail` test | Incident arrives; next clean check recovers |
+| Caddy 5xx log alert test | A controlled test event reaches the same escalation route |
+| TLS/domain warning test | Monitor shows both checks enabled with the intended lead times |
+| Compute/database capacity test | Notification channel and threshold test reaches the responder |
+| Backup notification test | A provider test/system notification or documented support confirmation reaches the responder |
+| Log retention test | A known release-tagged event remains searchable after local Docker rotation |
+
+Do not mark `FW-PROD-002` complete until every applicable row has an owner, UTC test
+time, result, and evidence location. Likewise, select an SMTP provider and prove
+password-reset delivery under `FW-PROD-003`; observability does not complete email.
 
 ## Deployment responsibilities
 
@@ -930,6 +1082,12 @@ Django and Gunicorn emit timestamped logs to stdout/stderr. The platform must at
 request metadata and retain logs according to the approved privacy and financial
 record policy. Logs must be searchable by `APP_RELEASE`; never log secrets, cookies,
 passwords, payment signatures, full webhook bodies, or database URLs.
+
+The Linode profile implements this boundary with masked structured Caddy access logs,
+Better Stack/Vector off-host collection, external HTTP monitors, and the versioned
+`check_financial_exceptions` heartbeat timer described above. Provider-side account
+configuration and exercised incident evidence remain deployment actions, not source
+code behavior.
 
 Create actionable alerts for:
 

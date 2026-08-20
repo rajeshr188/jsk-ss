@@ -23,11 +23,15 @@ here are not implemented behavior and do not relax the financial invariants in
   Managed PostgreSQL provides daily retained backups and forked-cluster restoration;
   complete and record the actual isolated restore with denomination-specific
   liability reconciliation after the cluster exists.
-- **FW-PROD-002 — Stable edge completed; observability remains:** Caddy serves the
-  owned `jaishrikrishnajewellery.com` domain with automatic HTTPS and verified proxy
-  trust. Select durable log retention and exercise external alerts for 5xx/readiness,
-  webhook failures, allocation exceptions, database capacity, certificate renewal,
-  and backup failure.
+- **FW-PROD-002 — Observability foundation implemented; activation remains:** Caddy
+  serves the owned domain with automatic HTTPS, verified proxy trust, masked
+  structured access logs, and release labels. The repository includes an aggregate
+  financial-exception check plus a five-minute external-heartbeat systemd timer, and
+  the runbook selects Better Stack for external checks/log retention and Linode for
+  capacity/backup events. Configure the two provider accounts and retain exercised
+  evidence for 5xx/readiness, failed webhooks, allocation exceptions, database
+  capacity, certificate renewal, backup failure, escalation, and retention before
+  marking this item complete.
 - **FW-PROD-003 — Delivery and rotation drill:** Verify real password-reset email
   delivery and rehearse separate Django, database, email, GoldAPI, Razorpay API, and
   Razorpay webhook secret rotations without exposing credentials.

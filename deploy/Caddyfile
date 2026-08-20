@@ -8,5 +8,15 @@ www.jaishrikrishnajewellery.com {
 
 jaishrikrishnajewellery.com {
 	encode zstd gzip
+	log {
+		output stdout
+		format filter {
+			request>remote_ip ip_mask 24 48
+			request>client_ip ip_mask 24 48
+			request>headers>User-Agent delete
+			wrap json
+		}
+	}
+	log_append release {env.APP_RELEASE}
 	reverse_proxy web:8000
 }

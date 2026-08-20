@@ -86,6 +86,10 @@ Production hardening — repository baseline complete; deployment exercises pend
 - The runbook also records post-merge local checkout hygiene: distinguish deployed
   SHA from branch names, preserve unrelated work, fast-forward local `main`, retire
   merged branches only after stabilization, and start each change on a fresh branch.
+- The Linode observability profile now defines privacy-reduced structured Caddy access
+  logs, Better Stack off-host retention and independent live/ready/5xx checks, Linode
+  capacity/backup notifications, and an aggregate financial-exception command driven
+  by a hardened five-minute systemd heartbeat timer.
 - Public About, Contact, Terms, Privacy, Cancellation and Refund, and showroom-only
   Shipping and Delivery pages expose consistent business identity and support details.
 - Public plans and INR pricing come from structured `SchemePlan` terms only when a
@@ -98,8 +102,10 @@ Production hardening — repository baseline complete; deployment exercises pend
 ## In progress
 
 - Environment-specific production proof: isolated database restoration, real email
-  delivery, external alert routing, and coordinated secret-rotation drills. The
-  stable owned domain/TLS/proxy path is operational.
+  delivery, external alert routing/exercises, and coordinated secret-rotation drills.
+  The stable owned domain/TLS/proxy path and repository observability foundation are
+  operational; Better Stack and Linode alert activation still require account-side
+  configuration and retained test evidence.
 - The Ubuntu 24.04 Compute Instance and three-node Managed PostgreSQL 16 cluster are
   provisioned in one region. Database/Cloud Firewall access controls and the database
   CA are in place, SSH access is verified, Docker is installed, and the owned domain
@@ -117,8 +123,9 @@ Production hardening — repository baseline complete; deployment exercises pend
   payment, reconciliation, refund, dispute, monitoring, and secret-rotation procedures exist.
 - Temporary quick-tunnel URLs have no uptime guarantee; deployment requires a stable,
   owned HTTPS endpoint and synchronized webhook-secret configuration.
-- Repository health checks and logging now exist, but an actual production platform
-  must still retain logs and exercise uptime/error/financial-exception alerts.
+- Repository health checks, privacy-reduced edge access logs, and a financial-
+  exception heartbeat now exist, but Better Stack/Linode must still be configured to
+  retain logs and exercise uptime, 5xx, capacity, backup, TLS, and financial alerts.
 - Backup and rollback procedures are documented, but the provisioned managed cluster
   has not yet completed an evidenced isolated restoration/reconciliation drill.
 - The application records redemptions but does not execute payouts, move inventory,
@@ -148,7 +155,8 @@ Production hardening — repository baseline complete; deployment exercises pend
 ## Verification
 
 - PostgreSQL 16 migrations applied successfully.
-- 144 tests pass, including public-policy route/link coverage, explicit active-plan
+- 145 tests pass, including aggregate financial-exception monitoring with redacted
+  output, public-policy route/link coverage, explicit active-plan
   publishing and INR pricing visibility, health/readiness failure sanitization, deploy-configuration
   gates, document access, receipt stability, unallocated disclosure, CSV
   denomination/formula safety, audit immutability, exception classification,
@@ -173,7 +181,9 @@ Production hardening — repository baseline complete; deployment exercises pend
   migrations, drift/system/deploy checks, the regression suite, static collection,
   and an independent production-image build.
 - The Linode production Compose model passes `docker compose config --quiet`, and
-  Caddy 2.11.4 validates the exact apex-domain and `www` redirect configuration.
+  Caddy 2.11.4 validates the exact apex-domain, `www` redirect, masked JSON access
+  log, and release-label configuration. The financial heartbeat shell script passes
+  a non-executing syntax check.
 - The deployed Linode application returns `200` from both liveness and PostgreSQL
   readiness over `https://jaishrikrishnajewellery.com`; the valid ACME contact and
   Caddy-managed certificate corrected the initial placeholder-contact failure.

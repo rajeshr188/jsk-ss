@@ -1,8 +1,11 @@
 import uuid
 from datetime import date
 from decimal import Decimal
+from io import StringIO
 
 from django.core.exceptions import ValidationError
+from django.core.management import call_command
+from django.core.management.base import CommandError
 from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
@@ -18,6 +21,7 @@ from schemes.models import (
 )
 from schemes.selectors import (
     get_cash_balance,
+    get_financial_exception_counts,
     get_owner_exception_queue,
     get_owner_liability_summary,
 )
@@ -230,6 +234,33 @@ class AuditAndExceptionTests(TestCase):
                 "Payment mismatch / manual correction required",
                 "Failed webhook reconciliation",
             },
+        )
+
+        counts = get_financial_exception_counts()
+        self.assertEqual(counts.paid_unallocated, 1)
+        self.assertEqual(counts.failed_webhooks, 2)
+        self.assertEqual(counts.mismatched_webhooks, 1)
+        self.assertEqual(counts.total, 3)
+
+        output = StringIO()
+        with self.assertRaisesMessage(
+            CommandError, "3 unresolved financial exception(s) detected"
+        ):
+            call_command("check_financial_exceptions", stdout=output)
+        rendered = output.getvalue()
+        self.assertIn("status=alert", rendered)
+        self.assertIn("paid_unallocated=1", rendered)
+        self.assertIn("failed_webhooks=2", rendered)
+        self.assertIn("mismatched_webhooks=1", rendered)
+        self.assertNotIn("order-unmatched", rendered)
+        self.assertNotIn("Contribution does not exist", rendered)
+
+    def test_financial_exception_check_reports_healthy_without_details(self):
+        output = StringIO()
+        call_command("check_financial_exceptions", stdout=output)
+        self.assertIn(
+            "financial_exception_check status=ok",
+            output.getvalue(),
         )
 
     def test_owner_retry_is_audited_with_resulting_rate_snapshot(self):

@@ -55,6 +55,7 @@ services:
         condition: service_healthy
     environment:
       ACME_EMAIL: ${ACME_EMAIL:?Set ACME_EMAIL for certificate notices}
+      APP_RELEASE: ${APP_RELEASE:?Set APP_RELEASE to the approved commit}
     ports:
       - "80:80"
       - "443:443"
