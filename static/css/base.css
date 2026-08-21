@@ -608,25 +608,77 @@ dl.row dt {
   backdrop-filter: blur(0.35rem);
 }
 
-.hero-summary-list {
-  padding-left: 0;
-  list-style: none;
+.hero-visual {
+  text-align: center;
 }
 
-.hero-summary-list li {
-  position: relative;
-  padding: 0.62rem 0 0.62rem 1.55rem;
-  border-top: 1px solid rgba(113, 58, 32, 0.1);
-  font-size: 0.91rem;
+.hero-metal-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr 1fr;
+  align-items: center;
+  gap: 0.55rem;
+  margin: 1.35rem 0;
 }
 
-.hero-summary-list li::before {
-  position: absolute;
-  top: 0.72rem;
-  left: 0;
-  color: var(--jsk-primary);
-  content: "✓";
+.metal-token,
+.jewellery-symbol {
+  display: grid;
+  place-items: center;
+  color: var(--jsk-brown-deep);
+  font-size: 0.72rem;
   font-weight: 800;
+  letter-spacing: 0.035em;
+}
+
+.metal-token__symbol,
+.mode-symbol {
+  display: grid;
+  width: 3.4rem;
+  height: 3.4rem;
+  place-items: center;
+  margin-bottom: 0.4rem;
+  border: 1px solid rgba(74, 40, 27, 0.18);
+  border-radius: 50%;
+  font: 700 1.15rem/1 Georgia, serif;
+  box-shadow: inset 0 0 0 0.28rem rgba(255, 255, 255, 0.25);
+}
+
+.metal-token--gold .metal-token__symbol,
+.mode-symbol--gold {
+  background: linear-gradient(145deg, #fff4cf, #d3a443);
+}
+
+.metal-token--silver .metal-token__symbol,
+.mode-symbol--silver {
+  background: linear-gradient(145deg, #fff, #aebbc2);
+}
+
+.jewellery-symbol svg {
+  width: 4.8rem;
+  height: 4.1rem;
+  margin-bottom: 0.15rem;
+  fill: rgba(201, 154, 61, 0.12);
+  stroke: var(--jsk-primary);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.5;
+}
+
+.hero-route {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  padding-top: 0.9rem;
+  color: var(--jsk-muted);
+  border-top: 1px solid rgba(113, 58, 32, 0.12);
+  font-size: 0.78rem;
+  font-weight: 750;
+}
+
+.hero-route span:nth-child(2) {
+  color: var(--jsk-gold-deep);
+  font-size: 1.1rem;
 }
 
 .mode-card {
@@ -655,6 +707,117 @@ dl.row dt {
   font-weight: 800;
   letter-spacing: 0.06em;
   text-transform: uppercase;
+}
+
+.mode-symbol {
+  width: 4rem;
+  height: 4rem;
+  flex: 0 0 auto;
+  margin: 0;
+  font-size: 1.35rem;
+}
+
+.mode-card__result {
+  padding-top: 1rem;
+  margin-top: 1rem;
+  color: var(--jsk-muted);
+  border-top: 1px solid var(--jsk-border);
+  font-size: 0.88rem;
+  font-weight: 650;
+}
+
+.scheme-journey {
+  padding: clamp(1.5rem, 5vw, 3.25rem);
+  background:
+    radial-gradient(circle at 50% 0, rgba(201, 154, 61, 0.14), transparent 18rem),
+    var(--jsk-surface);
+  border: 1px solid var(--jsk-border);
+  border-radius: 1.2rem;
+  box-shadow: var(--jsk-shadow-sm);
+}
+
+.journey-flow {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.journey-step {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  min-width: 0;
+  padding: 1rem 0.55rem;
+  text-align: center;
+}
+
+.journey-step:not(:last-child)::after {
+  position: absolute;
+  top: 2.25rem;
+  left: calc(50% + 2.6rem);
+  width: calc(100% - 4.2rem);
+  height: 1px;
+  background: linear-gradient(90deg, var(--jsk-gold), rgba(201, 154, 61, 0.25));
+  content: "";
+}
+
+.journey-icon {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  width: 4.5rem;
+  height: 4.5rem;
+  place-items: center;
+  margin-bottom: 0.8rem;
+  color: var(--jsk-primary);
+  background: linear-gradient(145deg, #fffdf9, var(--jsk-gold-soft));
+  border: 1px solid rgba(147, 100, 17, 0.3);
+  border-radius: 50%;
+  box-shadow: 0 0.45rem 1rem rgba(65, 42, 29, 0.08);
+  font: 700 1.5rem/1 Georgia, serif;
+}
+
+.journey-icon svg {
+  width: 1.8rem;
+  height: 1.8rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.7;
+}
+
+.journey-icon--metal {
+  color: var(--jsk-brown-deep);
+  text-transform: lowercase;
+}
+
+.journey-step strong,
+.journey-step span:last-child {
+  display: block;
+}
+
+.journey-step strong {
+  margin-bottom: 0.15rem;
+}
+
+.journey-step span:last-child {
+  color: var(--jsk-muted);
+  font-size: 0.78rem;
+}
+
+.journey-note {
+  max-width: 58rem;
+  padding-top: 1.2rem;
+  margin: 1rem auto 0;
+  color: var(--jsk-muted);
+  border-top: 1px solid var(--jsk-border);
+  font-size: 0.83rem;
+  text-align: center;
 }
 
 .trust-panel {
@@ -1007,6 +1170,14 @@ dl.row dt {
 
   .conversion-actions .btn {
     width: 100%;
+  }
+
+  .journey-flow {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .journey-step::after {
+    display: none;
   }
 }
 

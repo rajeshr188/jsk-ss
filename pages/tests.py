@@ -15,7 +15,15 @@ class PublicPageTests(SimpleTestCase):
         self.assertContains(
             response, "Plan today. Choose the jewellery you love tomorrow."
         )
-        self.assertContains(response, "One goal, two clearly recorded paths")
+        self.assertContains(response, "Two clearly recorded paths to jewellery")
+        self.assertContains(
+            response,
+            "that accumulated metal quantity can be applied toward jewellery",
+        )
+        self.assertContains(response, "A contribution does not reserve or purchase")
+        self.assertContains(response, "It is not a bank deposit")
+        self.assertContains(response, "From contribution to jewellery")
+        self.assertContains(response, "Lock the rate")
         self.assertNotContains(response, "Cash")
         self.assertNotContains(response, "cash")
         self.assertContains(response, "No public signup")
@@ -27,6 +35,7 @@ class PublicPageTests(SimpleTestCase):
     def test_about_page(self):
         response = self.client.get(reverse("about"))
         self.assertContains(response, "About Jai Shri Krishna Jewellery")
+        self.assertContains(response, "accumulated metal quantity may be applied")
 
     def test_our_story_credits_owner_and_developer(self):
         response = self.client.get(reverse("our_story"))
@@ -122,6 +131,15 @@ class PublicPricingPageTests(TestCase):
         self.assertFalse(plan.publicly_listed)
         response = self.client.get(reverse("pricing"))
         self.assertNotContains(response, plan.name)
+
+    def test_pricing_explains_contribution_and_jewellery_redemption(self):
+        self.make_plan(code="PUBLIC", publicly_listed=True)
+
+        response = self.client.get(reverse("pricing"))
+
+        self.assertContains(response, "The displayed INR amount is a plan contribution")
+        self.assertContains(response, "accumulated metal quantity may be applied")
+        self.assertNotContains(response, "Cash-plan bonus")
 
 
 @override_settings(APP_RELEASE="test-release")

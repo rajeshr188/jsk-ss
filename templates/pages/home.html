@@ -1,15 +1,15 @@
 {% extends '_base.html' %}
-{% block title %}Jewellery Savings Schemes in Vellore | Jai Shri Krishna Jewellery{% endblock title %}
-{% block meta_description %}Explore clearly documented 24K gold and silver jewellery savings schemes from Jai Shri Krishna Jewellery in Thorapadi, Vellore.{% endblock %}
+{% block title %}Gold &amp; Silver Jewellery Plans in Vellore | Jai Shri Krishna Jewellery{% endblock title %}
+{% block meta_description %}Explore showroom-enrolled gold and silver jewellery purchase plans with INR contributions, recorded metal quantities, and clear redemption terms.{% endblock %}
 
 {% block content %}
 <section class="hero-card hero-card--home mb-5" aria-labelledby="hero-title">
   <div class="row g-4 g-lg-5 align-items-center position-relative">
     <div class="col-lg-8">
       <div class="hero-content">
-        <p class="page-eyebrow">Jewellery savings in Vellore</p>
+        <p class="page-eyebrow">Gold and silver jewellery purchase plans</p>
         <h1 id="hero-title">Plan today. Choose the jewellery you love tomorrow.</h1>
-        <p class="lead">Build toward a meaningful jewellery or eligible coin purchase through a showroom-enrolled 24K gold or silver savings scheme—with clear terms and a record of every verified contribution.</p>
+        <p class="lead">Pay scheduled contributions in INR and build a recorded 24K gold or silver quantity. Once your plan becomes eligible, that accumulated metal quantity can be applied toward jewellery selected at our Vellore showroom.</p>
         <div class="d-flex flex-wrap gap-2 mt-4">
           <a class="btn btn-jsk btn-lg" href="{% url 'pricing' %}">Explore available plans</a>
           <a class="btn btn-outline-dark btn-lg" href="{% url 'contact' %}">Talk to our showroom</a>
@@ -24,15 +24,33 @@
       </div>
     </div>
     <div class="col-lg-4">
-      <aside class="hero-summary" aria-labelledby="hero-summary-title">
-        <p class="page-eyebrow mb-2">One clear record</p>
-        <h2 class="h4" id="hero-summary-title">See what matters to your scheme</h2>
-        <ul class="hero-summary-list mb-0">
-          <li>Recorded plan terms and eligibility date</li>
-          <li>Verified contribution history</li>
-          <li>Gold or silver grams where applicable</li>
-          <li>Receipts, statement, and redemption history</li>
-        </ul>
+      <aside class="hero-summary hero-visual" aria-labelledby="hero-summary-title">
+        <p class="page-eyebrow mb-2">Your choice of metal</p>
+        <h2 class="h4 text-center" id="hero-summary-title">Build grams. Choose jewellery.</h2>
+        <div class="hero-metal-grid">
+          <div class="metal-token metal-token--gold">
+            <span class="metal-token__symbol" aria-hidden="true">Au</span>
+            <span>24K Gold</span>
+          </div>
+          <div class="jewellery-symbol">
+            <svg viewBox="0 0 96 82" role="img" aria-label="Jewellery pendant">
+              <path d="M11 11c4 26 17 39 37 39s33-13 37-39" />
+              <path d="M48 50v8" />
+              <path d="M48 58 38 69l10 8 10-8-10-11Z" />
+              <circle cx="48" cy="68" r="3" />
+            </svg>
+            <span>Jewellery</span>
+          </div>
+          <div class="metal-token metal-token--silver">
+            <span class="metal-token__symbol" aria-hidden="true">Ag</span>
+            <span>Silver</span>
+          </div>
+        </div>
+        <div class="hero-route" aria-label="INR contributions become a recorded metal quantity for showroom redemption">
+          <span>INR contributions</span>
+          <span aria-hidden="true">→</span>
+          <span>Showroom redemption</span>
+        </div>
       </aside>
     </div>
   </div>
@@ -41,33 +59,77 @@
 <section aria-labelledby="modes-heading">
   <div class="section-heading mt-0">
     <div>
-      <p class="page-eyebrow">Choose your savings mode</p>
-      <h2 id="modes-heading">One goal, two clearly recorded paths</h2>
+      <p class="page-eyebrow">Choose your metal plan</p>
+      <h2 id="modes-heading">Two clearly recorded paths to jewellery</h2>
     </div>
     <p>Your showroom enrolment records the mode and terms you select.</p>
   </div>
   <div class="row g-4">
     <div class="col-md-6">
       <article class="card mode-card mode-card--gold h-100"><div class="card-body p-4">
-        <span class="mode-label">24K Gold</span>
-        <h3 class="h4 mt-3">Build a gold entitlement</h3>
-        <p class="text-secondary mb-0">Each verified INR contribution is converted to grams using the Jai Shri Krishna Jewellery Scheme Rate locked before that payment begins.</p>
+        <div class="d-flex align-items-center gap-3">
+          <span class="mode-symbol mode-symbol--gold" aria-hidden="true">Au</span>
+          <div>
+            <span class="mode-label">24K Gold</span>
+            <h3 class="h4 mt-2 mb-0">Build gold grams</h3>
+          </div>
+        </div>
+        <p class="mode-card__result mb-0">Verified contributions → gold quantity → eligible jewellery</p>
       </div></article>
     </div>
     <div class="col-md-6">
       <article class="card mode-card mode-card--silver h-100"><div class="card-body p-4">
-        <span class="mode-label">Silver</span>
-        <h3 class="h4 mt-3">Build a silver entitlement</h3>
-        <p class="text-secondary mb-0">Your allocated silver grams retain their original locked Scheme Rate, so a later rate publication does not rewrite your contribution history.</p>
+        <div class="d-flex align-items-center gap-3">
+          <span class="mode-symbol mode-symbol--silver" aria-hidden="true">Ag</span>
+          <div>
+            <span class="mode-label">Silver</span>
+            <h3 class="h4 mt-2 mb-0">Build silver grams</h3>
+          </div>
+        </div>
+        <p class="mode-card__result mb-0">Verified contributions → silver quantity → eligible jewellery</p>
       </div></article>
     </div>
   </div>
 </section>
 
+<section class="scheme-journey mt-4" aria-labelledby="conversion-explained-heading">
+  <div class="text-center mb-4">
+    <p class="page-eyebrow">How your plan works</p>
+    <h2 class="h3" id="conversion-explained-heading">From contribution to jewellery</h2>
+  </div>
+  <ol class="journey-flow">
+    <li class="journey-step">
+      <span class="journey-icon" aria-hidden="true">₹</span>
+      <strong>Pay in INR</strong>
+      <span>Your scheduled amount</span>
+    </li>
+    <li class="journey-step">
+      <span class="journey-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/><circle cx="12" cy="15" r="1"/></svg>
+      </span>
+      <strong>Lock the rate</strong>
+      <span>Shown before payment</span>
+    </li>
+    <li class="journey-step">
+      <span class="journey-icon journey-icon--metal" aria-hidden="true">g</span>
+      <strong>Build grams</strong>
+      <span>Gold or silver recorded</span>
+    </li>
+    <li class="journey-step">
+      <span class="journey-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M3 4c1 7 4 11 9 11s8-4 9-11"/><path d="M12 15v2"/><path d="m12 17-3 3 3 2 3-2-3-3Z"/></svg>
+      </span>
+      <strong>Choose jewellery</strong>
+      <span>At the showroom when eligible</span>
+    </li>
+  </ol>
+  <p class="journey-note mb-0"><strong>A contribution does not reserve or purchase a specific item.</strong> Final product price, taxes, making charges, and wastage/value addition are confirmed at the showroom. <a href="{% url 'terms' %}">Read full terms</a>.</p>
+</section>
+
 <section class="mt-5 pt-lg-3" aria-labelledby="how-it-works">
   <div class="section-heading">
     <div>
-      <p class="page-eyebrow">From interest to enrolment</p>
+      <p class="page-eyebrow">From interest to jewellery</p>
       <h2 id="how-it-works">A straightforward way to get started</h2>
     </div>
     <p>No public signup and no scheme without recorded terms.</p>
@@ -77,28 +139,28 @@
       <article class="card feature-card"><div class="card-body p-4">
         <span class="feature-number" aria-hidden="true">1</span>
         <h3 class="h5">Explore the plans</h3>
-        <p class="mb-0 text-secondary">Compare currently published contribution amounts, frequency, duration, and bonus terms.</p>
+        <p class="mb-0 text-secondary">Amount · frequency · duration</p>
       </div></article>
     </div>
     <div class="col-sm-6 col-lg-3">
       <article class="card feature-card"><div class="card-body p-4">
         <span class="feature-number" aria-hidden="true">2</span>
         <h3 class="h5">Speak with us</h3>
-        <p class="mb-0 text-secondary">Visit or contact our Thorapadi showroom to discuss the suitable plan and savings mode.</p>
+        <p class="mb-0 text-secondary">Choose gold or silver and accept the terms.</p>
       </div></article>
     </div>
     <div class="col-sm-6 col-lg-3">
       <article class="card feature-card"><div class="card-body p-4">
         <span class="feature-number" aria-hidden="true">3</span>
         <h3 class="h5">Receive your login</h3>
-        <p class="mb-0 text-secondary">After terms are accepted, the store creates your scheme enrolment and secure customer account.</p>
+        <p class="mb-0 text-secondary">We create your enrolment and secure account.</p>
       </div></article>
     </div>
     <div class="col-sm-6 col-lg-3">
       <article class="card feature-card"><div class="card-body p-4">
         <span class="feature-number" aria-hidden="true">4</span>
-        <h3 class="h5">Contribute and follow</h3>
-        <p class="mb-0 text-secondary">Make eligible contributions when online payment is available and follow your recorded progress toward redemption.</p>
+        <h3 class="h5">Track progress</h3>
+        <p class="mb-0 text-secondary">Payments · grams · receipts · redemption</p>
       </div></article>
     </div>
   </div>
@@ -109,14 +171,14 @@
     <div class="col-lg-5">
       <p class="page-eyebrow">Clarity from day one</p>
       <h2 id="trust-heading">A scheme record designed to stay understandable</h2>
-      <p class="text-secondary mb-lg-0">Your customer account supports the showroom relationship—it does not replace the terms agreed when you enrol.</p>
+      <p class="text-secondary mb-lg-0">Your customer account records the contribution journey. It is not a bank deposit, an interest-bearing account, a metal-trading product, or an online jewellery store.</p>
     </div>
     <div class="col-lg-7">
       <div class="row g-3">
         <div class="col-sm-6"><div class="trust-point"><strong>Terms stay attached</strong><span>Later plan changes do not rewrite an existing enrolment.</span></div></div>
-        <div class="col-sm-6"><div class="trust-point"><strong>Entitlements stay separate</strong><span>Gold and silver remain recorded in their matching metal denomination.</span></div></div>
+        <div class="col-sm-6"><div class="trust-point"><strong>Metal records stay separate</strong><span>Gold and silver remain in their matching denomination until an eligible redemption is recorded.</span></div></div>
         <div class="col-sm-6"><div class="trust-point"><strong>History stays visible</strong><span>Verified payments, allocations, receipts, and settlements remain traceable.</span></div></div>
-        <div class="col-sm-6"><div class="trust-point"><strong>Local help is available</strong><span>Questions and redemption arrangements are handled through our Vellore showroom.</span></div></div>
+        <div class="col-sm-6"><div class="trust-point"><strong>Showroom fulfilment</strong><span>Jewellery selection, invoicing, and collection are completed in person at our Vellore showroom.</span></div></div>
       </div>
     </div>
   </div>

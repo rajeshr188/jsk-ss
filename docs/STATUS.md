@@ -18,8 +18,9 @@ UI modernization — Bootstrap 5 refresh implemented; review pending
   account-recovery and owner-list surfaces, explicit table-header semantics, and
   mobile customer contribution/redemption cards.
 - Conversion-focused public homepage with a prospect-first plan/showroom journey,
-  distinct existing-customer access, accurate public gold/silver explanations, local
-  business details, repeated plan/contact actions, and pre-enrolment policy links.
+  distinct existing-customer access, an explicit INR-to-locked-metal-to-jewellery
+  visual redemption flow, compact gold/silver choice cards, local business details,
+  repeated plan/contact actions, and pre-enrolment policy links.
 - Owner/customer roles, customer records, reusable plans, and snapshotted enrolments.
 - Owner customer-management flow and isolated customer scheme view.
 - Append-oriented contributions with pending/paid/paid-unallocated/failed states.
@@ -113,17 +114,18 @@ UI modernization — Bootstrap 5 refresh implemented; review pending
 - Public plans and INR pricing come from structured `SchemePlan` terms only when a
   plan is active and explicitly marked `publicly_listed`; all existing plans migrate
   as private, and publishing changes are included in the immutable plan-change audit.
-- Public policy wording distinguishes voluntary early discontinuation from
-  duplicate/erroneous payment refunds and remains consistent with eligible CASH,
-  GOLD, SILVER, and jewellery-purchase settlement paths.
+- Public product and policy wording consistently describes the currently marketed
+  gold/silver journey, distinguishes voluntary early discontinuation from payment-
+  error refunds, and explains showroom-only metal or jewellery fulfilment.
 - A public Our Story page credits owner Dilip Kumar and developer Rajesh Rathod H,
   explains their family partnership, and uses accessible monogram portraits until
   approved photographs are supplied.
 
 ## In progress
 
-- The Bootstrap 5 UI modernization is implemented on `agent/ui-modernization` and
-  awaits stakeholder browser review before commit, PR, and production promotion.
+- The Bootstrap 5 UI modernization is committed on `agent/ui-modernization`; the
+  Razorpay-facing gold/silver product-language refinement awaits stakeholder browser
+  review before its follow-up commit, PR, and production promotion.
 - Environment-specific production proof: isolated database restoration, real email
   delivery, external alert routing/exercises, and coordinated secret-rotation drills.
   The stable owned domain/TLS/proxy path and repository observability foundation are
@@ -145,10 +147,12 @@ UI modernization — Bootstrap 5 refresh implemented; review pending
   it is paid or failed. Add expiry only with a reviewed payment-order lifecycle design.
 - Razorpay is verified only in Test Mode. Live keys remain rejected until production
   payment, reconciliation, refund, dispute, monitoring, and secret-rotation procedures exist.
-- The public homepage no longer markets CASH mode. CASH accounts, bonus rules,
-  maturity cash settlement, public-policy references, and payment support still exist;
-  they must not be treated as cleared for Razorpay Live Mode until qualified legal
-  review and written provider approval define the permitted product and payment flow.
+- Public prospect and policy pages now market only gold/silver jewellery purchase
+  plans, but owner workflows and the database still permit CASH accounts, bonus rules,
+  maturity cash settlement, and Razorpay test payments. Copy alone does not enforce
+  that product boundary. Before Razorpay submission or Live Mode, decide whether CASH
+  is legacy-only, enforce that decision in enrolment/payment services, and obtain
+  qualified legal review and written provider approval for the permitted flow.
 - Temporary quick-tunnel URLs have no uptime guarantee; deployment requires a stable,
   owned HTTPS endpoint and synchronized webhook-secret configuration.
 - Repository health checks, privacy-reduced edge access logs, and a financial-
@@ -183,7 +187,8 @@ UI modernization — Bootstrap 5 refresh implemented; review pending
 ## Verification
 
 - PostgreSQL 16 migrations applied successfully.
-- 141 tests pass, including owner-only Scheme Rate publication, large-change
+- 142 tests pass, including public INR-contribution/metal-to-jewellery copy coverage,
+  owner-only Scheme Rate publication, large-change
   confirmation, no-rate payment blocking, pre-order locking, rate-change race
   behavior, durable verified-payment/allocation transition, production-shaped
   `0009` to `0010` history backfill and blocker checks, historical immutability,
@@ -246,8 +251,10 @@ UI modernization — Bootstrap 5 refresh implemented; review pending
 
 ## Next recommended step
 
-Submit the verified public website and policy URLs to Razorpay, while keeping live
-keys disabled until live-mode operating procedures are approved. Retain the owned
+Complete the CASH product-boundary decision and enforce it in enrolment and payment
+services before submitting the public website and policy URLs to Razorpay. Keep live
+keys disabled until legal/provider review and live-mode operating procedures are
+approved. Retain the owned
 DNS/TLS and release evidence and complete
 `FW-PROD-001` through `FW-PROD-003`: a recorded database restore/reconciliation drill,
 stable owned HTTPS plus alerts, real email delivery, and secret-rotation rehearsal.
