@@ -69,7 +69,7 @@ class SchemePlanChangeForm(SchemePlanForm):
         help_texts = {
             **SchemePlanForm.Meta.help_texts,
             "publicly_listed": (
-                "Publishes this plan's name, description, contribution pricing, "
+                "Publishes this savings plan's name, description, contribution amounts, "
                 "frequency, duration, and cash-bonus terms when the plan is active."
             ),
         }

@@ -39,13 +39,10 @@
             <a class="nav-link{% if current_url == 'home' %} active{% endif %}"{% if current_url == 'home' %} aria-current="page"{% endif %} href="{% url 'home' %}">Home</a>
           </li>
           <li class="nav-item">
-            <a class="nav-link{% if current_url == 'pricing' %} active{% endif %}"{% if current_url == 'pricing' %} aria-current="page"{% endif %} href="{% url 'pricing' %}">Plans &amp; pricing</a>
+            <a class="nav-link{% if current_url == 'pricing' %} active{% endif %}"{% if current_url == 'pricing' %} aria-current="page"{% endif %} href="{% url 'pricing' %}">Savings plans</a>
           </li>
           <li class="nav-item">
             <a class="nav-link{% if current_url == 'about' %} active{% endif %}"{% if current_url == 'about' %} aria-current="page"{% endif %} href="{% url 'about' %}">About</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link{% if current_url == 'our_story' %} active{% endif %}"{% if current_url == 'our_story' %} aria-current="page"{% endif %} href="{% url 'our_story' %}">Our story</a>
           </li>
           <li class="nav-item">
             <a class="nav-link{% if current_url == 'contact' %} active{% endif %}"{% if current_url == 'contact' %} aria-current="page"{% endif %} href="{% url 'contact' %}">Contact</a>
@@ -125,9 +122,8 @@
         <div class="col-lg-7 d-lg-flex justify-content-lg-end">
           <nav class="footer-links" aria-label="Legal and business information">
             <a href="{% url 'about' %}">About</a>
-            <a href="{% url 'our_story' %}">Our story</a>
             <a href="{% url 'contact' %}">Contact</a>
-            <a href="{% url 'pricing' %}">Plans &amp; pricing</a>
+            <a href="{% url 'pricing' %}">Savings plans</a>
             <a href="{% url 'terms' %}">Terms</a>
             <a href="{% url 'privacy' %}">Privacy</a>
             <a href="{% url 'cancellation_refund' %}">Cancellation &amp; refunds</a>

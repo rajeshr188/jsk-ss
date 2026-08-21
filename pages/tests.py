@@ -38,6 +38,8 @@ class PublicPageTests(SimpleTestCase):
         self.assertNotContains(response, "cash")
         self.assertContains(response, "No public signup")
         self.assertContains(response, f'href="{reverse("pricing")}"')
+        self.assertContains(response, "Savings plans")
+        self.assertNotContains(response, "Plans &amp; pricing")
         self.assertContains(response, f'href="{reverse("contact")}"')
         self.assertContains(response, f'href="{reverse("account_login")}"')
         self.assertNotContains(response, "Django starter project")
@@ -55,6 +57,14 @@ class PublicPageTests(SimpleTestCase):
         self.assertContains(response, "Computer science engineer by qualification")
         self.assertContains(response, "Software developer by heart")
         self.assertContains(response, "rajeshrathodh@gmail.com")
+
+    def test_our_story_is_not_linked_from_public_pages(self):
+        story_url = reverse("our_story")
+
+        for route_name in ("home", "about"):
+            with self.subTest(route_name=route_name):
+                response = self.client.get(reverse(route_name))
+                self.assertNotContains(response, f'href="{story_url}"')
 
     def test_public_business_and_policy_pages_are_available(self):
         expected_content = {
@@ -76,7 +86,6 @@ class PublicPageTests(SimpleTestCase):
 
         for route_name in (
             "about",
-            "our_story",
             "contact",
             "pricing",
             "terms",
@@ -122,6 +131,7 @@ class PublicPricingPageTests(TestCase):
 
         self.assertContains(response, published.name)
         self.assertContains(response, "₹1000.00")
+        self.assertNotContains(response, f'href="{reverse("our_story")}"')
         self.assertNotContains(response, private.name)
         self.assertNotContains(response, inactive.name)
 
@@ -147,6 +157,8 @@ class PublicPricingPageTests(TestCase):
 
         response = self.client.get(reverse("pricing"))
 
+        self.assertContains(response, "Gold and silver savings schemes")
+        self.assertContains(response, "Savings plans with clear terms")
         self.assertContains(response, "The displayed INR amount is a plan contribution")
         self.assertContains(response, "accumulated metal quantity may be applied")
         self.assertNotContains(response, "Cash-plan bonus")

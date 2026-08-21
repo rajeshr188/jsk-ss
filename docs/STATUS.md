@@ -118,12 +118,16 @@ UI modernization — Bootstrap 5 refresh implemented; review pending
 - Public plans and INR pricing come from structured `SchemePlan` terms only when a
   plan is active and explicitly marked `publicly_listed`; all existing plans migrate
   as private, and publishing changes are included in the immutable plan-change audit.
+- Customer-facing navigation and page headings call these offers "Savings plans"
+  rather than "Plans & pricing"; displayed INR values are identified as contribution
+  amounts, while the stable `/plans/` route and internal URL name remain unchanged.
 - Public product and policy wording consistently describes the currently marketed
   gold/silver journey, distinguishes voluntary early discontinuation from payment-
   error refunds, and explains showroom-only metal or jewellery fulfilment.
 - A public Our Story page credits owner Dilip Kumar and developer Rajesh Rathod H,
   explains their family partnership, and uses accessible monogram portraits until
-  approved photographs are supplied.
+  approved photographs are supplied. Its route is retained for later publication,
+  but links to it are currently hidden from public navigation and page calls to action.
 
 ## In progress
 
