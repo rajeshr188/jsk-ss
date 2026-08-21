@@ -33,3 +33,5 @@ class AuthenticationSmokeTests(TestCase):
     def test_public_signup_is_closed(self):
         response = self.client.get(reverse("account_signup"))
         self.assertContains(response, "Sign Up Closed")
+        self.assertContains(response, "Public signup is not available")
+        self.assertContains(response, 'class="auth-shell"')

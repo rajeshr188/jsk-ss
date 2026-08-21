@@ -3,12 +3,13 @@
 {% block title %}Owner dashboard | Jai Shri Krishna Jewellery{% endblock %}
 
 {% block content %}
-<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+<div class="page-header">
   <div>
-    <h1 class="mb-1">Owner dashboard</h1>
-    <p class="text-muted mb-0">Current customer obligations and scheme activity</p>
+    <p class="page-eyebrow">Business overview</p>
+    <h1>Owner dashboard</h1>
+    <p class="page-subtitle">Current customer obligations, payment activity, and upcoming redemption work.</p>
   </div>
-  <div>
+  <div class="page-actions">
     <a class="btn btn-outline-dark" href="{% url 'schemes:scheme_rates' %}">Scheme rates</a>
     <a class="btn btn-outline-dark" href="{% url 'schemes:plan_list' %}">Scheme plans</a>
     <a class="btn btn-jsk" href="{% url 'schemes:customer_add' %}">Add customer</a>
@@ -16,10 +17,10 @@
 </div>
 
 <div class="row g-3">
-  <div class="col-6 col-lg-3"><div class="card h-100"><div class="card-body"><div class="text-muted">Customers</div><div class="display-6">{{ activity.customer_count }}</div></div></div></div>
-  <div class="col-6 col-lg-3"><div class="card h-100"><div class="card-body"><div class="text-muted">Open scheme accounts</div><div class="display-6">{{ activity.active_account_count }}</div></div></div></div>
-  <div class="col-6 col-lg-3"><div class="card h-100"><div class="card-body"><div class="text-muted">Contributions today</div><div class="display-6">{{ activity.contribution_count_today }}</div><div class="small text-muted">Successful payments</div></div></div></div>
-  <div class="col-6 col-lg-3"><div class="card h-100"><div class="card-body"><div class="text-muted">Contributions this month</div><div class="display-6">{{ activity.contribution_count_month }}</div><div class="small text-muted">Successful payments</div></div></div></div>
+  <div class="col-6 col-lg-3"><div class="card stat-card h-100"><div class="card-body"><div class="stat-label">Customers</div><div class="stat-value">{{ activity.customer_count }}</div><div class="stat-meta">Registered profiles</div></div></div></div>
+  <div class="col-6 col-lg-3"><div class="card stat-card h-100"><div class="card-body"><div class="stat-label">Open accounts</div><div class="stat-value">{{ activity.active_account_count }}</div><div class="stat-meta">Active scheme records</div></div></div></div>
+  <div class="col-6 col-lg-3"><div class="card stat-card stat-card--success h-100"><div class="card-body"><div class="stat-label">Contributions today</div><div class="stat-value">{{ activity.contribution_count_today }}</div><div class="stat-meta">Successful payments</div></div></div></div>
+  <div class="col-6 col-lg-3"><div class="card stat-card stat-card--gold h-100"><div class="card-body"><div class="stat-label">This month</div><div class="stat-value">{{ activity.contribution_count_month }}</div><div class="stat-meta">Successful payments</div></div></div></div>
 </div>
 
 {% if activity.unallocated_payment_count %}
@@ -36,34 +37,34 @@
 </div>
 {% endif %}
 
-<div class="d-flex justify-content-between align-items-end mt-5 mb-3">
+<div class="section-heading">
   <div>
-    <h2 class="h4 mb-1">Redemption eligibility</h2>
-    <p class="text-muted mb-0">Non-overlapping forecast windows from today.</p>
+    <h2>Redemption eligibility</h2>
+    <p>Non-overlapping forecast windows from today.</p>
   </div>
   <a class="btn btn-sm btn-outline-dark" href="{% url 'schemes:redemption_eligibility' %}">View accounts</a>
 </div>
 
 <div class="row g-3">
-  <div class="col-6 col-lg-3"><div class="card h-100 border-success"><div class="card-body"><div class="text-muted">Eligible now</div><div class="display-6">{{ eligibility.eligible_now_count }}</div></div></div></div>
-  <div class="col-6 col-lg-3"><div class="card h-100"><div class="card-body"><div class="text-muted">Next 30 days</div><div class="display-6">{{ eligibility.next_30_days_count }}</div><div class="small text-muted">Days 1–30</div></div></div></div>
-  <div class="col-6 col-lg-3"><div class="card h-100"><div class="card-body"><div class="text-muted">Next 60 days</div><div class="display-6">{{ eligibility.next_60_days_count }}</div><div class="small text-muted">Days 31–60</div></div></div></div>
-  <div class="col-6 col-lg-3"><div class="card h-100"><div class="card-body"><div class="text-muted">Next 90 days</div><div class="display-6">{{ eligibility.next_90_days_count }}</div><div class="small text-muted">Days 61–90</div></div></div></div>
+  <div class="col-6 col-lg-3"><div class="card stat-card stat-card--success h-100"><div class="card-body"><div class="stat-label">Eligible now</div><div class="stat-value">{{ eligibility.eligible_now_count }}</div><div class="stat-meta">Ready for review</div></div></div></div>
+  <div class="col-6 col-lg-3"><div class="card stat-card h-100"><div class="card-body"><div class="stat-label">Next 30 days</div><div class="stat-value">{{ eligibility.next_30_days_count }}</div><div class="stat-meta">Days 1–30</div></div></div></div>
+  <div class="col-6 col-lg-3"><div class="card stat-card h-100"><div class="card-body"><div class="stat-label">Next 60 days</div><div class="stat-value">{{ eligibility.next_60_days_count }}</div><div class="stat-meta">Days 31–60</div></div></div></div>
+  <div class="col-6 col-lg-3"><div class="card stat-card h-100"><div class="card-body"><div class="stat-label">Next 90 days</div><div class="stat-value">{{ eligibility.next_90_days_count }}</div><div class="stat-meta">Days 61–90</div></div></div></div>
 </div>
 
-<div class="d-flex justify-content-between align-items-end mt-5 mb-3">
+<div class="section-heading">
   <div>
-    <h2 class="h4 mb-1">Outstanding customer liabilities</h2>
-    <p class="text-muted mb-0">Cash, gold, and silver remain separate obligations.</p>
+    <h2>Outstanding customer liabilities</h2>
+    <p>Cash, gold, and silver remain separate obligations.</p>
   </div>
 </div>
 
 <div class="row g-3">
   <div class="col-12 col-lg-4">
-    <div class="card h-100 border-dark">
+    <div class="card stat-card stat-card--cash h-100">
       <div class="card-body">
-        <div class="text-muted">Cash redeemable obligation</div>
-        <div class="display-6">₹{{ liabilities.cash_redeemable_amount|floatformat:2 }}</div>
+        <div class="stat-label">Cash redeemable obligation</div>
+        <div class="stat-value">₹{{ liabilities.cash_redeemable_amount|floatformat:2 }}</div>
         <dl class="row small mt-3 mb-0">
           <dt class="col-7">Principal</dt><dd class="col-5 text-end">₹{{ liabilities.cash_principal|floatformat:2 }}</dd>
           <dt class="col-7">Earned bonus</dt><dd class="col-5 text-end">₹{{ liabilities.cash_earned_bonus|floatformat:2 }}</dd>
@@ -74,10 +75,10 @@
     </div>
   </div>
   <div class="col-12 col-lg-4">
-    <div class="card h-100 border-warning">
+    <div class="card stat-card stat-card--gold h-100">
       <div class="card-body">
-        <div class="text-muted">Gold obligation</div>
-        <div class="display-6">{{ liabilities.gold.quantity|floatformat:6 }} g</div>
+        <div class="stat-label">Gold obligation</div>
+        <div class="stat-value">{{ liabilities.gold.quantity|floatformat:6 }} g</div>
         {% if liabilities.gold.scheme_rate is not None %}
         <dl class="row small mt-3 mb-0">
           <dt class="col-6">Current Scheme Rate</dt><dd class="col-6 text-end">₹{{ liabilities.gold.scheme_rate|floatformat:4 }}/g</dd>
@@ -91,10 +92,10 @@
     </div>
   </div>
   <div class="col-12 col-lg-4">
-    <div class="card h-100 border-secondary">
+    <div class="card stat-card stat-card--silver h-100">
       <div class="card-body">
-        <div class="text-muted">Silver obligation</div>
-        <div class="display-6">{{ liabilities.silver.quantity|floatformat:6 }} g</div>
+        <div class="stat-label">Silver obligation</div>
+        <div class="stat-value">{{ liabilities.silver.quantity|floatformat:6 }} g</div>
         {% if liabilities.silver.scheme_rate is not None %}
         <dl class="row small mt-3 mb-0">
           <dt class="col-6">Current Scheme Rate</dt><dd class="col-6 text-end">₹{{ liabilities.silver.scheme_rate|floatformat:4 }}/g</dd>
@@ -111,14 +112,22 @@
 
 <p class="small text-muted mt-3 mb-0">Metal exposure is indicative at the current published Scheme Rate. Historical allocations remain unchanged, and metal exposure is not added to cash principal.</p>
 
-<div class="mt-4">
-  <a class="btn btn-outline-dark" href="{% url 'schemes:customer_list' %}">View customers</a>
-  <a class="btn btn-outline-dark" href="{% url 'schemes:contribution_list' %}">View contributions</a>
-  <a class="btn btn-outline-dark" href="{% url 'schemes:redemption_eligibility' %}">View redemption eligibility</a>
-  <a class="btn btn-outline-dark" href="{% url 'schemes:redemption_list' %}">View redemptions</a>
-  <a class="btn btn-outline-dark" href="{% url 'schemes:exception_queue' %}">Review exceptions</a>
-  <a class="btn btn-outline-dark" href="{% url 'schemes:audit_log' %}">View audit log</a>
-  <a class="btn btn-outline-dark" href="{% url 'schemes:contribution_export' %}">Export contributions</a>
-  <a class="btn btn-outline-dark" href="{% url 'schemes:redemption_export' %}">Export redemptions</a>
-</div>
+<section aria-labelledby="owner-actions-heading">
+  <div class="section-heading"><div><h2 id="owner-actions-heading">Common actions</h2><p>Continue with the owner tasks used most often.</p></div></div>
+  <div class="card"><div class="card-body d-flex flex-wrap gap-2">
+    <a class="btn btn-jsk" href="{% url 'schemes:customer_list' %}">Manage customers</a>
+    <a class="btn btn-outline-dark" href="{% url 'schemes:contribution_list' %}">Review contributions</a>
+    <a class="btn btn-outline-dark" href="{% url 'schemes:redemption_eligibility' %}">Review redemption eligibility</a>
+  </div></div>
+  <details class="card action-disclosure mt-3">
+    <summary>Reports and operational records</summary>
+    <div class="action-disclosure__body d-flex flex-wrap gap-2">
+      <a class="btn btn-outline-dark" href="{% url 'schemes:redemption_list' %}">Redemption ledger</a>
+      <a class="btn btn-outline-dark" href="{% url 'schemes:exception_queue' %}">Exception queue</a>
+      <a class="btn btn-outline-dark" href="{% url 'schemes:audit_log' %}">Audit log</a>
+      <a class="btn btn-outline-dark" href="{% url 'schemes:contribution_export' %}">Export contributions</a>
+      <a class="btn btn-outline-dark" href="{% url 'schemes:redemption_export' %}">Export redemptions</a>
+    </div>
+  </details>
+</section>
 {% endblock %}

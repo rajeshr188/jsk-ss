@@ -3,11 +3,12 @@
 {% block title %}Redemption eligibility | Jai Shri Krishna Jewellery{% endblock %}
 
 {% block content %}
-<div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-4">
+<div class="page-header">
   <div>
     <a class="small" href="{% url 'schemes:owner_dashboard' %}">← Owner dashboard</a>
-    <h1 class="mb-1">Redemption eligibility</h1>
-    <p class="text-muted mb-0">As of {{ eligibility.as_of|date:'d M Y' }} · Dates indicate eligibility, not automatic closure.</p>
+    <p class="page-eyebrow mt-2">Settlement planning</p>
+    <h1>Redemption eligibility</h1>
+    <p class="page-subtitle">As of {{ eligibility.as_of|date:'d M Y' }} · Dates indicate eligibility, not automatic closure.</p>
   </div>
 </div>
 
@@ -20,7 +21,7 @@
   <p class="small text-muted">{{ description }}</p>
   <div class="table-responsive">
     <table class="table align-middle">
-      <thead><tr><th>Eligible from</th><th>Scheme</th><th>Customer</th><th>Mode</th><th>Status</th><th>Action</th></tr></thead>
+      <thead><tr><th scope="col">Eligible from</th><th scope="col">Scheme</th><th scope="col">Customer</th><th scope="col">Mode</th><th scope="col">Status</th><th scope="col">Action</th></tr></thead>
       <tbody>
         {% for account in accounts %}
         <tr>

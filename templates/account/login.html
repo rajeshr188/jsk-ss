@@ -1,13 +1,21 @@
 {% extends '_base.html' %}
 {% load crispy_forms_tags %}
 
-{% block title %}Log in{% endblock %}
+{% block title %}Customer login | Jai Shri Krishna Jewellery{% endblock %}
 
 {% block content %}
-<h2>Log in</h2>
-<form method="post">
-  {% csrf_token %}
-  {{ form|crispy }}
-  <button class="btn btn-success" type="submit">Log in</button>
-</form>
+<div class="auth-shell">
+  <div class="card auth-card">
+    <p class="page-eyebrow">Secure account access</p>
+    <h1>Welcome back</h1>
+    <p class="text-secondary mb-4">Sign in with the email address registered by the showroom.</p>
+    <form method="post">
+      {% csrf_token %}
+      {{ form|crispy }}
+      <button class="btn btn-jsk w-100" type="submit">Log in</button>
+    </form>
+    <div class="text-center small mt-3"><a href="{% url 'account_reset_password' %}">Forgot your password?</a></div>
+  </div>
+  <p class="text-center small text-secondary mt-3 mb-0">New customers are enrolled at the showroom. Public signup is not available.</p>
+</div>
 {% endblock content %}

@@ -2,13 +2,24 @@
 
 ## Current milestone
 
-Production hardening — repository baseline complete; deployment exercises pending
+UI modernization — Bootstrap 5 refresh implemented; review pending
 
 ## Completed
 
 - Lithium authentication, Bootstrap/crispy forms, WhiteNoise, and custom user preserved.
 - PostgreSQL-only environment configuration and India time zone.
 - Jai Shri Krishna Jewellery branding and canonical documentation.
+- Bootstrap 5-only responsive interface modernization with a simplified owner
+  navigation, wider financial data surfaces, consistent cards/forms/tables,
+  refreshed public and authenticated journeys, and keyboard/reduced-motion
+  accessibility improvements; no new frontend framework or dependency was added.
+- Figma-principle refinement pass with WCAG-AA small-text contrast, structured
+  financial form fieldsets, progressively disclosed owner records, consistent
+  account-recovery and owner-list surfaces, explicit table-header semantics, and
+  mobile customer contribution/redemption cards.
+- Conversion-focused public homepage with a prospect-first plan/showroom journey,
+  distinct existing-customer access, accurate public gold/silver explanations, local
+  business details, repeated plan/contact actions, and pre-enrolment policy links.
 - Owner/customer roles, customer records, reusable plans, and snapshotted enrolments.
 - Owner customer-management flow and isolated customer scheme view.
 - Append-oriented contributions with pending/paid/paid-unallocated/failed states.
@@ -105,13 +116,14 @@ Production hardening — repository baseline complete; deployment exercises pend
 - Public policy wording distinguishes voluntary early discontinuation from
   duplicate/erroneous payment refunds and remains consistent with eligible CASH,
   GOLD, SILVER, and jewellery-purchase settlement paths.
+- A public Our Story page credits owner Dilip Kumar and developer Rajesh Rathod H,
+  explains their family partnership, and uses accessible monogram portraits until
+  approved photographs are supplied.
 
 ## In progress
 
-- Manual Scheme Rate refactor is implemented on the development branch with forward
-  migration `schemes.0010_manual_scheme_rates`; it is not yet deployed. Production
-  remains on migration `schemes.0009` until the branch is reviewed, merged, backed up,
-  and promoted through the documented release workflow.
+- The Bootstrap 5 UI modernization is implemented on `agent/ui-modernization` and
+  awaits stakeholder browser review before commit, PR, and production promotion.
 - Environment-specific production proof: isolated database restoration, real email
   delivery, external alert routing/exercises, and coordinated secret-rotation drills.
   The stable owned domain/TLS/proxy path and repository observability foundation are
@@ -122,9 +134,10 @@ Production hardening — repository baseline complete; deployment exercises pend
   CA are in place, SSH access is verified, Docker is installed, and the owned domain
   returns liveness and PostgreSQL readiness `200` through Caddy-managed HTTPS;
   production email, external alerts, and Razorpay live-mode readiness remain.
-- Production release `0545e3ced606c0d31ddec27ba70bb768f952c6d6` is healthy with
-  migration `schemes.0009_schemeplan_publicly_listed` applied. All public compliance
-  routes return `200`, and an owner-reviewed active plan is publicly listed.
+- Production release `2f87e042a72cb5c95222d619bb1ca8edbe7831e6` is healthy with
+  migration `schemes.0010_manual_scheme_rates` applied, zero reported financial
+  exceptions, and successful live, ready, static, and public-page checks. All public
+  compliance routes return `200`, and an owner-reviewed active plan is publicly listed.
 
 ## Known limitations
 
@@ -132,6 +145,10 @@ Production hardening — repository baseline complete; deployment exercises pend
   it is paid or failed. Add expiry only with a reviewed payment-order lifecycle design.
 - Razorpay is verified only in Test Mode. Live keys remain rejected until production
   payment, reconciliation, refund, dispute, monitoring, and secret-rotation procedures exist.
+- The public homepage no longer markets CASH mode. CASH accounts, bonus rules,
+  maturity cash settlement, public-policy references, and payment support still exist;
+  they must not be treated as cleared for Razorpay Live Mode until qualified legal
+  review and written provider approval define the permitted product and payment flow.
 - Temporary quick-tunnel URLs have no uptime guarantee; deployment requires a stable,
   owned HTTPS endpoint and synchronized webhook-secret configuration.
 - Repository health checks, privacy-reduced edge access logs, and a financial-
@@ -166,7 +183,7 @@ Production hardening — repository baseline complete; deployment exercises pend
 ## Verification
 
 - PostgreSQL 16 migrations applied successfully.
-- 139 tests pass, including owner-only Scheme Rate publication, large-change
+- 141 tests pass, including owner-only Scheme Rate publication, large-change
   confirmation, no-rate payment blocking, pre-order locking, rate-change race
   behavior, durable verified-payment/allocation transition, production-shaped
   `0009` to `0010` history backfill and blocker checks, historical immutability,
@@ -179,10 +196,8 @@ Production hardening — repository baseline complete; deployment exercises pend
   redemption precision, over-redemption protection,
   idempotency, partial/full closure, denomination separation, access control,
   PostgreSQL constraints, and all prior regressions.
-- Migrations through `schemes.0009_schemeplan_publicly_listed` are applied to the
-  current production deployment. The local development database is migrated through
-  `schemes.0010_manual_scheme_rates`; that forward migration is tested and pending
-  normal release deployment to production.
+- Migrations through `schemes.0010_manual_scheme_rates` are applied to the current
+  production deployment and local development database.
 - Migration drift check reports no changes.
 - Django system check and migration drift check pass.
 - Production deployment checks pass with a synthetic secure configuration and no

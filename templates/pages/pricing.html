@@ -5,19 +5,20 @@
 
 {% block content %}
 <div class="text-center pricing-header mx-auto mb-5">
-  <p class="text-uppercase small fw-semibold text-secondary mb-2">Savings plans</p>
-  <h1>Plans and pricing</h1>
-  <p class="lead">All contributions are collected in INR. Choose cash, gold, or silver as the savings mode when the showroom enrols you.</p>
+  <p class="page-eyebrow">Savings plans</p>
+  <h1 class="display-4">Clear terms before you enrol</h1>
+  <p class="lead text-secondary">All contributions are collected in INR. Choose cash, gold, or silver as the savings mode when the showroom enrols you.</p>
 </div>
 
 <div class="row g-4">
   {% for plan in plans %}
   <div class="col-md-6">
-    <article class="card plan-card h-100 shadow-sm">
+    <article class="card plan-card h-100">
       <div class="card-body p-4">
-        <h2 class="h4">{{ plan.name }}</h2>
-        {% if plan.description %}<p>{{ plan.description|linebreaksbr }}</p>{% endif %}
-        <dl class="row mb-0">
+        <p class="page-eyebrow mb-2">Available at the showroom</p>
+        <h2 class="h3 mb-3">{{ plan.name }}</h2>
+        {% if plan.description %}<p class="text-secondary">{{ plan.description|linebreaksbr }}</p>{% endif %}
+        <dl class="row mb-0 border-top pt-3">
           <dt class="col-5">Contribution</dt>
           <dd class="col-7">
             {% if plan.amount_rule == 'FIXED' %}
@@ -44,13 +45,14 @@
     </article>
   </div>
   {% empty %}
-  <div class="col-12"><div class="alert alert-info">No savings plans are currently open for new enrolment. Please contact the showroom for availability.</div></div>
+  <div class="col-12"><div class="card empty-state"><h2 class="h4">Plans are being updated</h2><p>No savings plans are currently open for new enrolment. Please contact the showroom for availability.</p><div><a class="btn btn-jsk" href="{% url 'contact' %}">Contact the showroom</a></div></div></div>
   {% endfor %}
 </div>
 
-<section class="card bg-light border-0 mt-5">
-  <div class="card-body p-4">
-    <h2 class="h4">How to join and contribute</h2>
+<section class="card border-0 mt-5">
+  <div class="card-body p-4 p-lg-5">
+    <p class="page-eyebrow">Getting started</p>
+    <h2 class="h3">How to join and contribute</h2>
     <p>Enrolment is completed at the showroom after you review and accept the applicable terms. The store then creates your customer login. Online payment is available only after enrolment and only for amounts allowed by your recorded plan.</p>
     <p>For gold or silver modes, the current Jai Shri Krishna Jewellery Scheme Rate is shown and locked before payment starts. A verified INR contribution is converted using that locked rate, and the final allocated quantity is shown after verification. A later rate publication does not change that contribution.</p>
     <div class="d-flex flex-wrap gap-2">

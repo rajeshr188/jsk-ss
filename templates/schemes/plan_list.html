@@ -3,13 +3,13 @@
 {% block title %}Scheme plans | Jai Shri Krishna Jewellery{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-  <div><h1 class="mb-1">Scheme plans</h1><p class="text-muted mb-0">Reusable terms for new customer agreements</p></div>
-  <a class="btn btn-jsk" href="{% url 'schemes:plan_add' %}">Add plan</a>
+<div class="page-header">
+  <div><p class="page-eyebrow">Scheme configuration</p><h1>Scheme plans</h1><p class="page-subtitle">Reusable terms for new customer agreements.</p></div>
+  <div class="page-actions"><a class="btn btn-jsk" href="{% url 'schemes:plan_add' %}">Add plan</a></div>
 </div>
 <div class="table-responsive">
   <table class="table align-middle">
-    <thead><tr><th>Plan</th><th>Amount</th><th>Frequency</th><th>Duration</th><th>Cash bonus</th><th>Status</th><th>Public page</th><th>Action</th></tr></thead>
+    <thead><tr><th scope="col">Plan</th><th scope="col">Amount</th><th scope="col">Frequency</th><th scope="col">Duration</th><th scope="col">Cash bonus</th><th scope="col">Status</th><th scope="col">Public page</th><th scope="col">Action</th></tr></thead>
     <tbody>
       {% for plan in plans %}
       <tr>

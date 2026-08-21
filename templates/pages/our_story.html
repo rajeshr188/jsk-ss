@@ -1,0 +1,55 @@
+{% extends '_base.html' %}
+
+{% block title %}Our Story | Jai Shri Krishna Jewellery{% endblock %}
+{% block meta_description %}Meet brothers Dilip Kumar and Rajesh Rathod H, the business and technology minds behind Jai Shri Krishna Jewellery.{% endblock %}
+
+{% block content %}
+<section class="story-hero text-center" aria-labelledby="story-title">
+  <p class="text-uppercase small fw-semibold text-secondary mb-2">The people behind the name</p>
+  <h1 id="story-title">Two brothers, one shared vision</h1>
+  <p class="lead mx-auto mb-0">Jai Shri Krishna Jewellery brings together a love for serving customers and a passion for building dependable software.</p>
+</section>
+
+<section class="row g-4 mt-1" aria-label="Owner and developer profiles">
+  <div class="col-lg-6">
+    <article class="profile-card h-100">
+      <div class="profile-portrait profile-portrait--owner" role="img" aria-label="Profile placeholder for Dilip Kumar">
+        <span aria-hidden="true">DK</span>
+      </div>
+      <div class="profile-card__body">
+        <p class="profile-role">Owner &amp; business lead</p>
+        <h2>Dilip Kumar</h2>
+        <p class="profile-tagline">Computer science engineer by qualification, businessman by heart.</p>
+        <p class="mb-0">Dilip brings the business vision, jewellery experience, and customer-first approach that guide Jai Shri Krishna Jewellery and its savings schemes.</p>
+      </div>
+    </article>
+  </div>
+
+  <div class="col-lg-6">
+    <article class="profile-card h-100">
+      <div class="profile-portrait profile-portrait--developer" role="img" aria-label="Profile placeholder for Rajesh Rathod H">
+        <span aria-hidden="true">RR</span>
+      </div>
+      <div class="profile-card__body">
+        <p class="profile-role">Developer</p>
+        <h2>Rajesh Rathod H</h2>
+        <p class="profile-tagline">Software developer by heart.</p>
+        <p>Rajesh designed and developed the digital savings scheme platform, translating the store's working needs into a clear and dependable experience for customers and the owner.</p>
+        <a class="profile-contact" href="mailto:rajeshrathodh@gmail.com" aria-label="Email Rajesh Rathod H at rajeshrathodh@gmail.com">rajeshrathodh@gmail.com</a>
+      </div>
+    </article>
+  </div>
+</section>
+
+<section class="partnership-card mt-4 mt-lg-5">
+  <div>
+    <p class="text-uppercase small fw-semibold text-secondary mb-2">Family and craft</p>
+    <h2>Built together, for the customers they serve</h2>
+    <p class="mb-0">As brothers, Dilip and Rajesh combine business understanding with thoughtful software development. Their shared aim is to make every savings-scheme interaction more transparent, convenient, and personal.</p>
+  </div>
+  <div class="d-flex flex-wrap gap-2">
+    <a class="btn btn-jsk" href="{% url 'pricing' %}">View savings plans</a>
+    <a class="btn btn-outline-dark" href="{% url 'contact' %}">Contact the showroom</a>
+  </div>
+</section>
+{% endblock content %}

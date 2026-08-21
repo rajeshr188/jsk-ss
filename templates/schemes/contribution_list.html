@@ -3,13 +3,13 @@
 {% block title %}Contributions | Jai Shri Krishna Jewellery{% endblock %}
 
 {% block content %}
-<div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-4">
-  <div><h1 class="mb-1">Contributions</h1><p class="text-muted mb-0">All customer payment attempts</p></div>
-  <a class="btn btn-outline-dark" href="{% url 'schemes:contribution_export' %}">Download CSV</a>
+<div class="page-header">
+  <div><p class="page-eyebrow">Payment records</p><h1>Contributions</h1><p class="page-subtitle">All customer payment attempts.</p></div>
+  <div class="page-actions"><a class="btn btn-outline-dark" href="{% url 'schemes:contribution_export' %}">Download CSV</a></div>
 </div>
 <div class="table-responsive">
   <table class="table align-middle">
-    <thead><tr><th>Created</th><th>Customer</th><th>Scheme</th><th>Period</th><th>Amount</th><th>Entitlement</th><th>Status</th><th>Action</th></tr></thead>
+    <thead><tr><th scope="col">Created</th><th scope="col">Customer</th><th scope="col">Scheme</th><th scope="col">Period</th><th scope="col">Amount</th><th scope="col">Entitlement</th><th scope="col">Status</th><th scope="col">Action</th></tr></thead>
     <tbody>
       {% for contribution in contributions %}
       <tr>

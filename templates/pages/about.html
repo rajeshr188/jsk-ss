@@ -24,6 +24,9 @@
 
   <h2>Visit us</h2>
   <p>Jai Shri Krishna Jewellery<br>No. 155, Azad Road<br>Thorapadi, Vellore<br>Tamil Nadu 632001, India</p>
-  <p><a class="btn btn-outline-dark" href="{% url 'contact' %}">Contact the showroom</a></p>
+  <div class="d-flex flex-wrap gap-2">
+    <a class="btn btn-jsk" href="{% url 'our_story' %}">Meet the brothers behind the business</a>
+    <a class="btn btn-outline-dark" href="{% url 'contact' %}">Contact the showroom</a>
+  </div>
 </div>
 {% endblock content %}

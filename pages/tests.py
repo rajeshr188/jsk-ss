@@ -12,11 +12,30 @@ class PublicPageTests(SimpleTestCase):
     def test_home_is_branded(self):
         response = self.client.get(reverse("home"))
         self.assertContains(response, "Jai Shri Krishna Jewellery")
+        self.assertContains(
+            response, "Plan today. Choose the jewellery you love tomorrow."
+        )
+        self.assertContains(response, "One goal, two clearly recorded paths")
+        self.assertNotContains(response, "Cash")
+        self.assertNotContains(response, "cash")
+        self.assertContains(response, "No public signup")
+        self.assertContains(response, f'href="{reverse("pricing")}"')
+        self.assertContains(response, f'href="{reverse("contact")}"')
+        self.assertContains(response, f'href="{reverse("account_login")}"')
         self.assertNotContains(response, "Django starter project")
 
     def test_about_page(self):
         response = self.client.get(reverse("about"))
         self.assertContains(response, "About Jai Shri Krishna Jewellery")
+
+    def test_our_story_credits_owner_and_developer(self):
+        response = self.client.get(reverse("our_story"))
+
+        self.assertContains(response, "Dilip Kumar")
+        self.assertContains(response, "Rajesh Rathod H")
+        self.assertContains(response, "Computer science engineer by qualification")
+        self.assertContains(response, "Software developer by heart")
+        self.assertContains(response, "rajeshrathodh@gmail.com")
 
     def test_public_business_and_policy_pages_are_available(self):
         expected_content = {
@@ -38,6 +57,7 @@ class PublicPageTests(SimpleTestCase):
 
         for route_name in (
             "about",
+            "our_story",
             "contact",
             "pricing",
             "terms",

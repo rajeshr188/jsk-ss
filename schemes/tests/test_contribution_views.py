@@ -48,6 +48,7 @@ class ContributionViewTests(TestCase):
         )
         self.assertContains(response, "Mock payment successful")
         self.assertContains(response, "₹5000.00")
+        self.assertContains(response, 'class="card mobile-history-card"')
         contribution = Contribution.objects.get(scheme_account=self.account)
         self.assertEqual(contribution.status, Contribution.Status.PAID)
         self.assertTrue(contribution.gateway_reference.startswith("mock_"))

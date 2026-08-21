@@ -3,13 +3,13 @@
 {% block title %}Redemptions | Jai Shri Krishna Jewellery{% endblock %}
 
 {% block content %}
-<div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-4">
-  <div><h1 class="mb-1">Redemptions</h1><p class="text-muted mb-0">Completed customer entitlement settlements</p></div>
-  <div><a class="btn btn-outline-dark" href="{% url 'schemes:redemption_export' %}">Download CSV</a> <a class="btn btn-jsk" href="{% url 'schemes:redemption_eligibility' %}">Review eligible accounts</a></div>
+<div class="page-header">
+  <div><p class="page-eyebrow">Settlement records</p><h1>Redemptions</h1><p class="page-subtitle">Completed customer entitlement settlements.</p></div>
+  <div class="page-actions"><a class="btn btn-outline-dark" href="{% url 'schemes:redemption_export' %}">Download CSV</a><a class="btn btn-jsk" href="{% url 'schemes:redemption_eligibility' %}">Review eligible accounts</a></div>
 </div>
 <div class="table-responsive">
   <table class="table align-middle">
-    <thead><tr><th>Completed</th><th>Reference</th><th>Customer</th><th>Scheme</th><th>Settlement</th><th>Entitlement redeemed</th><th>External reference</th><th>Notes</th><th>Processed by</th><th>Status</th></tr></thead>
+    <thead><tr><th scope="col">Completed</th><th scope="col">Reference</th><th scope="col">Customer</th><th scope="col">Scheme</th><th scope="col">Settlement</th><th scope="col">Entitlement redeemed</th><th scope="col">External reference</th><th scope="col">Notes</th><th scope="col">Processed by</th><th scope="col">Status</th></tr></thead>
     <tbody>
       {% for redemption in redemptions %}
       <tr>
