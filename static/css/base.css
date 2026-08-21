@@ -6,7 +6,7 @@
   --jsk-primary: #713a20;
   --jsk-primary-hover: #552a17;
   --jsk-gold: #c99a3d;
-  --jsk-gold-deep: #936411;
+  --jsk-gold-deep: #704606;
   --jsk-gold-soft: #f6ead0;
   --jsk-canvas: #f8f5ef;
   --jsk-surface: #fffdf9;
@@ -19,6 +19,8 @@
   --bs-body-bg: var(--jsk-canvas);
   --bs-link-color: var(--jsk-primary);
   --bs-link-hover-color: var(--jsk-primary-hover);
+  --bs-secondary-color: var(--jsk-muted);
+  --bs-secondary-rgb: 111, 98, 91;
   --bs-border-color: var(--jsk-border);
   --bs-border-radius: 0.65rem;
   --bs-border-radius-lg: 1rem;
@@ -593,6 +595,14 @@ dl.row dt {
   font-size: clamp(1rem, 2vw, 1.25rem);
 }
 
+.hero-card .page-eyebrow {
+  color: #5f3900;
+}
+
+.hero-card .trust-row {
+  color: #3f2d24;
+}
+
 .hero-card--home h1 {
   font-size: clamp(2.45rem, 6vw, 4.6rem);
 }
@@ -612,25 +622,6 @@ dl.row dt {
   text-align: center;
 }
 
-.hero-metal-grid {
-  display: grid;
-  grid-template-columns: 1fr 1.2fr 1fr;
-  align-items: center;
-  gap: 0.55rem;
-  margin: 1.35rem 0;
-}
-
-.metal-token,
-.jewellery-symbol {
-  display: grid;
-  place-items: center;
-  color: var(--jsk-brown-deep);
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.035em;
-}
-
-.metal-token__symbol,
 .mode-symbol {
   display: grid;
   width: 3.4rem;
@@ -643,25 +634,51 @@ dl.row dt {
   box-shadow: inset 0 0 0 0.28rem rgba(255, 255, 255, 0.25);
 }
 
-.metal-token--gold .metal-token__symbol,
 .mode-symbol--gold {
   background: linear-gradient(145deg, #fff4cf, #d3a443);
 }
 
-.metal-token--silver .metal-token__symbol,
 .mode-symbol--silver {
   background: linear-gradient(145deg, #fff, #aebbc2);
 }
 
-.jewellery-symbol svg {
-  width: 4.8rem;
-  height: 4.1rem;
-  margin-bottom: 0.15rem;
-  fill: rgba(201, 154, 61, 0.12);
-  stroke: var(--jsk-primary);
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 2.5;
+.hero-photo {
+  position: relative;
+  aspect-ratio: 6 / 7;
+  margin: 1.1rem 0 0.85rem;
+  overflow: hidden;
+  background: var(--jsk-brown-deep);
+  border: 1px solid rgba(113, 58, 32, 0.2);
+  border-radius: 0.8rem;
+  box-shadow: 0 0.75rem 1.5rem rgba(45, 24, 17, 0.16);
+}
+
+.hero-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.hero-photo__caption {
+  position: absolute;
+  inset: auto 0 0;
+  display: grid;
+  gap: 0.08rem;
+  padding: 1.6rem 0.75rem 0.65rem;
+  color: #fff;
+  background: linear-gradient(transparent, rgba(24, 14, 10, 0.9));
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.hero-photo__caption small {
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 0.64rem;
+  font-weight: 500;
+}
+
+.hero-photo__caption a {
+  color: inherit;
 }
 
 .hero-route {
@@ -784,11 +801,7 @@ dl.row dt {
 .journey-icon svg {
   width: 1.8rem;
   height: 1.8rem;
-  fill: none;
-  stroke: currentColor;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 1.7;
+  fill: currentColor;
 }
 
 .journey-icon--metal {
@@ -828,6 +841,9 @@ dl.row dt {
 }
 
 .trust-point {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
   height: 100%;
   padding: 1.1rem 1.2rem;
   background: var(--jsk-surface);
@@ -835,12 +851,29 @@ dl.row dt {
   border-radius: 0.8rem;
 }
 
-.trust-point strong,
-.trust-point span {
+.trust-point__icon {
+  display: grid;
+  width: 2.35rem;
+  height: 2.35rem;
+  place-items: center;
+  flex: 0 0 auto;
+  color: var(--jsk-primary);
+  background: var(--jsk-gold-soft);
+  border-radius: 50%;
+}
+
+.trust-point__icon svg {
+  width: 1.15rem;
+  height: 1.15rem;
+  fill: currentColor;
+}
+
+.trust-point__copy strong,
+.trust-point__copy span {
   display: block;
 }
 
-.trust-point span {
+.trust-point__copy span {
   margin-top: 0.25rem;
   color: var(--jsk-muted);
   font-size: 0.88rem;

@@ -16,11 +16,15 @@ UI modernization — Bootstrap 5 refresh implemented; review pending
 - Figma-principle refinement pass with WCAG-AA small-text contrast, structured
   financial form fieldsets, progressively disclosed owner records, consistent
   account-recovery and owner-list surfaces, explicit table-header semantics, and
-  mobile customer contribution/redemption cards.
+  mobile customer contribution/redemption cards; gold-label, Bootstrap secondary-
+  text, and warm-gradient homepage colors meet axe/WCAG AA normal-text contrast
+  thresholds against their lightest-risk theme surfaces.
 - Conversion-focused public homepage with a prospect-first plan/showroom journey,
   distinct existing-customer access, an explicit INR-to-locked-metal-to-jewellery
   visual redemption flow, compact gold/silver choice cards, local business details,
-  repeated plan/contact actions, and pre-enrolment policy links.
+  applicable BIS hallmark/HUID trust cues, embedded Bootstrap Icons, and one optimized,
+  self-hosted Pexels jewellery photograph clearly labelled as illustrative; repeated
+  plan/contact actions and pre-enrolment policy links remain prominent.
 - Owner/customer roles, customer records, reusable plans, and snapshotted enrolments.
 - Owner customer-management flow and isolated customer scheme view.
 - Append-oriented contributions with pending/paid/paid-unallocated/failed states.
@@ -205,6 +209,9 @@ UI modernization — Bootstrap 5 refresh implemented; review pending
   production deployment and local development database.
 - Migration drift check reports no changes.
 - Django system check and migration drift check pass.
+- The rendered anonymous homepage passes Deque axe-core 4.13's WCAG AA
+  `color-contrast` rule with zero violations; the referenced axe 4.12 rule uses
+  the same 4.5:1 normal-text and 3:1 qualifying-large-text thresholds.
 - Production deployment checks pass with a synthetic secure configuration and no
   issues; the real deployment must supply equivalent secrets, hosts, TLS, and email.
 - Production image `jsk-savings:hardening-check` builds successfully, collects 137
