@@ -21,8 +21,8 @@ UI modernization — Bootstrap 5 refresh implemented; review pending
   thresholds against their lightest-risk theme surfaces.
 - Conversion-focused public homepage with a prospect-first plan/showroom journey,
   distinct existing-customer access, an explicit INR-to-locked-metal-to-jewellery
-  visual redemption flow, compact gold/silver choice cards, local business details,
-  applicable BIS hallmark/HUID trust cues, embedded Bootstrap Icons, and one optimized,
+  visual redemption flow, concise gold/silver copy, local business details,
+  BIS hallmark/HUID trust cues, embedded Bootstrap Icons, and one optimized,
   self-hosted Pexels jewellery photograph clearly labelled as illustrative; repeated
   plan/contact actions and pre-enrolment policy links remain prominent.
 - Owner/customer roles, customer records, reusable plans, and snapshotted enrolments.

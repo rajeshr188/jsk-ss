@@ -10,14 +10,14 @@
       <div class="hero-content">
         <p class="page-eyebrow">Gold and silver jewellery purchase plans</p>
         <h1 id="hero-title">Plan today. Choose the jewellery you love tomorrow.</h1>
-        <p class="lead">Pay scheduled contributions in INR and accumulate a recorded quantity of 24K gold or silver. Once your plan becomes eligible, that accumulated metal quantity can be applied toward jewellery selected at our Vellore showroom.</p>
+        <p class="lead">Your INR contributions accumulate a recorded quantity of 24K gold or silver. Once eligible, apply it toward jewellery at our Vellore showroom.</p>
         <div class="trust-row" aria-label="Jewellery trust assurances">
-          <span>BIS-hallmarked jewellery where applicable</span>
+          <span>BIS-hallmarked jewellery</span>
           <span>Hallmark and HUID verification at purchase</span>
         </div>
         <div class="d-flex flex-wrap gap-2 mt-4">
           <a class="btn btn-jsk btn-lg" href="{% url 'pricing' %}">Explore available plans</a>
-          <a class="btn btn-outline-dark btn-lg" href="{% url 'contact' %}">Talk to our showroom</a>
+          <a class="btn btn-outline-dark btn-lg" href="{% url 'contact' %}">Talk to us</a>
         </div>
         <p class="small mt-3 mb-0">
           {% if user.is_authenticated %}
@@ -35,8 +35,7 @@
         <figure class="hero-photo">
           <img src="{% static 'images/home-jewellery.webp' %}" width="900" height="1050" alt="Traditional gold necklace displayed on a dark jewellery bust" fetchpriority="high" decoding="async">
           <figcaption class="hero-photo__caption">
-            <span>Illustrative jewellery · showroom selection</span>
-            <small>Photo by <a href="https://www.pexels.com/photo/a-gold-necklace-with-beads-hanging-on-a-jewelry-display-bust-20768279/" target="_blank" rel="noopener noreferrer">sinu sony / Pexels</a></small>
+            <span>Illustrative jewellery</span>
           </figcaption>
         </figure>
         <div class="hero-route" aria-label="INR contributions become a recorded metal quantity for showroom redemption">
@@ -49,41 +48,6 @@
   </div>
 </section>
 
-<section aria-labelledby="modes-heading">
-  <div class="section-heading mt-0">
-    <div>
-      <p class="page-eyebrow">Choose your metal plan</p>
-      <h2 id="modes-heading">Two clearly recorded paths to jewellery</h2>
-    </div>
-    <p>Your showroom enrolment records the mode and terms you select.</p>
-  </div>
-  <div class="row g-4">
-    <div class="col-md-6">
-      <article class="card mode-card mode-card--gold h-100"><div class="card-body p-4">
-        <div class="d-flex align-items-center gap-3">
-          <span class="mode-symbol mode-symbol--gold" aria-hidden="true">Au</span>
-          <div>
-            <span class="mode-label">24K Gold</span>
-            <h3 class="h4 mt-2 mb-0">A plan measured in gold</h3>
-          </div>
-        </div>
-        <p class="mode-card__result mb-0">Verified contributions → gold quantity → eligible jewellery</p>
-      </div></article>
-    </div>
-    <div class="col-md-6">
-      <article class="card mode-card mode-card--silver h-100"><div class="card-body p-4">
-        <div class="d-flex align-items-center gap-3">
-          <span class="mode-symbol mode-symbol--silver" aria-hidden="true">Ag</span>
-          <div>
-            <span class="mode-label">Silver</span>
-            <h3 class="h4 mt-2 mb-0">A plan measured in silver</h3>
-          </div>
-        </div>
-        <p class="mode-card__result mb-0">Verified contributions → silver quantity → eligible jewellery</p>
-      </div></article>
-    </div>
-  </div>
-</section>
 
 <section class="scheme-journey mt-4" aria-labelledby="conversion-explained-heading">
   <div class="text-center mb-4">

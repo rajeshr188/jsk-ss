@@ -15,23 +15,20 @@ class PublicPageTests(SimpleTestCase):
         self.assertContains(
             response, "Plan today. Choose the jewellery you love tomorrow."
         )
-        self.assertContains(response, "Two clearly recorded paths to jewellery")
         self.assertContains(
             response,
-            "that accumulated metal quantity can be applied toward jewellery",
+            "Your INR contributions accumulate a recorded quantity",
         )
         self.assertContains(response, "A contribution does not reserve or purchase")
         self.assertContains(response, "It is not a bank deposit")
         self.assertContains(response, "From contribution to jewellery")
         self.assertContains(response, "Lock the rate")
-        self.assertContains(response, "A plan measured in gold")
-        self.assertContains(response, "A plan measured in silver")
         self.assertNotContains(response, "Build gold grams")
         self.assertNotContains(response, "Build silver grams")
-        self.assertContains(response, "BIS-hallmarked jewellery where applicable")
+        self.assertContains(response, "BIS-hallmarked jewellery")
         self.assertContains(response, "Hallmark and HUID verification at purchase")
         self.assertContains(response, "images/home-jewellery.webp")
-        self.assertContains(response, "sinu sony / Pexels")
+        self.assertContains(response, "Illustrative jewellery")
         self.assertContains(response, "bi-currency-rupee")
         self.assertContains(response, "bi-patch-check-fill")
         self.assertNotContains(response, "Cash")
