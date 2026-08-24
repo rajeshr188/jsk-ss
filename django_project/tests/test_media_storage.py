@@ -1,4 +1,6 @@
 from io import BytesIO
+from unittest.mock import MagicMock, patch
+from urllib.error import HTTPError
 
 from PIL import Image as PillowImage
 from django.core.exceptions import ImproperlyConfigured
@@ -169,3 +171,42 @@ class WagtailMediaPipelineTests(TestCase):
         call_command("check_media_storage")
 
         self.assertEqual(image_model.objects.count(), image_count)
+
+    @override_settings(R2_CUSTOM_DOMAIN="media.example.com")
+    @patch("pages.management.commands.check_media_storage.urlopen")
+    def test_smoke_command_checks_public_and_private_custom_domain_paths(
+        self,
+        urlopen,
+    ):
+        public_response = MagicMock()
+        public_response.__enter__.return_value = public_response
+        public_response.status = 200
+        public_response.read.return_value = b"image"
+        urlopen.side_effect = [
+            public_response,
+            HTTPError(
+                "https://media.example.com/original_images/test",
+                403,
+                "",
+                {},
+                None,
+            ),
+            HTTPError(
+                "https://media.example.com/documents/test",
+                403,
+                "",
+                {},
+                None,
+            ),
+        ]
+
+        call_command("check_media_storage")
+
+        requested_urls = [call.args[0].full_url for call in urlopen.call_args_list]
+        self.assertEqual(len(requested_urls), 3)
+        self.assertIn("/images/", requested_urls[0])
+        self.assertIn("/original_images/", requested_urls[1])
+        self.assertIn("/documents/", requested_urls[2])
+        for requested_url in requested_urls:
+            self.assertNotIn(R2_ENVIRONMENT["R2_ACCESS_KEY_ID"], requested_url)
+            self.assertNotIn(R2_ENVIRONMENT["R2_SECRET_ACCESS_KEY"], requested_url)

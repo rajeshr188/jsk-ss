@@ -2,7 +2,7 @@
 
 ## Current milestone
 
-Cloudflare R2 media foundation — staging smoke passed; production controls pending
+Cloudflare R2 media foundation — DNS cutover verified; production controls pending
 
 ## Completed
 
@@ -142,6 +142,11 @@ Cloudflare R2 media foundation — staging smoke passed; production controls pen
 - The isolated non-production R2 smoke passed on 2026-08-24: Django uploaded and read
   the original, generated and read a Wagtail rendition, and removed the temporary
   database and object-storage records without printing credentials or signed URLs.
+- The complete Linode DNS record set was reproduced in Cloudflare, including the
+  initially missed GoDaddy and Postmark DKIM records. Authority changed to Cloudflare
+  without a stale DNSSEC delegation; both authoritative servers agree, and apex,
+  `www`, live, and ready HTTPS checks return `200` while web and mail records remain
+  DNS-only during stabilization.
 
 ## In progress
 
@@ -150,8 +155,9 @@ Cloudflare R2 media foundation — staging smoke passed; production controls pen
 - `FW-CMS-002` is complete locally. `FW-MEDIA-001` is implemented and tested in the
   repository, and its real non-production R2 smoke has passed. Its remaining external
   exit criteria are the separate production bucket, custom-domain/WAF/cache controls,
-  token rotation, monitoring, and recovery evidence. Catalogue models and production
-  promotion remain blocked until that operational proof is retained.
+  mail-after-DNS-cutover confirmation, token rotation, monitoring, and recovery
+  evidence. Catalogue models and production promotion remain blocked until that
+  operational proof is retained.
 - Environment-specific production proof: isolated database restoration, real email
   delivery, external alert routing/exercises, and coordinated secret-rotation drills.
   The stable owned domain/TLS/proxy path and repository observability foundation are
@@ -221,7 +227,7 @@ Cloudflare R2 media foundation — staging smoke passed; production controls pen
   static collection, and an applied-migration check. Wagtail/taggit migrations are
   applied to local PostgreSQL only; production has not received them.
 - PostgreSQL 16 migrations applied successfully.
-- 158 tests pass, including R2 configuration and signed/private-original versus
+- 159 tests pass, including R2 configuration and signed/private-original versus
   public-rendition URL isolation, no-residue upload/read/rendition/cleanup behavior,
   production media deployment gates, explicit Wagtail permission and route-precedence checks,
   public INR-contribution/metal-to-jewellery copy coverage,
@@ -291,13 +297,12 @@ Cloudflare R2 media foundation — staging smoke passed; production controls pen
 
 ## Next recommended step
 
-Export the complete Linode DNS zone, reproduce and verify it in a Cloudflare zone,
-and only then change authoritative nameservers so the owned R2 media domain can be
-attached without interrupting the application or GoDaddy-hosted mail records. After
-DNS is stable, provision the separate production bucket and retain evidence for the
-custom-domain/WAF/cache controls, token-rotation rehearsal, monitoring, and media
-recovery exercise. Do not create catalogue models or promote the CMS foundation to
-production until those durable-media behaviors are proven.
+Confirm Cloudflare marks the zone Active and test inbound/outbound mail after the DNS
+cutover. Then provision the separate production R2 Standard bucket, add the WAF rule
+for private prefixes before attaching the custom media domain, and retain evidence
+for public rendition delivery, cache controls, token rotation, monitoring, and media
+recovery. Do not create catalogue models or promote the CMS foundation to production
+until those durable-media behaviors are proven.
 
 Complete the CASH product-boundary decision and enforce it in enrolment and payment
 services before submitting the public website and policy URLs to Razorpay. Keep live

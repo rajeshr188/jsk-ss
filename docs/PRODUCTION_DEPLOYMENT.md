@@ -692,6 +692,14 @@ for application static files.
    priority 10; TXT includes `v=spf1 include:secureserver.net -all` and `T1327472`.
    This public snapshot is not a complete zone export. Export and compare every
    Linode DNS record before changing the registrar's nameservers.
+
+   Cutover evidence recorded 2026-08-24: Cloudflare received all 17 non-NS records,
+   including the two GoDaddy DKIM CNAMEs and Postmark DKIM TXT record missed by the
+   automatic import. Public authority changed to `carlane.ns.cloudflare.com` and
+   `tony.ns.cloudflare.com` with no stale DS delegation. Both authoritative servers
+   returned matching apex A/AAAA and MX answers; public apex, `www`, live, and ready
+   HTTPS checks returned `200`. Keep the Linode zone intact as the short-term DNS
+   rollback source until Cloudflare and mail delivery have remained stable.
 6. Disable the production bucket's public `r2.dev` URL. On the Cloudflare zone, add
    one zone-level WAF custom rule with the **Block** action:
 
@@ -714,8 +722,11 @@ for application static files.
    production origins and required `GET`/`HEAD` methods or upload headers; never use
    a wildcard origin for credentialed operations.
 9. Re-run `check_media_storage` with the production release candidate and production
-   bucket before editor access is enabled. Confirm R2 metrics show the temporary
-   writes, reads, and deletes and that the bucket is empty apart from approved media.
+   bucket before editor access is enabled. With `R2_CUSTOM_DOMAIN` configured, the
+   command also requires the generated `/images/` rendition to return `200` and the
+   direct custom-domain `/original_images/` and `/documents/` prefixes to return
+   `403`. Confirm R2 metrics show the temporary writes, reads, and deletes and that
+   the bucket is empty apart from approved media.
 
 Credential rotation uses overlap, not downtime: create a second bucket-scoped token,
 replace the two R2 key values, recreate the web service, run `check_media_storage`,
