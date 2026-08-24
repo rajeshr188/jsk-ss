@@ -180,9 +180,10 @@ here are not implemented behavior and do not relax the financial invariants in
   without retaining the temporary media. The real production bucket, owned media
   domain, public rendition path, private-prefix WAF rules, and no-residue smoke also
   passed on 2026-08-24. A second production smoke proved the public 24-hour cache
-  header and a real Cloudflare cache hit. Complete the work item only after credential
-  rotation, usage monitoring, and the recovery exercise have retained evidence. Do
-  not use the rate-limited `r2.dev` endpoint in production.
+  header and a real Cloudflare cache hit. A replacement bucket-scoped token passed
+  before and after the old token was deleted. Complete the work item only after usage
+  monitoring and the recovery exercise have retained evidence. Do not use the
+  rate-limited `r2.dev` endpoint in production.
 - **FW-CATALOG-001 — Catalogue domain:** Implement a `CatalogIndexPage`, focused
   `ProductPage`, image gallery, and reusable category/collection snippets. Model
   product discovery and showroom enquiry only; do not introduce inventory, cart,

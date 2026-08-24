@@ -151,6 +151,10 @@ Cloudflare R2 media foundation — production smoke passed; operations proof pen
   cutover. The public-rendition cache rule is deployed, and a fresh production smoke
   proved its 24-hour public cache header and a real Cloudflare cache `HIT` while WAF
   and cleanup behavior remained correct.
+- The production R2 credential-rotation rehearsal passed on 2026-08-24: a new token
+  scoped to the production bucket passed the complete smoke, the old token was
+  deleted, and the new token passed again. A transient local DNS/TLS failure during a
+  WAF probe recovered through bounded retries without weakening any access control.
 
 ## In progress
 
@@ -158,9 +162,9 @@ Cloudflare R2 media foundation — production smoke passed; operations proof pen
   promotion remains separate from the Wagtail foundation work.
 - `FW-CMS-002` is complete locally. `FW-MEDIA-001` is implemented and tested in the
   repository, and its non-production and production R2 smokes have passed. Its
-  remaining external exit criteria are token rotation, monitoring, and recovery
-  evidence. Catalogue models and production promotion remain blocked until that
-  operational proof is retained.
+  remaining external exit criteria are usage monitoring and recovery evidence.
+  Catalogue models and production promotion remain blocked until that operational
+  proof is retained.
 - The first production-bucket smoke correctly failed because the R2 attachment used
   the apex instead of the intended media hostname. The attachment was corrected to
   `media.jaishrikrishnajewellery.com`; DNS/TLS, public rendition routing, `403` WAF
@@ -307,9 +311,10 @@ Cloudflare R2 media foundation — production smoke passed; operations proof pen
 
 ## Next recommended step
 
-Perform the documented R2 token-rotation and media-recovery exercises while retaining
-Cloudflare metrics and recovery evidence. Do not create catalogue models or promote
-the CMS foundation to production until those durable-media behaviors are proven.
+Create an application-isolated media backup target and perform the documented
+copy/delete/restore/hash recovery exercise while retaining Cloudflare usage metrics
+and recovery evidence. Do not create catalogue models or promote the CMS foundation
+to production until those durable-media behaviors are proven.
 
 Complete the CASH product-boundary decision and enforce it in enrolment and payment
 services before submitting the public website and policy URLs to Razorpay. Keep live

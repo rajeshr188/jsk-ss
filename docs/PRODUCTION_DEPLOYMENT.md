@@ -755,6 +755,12 @@ replace the two R2 key values, recreate the web service, run `check_media_storag
 then revoke the old token and run the check again. Roll back to the previous token
 only while it remains active; never keep both indefinitely.
 
+Rotation evidence recorded 2026-08-24: a separately created replacement token scoped
+to the production media bucket passed the full storage/custom-domain smoke. The old
+token was deleted and the replacement passed the full smoke again. A transient local
+DNS/TLS interruption affected only a public WAF probe; bounded retries then completed
+without changing credentials or Cloudflare security rules.
+
 R2 durability is not a backup against operator deletion or application mistakes.
 Before real catalogue media is accepted, copy a non-sensitive test object to the
 approved backup target, delete only that test object from the primary bucket, restore
