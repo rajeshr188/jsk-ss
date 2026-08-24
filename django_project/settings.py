@@ -149,6 +149,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "catalog.context_processors.public_catalogue_navigation",
             ],
         },
     },
@@ -253,6 +254,9 @@ WAGTAILADMIN_BASE_URL = os.getenv(
     "WAGTAILADMIN_BASE_URL",
     "http://localhost:8000" if DEBUG else "https://jaishrikrishnajewellery.com",
 ).strip().rstrip("/")
+# Activate public navigation only after the catalogue root has been reviewed and
+# published. The context processor still resolves live/public state when enabled.
+PUBLIC_CATALOGUE_ENABLED = env_bool("PUBLIC_CATALOGUE_ENABLED", False)
 WAGTAILSEARCH_BACKENDS = {
     "default": {
         "BACKEND": "wagtail.search.backends.database",

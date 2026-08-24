@@ -1,4 +1,4 @@
-{% load static %}
+{% load static wagtailcore_tags %}
 <!DOCTYPE html>
 <html lang="en">
 
@@ -9,6 +9,9 @@
   <title>{% block title %}Jai Sri Krishna Jewelley{% endblock title %}</title>
   <meta name="description" content="{% block meta_description %}Jai Sri Krishna Jewelley gold and silver jewellery purchase plans in Vellore, Tamil Nadu.{% endblock %}">
   <meta name="author" content="">
+  {% block canonical_url %}{% endblock %}
+  {% block social_meta %}{% endblock %}
+  {% block structured_data %}{% endblock %}
   <link rel="shortcut icon" type="image/x-icon" href="{% static 'images/favicon.ico' %}">
 
   {% block css %}
@@ -41,6 +44,11 @@
           <li class="nav-item">
             <a class="nav-link{% if current_url == 'pricing' %} active{% endif %}"{% if current_url == 'pricing' %} aria-current="page"{% endif %} href="{% url 'pricing' %}">Savings plans</a>
           </li>
+          {% if public_catalogue_page %}
+          <li class="nav-item">
+            <a class="nav-link{% if public_catalogue_is_current %} active{% endif %}"{% if public_catalogue_is_current %} aria-current="page"{% endif %} href="{{ public_catalogue_url }}">Jewellery</a>
+          </li>
+          {% endif %}
           <li class="nav-item">
             <a class="nav-link{% if current_url == 'about' %} active{% endif %}"{% if current_url == 'about' %} aria-current="page"{% endif %} href="{% url 'about' %}">About</a>
           </li>
@@ -123,6 +131,7 @@
             <a href="{% url 'about' %}">About</a>
             <a href="{% url 'contact' %}">Contact</a>
             <a href="{% url 'pricing' %}">Savings plans</a>
+            {% if public_catalogue_page %}<a href="{{ public_catalogue_url }}">Jewellery catalogue</a>{% endif %}
             <a href="{% url 'terms' %}">Terms</a>
             <a href="{% url 'privacy' %}">Privacy</a>
             <a href="{% url 'cancellation_refund' %}">Cancellation &amp; refunds</a>

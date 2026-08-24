@@ -3,40 +3,99 @@
 
 {% block title %}{{ page.seo_title|default:page.title }} | Jai Sri Krishna Jewelley{% endblock %}
 {% block meta_description %}{{ page.search_description|default:page.short_description }}{% endblock %}
+{% block canonical_url %}<link rel="canonical" href="{{ page.full_url }}">{% endblock %}
+{% block social_meta %}
+  <meta property="og:type" content="product">
+  <meta property="og:title" content="{{ page.seo_title|default:page.title }}">
+  <meta property="og:description" content="{{ page.search_description|default:page.short_description }}">
+  <meta property="og:url" content="{{ page.full_url }}">
+  {% if primary_image_url %}<meta property="og:image" content="{{ primary_image_url }}"><meta property="og:image:alt" content="{{ gallery_images.0.alt_text }}">{% endif %}
+{% endblock %}
+{% block structured_data %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Product",
+  "name": "{{ page.title|escapejs }}",
+  "description": "{{ page.short_description|escapejs }}",
+  "sku": "{{ page.product_code|escapejs }}",
+  "category": "{{ page.category.name|escapejs }}",
+  "url": "{{ page.full_url|escapejs }}",
+  "brand": {"@type": "Brand", "name": "Jai Sri Krishna Jewelley"}{% if primary_image_url %},
+  "image": "{{ primary_image_url|escapejs }}"{% endif %}
+}
+</script>
+{% endblock %}
 
 {% block content %}
+<nav class="small mb-4" aria-label="Breadcrumb">
+  <ol class="breadcrumb mb-0">
+    <li class="breadcrumb-item"><a href="{% pageurl page.get_parent %}">{{ page.get_parent.title }}</a></li>
+    <li class="breadcrumb-item active" aria-current="page">{{ page.title }}</li>
+  </ol>
+</nav>
+
 <article>
-  <header class="mb-4">
-    <p class="eyebrow mb-2">{{ page.category.name }}</p>
-    <h1>{{ page.title }}</h1>
-    <p class="lead">{{ page.short_description }}</p>
-    <p class="small text-muted">Catalogue reference {{ page.product_code }}</p>
-  </header>
-
-  {% if page.gallery_images.all %}
-  <div class="row g-3 mb-4" aria-label="Product images">
-    {% for gallery_image in page.gallery_images.all %}
-      {% image gallery_image.image fill-720x540 as rendition %}
-      <figure class="col-md-6">
-        <img class="img-fluid rounded" src="{{ rendition.url }}" width="{{ rendition.width }}" height="{{ rendition.height }}" alt="{{ gallery_image.alt_text }}">
-        {% if gallery_image.caption %}<figcaption class="small text-muted mt-2">{{ gallery_image.caption }}</figcaption>{% endif %}
-      </figure>
-    {% endfor %}
-  </div>
-  {% endif %}
-
-  {% if page.description %}<div class="mb-4">{{ page.description|richtext }}</div>{% endif %}
-
-  <section class="card shadow-sm mb-4" aria-labelledby="showroom-information">
-    <div class="card-body">
-      <h2 class="h4" id="showroom-information">Showroom information</h2>
-      {% if page.display_price_inr %}
-      <p class="fs-4 fw-semibold mb-2">&#8377;{{ page.display_price_inr|floatformat:2 }}</p>
+  <div class="row g-4 g-lg-5 align-items-start">
+    <div class="col-lg-7">
+      {% if gallery_images %}
+      <div class="product-gallery" aria-label="Product images">
+        {% for gallery_image in gallery_images %}
+          {% image gallery_image.image fill-720x540 format-webp as product_image_small %}
+          {% image gallery_image.image fill-1440x1080 format-webp as product_image_large %}
+          <figure{% if forloop.first %} class="product-gallery__primary"{% endif %}>
+            <img class="img-fluid" src="{{ product_image_small.url }}" srcset="{{ product_image_small.url }} 720w, {{ product_image_large.url }} 1440w" sizes="(min-width: 992px) 58vw, 100vw" width="{{ product_image_small.width }}" height="{{ product_image_small.height }}" alt="{{ gallery_image.alt_text }}" {% if forloop.first %}fetchpriority="high"{% else %}loading="lazy"{% endif %} decoding="async">
+            {% if gallery_image.caption %}<figcaption>{{ gallery_image.caption }}</figcaption>{% endif %}
+          </figure>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="product-image-placeholder" role="img" aria-label="No photograph is currently available for {{ page.title }}">
+        <span aria-hidden="true">JSK</span>
+        <strong>Photograph coming soon</strong>
+      </div>
       {% endif %}
-      <p>{{ page.enquiry_note }}</p>
-      <p class="small text-muted mb-3">The displayed value is catalogue information, not a Scheme Rate, customer entitlement, invoice, or online checkout price.</p>
-      <a class="btn btn-primary" href="{% url 'contact' %}">Contact the showroom</a>
     </div>
+
+    <div class="col-lg-5">
+      <header class="product-summary">
+        <p class="page-eyebrow mb-2">{{ page.category.name }}</p>
+        <h1>{{ page.title }}</h1>
+        <p class="lead">{{ page.short_description }}</p>
+        <p class="small text-secondary mb-0">Catalogue reference {{ page.product_code }}</p>
+        {% if product_collections %}
+        <ul class="product-collections" aria-label="Collections">
+          {% for collection in product_collections %}<li>{{ collection.name }}</li>{% endfor %}
+        </ul>
+        {% endif %}
+      </header>
+
+      <section class="showroom-enquiry mt-4" aria-labelledby="showroom-information">
+        <p class="page-eyebrow mb-2">Showroom enquiry</p>
+        <h2 class="h3" id="showroom-information">Confirm before you visit</h2>
+        {% if page.display_price_inr %}
+        <p class="product-display-price"><span>Indicative display price</span><strong>&#8377;{{ page.display_price_inr|floatformat:2 }}</strong></p>
+        {% endif %}
+        <p>{{ page.enquiry_note }}</p>
+        <p class="small text-secondary">Availability, specifications and final price are confirmed at our Vellore showroom. Any displayed price is informational catalogue content—not a Scheme Rate, customer entitlement, invoice or online checkout price.</p>
+        <div class="d-grid d-sm-flex gap-2">
+          <a class="btn btn-primary" href="mailto:admin@jaishrikrishnajewellery.com?subject=Catalogue%20enquiry%20-%20{{ page.product_code|urlencode }}">Contact the showroom by email</a>
+          <a class="btn btn-outline-primary" href="tel:+919489481436">Call the showroom</a>
+        </div>
+        <a class="d-inline-block small fw-semibold mt-3" href="{% url 'contact' %}">Address and business hours</a>
+      </section>
+    </div>
+  </div>
+
+  {% if page.description %}
+  <section class="product-description mt-5" aria-labelledby="product-details">
+    <h2 class="h3" id="product-details">About this piece</h2>
+    <div class="rich-text">{{ page.description|richtext }}</div>
   </section>
+  {% endif %}
 </article>
+
+<div class="mt-5 pt-3 border-top">
+  <a class="fw-semibold" href="{% pageurl page.get_parent %}">&larr; Back to the jewellery catalogue</a>
+</div>
 {% endblock %}

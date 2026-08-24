@@ -2,7 +2,7 @@
 
 ## Current milestone
 
-Wagtail catalogue publishing authorization — FW-CATALOG-002 complete locally
+Public Wagtail catalogue — FW-CATALOG-003 complete locally
 
 ## Completed
 
@@ -169,15 +169,20 @@ Wagtail catalogue publishing authorization — FW-CATALOG-002 complete locally
   not grant group membership, non-staff users remain denied even if assigned by
   mistake, and every workflow, publish, and unpublish action stays in Wagtail's
   actor-attributed audit history.
+- `FW-CATALOG-003` provides accessible Bootstrap 5 catalogue and product pages with
+  live-only search and category/collection filters, featured-first 12-item pagination,
+  responsive Wagtail/R2 renditions, image-free and no-result states, canonical/Open
+  Graph/JSON-LD metadata, and explicit phone, email, and Vellore-showroom enquiry
+  paths. Global navigation remains default-off for safe rollout and appears only when
+  the flag is enabled and the catalogue root is independently live/public.
 
 ## In progress
 
 - The Bootstrap 5 UI modernization is merged into `main` at `24ed76d`; production
-  promotion remains separate from the Wagtail foundation work.
-- `FW-CMS-002`, functional `FW-MEDIA-001`, and `FW-CATALOG-001` are merged into
-  `main` through PR #7 at `a224a9c`. `FW-CATALOG-002` is complete locally on
-  `agent/catalog-publishing-auth`; integrate it through PR/CI before starting the
-  public-catalogue work in `FW-CATALOG-003` from updated `main`.
+  promotion remains separate from the Wagtail catalogue rollout.
+- `FW-CMS-002`, functional `FW-MEDIA-001`, and `FW-CATALOG-001` are merged through
+  PR #7; `FW-CATALOG-002` is merged through PR #8 at `2400457`. `FW-CATALOG-003` is
+  complete locally on `agent/public-catalogue` and awaits its own reviewed PR/CI merge.
 - `FW-MEDIA-002` tracks the accepted backup/recovery and usage-monitoring deferral.
   It does not block local catalogue development, but approved source photographs must
   remain outside R2 until an isolated backup target and restore proof exist.
@@ -232,12 +237,14 @@ Wagtail catalogue publishing authorization — FW-CATALOG-002 complete locally
 - Plan-specific early-discontinuation pricing, payment-order
   expiry, eligibility reminders, public onboarding, and partial-settlement policy are
   not yet defined.
-- The CMS, R2, catalogue domain, and publishing-authorization foundations exist
-  locally, and real non-production/production storage, access, cache, and rotation
-  smokes pass. No production staff user has been assigned a catalogue group, public
-  catalogue polish is not yet implemented, and there is no isolated media backup/
-  restore proof. Retain approved source photographs outside R2; production must not
-  rely on R2 as their only copy. The authorization branch is not yet merged or deployed.
+- The CMS, R2, catalogue domain, publishing authorization, and public catalogue exist
+  in the repository, and real non-production/production storage, access, cache, and
+  rotation smokes pass. No production staff user has yet been assigned a catalogue
+  group, `PUBLIC_CATALOGUE_ENABLED` remains default-off, and there is no isolated media
+  backup/restore proof. Retain approved source photographs outside R2; production must
+  not rely on R2 as their only copy. Catalogue migrations, authorization bootstrap,
+  editor training, reviewed content, browser proof, and navigation activation remain
+  `FW-CATALOG-004` rollout work.
 - The detailed, prioritized backlog and milestone-by-milestone limitation history
   are maintained in [Future work](FUTURE_WORK.md).
 
@@ -251,10 +258,13 @@ Wagtail catalogue publishing authorization — FW-CATALOG-002 complete locally
   static collection, and an applied-migration check. Wagtail/taggit migrations are
   applied to local PostgreSQL only; production has not received them.
 - PostgreSQL 16 migrations applied successfully.
-- 170 tests pass, including catalogue authorization drift repair, exact role/media
-  scope, draft privacy, editor submission, publisher approval, publish/unpublish audit
-  history, hierarchy, validation, case-insensitive uniqueness, preview, revision,
-  gallery and rendition coverage; R2 configuration and signed/private-original versus
+- 177 tests pass, including public catalogue search/category/collection filtering,
+  bounded pagination, responsive renditions, canonical/Open Graph/JSON-LD metadata,
+  accessible discovery and empty states, rollout-gated navigation, direct draft/live
+  visibility, catalogue authorization drift repair, exact role/media scope, editor
+  submission, publisher approval, publish/unpublish audit history, hierarchy,
+  validation, case-insensitive uniqueness, preview, revision, gallery and rendition
+  coverage; R2 configuration and signed/private-original versus
   public-rendition URL isolation, no-residue upload/read/rendition/cleanup behavior,
   production media deployment gates, explicit Wagtail permission and route-precedence checks,
   public INR-contribution/metal-to-jewellery copy coverage,
@@ -324,12 +334,13 @@ Wagtail catalogue publishing authorization — FW-CATALOG-002 complete locally
 
 ## Next recommended step
 
-Commit and push `agent/catalog-publishing-auth`, open and review its PR, require CI to
-pass, and merge it into `main`. Then fast-forward local `main` and create a fresh
-branch for `FW-CATALOG-003`, refining the Bootstrap 5 public catalogue, responsive
-R2 renditions, SEO, discovery controls, and enquiry journey. Keep the accepted
-`FW-MEDIA-002` recovery/monitoring limitation visible and retain source photographs
-outside R2.
+Commit and push the cohesive `agent/public-catalogue` implementation, open and review
+its PR, require CI to pass, and merge it into `main`. Then execute `FW-CATALOG-004` as
+a separate production-rollout change: preserve database/media recovery points, deploy
+the additive catalogue migrations, reconcile authorization, create and train explicit
+staff publishers, publish reviewed content, prove R2 renditions and public pages on
+mobile/desktop, and only then enable `PUBLIC_CATALOGUE_ENABLED`. Keep the accepted
+`FW-MEDIA-002` recovery limitation visible and retain source photographs outside R2.
 
 Complete the CASH product-boundary decision and enforce it in enrolment and payment
 services before submitting the public website and policy URLs to Razorpay. Keep live
