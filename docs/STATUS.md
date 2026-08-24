@@ -2,7 +2,7 @@
 
 ## Current milestone
 
-Wagtail catalogue foundation — local compatibility spike complete; R2 is next
+Cloudflare R2 media foundation — repository implementation complete; live proof pending
 
 ## Completed
 
@@ -133,14 +133,22 @@ Wagtail catalogue foundation — local compatibility spike complete; R2 is next
   the existing `/admin/` and `/scheme/` routes, and unchanged Bootstrap 5 public
   pages. CMS entry requires the explicit `wagtailadmin.access_admin` permission;
   customer and application-owner roles alone do not grant it.
+- The `FW-MEDIA-001` repository foundation uses environment-selected
+  `django-storages` R2 storage while retaining WhiteNoise for static files. Wagtail
+  originals and documents use short-lived signed S3 URLs; generated image renditions
+  use a separate public custom-domain storage alias. Production checks reject local
+  media, `r2.dev`, missing owned media domains, and non-view document serving. A
+  no-residue command exercises real upload, read, rendition, and cleanup behavior.
 
 ## In progress
 
 - The Bootstrap 5 UI modernization is merged into `main` at `24ed76d`; production
   promotion remains separate from the Wagtail foundation work.
-- `FW-CMS-002` is complete locally. The remaining phased Wagtail work is registered
-  as `FW-MEDIA-001` and `FW-CATALOG-001` through `FW-CATALOG-004`; Cloudflare R2
-  media isolation is next, before catalogue models or production promotion.
+- `FW-CMS-002` is complete locally. `FW-MEDIA-001` is implemented and tested in the
+  repository, but its external exit criteria remain: isolated R2 buckets, real
+  non-production smoke proof, production custom-domain/WAF/cache controls, token
+  rotation, monitoring, and recovery evidence. Catalogue models and production
+  promotion remain blocked until that operational proof is retained.
 - Environment-specific production proof: isolated database restoration, real email
   delivery, external alert routing/exercises, and coordinated secret-rotation drills.
   The stable owned domain/TLS/proxy path and repository observability foundation are
@@ -192,10 +200,11 @@ Wagtail catalogue foundation — local compatibility spike complete; R2 is next
 - Plan-specific early-discontinuation pricing, payment-order
   expiry, eligibility reminders, public onboarding, and partial-settlement policy are
   not yet defined.
-- The CMS foundation exists locally, but there is no catalogue model or R2
-  configuration. Local filesystem media is development-only; production's read-only
-  container cannot persist uploads, so this branch must not be promoted until R2 is
-  proven and real catalogue media must not yet be accepted.
+- The CMS and R2 configuration foundations exist locally, but there is no catalogue
+  model and no real Cloudflare bucket has yet passed the documented smoke, access,
+  rotation, monitoring, and recovery exercises. Local filesystem media is
+  development-only; production's read-only container cannot persist uploads, so this
+  branch must not be promoted and real catalogue media must not yet be accepted.
 - The detailed, prioritized backlog and milestone-by-milestone limitation history
   are maintained in [Future work](FUTURE_WORK.md).
 
@@ -209,7 +218,9 @@ Wagtail catalogue foundation — local compatibility spike complete; R2 is next
   static collection, and an applied-migration check. Wagtail/taggit migrations are
   applied to local PostgreSQL only; production has not received them.
 - PostgreSQL 16 migrations applied successfully.
-- 147 tests pass, including explicit Wagtail permission and route-precedence checks,
+- 158 tests pass, including R2 configuration and signed/private-original versus
+  public-rendition URL isolation, no-residue upload/read/rendition/cleanup behavior,
+  production media deployment gates, explicit Wagtail permission and route-precedence checks,
   public INR-contribution/metal-to-jewellery copy coverage,
   owner-only Scheme Rate publication, large-change
   confirmation, no-rate payment blocking, pre-order locking, rate-change race
@@ -277,10 +288,12 @@ Wagtail catalogue foundation — local compatibility spike complete; R2 is next
 
 ## Next recommended step
 
-Implement `FW-MEDIA-001` next with isolated non-production Cloudflare R2 credentials,
-an environment-selected `django-storages` backend, and upload/rendition/retrieval tests.
-Keep WhiteNoise for static files and do not create catalogue models or promote the
-CMS foundation to production until durable media behavior and recovery are proven.
+Provision the isolated non-production R2 Standard bucket and its bucket-scoped Object
+Read & Write token, place the credentials only in an ignored local environment file,
+and run the documented `check_media_storage` command. Then retain evidence for the
+owned custom-domain/WAF/cache controls, token-rotation rehearsal, monitoring, and
+media recovery exercise. Do not create catalogue models or promote the CMS foundation
+to production until those durable-media behaviors are proven.
 
 Complete the CASH product-boundary decision and enforce it in enrolment and payment
 services before submitting the public website and policy URLs to Razorpay. Keep live

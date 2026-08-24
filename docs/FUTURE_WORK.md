@@ -167,13 +167,19 @@ here are not implemented behavior and do not relax the financial invariants in
   `wagtailadmin.access_admin` are denied; an explicitly authorized staff user can
   enter. Wagtail migrations apply locally and all 147 tests pass. Production
   promotion is deliberately blocked until `FW-MEDIA-001` is complete.
-- **FW-MEDIA-001 — Cloudflare R2 media foundation:** Provision separate non-production
-  and production R2 Standard buckets, use bucket-scoped Object Read & Write tokens,
-  configure `django-storages` through environment variables, and retain WhiteNoise
-  for static files. Exit when upload, Wagtail rendition, retrieval, cache/CORS policy,
-  credential rotation, and recovery are exercised. Use an owned custom media domain
-  in production; do not use the rate-limited `r2.dev` endpoint there. Record usage
-  monitoring because the free allowance is not an unlimited service commitment.
+- **FW-MEDIA-001 — Cloudflare R2 media foundation (repository implementation
+  completed 2026-08-24; external proof remains):** The application now selects local
+  filesystem or Cloudflare R2 storage through environment variables, retains
+  WhiteNoise for static files, keeps originals/documents behind short-lived signed
+  URLs, publishes only generated renditions through an owned custom domain, and
+  rejects an unsafe production configuration. Automated configuration, URL-isolation,
+  upload, read, rendition, cleanup, and deployment-check tests pass. The production
+  runbook records isolated buckets, bucket-scoped Object Read & Write tokens, the
+  smoke command, CORS/cache/WAF policy, token rotation, and media recovery. Complete
+  the work item only after separate non-production and production R2 Standard buckets
+  are provisioned and the real upload/rendition/retrieval/cleanup check, custom-domain
+  controls, credential rotation, usage monitoring, and recovery exercise have retained
+  evidence. Do not use the rate-limited `r2.dev` endpoint in production.
 - **FW-CATALOG-001 — Catalogue domain:** Implement a `CatalogIndexPage`, focused
   `ProductPage`, image gallery, and reusable category/collection snippets. Model
   product discovery and showroom enquiry only; do not introduce inventory, cart,

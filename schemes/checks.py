@@ -95,6 +95,34 @@ def production_configuration(app_configs, **kwargs):
             )
         )
 
+    if settings.MEDIA_STORAGE_BACKEND != "r2":
+        issues.append(
+            Error(
+                "Production uploaded media must use Cloudflare R2.",
+                hint="Set MEDIA_STORAGE_BACKEND=r2 and configure bucket-scoped credentials.",
+                id="jsk.E012",
+            )
+        )
+    elif not settings.R2_CUSTOM_DOMAIN or settings.R2_CUSTOM_DOMAIN.endswith(
+        ".r2.dev"
+    ):
+        issues.append(
+            Error(
+                "Production R2 media requires an owned custom domain.",
+                hint="Configure R2_CUSTOM_DOMAIN without a scheme or path; do not use r2.dev.",
+                id="jsk.E013",
+            )
+        )
+
+    if settings.WAGTAILDOCS_SERVE_METHOD != "serve_view":
+        issues.append(
+            Error(
+                "Wagtail documents must be served through its permission-checking view.",
+                hint="Set WAGTAILDOCS_SERVE_METHOD=serve_view.",
+                id="jsk.E014",
+            )
+        )
+
     if settings.APP_RELEASE == "unknown":
         issues.append(
             Warning(
