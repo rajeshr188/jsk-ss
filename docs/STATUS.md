@@ -2,7 +2,7 @@
 
 ## Current milestone
 
-Cloudflare R2 media foundation — DNS cutover verified; production controls pending
+Cloudflare R2 media foundation — production smoke passed; operations proof pending
 
 ## Completed
 
@@ -153,16 +153,17 @@ Cloudflare R2 media foundation — DNS cutover verified; production controls pen
 - The Bootstrap 5 UI modernization is merged into `main` at `24ed76d`; production
   promotion remains separate from the Wagtail foundation work.
 - `FW-CMS-002` is complete locally. `FW-MEDIA-001` is implemented and tested in the
-  repository, and its real non-production R2 smoke has passed. Its remaining external
-  exit criteria are the separate production bucket, custom-domain/WAF/cache controls,
-  mail-after-DNS-cutover confirmation, token rotation, monitoring, and recovery
-  evidence. Catalogue models and production promotion remain blocked until that
-  operational proof is retained.
-- The first production-bucket smoke was attempted before the R2 custom hostname was
-  published and correctly failed its public-rendition check. Cloudflare's authoritative
-  servers still return no `media.jaishrikrishnajewellery.com` record; the bucket
-  attachment must show Active before retrying. Cleanup now continues independently
-  after individual storage failures and reports incomplete cleanup without identifiers.
+  repository, and its non-production and production R2 smokes have passed. Its
+  remaining external exit criteria are cache verification, mail-after-DNS-cutover
+  confirmation, token rotation, monitoring, and recovery evidence. Catalogue models
+  and production promotion remain blocked until that operational proof is retained.
+- The first production-bucket smoke correctly failed because the R2 attachment used
+  the apex instead of the intended media hostname. The attachment was corrected to
+  `media.jaishrikrishnajewellery.com`; DNS/TLS, public rendition routing, `403` WAF
+  protection for originals/documents, upload, read, rendition, and cleanup all passed
+  on 2026-08-24. Apex, `www`, live, and ready remained healthy. Cleanup continues
+  independently after individual storage failures and reports incomplete cleanup
+  without identifiers.
 - Environment-specific production proof: isolated database restoration, real email
   delivery, external alert routing/exercises, and coordinated secret-rotation drills.
   The stable owned domain/TLS/proxy path and repository observability foundation are
@@ -302,12 +303,11 @@ Cloudflare R2 media foundation — DNS cutover verified; production controls pen
 
 ## Next recommended step
 
-Confirm Cloudflare marks the zone Active and test inbound/outbound mail after the DNS
-cutover. Then provision the separate production R2 Standard bucket, add the WAF rule
-for private prefixes before attaching the custom media domain, and retain evidence
-for public rendition delivery, cache controls, token rotation, monitoring, and media
-recovery. Do not create catalogue models or promote the CMS foundation to production
-until those durable-media behaviors are proven.
+Test inbound/outbound mail after the DNS cutover, verify the rendition cache policy,
+then perform the documented R2 token-rotation and media-recovery exercises while
+retaining Cloudflare metrics and recovery evidence. Do not create catalogue models
+or promote the CMS foundation to production until those durable-media behaviors are
+proven.
 
 Complete the CASH product-boundary decision and enforce it in enrolment and payment
 services before submitting the public website and policy URLs to Razorpay. Keep live

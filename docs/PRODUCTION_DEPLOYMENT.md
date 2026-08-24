@@ -734,6 +734,13 @@ for application static files.
    a generic CNAME. If the command warns that cleanup was incomplete, inspect and
    remove only `r2-storage-check-*` records and objects before retrying.
 
+   Production evidence recorded 2026-08-24: an initial attachment mistakenly used
+   the apex domain and was removed without disrupting the application. The corrected
+   `media.jaishrikrishnajewellery.com` attachment became active with valid TLS;
+   nonexistent `/images/` returned `404`, both private prefixes returned `403`, and
+   the real production smoke passed upload, read, rendition, public delivery, access
+   controls, and cleanup. Apex, `www`, live, and ready remained `200`.
+
 Credential rotation uses overlap, not downtime: create a second bucket-scoped token,
 replace the two R2 key values, recreate the web service, run `check_media_storage`,
 then revoke the old token and run the check again. Roll back to the previous token
