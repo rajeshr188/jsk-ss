@@ -1,12 +1,12 @@
 {% extends '_base.html' %}
 
-{% block title %}Audit log | Jai Shri Krishna Jewellery{% endblock %}
+{% block title %}Audit log | Jai Sri Krishna Jewelley{% endblock %}
 
 {% block content %}
-<div class="mb-4"><h1 class="mb-1">Audit log</h1><p class="text-muted mb-0">Immutable record of sensitive owner and system actions</p></div>
+<div class="page-header"><div><p class="page-eyebrow">Operational records</p><h1>Audit log</h1><p class="page-subtitle">Immutable record of sensitive owner and system actions.</p></div></div>
 <div class="table-responsive">
   <table class="table align-middle">
-    <thead><tr><th>Timestamp</th><th>Action</th><th>Actor</th><th>Target</th><th>Reason</th><th>Recorded details</th></tr></thead>
+    <thead><tr><th scope="col">Timestamp</th><th scope="col">Action</th><th scope="col">Actor</th><th scope="col">Target</th><th scope="col">Reason</th><th scope="col">Recorded details</th></tr></thead>
     <tbody>
       {% for event in audit_events %}
       <tr>

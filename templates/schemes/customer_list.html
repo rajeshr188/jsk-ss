@@ -1,26 +1,30 @@
 {% extends '_base.html' %}
 
-{% block title %}Customers | Jai Shri Krishna Jewellery{% endblock %}
+{% block title %}Customers | Jai Sri Krishna Jewelley{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-  <h1>Customers</h1>
-  <a class="btn btn-jsk" href="{% url 'schemes:customer_add' %}">Add customer</a>
+<div class="page-header">
+  <div>
+    <p class="page-eyebrow">Customer management</p>
+    <h1>Customers</h1>
+    <p class="page-subtitle">Review customer profiles and their enrolled scheme accounts.</p>
+  </div>
+  <div class="page-actions"><a class="btn btn-jsk" href="{% url 'schemes:customer_add' %}">Add customer</a></div>
 </div>
 
 <div class="table-responsive">
   <table class="table align-middle">
-    <thead><tr><th>Customer</th><th>Mobile</th><th>Schemes</th><th></th></tr></thead>
+    <thead><tr><th scope="col">Customer</th><th scope="col">Mobile</th><th scope="col">Schemes</th><th scope="col"><span class="visually-hidden">Action</span></th></tr></thead>
     <tbody>
       {% for customer in customers %}
       <tr>
         <td><strong>{{ customer.full_name }}</strong><br><small class="text-muted">{{ customer.customer_number }}</small></td>
         <td>{{ customer.mobile_number }}</td>
         <td>{{ customer.scheme_accounts.count }}</td>
-        <td class="text-end"><a href="{% url 'schemes:customer_detail' customer.pk %}">View</a></td>
+        <td class="text-end"><a class="btn btn-sm btn-outline-dark" href="{% url 'schemes:customer_detail' customer.pk %}">View customer</a></td>
       </tr>
       {% empty %}
-      <tr><td colspan="4" class="text-muted text-center py-4">No customers yet.</td></tr>
+      <tr><td colspan="4"><div class="empty-state"><h2 class="h5">No customers yet</h2><p class="mb-0">Create the first customer profile to begin enrolment.</p></div></td></tr>
       {% endfor %}
     </tbody>
   </table>

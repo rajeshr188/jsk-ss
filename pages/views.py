@@ -44,6 +44,10 @@ class AboutPageView(TemplateView):
     template_name = "pages/about.html"
 
 
+class OurStoryPageView(TemplateView):
+    template_name = "pages/our_story.html"
+
+
 class ContactPageView(TemplateView):
     template_name = "pages/contact.html"
 

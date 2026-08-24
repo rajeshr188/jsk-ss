@@ -1,34 +1,46 @@
 {% extends '_base.html' %}
 {% load crispy_forms_tags %}
 
-{% block title %}Record redemption | Jai Shri Krishna Jewellery{% endblock %}
+{% block title %}Record redemption | Jai Sri Krishna Jewelley{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center"><div class="col-lg-7">
-  <a class="small" href="{% url 'schemes:redemption_eligibility' %}">← Redemption eligibility</a>
-  <h1>Record redemption</h1>
-  <p class="text-muted">{{ scheme_account.customer.full_name }} · {{ scheme_account.scheme_number }}</p>
+  <a class="small d-inline-block mb-2" href="{% url 'schemes:redemption_eligibility' %}">← Redemption eligibility</a>
+  <div class="page-header"><div><p class="page-eyebrow">Financial settlement</p><h1>Record redemption</h1><p class="page-subtitle">{{ scheme_account.customer.full_name }} · {{ scheme_account.scheme_number }}</p></div></div>
 
-  <div class="card mb-3"><div class="card-body">
-    <div class="text-muted">Outstanding {{ scheme_account.get_savings_mode_display|lower }} entitlement</div>
+  <div class="card stat-card {% if scheme_account.savings_mode == 'CASH' %}stat-card--cash{% elif scheme_account.savings_mode == 'GOLD' %}stat-card--gold{% else %}stat-card--silver{% endif %} mb-3"><div class="card-body p-4">
+    <div class="stat-label">Outstanding {{ scheme_account.get_savings_mode_display|lower }} entitlement</div>
     {% if scheme_account.savings_mode == 'CASH' %}
-    <div class="display-6">₹{{ outstanding|floatformat:2 }}</div>
+    <div class="stat-value">₹{{ outstanding|floatformat:2 }}</div>
     <dl class="row small mt-3 mb-0">
       <dt class="col-6">Principal</dt><dd class="col-6 text-end">₹{{ cash_bonus.principal_outstanding|floatformat:2 }}</dd>
       <dt class="col-6">Earned bonus</dt><dd class="col-6 text-end">₹{{ cash_bonus.earned_bonus|floatformat:2 }}</dd>
     </dl>
     {% else %}
-    <div class="display-6">{{ outstanding|floatformat:6 }} g</div>
+    <div class="stat-value">{{ outstanding|floatformat:6 }} g</div>
     {% endif %}
   </div></div>
 
   <div class="alert alert-warning" role="alert">
     This creates an immutable completed financial record. Cash redemption is allocated to principal first, then earned bonus. Confirm the settlement details before submitting.
   </div>
-  <form method="post" novalidate>
+  <form method="post" class="card form-card" novalidate>
     {% csrf_token %}
-    {{ form|crispy }}
-    <button class="btn btn-jsk" type="submit">Complete redemption</button>
+    {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+    {{ form.idempotency_key }}
+    <fieldset class="form-section">
+      <legend>Settlement</legend>
+      <p class="form-section-description">Choose how the entitlement is being settled and enter the exact amount.</p>
+      {{ form.settlement_type|as_crispy_field }}
+      {{ form.amount|as_crispy_field }}
+    </fieldset>
+    <fieldset class="form-section">
+      <legend>Reference and audit record</legend>
+      {{ form.external_reference|as_crispy_field }}
+      {{ form.notes|as_crispy_field }}
+      {{ form.audit_reason|as_crispy_field }}
+    </fieldset>
+    <div class="form-actions"><button class="btn btn-jsk" type="submit">Complete redemption</button></div>
   </form>
 </div></div>
 {% endblock %}

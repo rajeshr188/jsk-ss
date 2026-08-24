@@ -1,17 +1,49 @@
 {% extends '_base.html' %}
 {% load crispy_forms_tags %}
 
-{% block title %}{% if plan %}Edit{% else %}Add{% endif %} scheme plan | Jai Shri Krishna Jewellery{% endblock %}
+{% block title %}{% if plan %}Edit{% else %}Add{% endif %} scheme plan | Jai Sri Krishna Jewelley{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center"><div class="col-lg-8">
-  <h1>{% if plan %}Edit scheme plan{% else %}Add scheme plan{% endif %}</h1>
-  <p class="text-muted">For fixed plans, set minimum contribution equal to the fixed amount. Existing enrolments retain their snapshots when this plan changes. {% if plan %}Review all customer-facing fields before selecting publicly listed.{% else %}New plans start off the public page; review and edit the saved plan to publish it.{% endif %}</p>
-  <form method="post" novalidate>
+  <div class="page-header"><div><p class="page-eyebrow">Scheme configuration</p><h1>{% if plan %}Edit scheme plan{% else %}Add scheme plan{% endif %}</h1><p class="page-subtitle">For fixed plans, set minimum contribution equal to the fixed amount. Existing enrolments retain their snapshots when this plan changes. {% if plan %}Review all customer-facing fields before selecting publicly listed.{% else %}New plans start off the public page; review and edit the saved plan to publish it.{% endif %}</p></div></div>
+  <form method="post" class="card form-card" novalidate>
     {% csrf_token %}
-    {{ form|crispy }}
-    <button class="btn btn-jsk" type="submit">{% if plan %}Save audited change{% else %}Create plan{% endif %}</button>
-    <a class="btn btn-link" href="{% url 'schemes:plan_list' %}">Cancel</a>
+    {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+    <fieldset class="form-section">
+      <legend>Plan identity</legend>
+      <p class="form-section-description">Customer-facing name, reference code, and description.</p>
+      {{ form.name|as_crispy_field }}
+      {{ form.code|as_crispy_field }}
+      {{ form.description|as_crispy_field }}
+    </fieldset>
+    <fieldset class="form-section">
+      <legend>Contribution rules</legend>
+      <p class="form-section-description">Define the accepted amount and how frequently a customer may contribute.</p>
+      {{ form.amount_rule|as_crispy_field }}
+      {{ form.frequency_rule|as_crispy_field }}
+      {{ form.fixed_contribution_amount|as_crispy_field }}
+      {{ form.minimum_contribution|as_crispy_field }}
+      {{ form.maximum_contribution|as_crispy_field }}
+    </fieldset>
+    <fieldset class="form-section">
+      <legend>Duration and eligibility</legend>
+      {{ form.minimum_months|as_crispy_field }}
+      {{ form.default_months|as_crispy_field }}
+      {{ form.allow_contributions_after_eligibility|as_crispy_field }}
+    </fieldset>
+    <fieldset class="form-section">
+      <legend>Cash bonus terms</legend>
+      <p class="form-section-description">These fields apply only when a customer is enrolled in cash mode.</p>
+      {{ form.cash_bonus_percentage|as_crispy_field }}
+      {{ form.cash_bonus_minimum_months|as_crispy_field }}
+    </fieldset>
+    <fieldset class="form-section">
+      <legend>Availability{% if form.audit_reason %} and audit record{% endif %}</legend>
+      {{ form.active|as_crispy_field }}
+      {% if form.publicly_listed %}{{ form.publicly_listed|as_crispy_field }}{% endif %}
+      {% if form.audit_reason %}{{ form.audit_reason|as_crispy_field }}{% endif %}
+    </fieldset>
+    <div class="form-actions d-flex flex-wrap gap-2"><button class="btn btn-jsk" type="submit">{% if plan %}Save audited change{% else %}Create plan{% endif %}</button><a class="btn btn-outline-dark" href="{% url 'schemes:plan_list' %}">Cancel</a></div>
   </form>
 </div></div>
 {% endblock %}

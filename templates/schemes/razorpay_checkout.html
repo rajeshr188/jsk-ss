@@ -1,15 +1,14 @@
 {% extends '_base.html' %}
 
-{% block title %}Razorpay test checkout | Jai Shri Krishna Jewellery{% endblock %}
+{% block title %}Razorpay test checkout | Jai Sri Krishna Jewelley{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center"><div class="col-lg-6">
-  <a class="small" href="{% url 'schemes:my_scheme_detail' contribution.scheme_account.scheme_number %}">← Back to scheme</a>
-  <h1>Razorpay test checkout</h1>
-  <p class="text-muted">{{ contribution.scheme_account.scheme_number }} · Order {{ contribution.gateway_order_id }}</p>
-  <div class="card mb-3"><div class="card-body">
-    <div class="text-muted">Contribution amount</div>
-    <div class="display-6">₹{{ contribution.amount|floatformat:2 }}</div>
+  <a class="small d-inline-block mb-2" href="{% url 'schemes:my_scheme_detail' contribution.scheme_account.scheme_number %}">← Back to scheme</a>
+  <div class="page-header"><div><p class="page-eyebrow">Secure payment</p><h1>Razorpay test checkout</h1><p class="page-subtitle">{{ contribution.scheme_account.scheme_number }} · Order {{ contribution.gateway_order_id }}</p></div></div>
+  <div class="card stat-card stat-card--cash mb-3"><div class="card-body p-4">
+    <div class="stat-label">Contribution amount</div>
+    <div class="stat-value">₹{{ contribution.amount|floatformat:2 }}</div>
     {% if contribution.scheme_rate %}
     <div class="mt-2"><strong>Locked Scheme Rate:</strong> ₹{{ contribution.scheme_rate.rate_per_gram|floatformat:4 }}/g</div>
     {% endif %}
@@ -18,7 +17,7 @@
     Test mode only. Razorpay will simulate the transaction; no real money is collected.
   </div>
   <div class="alert d-none" id="checkout-status" role="alert" aria-live="polite"></div>
-  <button class="btn btn-jsk" id="open-checkout" type="button">Open secure test checkout</button>
+  <button class="btn btn-jsk btn-lg w-100" id="open-checkout" type="button">Open secure test checkout</button>
   <form id="verification-form" method="post" action="{% url 'schemes:razorpay_confirm' contribution.pk %}" class="d-none">
     {% csrf_token %}
     <input type="hidden" name="razorpay_payment_id" id="razorpay-payment-id">
@@ -52,7 +51,7 @@
         key: "{{ razorpay_key_id|escapejs }}",
         amount: "{{ amount_subunits }}",
         currency: "INR",
-        name: "Jai Shri Krishna Jewellery",
+        name: "Jai Sri Krishna Jewelley",
         description: "Scheme contribution (test mode)",
         order_id: "{{ contribution.gateway_order_id|escapejs }}",
         prefill: {

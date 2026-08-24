@@ -1,23 +1,24 @@
 {% extends '_base.html' %}
 {% load crispy_forms_tags %}
 
-{% block title %}Scheme rates | Jai Shri Krishna Jewellery{% endblock %}
+{% block title %}Scheme rates | Jai Sri Krishna Jewelley{% endblock %}
 
 {% block content %}
-<div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-4">
+<div class="page-header">
   <div>
-    <h1 class="mb-1">Scheme rates</h1>
-    <p class="text-muted mb-0">Publish the rates used to convert new gold and silver contributions.</p>
+    <p class="page-eyebrow">Metal rate management</p>
+    <h1>Scheme rates</h1>
+    <p class="page-subtitle">Publish the rates used to convert new gold and silver contributions.</p>
   </div>
-  <a class="btn btn-outline-dark" href="{% url 'schemes:owner_dashboard' %}">Owner dashboard</a>
+  <div class="page-actions"><a class="btn btn-outline-dark" href="{% url 'schemes:owner_dashboard' %}">Owner dashboard</a></div>
 </div>
 
 <div class="row g-3 mb-5">
   <div class="col-md-6">
-    <div class="card h-100 border-warning"><div class="card-body">
-      <div class="text-muted">Current Gold Scheme Rate</div>
+    <div class="card stat-card stat-card--gold h-100"><div class="card-body p-4">
+      <div class="stat-label">Current Gold Scheme Rate</div>
       {% if current_rates.GOLD %}
-      <div class="display-6">₹{{ current_rates.GOLD.rate_per_gram|floatformat:4 }}/g</div>
+      <div class="stat-value">₹{{ current_rates.GOLD.rate_per_gram|floatformat:4 }}/g</div>
       <div class="small text-muted mt-2">
         Effective {{ current_rates.GOLD.effective_from|date:"d M Y, h:i A" }} ·
         published by {{ current_rates.GOLD.published_by|default:"historical import" }}
@@ -29,10 +30,10 @@
     </div></div>
   </div>
   <div class="col-md-6">
-    <div class="card h-100 border-secondary"><div class="card-body">
-      <div class="text-muted">Current Silver Scheme Rate</div>
+    <div class="card stat-card stat-card--silver h-100"><div class="card-body p-4">
+      <div class="stat-label">Current Silver Scheme Rate</div>
       {% if current_rates.SILVER %}
-      <div class="display-6">₹{{ current_rates.SILVER.rate_per_gram|floatformat:4 }}/g</div>
+      <div class="stat-value">₹{{ current_rates.SILVER.rate_per_gram|floatformat:4 }}/g</div>
       <div class="small text-muted mt-2">
         Effective {{ current_rates.SILVER.effective_from|date:"d M Y, h:i A" }} ·
         published by {{ current_rates.SILVER.published_by|default:"historical import" }}
@@ -47,12 +48,12 @@
 
 <div class="row g-4" id="publish-rate">
   <div class="col-lg-5">
-    <h2 class="h4">Publish a new Scheme Rate</h2>
+    <h2 class="h3">Publish a new Scheme Rate</h2>
     <p class="text-muted">Publication creates a new immutable record. It never edits an earlier rate.</p>
-    <form method="post" novalidate data-gold-rate="{% if current_rates.GOLD %}{{ current_rates.GOLD.rate_per_gram }}{% endif %}" data-silver-rate="{% if current_rates.SILVER %}{{ current_rates.SILVER.rate_per_gram }}{% endif %}">
+    <form method="post" class="card form-card" novalidate data-gold-rate="{% if current_rates.GOLD %}{{ current_rates.GOLD.rate_per_gram }}{% endif %}" data-silver-rate="{% if current_rates.SILVER %}{{ current_rates.SILVER.rate_per_gram }}{% endif %}">
       {% csrf_token %}
       {{ form|crispy }}
-      <div class="card bg-light mb-3" id="rate-comparison"><div class="card-body small">
+      <div class="card shadow-none mb-3" id="rate-comparison"><div class="card-body small">
         <dl class="row mb-0">
           <dt class="col-7">Current rate</dt><dd class="col-5 text-end" id="comparison-current">—</dd>
           <dt class="col-7">New rate</dt><dd class="col-5 text-end" id="comparison-new">—</dd>
@@ -68,10 +69,10 @@
   </div>
 
   <div class="col-lg-7">
-    <h2 class="h4">Recent publication history</h2>
+    <h2 class="h3">Recent publication history</h2>
     <div class="table-responsive">
       <table class="table align-middle">
-        <thead><tr><th>Effective</th><th>Metal</th><th>Scheme Rate</th><th>Purity</th><th>Published by</th><th>Notes</th></tr></thead>
+        <thead><tr><th scope="col">Effective</th><th scope="col">Metal</th><th scope="col">Scheme Rate</th><th scope="col">Purity</th><th scope="col">Published by</th><th scope="col">Notes</th></tr></thead>
         <tbody>
           {% for rate in rate_history %}
           <tr>

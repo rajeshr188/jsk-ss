@@ -15,7 +15,7 @@ This is the canonical source for stable business rules.
 - **SCH-002:** An account snapshots the plan's economic terms at enrolment; later plan edits do not rewrite the agreement.
 - **SCH-003:** Minimum and default durations are at least 12 months; the agreed duration cannot be below the plan minimum.
 - **SCH-004:** Eligibility is the account start date plus agreed calendar months. Eligibility does not itself redeem or close an account.
-- **SCH-005:** A plan appears on the public plans and pricing page only when it is both active and explicitly marked publicly listed. New and migrated plans default to not publicly listed.
+- **SCH-005:** A plan appears on the public savings plans page only when it is both active and explicitly marked publicly listed. New and migrated plans default to not publicly listed.
 - **SCH-006:** Public plan edits affect the current offer for future enrolments only; existing scheme accounts retain their snapshotted economic terms.
 - **CON-001:** Amount rules (`FIXED`/`VARIABLE`) and frequency rules (`ONCE_PER_MONTH`/`FLEXIBLE`) are independent.
 - **CON-002:** Monthly periods use deterministic calendar keys such as `2026-08`, never rolling 30-day windows.
@@ -42,7 +42,7 @@ This is the canonical source for stable business rules.
   until its allocation is stored, then transitions to `PAID`. This recovery state
   covers allocation exceptions and process interruption; it is not a missing-rate
   workflow. Retry must reuse the contribution's original lock.
-- **RATE-001:** Only a manually published Jai Shri Krishna Jewellery `SchemeRate` may be used for a new gold or silver allocation.
+- **RATE-001:** Only a manually published Jai Sri Krishna Jewelley `SchemeRate` may be used for a new gold or silver allocation.
 - **RATE-002:** A metal contribution must lock its current applicable `SchemeRate` before mock payment initiation or Razorpay order creation.
 - **RATE-003:** Publishing a new `SchemeRate` never changes an already locked contribution.
 - **RATE-004:** Publishing a new `SchemeRate` never changes historical `MetalAllocation` quantity.

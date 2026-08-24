@@ -1,6 +1,6 @@
 # Production and Deployment Guide
 
-This is the canonical production runbook for the Jai Shri Krishna Jewellery
+This is the canonical production runbook for the Jai Sri Krishna Jewelley
 Savings Scheme. It covers the current Django 6, PostgreSQL, Gunicorn, WhiteNoise,
 Razorpay Test Mode, and manually published Scheme Rate build. Development setup remains in the
 [README](../README.md); business invariants remain in [Domain rules](DOMAIN_RULES.md).
@@ -581,7 +581,7 @@ EMAIL_HOST_PASSWORD=<smtp-password>
 EMAIL_USE_TLS=True
 EMAIL_USE_SSL=False
 EMAIL_TIMEOUT=10
-DEFAULT_FROM_EMAIL=Jai Shri Krishna Jewellery <noreply@example.com>
+DEFAULT_FROM_EMAIL=Jai Sri Krishna Jewelley <noreply@example.com>
 SERVER_EMAIL=errors@example.com
 
 PAYMENT_GATEWAY=razorpay

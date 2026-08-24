@@ -1,16 +1,17 @@
 {% extends '_base.html' %}
 
-{% block title %}{{ scheme_account.scheme_number }} | Jai Shri Krishna Jewellery{% endblock %}
+{% block title %}{{ scheme_account.scheme_number }} | Jai Sri Krishna Jewelley{% endblock %}
 
 {% block content %}
-<div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-4">
+<div class="page-header">
   <div>
-    <a class="small" href="{% url 'schemes:my_schemes' %}">← All schemes</a>
-    <h1 class="mb-1">{{ scheme_account.get_savings_mode_display }}</h1>
-    <div class="text-muted">{{ scheme_account.scheme_number }}</div>
+    <a class="small d-inline-block mb-2" href="{% url 'schemes:my_schemes' %}">← All schemes</a>
+    <p class="page-eyebrow">{{ scheme_account.plan.name }}</p>
+    <h1>{{ scheme_account.get_savings_mode_display }}</h1>
+    <div class="page-subtitle">{{ scheme_account.scheme_number }}</div>
     <span class="badge text-bg-secondary mt-2">{{ scheme_account.effective_status_label }}</span>
   </div>
-  <div class="d-flex gap-2 d-print-none">
+  <div class="page-actions d-print-none">
   <a class="btn btn-outline-dark" href="{% url 'schemes:scheme_statement' scheme_account.scheme_number %}">Print statement</a>
   {% if payment_gateway_enabled and scheme_account.effective_status != 'REDEEMED' %}
     {% if scheme_account.savings_mode == 'CASH' or current_scheme_rate %}
@@ -34,9 +35,9 @@
 {% endif %}
 
 {% if scheme_account.savings_mode == 'CASH' %}
-<div class="card mb-4"><div class="card-body">
-  <div class="text-muted">Redeemable cash amount</div>
-  <div class="display-6">₹{{ cash_bonus.redeemable_amount|floatformat:2 }}</div>
+<div class="card stat-card stat-card--cash mb-4"><div class="card-body p-4">
+  <div class="stat-label">Redeemable cash amount</div>
+  <div class="stat-value">₹{{ cash_bonus.redeemable_amount|floatformat:2 }}</div>
   <dl class="row mt-3 mb-0">
     <dt class="col-sm-6">Total paid</dt><dd class="col-sm-6 text-sm-end">₹{{ cash_bonus.principal_paid|floatformat:2 }}</dd>
     <dt class="col-sm-6">Outstanding principal</dt><dd class="col-sm-6 text-sm-end">₹{{ cash_bonus.principal_outstanding|floatformat:2 }}</dd>
@@ -48,18 +49,18 @@
 {% endif %}
 
 {% if scheme_account.savings_mode == 'GOLD' or scheme_account.savings_mode == 'SILVER' %}
-<div class="card mb-4"><div class="card-body">
-  <div class="text-muted">{{ scheme_account.get_savings_mode_display }} entitlement</div>
-  <div class="display-6">{{ metal_balance|floatformat:6 }} g</div>
+<div class="card stat-card {% if scheme_account.savings_mode == 'GOLD' %}stat-card--gold{% else %}stat-card--silver{% endif %} mb-4"><div class="card-body p-4">
+  <div class="stat-label">{{ scheme_account.get_savings_mode_display }} entitlement</div>
+  <div class="stat-value">{{ metal_balance|floatformat:6 }} g</div>
   <div class="mt-3"><strong>Current Scheme Rate:</strong> {% if current_scheme_rate %}₹{{ current_scheme_rate.rate_per_gram|floatformat:4 }}/g{% else %}Not published{% endif %}</div>
   <small class="text-muted">Immutable allocations less completed metal redemptions.</small>
 </div></div>
 {% endif %}
 
-<h2 class="h4">Contribution history</h2>
-<div class="table-responsive">
+<div class="section-heading"><div><h2>Contribution history</h2><p>Verified payments, allocations, and pending attempts.</p></div></div>
+<div class="table-responsive d-none d-md-block">
   <table class="table align-middle">
-    <thead><tr><th>Date</th><th>Period</th><th>Amount paid</th><th>Metal credited</th><th>Scheme Rate</th><th>Status</th><th>Reference</th></tr></thead>
+    <thead><tr><th scope="col">Date</th><th scope="col">Period</th><th scope="col">Amount paid</th><th scope="col">Metal credited</th><th scope="col">Scheme Rate</th><th scope="col">Status</th><th scope="col">Reference</th></tr></thead>
     <tbody>
       {% for contribution in contributions %}
       <tr>
@@ -87,11 +88,38 @@
     </tbody>
   </table>
 </div>
+<div class="d-md-none">
+  {% for contribution in contributions %}
+  <article class="card mobile-history-card"><div class="card-body">
+    <div class="d-flex align-items-start justify-content-between gap-3 mb-2">
+      <div><p class="page-eyebrow mb-1">{{ contribution.contribution_period|date:'F Y' }}</p><strong>₹{{ contribution.amount|floatformat:2 }}</strong></div>
+      <div>
+        {% if contribution.status == 'PAID' %}<span class="badge text-bg-success">Paid</span>
+        {% elif contribution.status == 'PAID_UNALLOCATED' %}<span class="badge text-bg-warning">Paid — allocation pending</span>
+        {% elif contribution.status == 'FAILED' %}<span class="badge text-bg-danger">Failed</span>
+        {% else %}<span class="badge text-bg-warning">Pending</span>{% endif %}
+      </div>
+    </div>
+    <dl class="row small">
+      <dt class="col-5">Date</dt><dd class="col-7 text-end">{{ contribution.created_at|date:'d M Y, g:i A' }}</dd>
+      <dt class="col-5">Metal credited</dt><dd class="col-7 text-end">{% if contribution.metal_allocation %}{{ contribution.metal_allocation.quantity|floatformat:6 }} g{% else %}—{% endif %}</dd>
+      <dt class="col-5">Scheme Rate</dt><dd class="col-7 text-end">{% if contribution.metal_allocation %}₹{{ contribution.metal_allocation.scheme_rate.rate_per_gram|floatformat:4 }}/g{% elif contribution.scheme_rate %}₹{{ contribution.scheme_rate.rate_per_gram|floatformat:4 }}/g locked{% else %}—{% endif %}</dd>
+      <dt class="col-5">Reference</dt><dd class="col-7 text-end text-break">{{ contribution.gateway_reference|default:'—' }}</dd>
+    </dl>
+    {% if contribution.status == 'PAID' or contribution.status == 'PAID_UNALLOCATED' %}
+    <a class="btn btn-sm btn-outline-dark" href="{% url 'schemes:contribution_receipt' contribution.pk %}">View receipt</a>
+    {% endif %}
+    {% if contribution.status == 'PENDING' and contribution.payment_gateway == 'razorpay' and contribution.gateway_order_id %}
+    <a class="btn btn-sm btn-jsk" href="{% url 'schemes:razorpay_checkout' contribution.pk %}">Resume test payment</a>
+    {% endif %}
+  </div></article>
+  {% empty %}<div class="card empty-state"><p class="mb-0">No contributions yet.</p></div>{% endfor %}
+</div>
 
-<h2 class="h4 mt-5">Redemption history</h2>
-<div class="table-responsive">
+<div class="section-heading"><div><h2>Redemption history</h2><p>Completed settlements and preserved reversals.</p></div></div>
+<div class="table-responsive d-none d-md-block">
   <table class="table align-middle">
-    <thead><tr><th>Completed</th><th>Reference</th><th>Settlement</th><th>Entitlement redeemed</th><th>External reference</th><th>Status</th></tr></thead>
+    <thead><tr><th scope="col">Completed</th><th scope="col">Reference</th><th scope="col">Settlement</th><th scope="col">Entitlement redeemed</th><th scope="col">External reference</th><th scope="col">Status</th></tr></thead>
     <tbody>
       {% for redemption in redemptions %}
       <tr>
@@ -109,5 +137,25 @@
       {% empty %}<tr><td colspan="6" class="text-center text-muted py-4">No redemptions recorded.</td></tr>{% endfor %}
     </tbody>
   </table>
+</div>
+<div class="d-md-none">
+  {% for redemption in redemptions %}
+  <article class="card mobile-history-card"><div class="card-body">
+    <div class="d-flex align-items-start justify-content-between gap-3 mb-2">
+      <div><p class="page-eyebrow mb-1">{{ redemption.completed_at|date:'d M Y' }}</p><strong>{{ redemption.redemption_number }}</strong></div>
+      <div>{% if redemption.reversal %}<span class="badge text-bg-secondary">Reversed</span>{% else %}<span class="badge text-bg-success">Completed</span>{% endif %}</div>
+    </div>
+    <dl class="row small">
+      <dt class="col-5">Settlement</dt><dd class="col-7 text-end">{{ redemption.get_settlement_type_display }}</dd>
+      <dt class="col-5">Entitlement</dt><dd class="col-7 text-end">
+        {% if redemption.cash_amount is not None %}₹{{ redemption.cash_amount|floatformat:2 }}<br><span class="text-muted">Principal ₹{{ redemption.cash_principal_amount|floatformat:2 }} · Bonus ₹{{ redemption.cash_bonus_amount|floatformat:2 }}</span>
+        {% elif redemption.gold_quantity is not None %}{{ redemption.gold_quantity|floatformat:6 }} g gold
+        {% else %}{{ redemption.silver_quantity|floatformat:6 }} g silver{% endif %}
+      </dd>
+      <dt class="col-5">External reference</dt><dd class="col-7 text-end text-break">{{ redemption.external_reference|default:'—' }}</dd>
+      {% if redemption.reversal %}<dt class="col-5">Reversal reason</dt><dd class="col-7 text-end">{{ redemption.reversal.reason }}</dd>{% endif %}
+    </dl>
+  </div></article>
+  {% empty %}<div class="card empty-state"><p class="mb-0">No redemptions recorded.</p></div>{% endfor %}
 </div>
 {% endblock %}

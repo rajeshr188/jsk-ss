@@ -1,12 +1,12 @@
 {% extends '_base.html' %}
 
-{% block title %}Exception queue | Jai Shri Krishna Jewellery{% endblock %}
+{% block title %}Exception queue | Jai Sri Krishna Jewelley{% endblock %}
 
 {% block content %}
-<div class="mb-4"><h1 class="mb-1">Exception queue</h1><p class="text-muted mb-0">Unresolved allocation and payment-reconciliation issues requiring owner review</p></div>
+<div class="page-header"><div><p class="page-eyebrow">Operational review</p><h1>Exception queue</h1><p class="page-subtitle">Unresolved allocation and payment-reconciliation issues requiring owner review.</p></div></div>
 <div class="table-responsive">
   <table class="table align-middle">
-    <thead><tr><th>Detected</th><th>Category</th><th>Customer / scheme</th><th>Provider reference</th><th>Detail</th><th>Action</th></tr></thead>
+    <thead><tr><th scope="col">Detected</th><th scope="col">Category</th><th scope="col">Customer / scheme</th><th scope="col">Provider reference</th><th scope="col">Detail</th><th scope="col">Action</th></tr></thead>
     <tbody>
       {% for item in exceptions %}
       <tr>

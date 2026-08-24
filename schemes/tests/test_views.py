@@ -78,11 +78,20 @@ class OwnerFlowTests(TestCase):
     def test_new_plan_must_be_saved_before_owner_can_publish_it(self):
         add_response = self.client.get(reverse("schemes:plan_add"))
         self.assertNotContains(add_response, 'id="id_publicly_listed"')
+        self.assertContains(add_response, "Plan identity")
+        self.assertContains(add_response, "Contribution rules")
 
         plan = make_plan()
         edit_response = self.client.get(reverse("schemes:plan_edit", args=[plan.pk]))
         self.assertContains(edit_response, 'id="id_publicly_listed"')
         self.assertFalse(plan.publicly_listed)
+
+    def test_owner_dashboard_prioritizes_common_actions(self):
+        response = self.client.get(reverse("schemes:owner_dashboard"))
+
+        self.assertContains(response, "Common actions")
+        self.assertContains(response, "Reports and operational records")
+        self.assertContains(response, "Manage customers")
 
 
 class CustomerIsolationTests(TestCase):

@@ -1,25 +1,167 @@
 {% extends '_base.html' %}
-{% block title %}Jai Shri Krishna Jewellery{% endblock title %}
-{% block meta_description %}Explore transparent cash, gold, and silver jewellery savings schemes from Jai Shri Krishna Jewellery in Vellore.{% endblock %}
+{% load static %}
+{% block title %}Gold &amp; Silver Jewellery Plans in Vellore | Jai Sri Krishna Jewelley{% endblock title %}
+{% block meta_description %}Explore showroom-enrolled gold and silver jewellery purchase plans with INR contributions, recorded metal quantities, and clear redemption terms.{% endblock %}
 
 {% block content %}
-<div class="hero-card px-4 py-5 my-4 text-center rounded-4">
-  <p class="text-uppercase small fw-semibold mb-2">Savings with clarity</p>
-  <h1 class="display-5 fw-bold">Jai Shri Krishna Jewellery</h1>
-  <p class="lead mx-auto">Build your jewellery savings through cash, 24K gold, or silver schemes.</p>
-  <div class="d-flex flex-wrap gap-2 justify-content-center">
-    <a class="btn btn-jsk btn-lg" href="{% url 'pricing' %}">View plans &amp; pricing</a>
-    {% if user.is_authenticated %}
-    <a class="btn btn-outline-dark btn-lg" href="{% url 'schemes:post_login' %}">Open dashboard</a>
-    {% else %}
-    <a class="btn btn-outline-dark btn-lg" href="{% url 'account_login' %}">Customer login</a>
-    {% endif %}
+<section class="hero-card hero-card--home mb-5" aria-labelledby="hero-title">
+  <div class="row g-4 g-lg-5 align-items-center position-relative">
+    <div class="col-lg-8">
+      <div class="hero-content">
+        <p class="page-eyebrow">Gold and silver jewellery purchase plans</p>
+        <h1 id="hero-title">Plan today. Choose the jewellery you love tomorrow.</h1>
+        <p class="lead">Your INR contributions accumulate a recorded quantity of 24K gold or silver. Once eligible, apply it toward jewellery at our Vellore showroom.</p>
+        <div class="trust-row" aria-label="Jewellery trust assurances">
+          <span>BIS-hallmarked jewellery</span>
+          <span>Hallmark and HUID verification at purchase</span>
+        </div>
+        <div class="d-flex flex-wrap gap-2 mt-4">
+          <a class="btn btn-jsk btn-lg" href="{% url 'pricing' %}">Explore available plans</a>
+          <a class="btn btn-outline-dark btn-lg" href="{% url 'contact' %}">Talk to us</a>
+        </div>
+        <p class="small mt-3 mb-0">
+          {% if user.is_authenticated %}
+          Already enrolled? <a class="fw-semibold" href="{% url 'schemes:post_login' %}">Open your dashboard</a>.
+          {% else %}
+          Already enrolled? <a class="fw-semibold" href="{% url 'account_login' %}">Sign in to your customer account</a>.
+          {% endif %}
+        </p>
+      </div>
+    </div>
+    <div class="col-lg-4">
+      <aside class="hero-summary hero-visual" aria-labelledby="hero-summary-title">
+        <p class="page-eyebrow mb-2">Your jewellery goal</p>
+        <h2 class="h4 text-center" id="hero-summary-title">Contribute. Accumulate. Choose jewellery.</h2>
+        <figure class="hero-photo">
+          <img src="{% static 'images/home-jewellery.webp' %}" width="900" height="1050" alt="Traditional gold necklace displayed on a dark jewellery bust" fetchpriority="high" decoding="async">
+          <figcaption class="hero-photo__caption">
+            <span>Illustrative jewellery</span>
+          </figcaption>
+        </figure>
+        <div class="hero-route" aria-label="INR contributions become a recorded metal quantity for showroom redemption">
+          <span>INR contributions</span>
+          <span aria-hidden="true">→</span>
+          <span>Showroom redemption</span>
+        </div>
+      </aside>
+    </div>
   </div>
-</div>
+</section>
 
-<div class="row g-4 mb-4">
-  <div class="col-md-4"><div class="card h-100"><div class="card-body"><h2 class="h5">Choose a savings mode</h2><p class="mb-0">Keep cash, gold, and silver scheme entitlements clearly separated.</p></div></div></div>
-  <div class="col-md-4"><div class="card h-100"><div class="card-body"><h2 class="h5">Pay securely online</h2><p class="mb-0">Enrolled customers can sign in and make eligible INR contributions through Razorpay Checkout.</p></div></div></div>
-  <div class="col-md-4"><div class="card h-100"><div class="card-body"><h2 class="h5">Track every contribution</h2><p class="mb-0">View payment history, metal allocations, eligibility, receipts, statements, and completed redemptions.</p></div></div></div>
-</div>
+
+<section class="scheme-journey mt-4" aria-labelledby="conversion-explained-heading">
+  <div class="text-center mb-4">
+    <p class="page-eyebrow">How your plan works</p>
+    <h2 class="h3" id="conversion-explained-heading">From contribution to jewellery</h2>
+  </div>
+  <ol class="journey-flow">
+    <li class="journey-step">
+      <span class="journey-icon" aria-hidden="true">
+        <svg class="bi bi-currency-rupee" viewBox="0 0 16 16"><path d="M4 3.06h2.726c1.22 0 2.12.575 2.325 1.724H4v1.051h5.051C8.855 7.001 8 7.558 6.788 7.558H4v1.317L8.437 14h2.11L6.095 8.884h.855c2.316-.018 3.465-1.476 3.688-3.049H12V4.784h-1.345c-.08-.778-.357-1.335-.793-1.732H12V2H4z"/></svg>
+      </span>
+      <strong>Pay in INR</strong>
+      <span>Your scheduled amount</span>
+    </li>
+    <li class="journey-step">
+      <span class="journey-icon" aria-hidden="true">
+        <svg class="bi bi-lock-fill" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8 0a4 4 0 0 1 4 4v2.05a2.5 2.5 0 0 1 2 2.45v5a2.5 2.5 0 0 1-2.5 2.5h-7A2.5 2.5 0 0 1 2 13.5v-5a2.5 2.5 0 0 1 2-2.45V4a4 4 0 0 1 4-4m0 1a3 3 0 0 0-3 3v2h6V4a3 3 0 0 0-3-3"/></svg>
+      </span>
+      <strong>Lock the rate</strong>
+      <span>Shown before payment</span>
+    </li>
+    <li class="journey-step">
+      <span class="journey-icon journey-icon--metal" aria-hidden="true">
+        <svg class="bi bi-gem" viewBox="0 0 16 16"><path d="M3.1.7a.5.5 0 0 1 .4-.2h9a.5.5 0 0 1 .4.2l2.976 3.974c.149.185.156.45.01.644L8.4 15.3a.5.5 0 0 1-.8 0L.1 5.3a.5.5 0 0 1 0-.6zm11.386 3.785-1.806-2.41-.776 2.413zm-3.633.004.961-2.989H4.186l.963 2.995zM5.47 5.495 8 13.366l2.532-7.876zm-1.371-.999-.78-2.422-1.818 2.425zM1.499 5.5l5.113 6.817-2.192-6.82zm7.889 6.817 5.123-6.83-2.928.002z"/></svg>
+      </span>
+      <strong>Accumulate metal</strong>
+      <span>Gold or silver quantity recorded</span>
+    </li>
+    <li class="journey-step">
+      <span class="journey-icon" aria-hidden="true">
+        <svg class="bi bi-shop" viewBox="0 0 16 16"><path d="M2.97 1.35A1 1 0 0 1 3.73 1h8.54a1 1 0 0 1 .76.35l2.609 3.044A1.5 1.5 0 0 1 16 5.37v.255a2.375 2.375 0 0 1-4.25 1.458A2.37 2.37 0 0 1 9.875 8 2.37 2.37 0 0 1 8 7.083 2.37 2.37 0 0 1 6.125 8a2.37 2.37 0 0 1-1.875-.917A2.375 2.375 0 0 1 0 5.625V5.37a1.5 1.5 0 0 1 .361-.976zm1.78 4.275a1.375 1.375 0 0 0 2.75 0 .5.5 0 0 1 1 0 1.375 1.375 0 0 0 2.75 0 .5.5 0 0 1 1 0 1.375 1.375 0 1 0 2.75 0V5.37a.5.5 0 0 0-.12-.325L12.27 2H3.73L1.12 5.045A.5.5 0 0 0 1 5.37v.255a1.375 1.375 0 0 0 2.75 0 .5.5 0 0 1 1 0M1.5 8.5A.5.5 0 0 1 2 9v6h1v-5a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v5h6V9a.5.5 0 0 1 1 0v6h.5a.5.5 0 0 1 0 1H.5a.5.5 0 0 1 0-1H1V9a.5.5 0 0 1 .5-.5M4 15h3v-5H4zm5-5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1zm3 0h-2v3h2z"/></svg>
+      </span>
+      <strong>Choose jewellery</strong>
+      <span>At the showroom when eligible</span>
+    </li>
+  </ol>
+  <p class="journey-note mb-0"><strong>A contribution does not reserve or purchase a specific item.</strong> Final product price, taxes, making charges, and wastage/value addition are confirmed at the showroom. <a href="{% url 'terms' %}">Read full terms</a>.</p>
+</section>
+
+<section class="mt-5 pt-lg-3" aria-labelledby="how-it-works">
+  <div class="section-heading">
+    <div>
+      <p class="page-eyebrow">From interest to jewellery</p>
+      <h2 id="how-it-works">A straightforward way to get started</h2>
+    </div>
+    <p>No public signup and no scheme without recorded terms.</p>
+  </div>
+  <div class="row g-3 g-lg-4">
+    <div class="col-sm-6 col-lg-3">
+      <article class="card feature-card"><div class="card-body p-4">
+        <span class="feature-number" aria-hidden="true">1</span>
+        <h3 class="h5">Explore the plans</h3>
+        <p class="mb-0 text-secondary">Amount · frequency · duration</p>
+      </div></article>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+      <article class="card feature-card"><div class="card-body p-4">
+        <span class="feature-number" aria-hidden="true">2</span>
+        <h3 class="h5">Speak with us</h3>
+        <p class="mb-0 text-secondary">Choose gold or silver and accept the terms.</p>
+      </div></article>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+      <article class="card feature-card"><div class="card-body p-4">
+        <span class="feature-number" aria-hidden="true">3</span>
+        <h3 class="h5">Receive your login</h3>
+        <p class="mb-0 text-secondary">We create your enrolment and secure account.</p>
+      </div></article>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+      <article class="card feature-card"><div class="card-body p-4">
+        <span class="feature-number" aria-hidden="true">4</span>
+        <h3 class="h5">Track progress</h3>
+        <p class="mb-0 text-secondary">Payments · grams · receipts · redemption</p>
+      </div></article>
+    </div>
+  </div>
+</section>
+
+<section class="trust-panel mt-5" aria-labelledby="trust-heading">
+  <div class="row g-4 g-lg-5 align-items-center">
+    <div class="col-lg-5">
+      <p class="page-eyebrow">Clarity from day one</p>
+      <h2 id="trust-heading">A scheme record designed to stay understandable</h2>
+      <p class="text-secondary mb-lg-0">Your customer account records the contribution journey. It is not a bank deposit, an interest-bearing account, a metal-trading product, or an online jewellery store.</p>
+    </div>
+    <div class="col-lg-7">
+      <div class="row g-3">
+        <div class="col-sm-6"><div class="trust-point"><span class="trust-point__icon" aria-hidden="true"><svg class="bi bi-file-check" viewBox="0 0 16 16"><path d="M10.854 6.146a.5.5 0 0 1 0 .708l-3 3a.5.5 0 0 1-.708 0l-1.5-1.5a.5.5 0 1 1 .708-.708L7.5 8.793l2.646-2.647a.5.5 0 0 1 .708 0"/><path d="M4 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2zm0 1h8a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1"/></svg></span><div class="trust-point__copy"><strong>Terms stay attached</strong><span>Later plan changes do not rewrite an existing enrolment.</span></div></div></div>
+        <div class="col-sm-6"><div class="trust-point"><span class="trust-point__icon" aria-hidden="true"><svg class="bi bi-patch-check-fill" viewBox="0 0 16 16"><path d="M10.067.87a2.89 2.89 0 0 0-4.134 0l-.622.638-.89-.011a2.89 2.89 0 0 0-2.924 2.924l.01.89-.636.622a2.89 2.89 0 0 0 0 4.134l.637.622-.011.89a2.89 2.89 0 0 0 2.924 2.924l.89-.01.622.636a2.89 2.89 0 0 0 4.134 0l.622-.637.89.011a2.89 2.89 0 0 0 2.924-2.924l-.01-.89.636-.622a2.89 2.89 0 0 0 0-4.134l-.637-.622.011-.89a2.89 2.89 0 0 0-2.924-2.924l-.89.01zm.287 5.984-3 3a.5.5 0 0 1-.708 0l-1.5-1.5a.5.5 0 1 1 .708-.708L7 8.793l2.646-2.647a.5.5 0 0 1 .708.708"/></svg></span><div class="trust-point__copy"><strong>BIS hallmark assurance</strong><span>Inspect the hallmark and applicable HUID when selecting your jewellery.</span></div></div></div>
+        <div class="col-sm-6"><div class="trust-point"><span class="trust-point__icon" aria-hidden="true"><svg class="bi bi-clock-history" viewBox="0 0 16 16"><path d="M8.515 1.019A7 7 0 0 0 8 1V0a8 8 0 0 1 .589.022zm2.004.45a7 7 0 0 0-.985-.299l.219-.976q.576.129 1.126.342zm1.37.71a7 7 0 0 0-.439-.27l.493-.87a8 8 0 0 1 .979.654l-.615.789a7 7 0 0 0-.418-.302zm1.834 1.79a7 7 0 0 0-.653-.796l.724-.69q.406.429.747.91zm.744 1.352a7 7 0 0 0-.214-.468l.893-.45a8 8 0 0 1 .45 1.088l-.95.313a7 7 0 0 0-.179-.483m.53 2.507a7 7 0 0 0-.1-1.025l.985-.17q.1.58.116 1.17zm-.131 1.538q.05-.254.081-.51l.993.123a8 8 0 0 1-.23 1.155l-.964-.267q.069-.247.12-.501m-.952 2.379q.276-.436.486-.908l.914.405q-.24.54-.555 1.038zm-.964 1.205q.183-.183.35-.378l.758.653a8 8 0 0 1-.401.432z"/><path d="M8 1a7 7 0 1 0 4.95 11.95l.707.707A8.001 8.001 0 1 1 8 0z"/><path d="M7.5 3a.5.5 0 0 1 .5.5v5.21l3.248 1.856a.5.5 0 0 1-.496.868l-3.5-2A.5.5 0 0 1 7 9V3.5a.5.5 0 0 1 .5-.5"/></svg></span><div class="trust-point__copy"><strong>History stays visible</strong><span>Verified payments, allocations, receipts, and settlements remain traceable.</span></div></div></div>
+        <div class="col-sm-6"><div class="trust-point"><span class="trust-point__icon" aria-hidden="true"><svg class="bi bi-shop" viewBox="0 0 16 16"><path d="M2.97 1.35A1 1 0 0 1 3.73 1h8.54a1 1 0 0 1 .76.35l2.609 3.044A1.5 1.5 0 0 1 16 5.37v.255a2.375 2.375 0 0 1-4.25 1.458A2.37 2.37 0 0 1 9.875 8 2.37 2.37 0 0 1 8 7.083 2.37 2.37 0 0 1 6.125 8a2.37 2.37 0 0 1-1.875-.917A2.375 2.375 0 0 1 0 5.625V5.37a1.5 1.5 0 0 1 .361-.976zm1.78 4.275a1.375 1.375 0 0 0 2.75 0 .5.5 0 0 1 1 0 1.375 1.375 0 0 0 2.75 0 .5.5 0 0 1 1 0 1.375 1.375 0 1 0 2.75 0V5.37a.5.5 0 0 0-.12-.325L12.27 2H3.73L1.12 5.045A.5.5 0 0 0 1 5.37v.255a1.375 1.375 0 0 0 2.75 0 .5.5 0 0 1 1 0M1.5 8.5A.5.5 0 0 1 2 9v6h1v-5a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v5h6V9a.5.5 0 0 1 1 0v6h.5a.5.5 0 0 1 0 1H.5a.5.5 0 0 1 0-1H1V9a.5.5 0 0 1 .5-.5M4 15h3v-5H4zm5-5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1zm3 0h-2v3h2z"/></svg></span><div class="trust-point__copy"><strong>Showroom fulfilment</strong><span>Jewellery selection, invoicing, and collection are completed in person at our Vellore showroom.</span></div></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="conversion-panel mt-5" aria-labelledby="next-step-heading">
+  <div>
+    <p class="page-eyebrow">Your next step</p>
+    <h2 id="next-step-heading">Start with a plan you can understand.</h2>
+    <p class="mb-2">Review the published options, then speak with us before you enrol.</p>
+    <p class="small text-secondary mb-0">No. 155, Azad Road, Thorapadi, Vellore · Monday–Saturday 9:00 AM–9:00 PM · Sunday until 1:00 PM</p>
+  </div>
+  <div class="conversion-actions">
+    <a class="btn btn-jsk" href="{% url 'pricing' %}">View savings plans</a>
+    <a class="btn btn-outline-dark" href="{% url 'contact' %}">Contact Jai Sri Krishna Jewelley</a>
+  </div>
+</section>
+
+<nav class="pre-enrolment-links mt-4" aria-label="Information to review before enrolment">
+  <span>Before you enrol:</span>
+  <a href="{% url 'terms' %}">Terms and conditions</a>
+  <a href="{% url 'cancellation_refund' %}">Cancellation and refunds</a>
+  <a href="{% url 'privacy' %}">Privacy policy</a>
+</nav>
 {% endblock content %}

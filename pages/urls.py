@@ -5,6 +5,7 @@ from .views import (
     CancellationRefundPageView,
     ContactPageView,
     HomePageView,
+    OurStoryPageView,
     PricingPageView,
     PrivacyPageView,
     ShippingDeliveryPageView,
@@ -16,6 +17,7 @@ from .views import (
 urlpatterns = [
     path("", HomePageView.as_view(), name="home"),
     path("about/", AboutPageView.as_view(), name="about"),
+    path("our-story/", OurStoryPageView.as_view(), name="our_story"),
     path("contact/", ContactPageView.as_view(), name="contact"),
     path("plans/", PricingPageView.as_view(), name="pricing"),
     path("terms/", TermsPageView.as_view(), name="terms"),

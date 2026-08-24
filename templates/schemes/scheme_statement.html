@@ -1,6 +1,6 @@
 {% extends '_base.html' %}
 
-{% block title %}Statement {{ statement.scheme_account.scheme_number }} | Jai Shri Krishna Jewellery{% endblock %}
+{% block title %}Statement {{ statement.scheme_account.scheme_number }} | Jai Sri Krishna Jewelley{% endblock %}
 
 {% block css %}
 {{ block.super }}
@@ -16,7 +16,7 @@
 <div class="d-flex justify-content-end mb-3 d-print-none"><button class="btn btn-jsk" type="button" onclick="window.print()">Print statement</button></div>
 <article class="card statement-document"><div class="card-body p-4 p-md-5">
   <div class="text-center border-bottom pb-3 mb-4">
-    <h1 class="h2 mb-1">Jai Shri Krishna Jewellery</h1>
+    <h1 class="h2 mb-1">Jai Sri Krishna Jewelley</h1>
     <p class="text-muted mb-0">Customer savings scheme statement</p>
   </div>
   <dl class="row">
@@ -33,7 +33,7 @@
   </div></div>
 
   <div class="table-responsive"><table class="table table-sm align-middle">
-    <thead><tr><th>Date</th><th>Description</th><th>Reference</th><th>Amount paid</th><th>Scheme Rate</th><th>Metal allocation</th><th>Redemption / restoration</th><th>Status</th></tr></thead>
+    <thead><tr><th scope="col">Date</th><th scope="col">Description</th><th scope="col">Reference</th><th scope="col">Amount paid</th><th scope="col">Scheme Rate</th><th scope="col">Metal allocation</th><th scope="col">Redemption / restoration</th><th scope="col">Status</th></tr></thead>
     <tbody>
       {% for entry in statement.entries %}
       <tr>

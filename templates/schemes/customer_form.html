@@ -1,17 +1,29 @@
 {% extends '_base.html' %}
 {% load crispy_forms_tags %}
 
-{% block title %}Add customer | Jai Shri Krishna Jewellery{% endblock %}
+{% block title %}Add customer | Jai Sri Krishna Jewelley{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center"><div class="col-lg-7">
-  <h1>Add customer</h1>
-  <p class="text-muted">This also creates the customer's email login.</p>
-  <form method="post" novalidate>
+  <div class="page-header"><div><p class="page-eyebrow">Customer management</p><h1>Add customer</h1><p class="page-subtitle">Create the customer profile and registered email login.</p></div></div>
+  <form method="post" class="card form-card" novalidate>
     {% csrf_token %}
-    {{ form|crispy }}
-    <button class="btn btn-jsk" type="submit">Create customer</button>
-    <a class="btn btn-link" href="{% url 'schemes:customer_list' %}">Cancel</a>
+    {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+    <fieldset class="form-section">
+      <legend>Customer details</legend>
+      <p class="form-section-description">Use the customer's current contact information.</p>
+      {{ form.full_name|as_crispy_field }}
+      {{ form.email|as_crispy_field }}
+      {{ form.mobile_number|as_crispy_field }}
+      {{ form.address|as_crispy_field }}
+    </fieldset>
+    <fieldset class="form-section">
+      <legend>Initial login credentials</legend>
+      <p class="form-section-description">Provide the temporary password securely and ask the customer to change it after signing in.</p>
+      {{ form.password1|as_crispy_field }}
+      {{ form.password2|as_crispy_field }}
+    </fieldset>
+    <div class="form-actions d-flex flex-wrap gap-2"><button class="btn btn-jsk" type="submit">Create customer</button><a class="btn btn-outline-dark" href="{% url 'schemes:customer_list' %}">Cancel</a></div>
   </form>
 </div></div>
 {% endblock %}
