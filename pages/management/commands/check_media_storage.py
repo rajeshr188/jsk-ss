@@ -20,16 +20,28 @@ class Command(BaseCommand):
     def _read_public_rendition(self, name):
         url = f"https://{settings.R2_CUSTOM_DOMAIN}/{quote(name, safe='/')}"
         request = Request(url, headers={"User-Agent": "jsk-r2-storage-check/1.0"})
-        try:
-            with urlopen(request, timeout=10) as response:
-                if response.status != 200 or not response.read(8):
-                    raise CommandError(
-                        "The R2 custom domain did not return the generated rendition"
-                    )
-        except (HTTPError, URLError, TimeoutError) as exc:
-            raise CommandError(
-                "The R2 custom domain could not serve the generated rendition"
-            ) from exc
+        for _ in range(3):
+            try:
+                with urlopen(request, timeout=10) as response:
+                    if response.status != 200 or not response.read(8):
+                        raise CommandError(
+                            "The R2 custom domain did not return the generated rendition"
+                        )
+                    cache_control = response.headers.get("Cache-Control", "").lower()
+                    if (
+                        "public" not in cache_control
+                        or "max-age=86400" not in cache_control
+                    ):
+                        raise CommandError(
+                            "The public rendition response has an unsafe cache policy"
+                        )
+                    if response.headers.get("CF-Cache-Status", "").upper() == "HIT":
+                        return
+            except (HTTPError, URLError, TimeoutError) as exc:
+                raise CommandError(
+                    "The R2 custom domain could not serve the generated rendition"
+                ) from exc
+        raise CommandError("The public rendition did not produce a Cloudflare cache HIT")
 
     def _require_blocked_custom_domain_path(self, name):
         url = f"https://{settings.R2_CUSTOM_DOMAIN}/{quote(name, safe='/')}"

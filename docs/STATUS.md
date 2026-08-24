@@ -147,6 +147,9 @@ Cloudflare R2 media foundation — production smoke passed; operations proof pen
   without a stale DNSSEC delegation; both authoritative servers agree, and apex,
   `www`, live, and ready HTTPS checks return `200` while web and mail records remain
   DNS-only during stabilization.
+- Inbound and outbound GoDaddy-hosted mail both passed after the Cloudflare DNS
+  cutover. The public-rendition cache rule is deployed; its response header and cache
+  `HIT` behavior remain to be exercised by the production media smoke.
 
 ## In progress
 
@@ -154,9 +157,9 @@ Cloudflare R2 media foundation — production smoke passed; operations proof pen
   promotion remains separate from the Wagtail foundation work.
 - `FW-CMS-002` is complete locally. `FW-MEDIA-001` is implemented and tested in the
   repository, and its non-production and production R2 smokes have passed. Its
-  remaining external exit criteria are cache verification, mail-after-DNS-cutover
-  confirmation, token rotation, monitoring, and recovery evidence. Catalogue models
-  and production promotion remain blocked until that operational proof is retained.
+  remaining external exit criteria are cache verification, token rotation,
+  monitoring, and recovery evidence. Catalogue models and production promotion
+  remain blocked until that operational proof is retained.
 - The first production-bucket smoke correctly failed because the R2 attachment used
   the apex instead of the intended media hostname. The attachment was corrected to
   `media.jaishrikrishnajewellery.com`; DNS/TLS, public rendition routing, `403` WAF
@@ -303,11 +306,10 @@ Cloudflare R2 media foundation — production smoke passed; operations proof pen
 
 ## Next recommended step
 
-Test inbound/outbound mail after the DNS cutover, verify the rendition cache policy,
-then perform the documented R2 token-rotation and media-recovery exercises while
-retaining Cloudflare metrics and recovery evidence. Do not create catalogue models
-or promote the CMS foundation to production until those durable-media behaviors are
-proven.
+Re-run the production media smoke to verify the rendition cache policy, then perform
+the documented R2 token-rotation and media-recovery exercises while retaining
+Cloudflare metrics and recovery evidence. Do not create catalogue models or promote
+the CMS foundation to production until those durable-media behaviors are proven.
 
 Complete the CASH product-boundary decision and enforce it in enrolment and payment
 services before submitting the public website and policy URLs to Razorpay. Keep live

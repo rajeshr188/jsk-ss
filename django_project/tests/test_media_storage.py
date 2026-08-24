@@ -179,12 +179,25 @@ class WagtailMediaPipelineTests(TestCase):
         self,
         urlopen,
     ):
-        public_response = MagicMock()
-        public_response.__enter__.return_value = public_response
-        public_response.status = 200
-        public_response.read.return_value = b"image"
+        cache_miss_response = MagicMock()
+        cache_miss_response.__enter__.return_value = cache_miss_response
+        cache_miss_response.status = 200
+        cache_miss_response.read.return_value = b"image"
+        cache_miss_response.headers = {
+            "Cache-Control": "public, max-age=86400",
+            "CF-Cache-Status": "MISS",
+        }
+        cache_hit_response = MagicMock()
+        cache_hit_response.__enter__.return_value = cache_hit_response
+        cache_hit_response.status = 200
+        cache_hit_response.read.return_value = b"image"
+        cache_hit_response.headers = {
+            "Cache-Control": "public, max-age=86400",
+            "CF-Cache-Status": "HIT",
+        }
         urlopen.side_effect = [
-            public_response,
+            cache_miss_response,
+            cache_hit_response,
             HTTPError(
                 "https://media.example.com/original_images/test",
                 403,
@@ -204,10 +217,11 @@ class WagtailMediaPipelineTests(TestCase):
         call_command("check_media_storage")
 
         requested_urls = [call.args[0].full_url for call in urlopen.call_args_list]
-        self.assertEqual(len(requested_urls), 3)
+        self.assertEqual(len(requested_urls), 4)
         self.assertIn("/images/", requested_urls[0])
-        self.assertIn("/original_images/", requested_urls[1])
-        self.assertIn("/documents/", requested_urls[2])
+        self.assertEqual(requested_urls[0], requested_urls[1])
+        self.assertIn("/original_images/", requested_urls[2])
+        self.assertIn("/documents/", requested_urls[3])
         for requested_url in requested_urls:
             self.assertNotIn(R2_ENVIRONMENT["R2_ACCESS_KEY_ID"], requested_url)
             self.assertNotIn(R2_ENVIRONMENT["R2_SECRET_ACCESS_KEY"], requested_url)

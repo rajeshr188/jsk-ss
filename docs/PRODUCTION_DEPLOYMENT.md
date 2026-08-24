@@ -723,10 +723,11 @@ for application static files.
    a wildcard origin for credentialed operations.
 9. Re-run `check_media_storage` with the production release candidate and production
    bucket before editor access is enabled. With `R2_CUSTOM_DOMAIN` configured, the
-   command also requires the generated `/images/` rendition to return `200` and the
-   direct custom-domain `/original_images/` and `/documents/` prefixes to return
-   `403`. Confirm R2 metrics show the temporary writes, reads, and deletes and that
-   the bucket is empty apart from approved media.
+   command also requires the generated `/images/` rendition to return `200`, carry
+   `Cache-Control: public, max-age=86400`, and produce a Cloudflare cache `HIT` within
+   three requests. The direct custom-domain `/original_images/` and `/documents/`
+   prefixes must return `403`. Confirm R2 metrics show the temporary writes, reads,
+   and deletes and that the bucket is empty apart from approved media.
 
    Before running it, the bucket's Custom Domains panel must show the media hostname
    as Active and both Cloudflare authoritative nameservers must resolve it. `NXDOMAIN`
