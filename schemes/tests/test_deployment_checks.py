@@ -28,6 +28,9 @@ class ProductionConfigurationCheckTests(SimpleTestCase):
         EMAIL_HOST="smtp.example.com",
         ALLOWED_HOSTS=["savings.example.com"],
         CSRF_TRUSTED_ORIGINS=["https://savings.example.com"],
+        MEDIA_STORAGE_BACKEND="r2",
+        R2_CUSTOM_DOMAIN="media.savings.example.com",
+        WAGTAILDOCS_SERVE_METHOD="serve_view",
         APP_RELEASE="abc123",
         DATABASES={"default": {"OPTIONS": {"sslmode": "require"}}},
     )
@@ -49,3 +52,21 @@ class ProductionConfigurationCheckTests(SimpleTestCase):
     )
     def test_missing_payment_credentials_are_errors(self):
         self.assertIn("jsk.E006", self.issue_ids())
+
+    @override_settings(
+        MEDIA_STORAGE_BACKEND="filesystem",
+        R2_CUSTOM_DOMAIN="",
+    )
+    def test_local_media_storage_is_rejected_for_production(self):
+        self.assertIn("jsk.E012", self.issue_ids())
+
+    @override_settings(
+        MEDIA_STORAGE_BACKEND="r2",
+        R2_CUSTOM_DOMAIN="temporary.r2.dev",
+    )
+    def test_r2_development_domain_is_rejected_for_production(self):
+        self.assertIn("jsk.E013", self.issue_ids())
+
+    @override_settings(WAGTAILDOCS_SERVE_METHOD="redirect")
+    def test_direct_document_serving_is_rejected_for_production(self):
+        self.assertIn("jsk.E014", self.issue_ids())

@@ -42,6 +42,13 @@ Alternatively, set `DJANGO_SECRET_KEY` and run `docker compose up --build`; Comp
 | `APP_RELEASE` | production | Commit SHA or immutable image version included in health responses |
 | `ALLOWED_HOSTS` | no | Comma-separated host names |
 | `CSRF_TRUSTED_ORIGINS` | no | Comma-separated trusted origins |
+| `WAGTAILADMIN_BASE_URL` | CMS | Public origin used for absolute Wagtail admin links; omit `/cms/` and a trailing slash |
+| `MEDIA_STORAGE_BACKEND` | media | `filesystem` for local development or `r2` for Cloudflare R2; production checks require `r2` |
+| `R2_ACCOUNT_ID` | R2 | Cloudflare's 32-character account ID; server-side only |
+| `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` | R2 | Object Read & Write credentials scoped to exactly one media bucket |
+| `R2_BUCKET_NAME` | R2 | Dedicated environment-specific R2 Standard bucket |
+| `R2_CUSTOM_DOMAIN` | production media | Owned public hostname for renditions, without scheme/path; `r2.dev` is rejected in production |
+| `R2_SIGNED_URL_EXPIRY_SECONDS` | no | Lifetime of private original/document URLs; defaults to `900` seconds |
 | `DEFAULT_FROM_EMAIL` | no | Sender for authentication emails |
 | `EMAIL_BACKEND` | production | Delivery backend; deploy checks reject console, dummy, and in-memory backends |
 | `EMAIL_HOST`, `EMAIL_PORT` | SMTP | SMTP server and port |

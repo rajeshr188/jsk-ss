@@ -154,6 +154,62 @@ here are not implemented behavior and do not relax the financial invariants in
 - **FW-AUTH-003:** Keep contribution access disabled until an owner creates a valid
   `SchemeAccount`; a public login must never imply financial enrolment.
 
+## Catalogue content management
+
+- **FW-CMS-001 — Wagtail feasibility and architecture (completed 2026-08-24):**
+  [ADR-0004](decisions/ADR-0004-wagtail-catalog-cms.md) accepts Wagtail 7.4 LTS as a
+  bounded catalogue CMS while preserving the existing Django application,
+  `accounts.CustomUser`, Bootstrap 5 public UI, and financial-domain separation.
+- **FW-CMS-002 — Foundation spike (completed locally 2026-08-24):** Wagtail 7.4.3 is
+  integrated additively at `/cms/` with PostgreSQL search, the existing
+  `accounts.CustomUser`, `/admin/`, `/scheme/`, public-route precedence, restricted
+  document types, and development-only local media. A customer and an owner without
+  `wagtailadmin.access_admin` are denied; an explicitly authorized staff user can
+  enter. Wagtail migrations apply locally and all 147 tests pass. Production
+  promotion remains separate from this local foundation milestone.
+- **FW-MEDIA-001 — Cloudflare R2 media foundation (functionally completed
+  2026-08-24):** The application now selects local
+  filesystem or Cloudflare R2 storage through environment variables, retains
+  WhiteNoise for static files, keeps originals/documents behind short-lived signed
+  URLs, publishes only generated renditions through an owned custom domain, and
+  rejects an unsafe production configuration. Automated configuration, URL-isolation,
+  upload, read, rendition, cleanup, and deployment-check tests pass. The production
+  runbook records isolated buckets, bucket-scoped Object Read & Write tokens, the
+  smoke command, CORS/cache/WAF policy, token rotation, and media recovery. A real
+  isolated non-production R2 upload/read/rendition/cleanup smoke passed on 2026-08-24
+  without retaining the temporary media. The real production bucket, owned media
+  domain, public rendition path, private-prefix WAF rules, and no-residue smoke also
+  passed on 2026-08-24. A second production smoke proved the public 24-hour cache
+  header and a real Cloudflare cache hit. A replacement bucket-scoped token passed
+  before and after the old token was deleted. Do not use the rate-limited `r2.dev`
+  endpoint in production.
+- **FW-MEDIA-002 — Media backup, recovery, and monitoring (accepted deferral
+  2026-08-24):** The owner accepted deferring the isolated copy/delete/restore/hash
+  drill and ongoing usage-monitoring evidence to keep the catalogue roadmap moving.
+  This does not block local `FW-CATALOG-001` work. Until a separate backup target and
+  periodic restore test exist, retain approved source photographs outside R2 and do
+  not treat R2 as their only copy. Production editor activation requires explicit
+  acceptance of this limitation and a source-original retention process.
+- **FW-CATALOG-001 — Catalogue domain:** Implement a `CatalogIndexPage`, focused
+  `ProductPage`, image gallery, and reusable category/collection snippets. Model
+  product discovery and showroom enquiry only; do not introduce inventory, cart,
+  invoicing, fulfilment, or reuse Scheme Rates as catalogue prices. Exit when model
+  validation, uniqueness, preview, revision, and image tests pass.
+- **FW-CATALOG-002 — Publishing and authorization:** Define least-privilege editor,
+  publisher, and administrator groups; require explicit CMS authorization independent
+  of application role; and test draft privacy, publish/unpublish, audit history, and
+  owner workflow. Enable workflow email only after production SMTP is verified.
+- **FW-CATALOG-003 — Public catalogue:** Add accessible Bootstrap 5 catalogue and
+  product pages, responsive R2-backed images, SEO metadata, filtering/search, enquiry
+  calls to action, and clear showroom availability language. Exit when accessibility,
+  performance, structured-content, empty-state, and public/draft visibility checks
+  pass on mobile and desktop.
+- **FW-CATALOG-004 — Production rollout:** Back up the database and media inventory,
+  run additive migrations against a release candidate, verify the custom media domain,
+  security headers, monitoring, restore procedure, and application rollback, then
+  train authorized editors. Existing public pages remain Django-owned until a later
+  approved content/URL migration.
+
 ## Prioritization rule
 
 Complete the remaining production deployment gates before handling real funds. Feature

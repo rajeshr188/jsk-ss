@@ -2,7 +2,7 @@
 
 ## Current milestone
 
-UI modernization — Bootstrap 5 refresh implemented; review pending
+Wagtail catalogue domain — foundation branch ready for integration
 
 ## Completed
 
@@ -128,12 +128,45 @@ UI modernization — Bootstrap 5 refresh implemented; review pending
   explains their family partnership, and uses accessible monogram portraits until
   approved photographs are supplied. Its route is retained for later publication,
   but links to it are currently hidden from public navigation and page calls to action.
+- Wagtail feasibility is accepted in ADR-0004 as a bounded catalogue CMS. Wagtail
+  7.4.3 now runs additively with PostgreSQL search, `accounts.CustomUser`, `/cms/`,
+  the existing `/admin/` and `/scheme/` routes, and unchanged Bootstrap 5 public
+  pages. CMS entry requires the explicit `wagtailadmin.access_admin` permission;
+  customer and application-owner roles alone do not grant it.
+- The `FW-MEDIA-001` repository foundation uses environment-selected
+  `django-storages` R2 storage while retaining WhiteNoise for static files. Wagtail
+  originals and documents use short-lived signed S3 URLs; generated image renditions
+  use a separate public custom-domain storage alias. Production checks reject local
+  media, `r2.dev`, missing owned media domains, and non-view document serving. A
+  no-residue command exercises real upload, read, rendition, and cleanup behavior.
+- The isolated non-production R2 smoke passed on 2026-08-24: Django uploaded and read
+  the original, generated and read a Wagtail rendition, and removed the temporary
+  database and object-storage records without printing credentials or signed URLs.
+- The complete Linode DNS record set was reproduced in Cloudflare, including the
+  initially missed GoDaddy and Postmark DKIM records. Authority changed to Cloudflare
+  without a stale DNSSEC delegation; both authoritative servers agree, and apex,
+  `www`, live, and ready HTTPS checks return `200` while web and mail records remain
+  DNS-only during stabilization.
+- Inbound and outbound GoDaddy-hosted mail both passed after the Cloudflare DNS
+  cutover. The public-rendition cache rule is deployed, and a fresh production smoke
+  proved its 24-hour public cache header and a real Cloudflare cache `HIT` while WAF
+  and cleanup behavior remained correct.
+- The production R2 credential-rotation rehearsal passed on 2026-08-24: a new token
+  scoped to the production bucket passed the complete smoke, the old token was
+  deleted, and the new token passed again. A transient local DNS/TLS failure during a
+  WAF probe recovered through bounded retries without weakening any access control.
 
 ## In progress
 
-- The Bootstrap 5 UI modernization is committed on `agent/ui-modernization`; the
-  Razorpay-facing gold/silver product-language refinement awaits stakeholder browser
-  review before its follow-up commit, PR, and production promotion.
+- The Bootstrap 5 UI modernization is merged into `main` at `24ed76d`; production
+  promotion remains separate from the Wagtail foundation work.
+- `FW-CMS-002` and functional `FW-MEDIA-001` are complete on
+  `agent/wagtail-foundation`. Integrate that branch through PR/CI before starting
+  `FW-CATALOG-001` from updated `main`; do not stack catalogue models onto the
+  unmerged foundation branch.
+- `FW-MEDIA-002` tracks the accepted backup/recovery and usage-monitoring deferral.
+  It does not block local catalogue development, but approved source photographs must
+  remain outside R2 until an isolated backup target and restore proof exist.
 - Environment-specific production proof: isolated database restoration, real email
   delivery, external alert routing/exercises, and coordinated secret-rotation drills.
   The stable owned domain/TLS/proxy path and repository observability foundation are
@@ -185,6 +218,11 @@ UI modernization — Bootstrap 5 refresh implemented; review pending
 - Plan-specific early-discontinuation pricing, payment-order
   expiry, eligibility reminders, public onboarding, and partial-settlement policy are
   not yet defined.
+- The CMS and R2 foundations exist locally and real non-production/production storage,
+  access, cache, and rotation smokes pass, but there is no catalogue model and no
+  isolated media backup/restore proof. Retain approved source photographs outside R2;
+  production must not rely on R2 as their only copy. The Wagtail/R2 branch is not yet
+  merged or deployed.
 - The detailed, prioritized backlog and milestone-by-milestone limitation history
   are maintained in [Future work](FUTURE_WORK.md).
 
@@ -194,8 +232,14 @@ UI modernization — Bootstrap 5 refresh implemented; review pending
 
 ## Verification
 
+- Wagtail 7.4.3 and Django 6.0.4 pass system checks, production-shaped deploy checks,
+  static collection, and an applied-migration check. Wagtail/taggit migrations are
+  applied to local PostgreSQL only; production has not received them.
 - PostgreSQL 16 migrations applied successfully.
-- 143 tests pass, including public INR-contribution/metal-to-jewellery copy coverage,
+- 160 tests pass, including R2 configuration and signed/private-original versus
+  public-rendition URL isolation, no-residue upload/read/rendition/cleanup behavior,
+  production media deployment gates, explicit Wagtail permission and route-precedence checks,
+  public INR-contribution/metal-to-jewellery copy coverage,
   owner-only Scheme Rate publication, large-change
   confirmation, no-rate payment blocking, pre-order locking, rate-change race
   behavior, durable verified-payment/allocation transition, production-shaped
@@ -261,6 +305,11 @@ UI modernization — Bootstrap 5 refresh implemented; review pending
   exports; all tagged records were rolled back.
 
 ## Next recommended step
+
+Push `agent/wagtail-foundation`, open and review its PR, require CI to pass, and merge
+it into `main`. Then fast-forward local `main` and create `agent/catalog-domain` for
+`FW-CATALOG-001`. Keep the accepted `FW-MEDIA-002` recovery/monitoring limitation
+visible and retain source photographs outside R2.
 
 Complete the CASH product-boundary decision and enforce it in enrolment and payment
 services before submitting the public website and policy URLs to Razorpay. Keep live

@@ -4,6 +4,8 @@ from urllib.parse import parse_qsl, unquote, urlparse
 
 from django.core.exceptions import ImproperlyConfigured
 
+from .media_storage import build_media_storage_config
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -76,6 +78,7 @@ INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
+    "django.contrib.postgres",
     "django.contrib.sessions",
     "django.contrib.messages",
     "whitenoise.runserver_nostatic",
@@ -86,6 +89,20 @@ INSTALLED_APPS = [
     "allauth.account",
     "crispy_forms",
     "crispy_bootstrap5",
+    "wagtail.contrib.forms",
+    "wagtail.contrib.redirects",
+    "wagtail.embeds",
+    "wagtail.sites",
+    "wagtail.users",
+    "wagtail.snippets",
+    "wagtail.documents",
+    "wagtail.images",
+    "wagtail.search",
+    "wagtail.admin",
+    "wagtail",
+    "modelcluster",
+    "taggit",
+    "django_filters",
     # Local
     "accounts",
     "pages",
@@ -103,6 +120,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "allauth.account.middleware.AccountMiddleware",  # django-allauth
+    "wagtail.contrib.redirects.middleware.RedirectMiddleware",
 ]
 
 if DEBUG:
@@ -197,11 +215,23 @@ STATIC_URL = "/static/"
 # https://docs.djangoproject.com/en/dev/ref/contrib/staticfiles/#std:setting-STATICFILES_DIRS
 STATICFILES_DIRS = [BASE_DIR / "static"]
 
+# Local uploaded-media storage remains the development default. Production must
+# select the Cloudflare R2 backend and provide server-side credentials.
+MEDIA_ROOT = BASE_DIR / "media"
+MEDIA_URL = "/media/"
+
+MEDIA_STORAGE_CONFIG = build_media_storage_config(os.environ)
+MEDIA_STORAGE_BACKEND = MEDIA_STORAGE_CONFIG.backend
+R2_ACCOUNT_ID = MEDIA_STORAGE_CONFIG.account_id
+R2_ACCESS_KEY_ID = MEDIA_STORAGE_CONFIG.access_key_id
+R2_SECRET_ACCESS_KEY = MEDIA_STORAGE_CONFIG.secret_access_key
+R2_BUCKET_NAME = MEDIA_STORAGE_CONFIG.bucket_name
+R2_CUSTOM_DOMAIN = MEDIA_STORAGE_CONFIG.custom_domain
+
 # https://whitenoise.readthedocs.io/en/latest/django.html
 STORAGES = {
-    "default": {
-        "BACKEND": "django.core.files.storage.FileSystemStorage",
-    },
+    "default": MEDIA_STORAGE_CONFIG.default_storage,
+    "renditions": MEDIA_STORAGE_CONFIG.rendition_storage,
     "staticfiles": {
         "BACKEND": (
             "django.contrib.staticfiles.storage.StaticFilesStorage"
@@ -214,6 +244,25 @@ STORAGES = {
 # Default primary key field type
 # https://docs.djangoproject.com/en/stable/ref/settings/#default-auto-field
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# Wagtail is a bounded catalogue CMS. Existing public and financial routes remain
+# ordinary Django views until their own approved implementation phase.
+WAGTAIL_SITE_NAME = "Jai Sri Krishna Jewelley Catalogue"
+WAGTAILADMIN_BASE_URL = os.getenv(
+    "WAGTAILADMIN_BASE_URL",
+    "http://localhost:8000" if DEBUG else "https://jaishrikrishnajewellery.com",
+).strip().rstrip("/")
+WAGTAILSEARCH_BACKENDS = {
+    "default": {
+        "BACKEND": "wagtail.search.backends.database",
+    }
+}
+DATA_UPLOAD_MAX_NUMBER_FIELDS = 10_000
+WAGTAILDOCS_EXTENSIONS = ["csv", "docx", "odt", "pdf", "pptx", "rtf", "txt", "xlsx"]
+WAGTAILDOCS_MAX_UPLOAD_SIZE = 10 * 1024 * 1024
+WAGTAILDOCS_SERVE_METHOD = "serve_view"
+WAGTAILIMAGES_MAX_UPLOAD_SIZE = 10 * 1024 * 1024
+WAGTAILIMAGES_RENDITION_STORAGE = "renditions"
 
 # django-crispy-forms
 # https://django-crispy-forms.readthedocs.io/en/latest/install.html#template-packs

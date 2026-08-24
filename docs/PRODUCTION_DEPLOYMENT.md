@@ -547,6 +547,8 @@ Provision these resources before the first build is promoted:
 6. An SMTP or transactional email account with an authorized sender domain.
 7. Razorpay Test Mode keys and a separate webhook signing secret.
 8. Uptime, error, database, backup, and financial-exception alert destinations.
+9. Separate Cloudflare R2 Standard buckets and bucket-scoped credentials for staging
+   and production uploaded media. Production also requires an owned media domain.
 
 ## Production environment
 
@@ -569,6 +571,15 @@ APP_RELEASE=<immutable-commit-or-image-id>
 
 ALLOWED_HOSTS=savings.example.com
 CSRF_TRUSTED_ORIGINS=https://savings.example.com
+WAGTAILADMIN_BASE_URL=https://savings.example.com
+
+MEDIA_STORAGE_BACKEND=r2
+R2_ACCOUNT_ID=<32-character-cloudflare-account-id>
+R2_ACCESS_KEY_ID=<bucket-scoped-access-key-id>
+R2_SECRET_ACCESS_KEY=<bucket-scoped-secret-access-key>
+R2_BUCKET_NAME=<production-media-bucket>
+R2_CUSTOM_DOMAIN=media.savings.example.com
+R2_SIGNED_URL_EXPIRY_SECONDS=900
 
 DATABASE_URL=postgresql://<app-user>:<url-encoded-password>@<private-host>:5432/<database>?sslmode=require
 DATABASE_CONN_MAX_AGE=60
@@ -606,6 +617,15 @@ Configuration rules:
 - `ALLOWED_HOSTS` contains bare hostnames, not schemes or paths. Do not use `*`.
 - `CSRF_TRUSTED_ORIGINS` contains complete HTTPS origins and includes a port only if
   the public origin uses a non-default port.
+- `WAGTAILADMIN_BASE_URL` is the public origin used to build absolute CMS links. Do
+  not include `/cms/` or a trailing slash.
+- `MEDIA_STORAGE_BACKEND=r2` is mandatory when Wagtail is deployed. Use a separate
+  R2 Standard bucket and Object Read & Write token for each environment. Scope each
+  token to its one bucket; never expose either credential to browser code or logs.
+- `R2_CUSTOM_DOMAIN` is a hostname without `https://`, port, path, or trailing slash.
+  Production checks reject a missing domain and Cloudflare's rate-limited `r2.dev`.
+  Private originals/documents use 15-minute signed S3 API URLs; only generated
+  renditions use the unsigned custom domain.
 - Percent-encode reserved characters in database usernames/passwords. Require
   `sslmode=require` or the stronger certificate-validation mode supported by the
   provider. Prefer a private network in addition to TLS where available; the selected
@@ -626,6 +646,133 @@ Configuration rules:
   the migration job and web service.
 
 The complete variable reference is maintained in the [README](../README.md#environment-variables).
+
+## Cloudflare R2 media setup and proof
+
+The application sends uploads through Django; browsers do not upload directly to
+R2. Wagtail originals and documents use the private `default` storage alias and
+short-lived signed S3 API URLs. Generated image renditions use the separate
+`renditions` alias and the public custom media domain. WhiteNoise remains responsible
+for application static files.
+
+1. Create two R2 **Standard** buckets such as `jsk-media-staging` and
+   `jsk-media-production`. Do not share a bucket between environments.
+2. Create a separate R2 API credential for each bucket. Select **Object Read &
+   Write** and restrict it to that one bucket. Save the Access Key ID and Secret
+   Access Key immediately in the relevant secret store; never commit or paste them
+   into tickets, chat, screenshots, or shell output.
+3. For the first non-production smoke, set `MEDIA_STORAGE_BACKEND=r2`, configure the
+   account ID, key pair, and staging bucket, and leave `R2_CUSTOM_DOMAIN` empty. This
+   keeps generated URLs signed and avoids making the staging bucket public.
+4. Apply Wagtail migrations, run normal Django checks, and execute:
+
+   ```powershell
+   uv run --env-file .env.r2 python manage.py check_media_storage
+   ```
+
+   The command creates a small PNG, reads it back, creates and reads a Wagtail
+   rendition, then deletes its database rows and both objects. It must report all
+   four checks as successful, leave no `r2-storage-check-*` object, and expose no
+   credential or signed URL in output.
+
+   Evidence recorded 2026-08-24: the isolated non-production command reported that
+   upload, read, rendition, and cleanup all passed. No credential, URL, or temporary
+   object identifier is retained in the repository.
+5. Before production, add `jaishrikrishnajewellery.com` as a zone in the same
+   Cloudflare account and connect `media.jaishrikrishnajewellery.com` to the
+   production bucket under **R2 → bucket → Settings → Custom Domains**. If the
+   authoritative DNS is not already on Cloudflare, first inventory and preserve all
+   apex, `www`, MX, TXT, CAA, and verification records before changing nameservers or
+   using Cloudflare's supported partial-zone setup. Never CNAME the media hostname to
+   an `r2.dev` address.
+
+   DNS baseline observed 2026-08-24: authority remains on `ns1.linode.com` through
+   `ns5.linode.com`; the apex and `www` resolve to `172.235.9.77`; MX records point
+   to `smtp.secureserver.net` at priority 0 and `mailstore1.secureserver.net` at
+   priority 10; TXT includes `v=spf1 include:secureserver.net -all` and `T1327472`.
+   This public snapshot is not a complete zone export. Export and compare every
+   Linode DNS record before changing the registrar's nameservers.
+
+   Cutover evidence recorded 2026-08-24: Cloudflare received all 17 non-NS records,
+   including the two GoDaddy DKIM CNAMEs and Postmark DKIM TXT record missed by the
+   automatic import. Public authority changed to `carlane.ns.cloudflare.com` and
+   `tony.ns.cloudflare.com` with no stale DS delegation. Both authoritative servers
+   returned matching apex A/AAAA and MX answers; public apex, `www`, live, and ready
+   HTTPS checks returned `200`. Keep the Linode zone intact as the short-term DNS
+   rollback source until Cloudflare and mail delivery have remained stable.
+6. Disable the production bucket's public `r2.dev` URL. On the Cloudflare zone, add
+   one zone-level WAF custom rule with the **Block** action:
+
+   ```text
+   (http.host eq "media.jaishrikrishnajewellery.com" and
+    (starts_with(http.request.uri.path, "/original_images/") or
+     starts_with(http.request.uri.path, "/documents/")))
+   ```
+
+   The Free plan currently includes a limited number of zone custom rules, so retain
+   evidence that requests to both protected prefixes return `403` while a generated
+   `/images/` rendition returns `200`. The S3 API endpoint remains private and is not
+   affected by this browser-facing WAF rule.
+7. Add a cache rule only for `media.jaishrikrishnajewellery.com/images/*` and respect
+   the object's `Cache-Control: public, max-age=86400`. Do not cache signed original
+   or document responses. Purge the media hostname after changing cache or CORS rules.
+8. No R2 CORS policy is required for the current server-side upload and ordinary
+   HTML `<img>` flow. Record that explicit deny-by-default decision. If later browser
+   JavaScript, canvas access, or direct uploads require CORS, allow only the exact
+   production origins and required `GET`/`HEAD` methods or upload headers; never use
+   a wildcard origin for credentialed operations.
+9. Re-run `check_media_storage` with the production release candidate and production
+   bucket before editor access is enabled. With `R2_CUSTOM_DOMAIN` configured, the
+   command also requires the generated `/images/` rendition to return `200`, carry
+   `Cache-Control: public, max-age=86400`, and produce a Cloudflare cache `HIT` within
+   three requests. The direct custom-domain `/original_images/` and `/documents/`
+   prefixes must return `403`. Confirm R2 metrics show the temporary writes, reads,
+   and deletes and that the bucket is empty apart from approved media.
+
+   Before running it, the bucket's Custom Domains panel must show the media hostname
+   as Active and both Cloudflare authoritative nameservers must resolve it. `NXDOMAIN`
+   means the R2 attachment is not ready; do not work around that by manually creating
+   a generic CNAME. If the command warns that cleanup was incomplete, inspect and
+   remove only `r2-storage-check-*` records and objects before retrying. Public
+   rendition and private-prefix checks retry three times and distinguish an HTTP
+   status failure from a DNS/network/TLS failure; use that classification before
+   changing WAF or cache rules.
+
+   Production evidence recorded 2026-08-24: an initial attachment mistakenly used
+   the apex domain and was removed without disrupting the application. The corrected
+   `media.jaishrikrishnajewellery.com` attachment became active with valid TLS;
+   nonexistent `/images/` returned `404`, both private prefixes returned `403`, and
+   the real production smoke passed upload, read, rendition, public delivery, access
+   controls, and cleanup. Apex, `www`, live, and ready remained `200`.
+
+   Cache evidence recorded 2026-08-24: after the host-scoped `/images/` cache rule
+   was deployed, a fresh production smoke observed the required
+   `Cache-Control: public, max-age=86400` response and a Cloudflare cache `HIT`; the
+   private-prefix and cleanup checks continued to pass.
+
+Credential rotation uses overlap, not downtime: create a second bucket-scoped token,
+replace the two R2 key values, recreate the web service, run `check_media_storage`,
+then revoke the old token and run the check again. Roll back to the previous token
+only while it remains active; never keep both indefinitely.
+
+Rotation evidence recorded 2026-08-24: a separately created replacement token scoped
+to the production media bucket passed the full storage/custom-domain smoke. The old
+token was deleted and the replacement passed the full smoke again. A transient local
+DNS/TLS interruption affected only a public WAF probe; bounded retries then completed
+without changing credentials or Cloudflare security rules.
+
+R2 durability is not a backup against operator deletion or application mistakes.
+Before real catalogue media is accepted, copy a non-sensitive test object to the
+approved backup target, delete only that test object from the primary bucket, restore
+it to the same key, and compare its size and SHA-256 hash. Record the date, operator,
+bucket names, evidence, and cleanup. Define a scheduled copy/retention policy for real
+media and test restoration periodically; database recovery and media recovery must use
+compatible recovery points because Wagtail stores object keys in PostgreSQL.
+
+Accepted deferral recorded 2026-08-24: this recovery drill is not required to begin
+local catalogue-domain development. It remains `FW-MEDIA-002`; approved source images
+must be retained outside R2, and R2 must not become the only copy until a backup target
+and periodic restore proof exist.
 
 ## Edge, DNS, and TLS configuration
 

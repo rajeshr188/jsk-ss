@@ -57,6 +57,12 @@ jobs:
           ALLOWED_HOSTS: savings.example.invalid
           CSRF_TRUSTED_ORIGINS: https://savings.example.invalid
           APP_RELEASE: ci
+          MEDIA_STORAGE_BACKEND: r2
+          R2_ACCOUNT_ID: 0123456789abcdef0123456789abcdef
+          R2_ACCESS_KEY_ID: ci-only-not-a-real-access-key
+          R2_SECRET_ACCESS_KEY: ci-only-not-a-real-secret-key
+          R2_BUCKET_NAME: ci-only-not-a-real-bucket
+          R2_CUSTOM_DOMAIN: media.example.invalid
           DATABASE_URL: postgresql://jsk_ci:jsk_ci@127.0.0.1:5432/jsk_ci?sslmode=disable
           PAYMENT_GATEWAY: razorpay
           RAZORPAY_KEY_ID: rzp_test_ci_only
