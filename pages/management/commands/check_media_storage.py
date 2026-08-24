@@ -62,20 +62,31 @@ class Command(BaseCommand):
     def _require_blocked_custom_domain_path(self, name):
         url = f"https://{settings.R2_CUSTOM_DOMAIN}/{quote(name, safe='/')}"
         request = Request(url, headers={"User-Agent": "jsk-r2-storage-check/1.0"})
-        try:
-            with urlopen(request, timeout=10):
-                pass
-        except HTTPError as exc:
-            if exc.code == 403:
-                return
+        last_http_status = None
+        network_failure = False
+        for _ in range(3):
+            try:
+                with urlopen(request, timeout=10):
+                    raise CommandError(
+                        "The R2 custom domain exposed a private media prefix"
+                    )
+            except HTTPError as exc:
+                if exc.code == 403:
+                    return
+                last_http_status = exc.code
+            except (URLError, TimeoutError):
+                network_failure = True
+        if last_http_status is not None:
             raise CommandError(
-                "The R2 custom-domain private-prefix check did not return 403"
-            ) from exc
-        except (URLError, TimeoutError) as exc:
+                f"The R2 custom-domain private-prefix check returned HTTP "
+                f"{last_http_status} instead of 403"
+            )
+        if network_failure:
             raise CommandError(
-                "The R2 custom domain was unreachable during its access-control check"
-            ) from exc
-        raise CommandError("The R2 custom domain exposed a private media prefix")
+                "The R2 custom domain had a DNS, network, or TLS failure during "
+                "its access-control check"
+            )
+        raise CommandError("The R2 custom-domain private-prefix check failed")
 
     def handle(self, *args, **options):
         if settings.MEDIA_STORAGE_BACKEND != "r2":

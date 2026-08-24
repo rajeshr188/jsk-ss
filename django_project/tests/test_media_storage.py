@@ -198,6 +198,7 @@ class WagtailMediaPipelineTests(TestCase):
         urlopen.side_effect = [
             cache_miss_response,
             cache_hit_response,
+            URLError("temporary TLS interruption"),
             HTTPError(
                 "https://media.example.com/original_images/test",
                 403,
@@ -217,11 +218,12 @@ class WagtailMediaPipelineTests(TestCase):
         call_command("check_media_storage")
 
         requested_urls = [call.args[0].full_url for call in urlopen.call_args_list]
-        self.assertEqual(len(requested_urls), 4)
+        self.assertEqual(len(requested_urls), 5)
         self.assertIn("/images/", requested_urls[0])
         self.assertEqual(requested_urls[0], requested_urls[1])
         self.assertIn("/original_images/", requested_urls[2])
-        self.assertIn("/documents/", requested_urls[3])
+        self.assertEqual(requested_urls[2], requested_urls[3])
+        self.assertIn("/documents/", requested_urls[4])
         for requested_url in requested_urls:
             self.assertNotIn(R2_ENVIRONMENT["R2_ACCESS_KEY_ID"], requested_url)
             self.assertNotIn(R2_ENVIRONMENT["R2_SECRET_ACCESS_KEY"], requested_url)

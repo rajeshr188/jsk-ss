@@ -734,8 +734,9 @@ for application static files.
    means the R2 attachment is not ready; do not work around that by manually creating
    a generic CNAME. If the command warns that cleanup was incomplete, inspect and
    remove only `r2-storage-check-*` records and objects before retrying. Public
-   rendition checks retry three times and distinguish an HTTP status failure from a
-   DNS/network/TLS failure; use that classification before changing WAF or cache rules.
+   rendition and private-prefix checks retry three times and distinguish an HTTP
+   status failure from a DNS/network/TLS failure; use that classification before
+   changing WAF or cache rules.
 
    Production evidence recorded 2026-08-24: an initial attachment mistakenly used
    the apex domain and was removed without disrupting the application. The corrected
