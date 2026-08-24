@@ -2,7 +2,7 @@
 
 ## Current milestone
 
-Wagtail catalogue domain — FW-CATALOG-001 complete locally
+Wagtail catalogue publishing authorization — FW-CATALOG-002 complete locally
 
 ## Completed
 
@@ -161,14 +161,23 @@ Wagtail catalogue domain — FW-CATALOG-001 complete locally
   optional positive informational INR display price. The model and preview templates
   support product discovery and showroom enquiry only; they do not introduce
   inventory, carts, checkout, invoices, fulfilment, payments, or Scheme Rate coupling.
+- `FW-CATALOG-002` adds an explicit, idempotent catalogue authorization bootstrap.
+  It creates a draft catalogue root, dedicated media collection, subtree-scoped
+  Catalogue Editors/Publishers/Administrators groups, collection-scoped image access,
+  and a publisher approval workflow. Editors can prepare and submit drafts;
+  publishers or catalogue administrators approve publication. Application roles do
+  not grant group membership, non-staff users remain denied even if assigned by
+  mistake, and every workflow, publish, and unpublish action stays in Wagtail's
+  actor-attributed audit history.
 
 ## In progress
 
 - The Bootstrap 5 UI modernization is merged into `main` at `24ed76d`; production
   promotion remains separate from the Wagtail foundation work.
-- `FW-CMS-002` and functional `FW-MEDIA-001` are merged into `main`. `FW-CATALOG-001`
-  is complete locally on `agent/catalog-domain`; integrate it through PR/CI before
-  starting `FW-CATALOG-002` publishing and authorization work from updated `main`.
+- `FW-CMS-002`, functional `FW-MEDIA-001`, and `FW-CATALOG-001` are merged into
+  `main` through PR #7 at `a224a9c`. `FW-CATALOG-002` is complete locally on
+  `agent/catalog-publishing-auth`; integrate it through PR/CI before starting the
+  public-catalogue work in `FW-CATALOG-003` from updated `main`.
 - `FW-MEDIA-002` tracks the accepted backup/recovery and usage-monitoring deferral.
   It does not block local catalogue development, but approved source photographs must
   remain outside R2 until an isolated backup target and restore proof exist.
@@ -223,12 +232,12 @@ Wagtail catalogue domain — FW-CATALOG-001 complete locally
 - Plan-specific early-discontinuation pricing, payment-order
   expiry, eligibility reminders, public onboarding, and partial-settlement policy are
   not yet defined.
-- The CMS, R2, and catalogue-domain foundations exist locally, and real non-production/
-  production storage, access, cache, and rotation smokes pass. Catalogue publishing
-  authorization and public catalogue polish are not yet implemented, and there is no
-  isolated media backup/restore proof. Retain approved source photographs outside R2;
-  production must not rely on R2 as their only copy. The catalogue branch is not yet
-  merged or deployed.
+- The CMS, R2, catalogue domain, and publishing-authorization foundations exist
+  locally, and real non-production/production storage, access, cache, and rotation
+  smokes pass. No production staff user has been assigned a catalogue group, public
+  catalogue polish is not yet implemented, and there is no isolated media backup/
+  restore proof. Retain approved source photographs outside R2; production must not
+  rely on R2 as their only copy. The authorization branch is not yet merged or deployed.
 - The detailed, prioritized backlog and milestone-by-milestone limitation history
   are maintained in [Future work](FUTURE_WORK.md).
 
@@ -242,8 +251,10 @@ Wagtail catalogue domain — FW-CATALOG-001 complete locally
   static collection, and an applied-migration check. Wagtail/taggit migrations are
   applied to local PostgreSQL only; production has not received them.
 - PostgreSQL 16 migrations applied successfully.
-- 167 tests pass, including catalogue hierarchy, validation, case-insensitive
-  uniqueness, preview, revision, gallery and rendition coverage; R2 configuration and signed/private-original versus
+- 170 tests pass, including catalogue authorization drift repair, exact role/media
+  scope, draft privacy, editor submission, publisher approval, publish/unpublish audit
+  history, hierarchy, validation, case-insensitive uniqueness, preview, revision,
+  gallery and rendition coverage; R2 configuration and signed/private-original versus
   public-rendition URL isolation, no-residue upload/read/rendition/cleanup behavior,
   production media deployment gates, explicit Wagtail permission and route-precedence checks,
   public INR-contribution/metal-to-jewellery copy coverage,
@@ -313,11 +324,12 @@ Wagtail catalogue domain — FW-CATALOG-001 complete locally
 
 ## Next recommended step
 
-Commit and push `agent/catalog-domain`, open and review its PR, require CI to pass, and
-merge it into `main`. Then fast-forward local `main` and create a fresh branch for
-`FW-CATALOG-002`, defining least-privilege editor/publisher permissions and testing
-draft privacy plus publish/unpublish history. Keep the accepted `FW-MEDIA-002`
-recovery/monitoring limitation visible and retain source photographs outside R2.
+Commit and push `agent/catalog-publishing-auth`, open and review its PR, require CI to
+pass, and merge it into `main`. Then fast-forward local `main` and create a fresh
+branch for `FW-CATALOG-003`, refining the Bootstrap 5 public catalogue, responsive
+R2 renditions, SEO, discovery controls, and enquiry journey. Keep the accepted
+`FW-MEDIA-002` recovery/monitoring limitation visible and retain source photographs
+outside R2.
 
 Complete the CASH product-boundary decision and enforce it in enrolment and payment
 services before submitting the public website and policy URLs to Razorpay. Keep live

@@ -145,6 +145,17 @@ This is the canonical source for stable business rules.
   Public catalogue reads must expose only live public pages, and CMS access always
   requires explicit Wagtail authorization independent of application owner/customer
   roles.
+- **CAT-006:** Catalogue Editors may prepare and submit content but cannot publish.
+  Catalogue Publishers and Catalogue Administrators may approve, publish, and
+  unpublish within the catalogue subtree. Catalogue Administrators additionally hold
+  destructive catalogue-content/media permissions but no financial, user-management,
+  or document-library authority.
+- **CAT-007:** Catalogue images are restricted to the dedicated catalogue media
+  collection. Every submission, approval, publication, and unpublication retains its
+  Wagtail workflow/audit actor; group assignment is a separate explicit administrator
+  action and is never derived from `CustomUser.role`. `wagtailadmin.access_admin`
+  additionally requires `is_staff=True`, including for users assigned to a catalogue
+  group by mistake.
 
 ## Precision
 
