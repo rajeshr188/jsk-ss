@@ -769,6 +769,11 @@ bucket names, evidence, and cleanup. Define a scheduled copy/retention policy fo
 media and test restoration periodically; database recovery and media recovery must use
 compatible recovery points because Wagtail stores object keys in PostgreSQL.
 
+Accepted deferral recorded 2026-08-24: this recovery drill is not required to begin
+local catalogue-domain development. It remains `FW-MEDIA-002`; approved source images
+must be retained outside R2, and R2 must not become the only copy until a backup target
+and periodic restore proof exist.
+
 ## Edge, DNS, and TLS configuration
 
 1. Configure the service on a temporary platform hostname and validate both health

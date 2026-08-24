@@ -2,7 +2,7 @@
 
 ## Current milestone
 
-Cloudflare R2 media foundation — production smoke passed; operations proof pending
+Wagtail catalogue domain — foundation branch ready for integration
 
 ## Completed
 
@@ -160,18 +160,13 @@ Cloudflare R2 media foundation — production smoke passed; operations proof pen
 
 - The Bootstrap 5 UI modernization is merged into `main` at `24ed76d`; production
   promotion remains separate from the Wagtail foundation work.
-- `FW-CMS-002` is complete locally. `FW-MEDIA-001` is implemented and tested in the
-  repository, and its non-production and production R2 smokes have passed. Its
-  remaining external exit criteria are usage monitoring and recovery evidence.
-  Catalogue models and production promotion remain blocked until that operational
-  proof is retained.
-- The first production-bucket smoke correctly failed because the R2 attachment used
-  the apex instead of the intended media hostname. The attachment was corrected to
-  `media.jaishrikrishnajewellery.com`; DNS/TLS, public rendition routing, `403` WAF
-  protection for originals/documents, upload, read, rendition, and cleanup all passed
-  on 2026-08-24. Apex, `www`, live, and ready remained healthy. Cleanup continues
-  independently after individual storage failures and reports incomplete cleanup
-  without identifiers.
+- `FW-CMS-002` and functional `FW-MEDIA-001` are complete on
+  `agent/wagtail-foundation`. Integrate that branch through PR/CI before starting
+  `FW-CATALOG-001` from updated `main`; do not stack catalogue models onto the
+  unmerged foundation branch.
+- `FW-MEDIA-002` tracks the accepted backup/recovery and usage-monitoring deferral.
+  It does not block local catalogue development, but approved source photographs must
+  remain outside R2 until an isolated backup target and restore proof exist.
 - Environment-specific production proof: isolated database restoration, real email
   delivery, external alert routing/exercises, and coordinated secret-rotation drills.
   The stable owned domain/TLS/proxy path and repository observability foundation are
@@ -223,11 +218,11 @@ Cloudflare R2 media foundation — production smoke passed; operations proof pen
 - Plan-specific early-discontinuation pricing, payment-order
   expiry, eligibility reminders, public onboarding, and partial-settlement policy are
   not yet defined.
-- The CMS and R2 configuration foundations exist locally, but there is no catalogue
-  model and no real Cloudflare bucket has yet passed the documented smoke, access,
-  rotation, monitoring, and recovery exercises. Local filesystem media is
-  development-only; production's read-only container cannot persist uploads, so this
-  branch must not be promoted and real catalogue media must not yet be accepted.
+- The CMS and R2 foundations exist locally and real non-production/production storage,
+  access, cache, and rotation smokes pass, but there is no catalogue model and no
+  isolated media backup/restore proof. Retain approved source photographs outside R2;
+  production must not rely on R2 as their only copy. The Wagtail/R2 branch is not yet
+  merged or deployed.
 - The detailed, prioritized backlog and milestone-by-milestone limitation history
   are maintained in [Future work](FUTURE_WORK.md).
 
@@ -311,10 +306,10 @@ Cloudflare R2 media foundation — production smoke passed; operations proof pen
 
 ## Next recommended step
 
-Create an application-isolated media backup target and perform the documented
-copy/delete/restore/hash recovery exercise while retaining Cloudflare usage metrics
-and recovery evidence. Do not create catalogue models or promote the CMS foundation
-to production until those durable-media behaviors are proven.
+Push `agent/wagtail-foundation`, open and review its PR, require CI to pass, and merge
+it into `main`. Then fast-forward local `main` and create `agent/catalog-domain` for
+`FW-CATALOG-001`. Keep the accepted `FW-MEDIA-002` recovery/monitoring limitation
+visible and retain source photographs outside R2.
 
 Complete the CASH product-boundary decision and enforce it in enrolment and payment
 services before submitting the public website and policy URLs to Razorpay. Keep live

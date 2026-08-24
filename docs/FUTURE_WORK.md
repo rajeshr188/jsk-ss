@@ -166,9 +166,9 @@ here are not implemented behavior and do not relax the financial invariants in
   document types, and development-only local media. A customer and an owner without
   `wagtailadmin.access_admin` are denied; an explicitly authorized staff user can
   enter. Wagtail migrations apply locally and all 147 tests pass. Production
-  promotion is deliberately blocked until `FW-MEDIA-001` is complete.
-- **FW-MEDIA-001 — Cloudflare R2 media foundation (repository implementation
-  completed 2026-08-24; external proof remains):** The application now selects local
+  promotion remains separate from this local foundation milestone.
+- **FW-MEDIA-001 — Cloudflare R2 media foundation (functionally completed
+  2026-08-24):** The application now selects local
   filesystem or Cloudflare R2 storage through environment variables, retains
   WhiteNoise for static files, keeps originals/documents behind short-lived signed
   URLs, publishes only generated renditions through an owned custom domain, and
@@ -181,9 +181,15 @@ here are not implemented behavior and do not relax the financial invariants in
   domain, public rendition path, private-prefix WAF rules, and no-residue smoke also
   passed on 2026-08-24. A second production smoke proved the public 24-hour cache
   header and a real Cloudflare cache hit. A replacement bucket-scoped token passed
-  before and after the old token was deleted. Complete the work item only after usage
-  monitoring and the recovery exercise have retained evidence. Do not use the
-  rate-limited `r2.dev` endpoint in production.
+  before and after the old token was deleted. Do not use the rate-limited `r2.dev`
+  endpoint in production.
+- **FW-MEDIA-002 — Media backup, recovery, and monitoring (accepted deferral
+  2026-08-24):** The owner accepted deferring the isolated copy/delete/restore/hash
+  drill and ongoing usage-monitoring evidence to keep the catalogue roadmap moving.
+  This does not block local `FW-CATALOG-001` work. Until a separate backup target and
+  periodic restore test exist, retain approved source photographs outside R2 and do
+  not treat R2 as their only copy. Production editor activation requires explicit
+  acceptance of this limitation and a source-original retention process.
 - **FW-CATALOG-001 — Catalogue domain:** Implement a `CatalogIndexPage`, focused
   `ProductPage`, image gallery, and reusable category/collection snippets. Model
   product discovery and showroom enquiry only; do not introduce inventory, cart,
