@@ -154,6 +154,45 @@ here are not implemented behavior and do not relax the financial invariants in
 - **FW-AUTH-003:** Keep contribution access disabled until an owner creates a valid
   `SchemeAccount`; a public login must never imply financial enrolment.
 
+## Catalogue content management
+
+- **FW-CMS-001 — Wagtail feasibility and architecture (completed 2026-08-24):**
+  [ADR-0004](decisions/ADR-0004-wagtail-catalog-cms.md) accepts Wagtail 7.4 LTS as a
+  bounded catalogue CMS while preserving the existing Django application,
+  `accounts.CustomUser`, Bootstrap 5 public UI, and financial-domain separation.
+- **FW-CMS-002 — Foundation spike:** On `agent/wagtail-foundation`, add the smallest
+  Wagtail integration needed to prove dependency compatibility, additive migrations,
+  `/cms/` and admin coexistence, custom-user access, Django checks, and unchanged
+  financial regressions. Keep catalogue models and production deployment out of this
+  first code change. Exit when a customer is denied CMS access, an explicitly
+  authorized staff user can enter it, and the full regression suite passes.
+- **FW-MEDIA-001 — Cloudflare R2 media foundation:** Provision separate non-production
+  and production R2 Standard buckets, use bucket-scoped Object Read & Write tokens,
+  configure `django-storages` through environment variables, and retain WhiteNoise
+  for static files. Exit when upload, Wagtail rendition, retrieval, cache/CORS policy,
+  credential rotation, and recovery are exercised. Use an owned custom media domain
+  in production; do not use the rate-limited `r2.dev` endpoint there. Record usage
+  monitoring because the free allowance is not an unlimited service commitment.
+- **FW-CATALOG-001 — Catalogue domain:** Implement a `CatalogIndexPage`, focused
+  `ProductPage`, image gallery, and reusable category/collection snippets. Model
+  product discovery and showroom enquiry only; do not introduce inventory, cart,
+  invoicing, fulfilment, or reuse Scheme Rates as catalogue prices. Exit when model
+  validation, uniqueness, preview, revision, and image tests pass.
+- **FW-CATALOG-002 — Publishing and authorization:** Define least-privilege editor,
+  publisher, and administrator groups; require explicit CMS authorization independent
+  of application role; and test draft privacy, publish/unpublish, audit history, and
+  owner workflow. Enable workflow email only after production SMTP is verified.
+- **FW-CATALOG-003 — Public catalogue:** Add accessible Bootstrap 5 catalogue and
+  product pages, responsive R2-backed images, SEO metadata, filtering/search, enquiry
+  calls to action, and clear showroom availability language. Exit when accessibility,
+  performance, structured-content, empty-state, and public/draft visibility checks
+  pass on mobile and desktop.
+- **FW-CATALOG-004 — Production rollout:** Back up the database and media inventory,
+  run additive migrations against a release candidate, verify the custom media domain,
+  security headers, monitoring, restore procedure, and application rollback, then
+  train authorized editors. Existing public pages remain Django-owned until a later
+  approved content/URL migration.
+
 ## Prioritization rule
 
 Complete the remaining production deployment gates before handling real funds. Feature

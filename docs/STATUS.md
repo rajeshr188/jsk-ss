@@ -2,7 +2,7 @@
 
 ## Current milestone
 
-UI modernization — Bootstrap 5 refresh implemented; review pending
+Wagtail catalogue foundation — architecture accepted; implementation not started
 
 ## Completed
 
@@ -128,12 +128,19 @@ UI modernization — Bootstrap 5 refresh implemented; review pending
   explains their family partnership, and uses accessible monogram portraits until
   approved photographs are supplied. Its route is retained for later publication,
   but links to it are currently hidden from public navigation and page calls to action.
+- Wagtail feasibility is accepted in ADR-0004 as a bounded catalogue CMS. The
+  decision preserves the existing Django financial application, custom user,
+  Bootstrap 5 frontend, and Django admin, and selects Cloudflare R2 Standard as the
+  initial uploaded-media store. No Wagtail dependency or database migration has yet
+  been added.
 
 ## In progress
 
-- The Bootstrap 5 UI modernization is committed on `agent/ui-modernization`; the
-  Razorpay-facing gold/silver product-language refinement awaits stakeholder browser
-  review before its follow-up commit, PR, and production promotion.
+- The Bootstrap 5 UI modernization is merged into `main` at `24ed76d`; production
+  promotion remains separate from the Wagtail foundation work.
+- The phased Wagtail work is registered as `FW-CMS-002`, `FW-MEDIA-001`, and
+  `FW-CATALOG-001` through `FW-CATALOG-004`. The next code change is a deliberately
+  small compatibility and authorization spike, not a catalogue implementation.
 - Environment-specific production proof: isolated database restoration, real email
   delivery, external alert routing/exercises, and coordinated secret-rotation drills.
   The stable owned domain/TLS/proxy path and repository observability foundation are
@@ -185,6 +192,9 @@ UI modernization — Bootstrap 5 refresh implemented; review pending
 - Plan-specific early-discontinuation pricing, payment-order
   expiry, eligibility reminders, public onboarding, and partial-settlement policy are
   not yet defined.
+- There is no CMS, catalogue model, upload workflow, or R2 configuration in the
+  application yet. Production's read-only container and local media storage cannot
+  safely persist uploads; R2 must be proven before real catalogue media is accepted.
 - The detailed, prioritized backlog and milestone-by-milestone limitation history
   are maintained in [Future work](FUTURE_WORK.md).
 
@@ -194,6 +204,8 @@ UI modernization — Bootstrap 5 refresh implemented; review pending
 
 ## Verification
 
+- The Wagtail feasibility update is documentation-only; it adds no dependency,
+  migration, route, database table, storage credential, or production behavior.
 - PostgreSQL 16 migrations applied successfully.
 - 143 tests pass, including public INR-contribution/metal-to-jewellery copy coverage,
   owner-only Scheme Rate publication, large-change
@@ -261,6 +273,11 @@ UI modernization — Bootstrap 5 refresh implemented; review pending
   exports; all tagged records were rolled back.
 
 ## Next recommended step
+
+Review and accept ADR-0004 and the phased catalogue gates, then implement only the
+`FW-CMS-002` Wagtail foundation spike on `agent/wagtail-foundation`. Keep it separate
+from R2 provisioning and catalogue models so compatibility, authorization, migration,
+and rollback behavior can be reviewed independently.
 
 Complete the CASH product-boundary decision and enforce it in enrolment and payment
 services before submitting the public website and policy URLs to Razorpay. Keep live
