@@ -179,7 +179,8 @@ here are not implemented behavior and do not relax the financial invariants in
   isolated non-production R2 upload/read/rendition/cleanup smoke passed on 2026-08-24
   without retaining the temporary media. The real production bucket, owned media
   domain, public rendition path, private-prefix WAF rules, and no-residue smoke also
-  passed on 2026-08-24. Complete the work item only after cache behavior, credential
+  passed on 2026-08-24. A second production smoke proved the public 24-hour cache
+  header and a real Cloudflare cache hit. Complete the work item only after credential
   rotation, usage monitoring, and the recovery exercise have retained evidence. Do
   not use the rate-limited `r2.dev` endpoint in production.
 - **FW-CATALOG-001 — Catalogue domain:** Implement a `CatalogIndexPage`, focused

@@ -744,6 +744,11 @@ for application static files.
    the real production smoke passed upload, read, rendition, public delivery, access
    controls, and cleanup. Apex, `www`, live, and ready remained `200`.
 
+   Cache evidence recorded 2026-08-24: after the host-scoped `/images/` cache rule
+   was deployed, a fresh production smoke observed the required
+   `Cache-Control: public, max-age=86400` response and a Cloudflare cache `HIT`; the
+   private-prefix and cleanup checks continued to pass.
+
 Credential rotation uses overlap, not downtime: create a second bucket-scoped token,
 replace the two R2 key values, recreate the web service, run `check_media_storage`,
 then revoke the old token and run the check again. Roll back to the previous token
