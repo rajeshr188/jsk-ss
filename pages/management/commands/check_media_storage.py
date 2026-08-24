@@ -56,7 +56,7 @@ class Command(BaseCommand):
         image_model = get_image_model()
         image = None
         stored_names = []
-        passed = False
+        operation_error = None
         try:
             image_bytes = BytesIO()
             PillowImage.new("RGB", (8, 8), color=(184, 134, 11)).save(
@@ -90,16 +90,38 @@ class Command(BaseCommand):
                 self._require_blocked_custom_domain_path(
                     f"documents/r2-storage-check-{uuid4().hex}.txt"
                 )
-            passed = True
-        finally:
-            for storage, name in reversed(stored_names):
-                storage.delete(name)
-            if image is not None and image.pk:
-                image.delete()
+        except Exception as exc:
+            operation_error = exc
 
-        if passed:
-            self.stdout.write(
-                self.style.SUCCESS(
-                    "R2 media storage passed upload, read, rendition, and cleanup checks."
+        cleanup_failed = False
+        for storage, name in reversed(stored_names):
+            try:
+                storage.delete(name)
+            except Exception:
+                cleanup_failed = True
+        if image is not None and image.pk:
+            try:
+                image.delete()
+            except Exception:
+                cleanup_failed = True
+
+        if operation_error is not None:
+            if cleanup_failed:
+                self.stderr.write(
+                    self.style.WARNING(
+                        "The media check failed and automatic cleanup was incomplete; "
+                        "inspect temporary smoke records and objects."
+                    )
                 )
+            raise operation_error
+
+        if cleanup_failed:
+            raise CommandError(
+                "R2 media checks passed, but temporary smoke cleanup was incomplete"
             )
+
+        self.stdout.write(
+            self.style.SUCCESS(
+                "R2 media storage passed upload, read, rendition, and cleanup checks."
+            )
+        )

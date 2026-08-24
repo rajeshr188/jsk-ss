@@ -1,12 +1,13 @@
 from io import BytesIO
 from unittest.mock import MagicMock, patch
-from urllib.error import HTTPError
+from urllib.error import HTTPError, URLError
 
 from PIL import Image as PillowImage
 from django.core.exceptions import ImproperlyConfigured
 from django.core.files.images import ImageFile
 from django.core.files.storage import storages
 from django.core.management import call_command
+from django.core.management.base import CommandError
 from django.test import SimpleTestCase, TestCase, override_settings
 from storages.backends.s3 import S3Storage
 from wagtail.images import get_image_model
@@ -210,3 +211,18 @@ class WagtailMediaPipelineTests(TestCase):
         for requested_url in requested_urls:
             self.assertNotIn(R2_ENVIRONMENT["R2_ACCESS_KEY_ID"], requested_url)
             self.assertNotIn(R2_ENVIRONMENT["R2_SECRET_ACCESS_KEY"], requested_url)
+
+    @override_settings(R2_CUSTOM_DOMAIN="missing-media.example.com")
+    @patch("pages.management.commands.check_media_storage.urlopen")
+    def test_smoke_command_cleans_up_when_custom_domain_is_unavailable(self, urlopen):
+        image_model = get_image_model()
+        image_count = image_model.objects.count()
+        urlopen.side_effect = URLError("DNS lookup failed")
+
+        with self.assertRaisesMessage(
+            CommandError,
+            "could not serve the generated rendition",
+        ):
+            call_command("check_media_storage")
+
+        self.assertEqual(image_model.objects.count(), image_count)

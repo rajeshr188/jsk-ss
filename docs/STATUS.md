@@ -158,6 +158,11 @@ Cloudflare R2 media foundation — DNS cutover verified; production controls pen
   mail-after-DNS-cutover confirmation, token rotation, monitoring, and recovery
   evidence. Catalogue models and production promotion remain blocked until that
   operational proof is retained.
+- The first production-bucket smoke was attempted before the R2 custom hostname was
+  published and correctly failed its public-rendition check. Cloudflare's authoritative
+  servers still return no `media.jaishrikrishnajewellery.com` record; the bucket
+  attachment must show Active before retrying. Cleanup now continues independently
+  after individual storage failures and reports incomplete cleanup without identifiers.
 - Environment-specific production proof: isolated database restoration, real email
   delivery, external alert routing/exercises, and coordinated secret-rotation drills.
   The stable owned domain/TLS/proxy path and repository observability foundation are
@@ -227,7 +232,7 @@ Cloudflare R2 media foundation — DNS cutover verified; production controls pen
   static collection, and an applied-migration check. Wagtail/taggit migrations are
   applied to local PostgreSQL only; production has not received them.
 - PostgreSQL 16 migrations applied successfully.
-- 159 tests pass, including R2 configuration and signed/private-original versus
+- 160 tests pass, including R2 configuration and signed/private-original versus
   public-rendition URL isolation, no-residue upload/read/rendition/cleanup behavior,
   production media deployment gates, explicit Wagtail permission and route-precedence checks,
   public INR-contribution/metal-to-jewellery copy coverage,

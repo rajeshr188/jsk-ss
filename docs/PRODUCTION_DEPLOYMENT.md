@@ -728,6 +728,12 @@ for application static files.
    `403`. Confirm R2 metrics show the temporary writes, reads, and deletes and that
    the bucket is empty apart from approved media.
 
+   Before running it, the bucket's Custom Domains panel must show the media hostname
+   as Active and both Cloudflare authoritative nameservers must resolve it. `NXDOMAIN`
+   means the R2 attachment is not ready; do not work around that by manually creating
+   a generic CNAME. If the command warns that cleanup was incomplete, inspect and
+   remove only `r2-storage-check-*` records and objects before retrying.
+
 Credential rotation uses overlap, not downtime: create a second bucket-scoped token,
 replace the two R2 key values, recreate the web service, run `check_media_storage`,
 then revoke the old token and run the check again. Roll back to the previous token
