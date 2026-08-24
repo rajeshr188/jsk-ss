@@ -2,7 +2,7 @@
 
 ## Project
 
-This is the Jai Shri Krishna Jewellery Savings Scheme: a single-business Django application, not a multi-tenant SaaS product.
+This is the Jai Sri Krishna Jewelley Savings Scheme: a single-business Django application, not a multi-tenant SaaS product.
 
 ## Technology
 

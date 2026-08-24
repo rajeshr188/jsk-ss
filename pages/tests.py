@@ -11,7 +11,7 @@ from schemes.models import SchemePlan
 class PublicPageTests(SimpleTestCase):
     def test_home_is_branded(self):
         response = self.client.get(reverse("home"))
-        self.assertContains(response, "Jai Shri Krishna Jewellery")
+        self.assertContains(response, "Jai Sri Krishna Jewelley")
         self.assertContains(
             response, "Plan today. Choose the jewellery you love tomorrow."
         )
@@ -43,7 +43,7 @@ class PublicPageTests(SimpleTestCase):
 
     def test_about_page(self):
         response = self.client.get(reverse("about"))
-        self.assertContains(response, "About Jai Shri Krishna Jewellery")
+        self.assertContains(response, "About Jai Sri Krishna Jewelley")
         self.assertContains(response, "accumulated metal quantity may be applied")
 
     def test_our_story_credits_owner_and_developer(self):

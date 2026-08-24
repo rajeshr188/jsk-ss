@@ -8,7 +8,7 @@ UI modernization — Bootstrap 5 refresh implemented; review pending
 
 - Lithium authentication, Bootstrap/crispy forms, WhiteNoise, and custom user preserved.
 - PostgreSQL-only environment configuration and India time zone.
-- Jai Shri Krishna Jewellery branding and canonical documentation.
+- Jai Sri Krishna Jewelley branding and canonical documentation.
 - Bootstrap 5-only responsive interface modernization with a simplified owner
   navigation, wider financial data surfaces, consistent cards/forms/tables,
   refreshed public and authenticated journeys, and keyboard/reduced-motion
@@ -195,7 +195,7 @@ UI modernization — Bootstrap 5 refresh implemented; review pending
 ## Verification
 
 - PostgreSQL 16 migrations applied successfully.
-- 142 tests pass, including public INR-contribution/metal-to-jewellery copy coverage,
+- 143 tests pass, including public INR-contribution/metal-to-jewellery copy coverage,
   owner-only Scheme Rate publication, large-change
   confirmation, no-rate payment blocking, pre-order locking, rate-change race
   behavior, durable verified-payment/allocation transition, production-shaped
