@@ -1,6 +1,6 @@
 # ADR-0004 — Adopt Wagtail as a Bounded Catalogue CMS
 
-**Status:** Accepted  
+**Status:** Accepted
 **Date:** 2026-08-24
 
 ## Context
