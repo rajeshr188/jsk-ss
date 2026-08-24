@@ -105,6 +105,7 @@ INSTALLED_APPS = [
     "django_filters",
     # Local
     "accounts",
+    "catalog.apps.CatalogConfig",
     "pages",
     "schemes",
 ]

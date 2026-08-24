@@ -127,6 +127,25 @@ This is the canonical source for stable business rules.
 - **DOC-006:** INR amounts, gold grams, and silver grams remain separate in documents and exports. Indicative current metal exposure is not exported as booked cash liability.
 - **DOC-007:** MVP documents are on-demand printable HTML acknowledgements, not tax invoices or archived legal snapshots.
 
+## Catalogue boundaries
+
+- **CAT-001:** Catalogue content supports product discovery and showroom enquiry only.
+  It must not become an inventory, cart, checkout, invoice, tax, fulfilment, or payment
+  system.
+- **CAT-002:** An optional product display price is informational INR catalogue
+  content. It must be positive when present and must never be sourced from or treated
+  as a Scheme Rate, contribution amount, customer entitlement, or final invoice price.
+- **CAT-003:** Every product has a stable case-insensitively unique product code and
+  one reusable category; optional reusable marketing collections do not determine
+  financial or fulfilment behavior.
+- **CAT-004:** Product gallery ordering and image alt text are editorial content kept
+  with Wagtail revisions. Public pages may use generated renditions, while approved
+  source photographs remain subject to the separate media-recovery policy.
+- **CAT-005:** Draft, preview, publish, and unpublish state remains Wagtail-owned.
+  Public catalogue reads must expose only live public pages, and CMS access always
+  requires explicit Wagtail authorization independent of application owner/customer
+  roles.
+
 ## Precision
 
 Money uses 2 decimal places. Contribution and cash-redemption input with more than 2 decimal places is rejected rather than silently rounded. Cash bonus calculations use `ROUND_HALF_UP` to 2 decimal places. Metal quantities and metal-redemption input use 6 decimal places; excess precision is rejected. Allocation calculations use `ROUND_HALF_UP`. Scheme Rates and purity metadata use 4 decimal places.
