@@ -8,6 +8,7 @@ from django.urls import reverse
 from schemes.models import SchemePlan
 
 
+@override_settings(PUBLIC_CATALOGUE_ENABLED=False)
 class PublicPageTests(SimpleTestCase):
     def test_home_is_branded(self):
         response = self.client.get(reverse("home"))

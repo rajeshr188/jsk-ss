@@ -1,3 +1,5 @@
+import json
+import re
 from decimal import Decimal
 from io import BytesIO
 
@@ -197,6 +199,257 @@ class CatalogueDomainTests(TestCase):
             "Polished gold ring on a neutral display",
         )
         self.assertEqual((rendition.width, rendition.height), (6, 4))
+
+
+@override_settings(
+    STORAGES=IN_MEMORY_STORAGES,
+    PUBLIC_CATALOGUE_ENABLED=True,
+)
+class PublicCatalogueTests(TestCase):
+    def setUp(self):
+        if not Locale.objects.exists():
+            Locale.objects.create(language_code="en")
+        root = Page.get_first_root_node()
+        if root is None:
+            root = Page.add_root(title="Root", slug="root")
+        site_root = root.get_children().first()
+        if site_root is None:
+            site_root = root.add_child(instance=Page(title="Site root", slug="home"))
+        Site.objects.update_or_create(
+            is_default_site=True,
+            defaults={
+                "hostname": "testserver",
+                "port": 80,
+                "root_page": site_root,
+            },
+        )
+        call_command("configure_catalog_permissions", verbosity=0)
+        self.catalogue = CatalogIndexPage.objects.get()
+        self.catalogue.get_latest_revision().publish()
+        self.catalogue.refresh_from_db()
+
+        self.rings = ProductCategory.objects.create(
+            name="Gold rings",
+            slug="gold-rings",
+        )
+        self.necklaces = ProductCategory.objects.create(
+            name="Gold necklaces",
+            slug="gold-necklaces",
+        )
+        self.wedding = ProductCollection.objects.create(
+            name="Wedding collection",
+            slug="wedding-collection",
+        )
+        self.ring = self.make_product(
+            title="Classic gold ring",
+            code="JSK-G-001",
+            category=self.rings,
+            description="A polished ring for an elegant everyday look.",
+            featured=True,
+        )
+        self.necklace = self.make_product(
+            title="Temple gold necklace",
+            code="JSK-G-002",
+            category=self.necklaces,
+            description="A detailed necklace for special occasions.",
+            collection=self.wedding,
+        )
+        self.draft = self.make_product(
+            title="Unreleased gold bangle",
+            code="JSK-G-003",
+            category=self.rings,
+            description="This draft must not appear publicly.",
+            live=False,
+        )
+
+    def make_product(
+        self,
+        *,
+        title,
+        code,
+        category,
+        description,
+        collection=None,
+        featured=False,
+        live=True,
+    ):
+        product = ProductPage(
+            title=title,
+            slug=title.lower().replace(" ", "-"),
+            product_code=code,
+            category=category,
+            short_description=description,
+            description=f"<p>{description}</p>",
+            display_price_inr=Decimal("25000.00"),
+            featured=featured,
+            live=False,
+        )
+        self.catalogue.add_child(instance=product)
+        if collection:
+            product.collections.add(collection)
+        revision = product.save_revision()
+        if live:
+            revision.publish()
+        product.refresh_from_db()
+        return product
+
+    def make_image(self, product):
+        image_bytes = BytesIO()
+        PillowImage.new("RGB", (160, 120), color=(184, 134, 11)).save(
+            image_bytes,
+            format="PNG",
+        )
+        image_bytes.seek(0)
+        image = get_image_model().objects.create(
+            title=f"{product.title} catalogue image",
+            file=ImageFile(image_bytes, name=f"{product.slug}.png"),
+            collection=Collection.get_first_root_node(),
+        )
+        ProductImage.objects.create(
+            page=product,
+            image=image,
+            alt_text=f"{product.title} on a neutral showroom display",
+            caption="Showroom catalogue photograph",
+        )
+        return image
+
+    def test_index_exposes_only_live_products_and_accessible_discovery_controls(self):
+        response = self.client.get(self.catalogue.url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Classic gold ring")
+        self.assertContains(response, "Temple gold necklace")
+        self.assertNotContains(response, "Unreleased gold bangle")
+        self.assertContains(response, 'role="search"')
+        self.assertContains(response, 'for="catalogue-query"')
+        self.assertContains(response, 'for="catalogue-category"')
+        self.assertContains(response, 'for="catalogue-collection"')
+        self.assertContains(
+            response,
+            "<strong>2</strong> pieces found",
+            html=True,
+        )
+        self.assertContains(response, "Availability, specifications and final price")
+        self.assertNotContains(response, "Add to cart")
+
+        structured_data_match = re.search(
+            r'<script type="application/ld\+json">\s*(.*?)\s*</script>',
+            response.content.decode(),
+            re.DOTALL,
+        )
+        self.assertIsNotNone(structured_data_match)
+        structured_data = json.loads(structured_data_match.group(1))
+        self.assertEqual(structured_data["@type"], "CollectionPage")
+        self.assertEqual(structured_data["mainEntity"]["numberOfItems"], 2)
+        self.assertEqual(
+            [
+                item["name"]
+                for item in structured_data["mainEntity"]["itemListElement"]
+            ],
+            ["Classic gold ring", "Temple gold necklace"],
+        )
+
+    def test_search_category_and_collection_filters_are_combined(self):
+        search = self.client.get(self.catalogue.url, {"q": "JSK-G-002"})
+        self.assertContains(search, "Temple gold necklace")
+        self.assertNotContains(search, "Classic gold ring")
+
+        category = self.client.get(
+            self.catalogue.url,
+            {"category": self.rings.slug},
+        )
+        self.assertContains(category, "Classic gold ring")
+        self.assertNotContains(category, "Temple gold necklace")
+
+        collection = self.client.get(
+            self.catalogue.url,
+            {"collection": self.wedding.slug},
+        )
+        self.assertContains(collection, "Temple gold necklace")
+        self.assertNotContains(collection, "Classic gold ring")
+
+        no_match = self.client.get(
+            self.catalogue.url,
+            {"q": "necklace", "category": self.rings.slug},
+        )
+        self.assertContains(no_match, "No pieces match those filters")
+        self.assertContains(no_match, "View all jewellery")
+
+    def test_empty_unfiltered_catalogue_has_a_showroom_path(self):
+        self.ring.unpublish()
+        self.necklace.unpublish()
+
+        response = self.client.get(self.catalogue.url)
+
+        self.assertContains(response, "Our online collection is being prepared")
+        self.assertContains(response, "Contact the showroom")
+
+    def test_responsive_renditions_and_product_metadata_are_rendered(self):
+        self.make_image(self.ring)
+
+        index_response = self.client.get(self.catalogue.url)
+        self.assertContains(index_response, "srcset=")
+        self.assertContains(index_response, 'loading="lazy"')
+        self.assertContains(index_response, 'decoding="async"')
+
+        response = self.client.get(self.ring.url)
+        content = response.content.decode()
+        self.assertContains(response, 'rel="canonical"')
+        self.assertContains(response, 'property="og:type" content="product"')
+        self.assertContains(response, 'property="og:image"')
+        self.assertContains(response, 'fetchpriority="high"')
+        self.assertContains(
+            response,
+            "Classic gold ring on a neutral showroom display",
+        )
+        self.assertContains(response, "Contact the showroom by email")
+        self.assertContains(response, "tel:+919489481436")
+        self.assertContains(response, "not a Scheme Rate")
+        self.assertNotContains(response, "Add to cart")
+
+        structured_data_match = re.search(
+            r'<script type="application/ld\+json">\s*(.*?)\s*</script>',
+            content,
+            re.DOTALL,
+        )
+        self.assertIsNotNone(structured_data_match)
+        structured_data = json.loads(structured_data_match.group(1))
+        self.assertEqual(structured_data["@type"], "Product")
+        self.assertEqual(structured_data["sku"], "JSK-G-001")
+        self.assertEqual(structured_data["brand"]["name"], "Jai Sri Krishna Jewelley")
+        self.assertNotIn("offers", structured_data)
+
+    def test_public_navigation_tracks_catalogue_publication(self):
+        response = self.client.get(reverse("home"))
+        self.assertEqual(response.context["public_catalogue_page"], self.catalogue)
+        self.assertContains(response, f'href="{self.catalogue.url}">Jewellery</a>')
+
+        self.catalogue.unpublish()
+        response = self.client.get(reverse("home"))
+        self.assertIsNone(response.context["public_catalogue_page"])
+        self.assertNotContains(response, ">Jewellery</a>")
+
+    def test_draft_product_is_not_publicly_routable(self):
+        self.assertEqual(self.client.get(self.draft.url).status_code, 404)
+        self.assertEqual(self.client.get(self.ring.url).status_code, 200)
+
+    def test_results_are_paginated_to_bound_page_weight(self):
+        for number in range(4, 15):
+            self.make_product(
+                title=f"Catalogue piece {number:02d}",
+                code=f"JSK-G-{number:03d}",
+                category=self.rings,
+                description="A catalogue piece used to verify bounded result pages.",
+            )
+
+        first_page = self.client.get(self.catalogue.url)
+        second_page = self.client.get(self.catalogue.url, {"page": 2})
+
+        self.assertEqual(first_page.context["products"].paginator.count, 13)
+        self.assertEqual(len(first_page.context["products"]), 12)
+        self.assertEqual(len(second_page.context["products"]), 1)
+        self.assertContains(first_page, "Page 1 of 2")
+        self.assertContains(second_page, "Page 2 of 2")
 
 
 @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")

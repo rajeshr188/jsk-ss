@@ -156,6 +156,18 @@ This is the canonical source for stable business rules.
   action and is never derived from `CustomUser.role`. `wagtailadmin.access_admin`
   additionally requires `is_staff=True`, including for users assigned to a catalogue
   group by mistake.
+- **CAT-008:** Public discovery exposes only live, unrestricted products beneath the
+  single live catalogue root. Search, category/collection filtering, result counts,
+  structured data, and pagination must never disclose drafts or pages outside that
+  subtree; result pages are bounded to 12 products.
+- **CAT-009:** Catalogue photographs use Wagtail-generated responsive renditions with
+  editorial alt text and intrinsic dimensions. Product metadata may describe a
+  discoverable product but must not publish an online offer, stock status, checkout,
+  or final-price promise.
+- **CAT-010:** Global catalogue navigation requires both a live/public catalogue root
+  and the explicit `PUBLIC_CATALOGUE_ENABLED` rollout flag. Keep the flag disabled
+  until reviewed content and its direct public URLs pass rollout checks; disabling it
+  removes discovery links without changing Wagtail revision or publication history.
 
 ## Precision
 

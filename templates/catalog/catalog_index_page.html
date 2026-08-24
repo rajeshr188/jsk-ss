@@ -1,32 +1,148 @@
 {% extends "_base.html" %}
-{% load wagtailcore_tags %}
+{% load wagtailcore_tags wagtailimages_tags %}
 
 {% block title %}{{ page.seo_title|default:page.title }} | Jai Sri Krishna Jewelley{% endblock %}
-{% block meta_description %}{{ page.search_description|default:"Explore jewellery available for showroom enquiry at Jai Sri Krishna Jewelley in Vellore." }}{% endblock %}
+{% block meta_description %}{{ page.search_description|default:"Explore gold and silver jewellery for showroom enquiry at Jai Sri Krishna Jewelley in Vellore." }}{% endblock %}
+{% block canonical_url %}<link rel="canonical" href="{{ page.full_url }}">{% endblock %}
+{% block social_meta %}
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="{{ page.seo_title|default:page.title }}">
+  <meta property="og:description" content="{{ page.search_description|default:'Explore jewellery for showroom enquiry in Vellore.' }}">
+  <meta property="og:url" content="{{ page.full_url }}">
+{% endblock %}
+{% block structured_data %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "CollectionPage",
+  "name": "{{ page.title|escapejs }}",
+  "description": "{{ page.search_description|default:'Explore jewellery for showroom enquiry at Jai Sri Krishna Jewelley in Vellore.'|escapejs }}",
+  "url": "{{ page.full_url|escapejs }}",
+  "isPartOf": {"@type": "WebSite", "name": "Jai Sri Krishna Jewelley"},
+  "mainEntity": {
+    "@type": "ItemList",
+    "numberOfItems": {{ products.paginator.count }},
+    "itemListElement": [{% for product in products %}
+      {"@type": "ListItem", "position": {{ forloop.counter0|add:products.start_index }}, "name": "{{ product.title|escapejs }}", "url": "{{ product.full_url|escapejs }}"}{% if not forloop.last %},{% endif %}{% endfor %}
+    ]
+  }
+}
+</script>
+{% endblock %}
 
 {% block content %}
-<header class="mb-4">
-  <p class="eyebrow mb-2">Showroom catalogue</p>
-  <h1>{{ page.title }}</h1>
-  {% if page.intro %}<div class="lead">{{ page.intro|richtext }}</div>{% endif %}
+<header class="catalogue-hero mb-4 mb-lg-5">
+  <div>
+    <p class="page-eyebrow">Vellore showroom collection</p>
+    <h1>{{ page.title }}</h1>
+    {% if page.intro %}<div class="catalogue-intro">{{ page.intro|richtext }}</div>{% endif %}
+  </div>
+  <div class="catalogue-hero__assurance" aria-label="Catalogue service information">
+    <strong>Discover online. Choose in person.</strong>
+    <span>Availability, specifications and final price are confirmed at our showroom.</span>
+  </div>
 </header>
 
+<section class="catalogue-discovery mb-4" aria-labelledby="catalogue-discovery-heading">
+  <div class="d-flex flex-wrap align-items-end justify-content-between gap-2 mb-3">
+    <div>
+      <h2 class="h4 mb-1" id="catalogue-discovery-heading">Find your piece</h2>
+      <p class="text-secondary mb-0">Search by name or reference, then narrow the collection.</p>
+    </div>
+    {% if catalogue_filters_active %}<a class="small fw-semibold" href="{% pageurl page %}">Clear all filters</a>{% endif %}
+  </div>
+  <form method="get" action="{% pageurl page %}" class="row g-3" role="search">
+    <div class="col-lg-5">
+      <label class="form-label" for="catalogue-query">Search jewellery</label>
+      <input class="form-control" id="catalogue-query" name="q" type="search" maxlength="100" value="{{ catalogue_filters.query }}" placeholder="Name or catalogue reference">
+    </div>
+    <div class="col-sm-6 col-lg-3">
+      <label class="form-label" for="catalogue-category">Category</label>
+      <select class="form-select" id="catalogue-category" name="category">
+        <option value="">All categories</option>
+        {% for category in categories %}<option value="{{ category.slug }}"{% if catalogue_filters.category_slug == category.slug %} selected{% endif %}>{{ category.name }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+      <label class="form-label" for="catalogue-collection">Collection</label>
+      <select class="form-select" id="catalogue-collection" name="collection">
+        <option value="">All collections</option>
+        {% for collection in collections %}<option value="{{ collection.slug }}"{% if catalogue_filters.collection_slug == collection.slug %} selected{% endif %}>{{ collection.name }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="col-lg-1 d-grid align-self-end">
+      <button class="btn btn-primary" type="submit">Find</button>
+    </div>
+  </form>
+</section>
+
 {% if products %}
-<div class="row g-4">
+<div class="catalogue-result-summary" role="status">
+  <p class="mb-0"><strong>{{ products.paginator.count }}</strong> piece{{ products.paginator.count|pluralize }} found</p>
+</div>
+<div class="row g-4" aria-label="Catalogue results">
   {% for product in products %}
-  <article class="col-md-6 col-xl-4">
-    <div class="card h-100 shadow-sm">
-      <div class="card-body">
-        <p class="small text-muted mb-2">{{ product.category.name }}</p>
+  <article class="col-sm-6 col-xl-4">
+    <div class="catalogue-card h-100">
+      <a class="catalogue-card__image" href="{% pageurl product %}" aria-label="View {{ product.title }}">
+        {% with gallery_image=product.gallery_images.all.0 %}
+          {% if gallery_image %}
+            {% image gallery_image.image fill-480x360 format-webp as card_image_small %}
+            {% image gallery_image.image fill-960x720 format-webp as card_image_large %}
+            <img src="{{ card_image_small.url }}" srcset="{{ card_image_small.url }} 480w, {{ card_image_large.url }} 960w" sizes="(min-width: 1200px) 360px, (min-width: 576px) 50vw, 100vw" width="{{ card_image_small.width }}" height="{{ card_image_small.height }}" alt="{{ gallery_image.alt_text }}" loading="lazy" decoding="async">
+          {% else %}
+            <span class="catalogue-card__placeholder" aria-hidden="true"><span>JSK</span></span>
+            <span class="visually-hidden">No product photograph is available</span>
+          {% endif %}
+        {% endwith %}
+      </a>
+      <div class="catalogue-card__body">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+          <span class="catalogue-category">{{ product.category.name }}</span>
+          {% if product.featured %}<span class="badge text-bg-light border">Featured</span>{% endif %}
+        </div>
         <h2 class="h4"><a href="{% pageurl product %}">{{ product.title }}</a></h2>
-        <p>{{ product.short_description }}</p>
-        <p class="small mb-0">Reference {{ product.product_code }}</p>
+        <p class="text-secondary">{{ product.short_description }}</p>
+        <div class="catalogue-card__footer">
+          <span class="small text-secondary">Ref. {{ product.product_code }}</span>
+          {% if product.display_price_inr %}<strong>Indicative &#8377;{{ product.display_price_inr|floatformat:2 }}</strong>{% else %}<strong>Enquire at showroom</strong>{% endif %}
+        </div>
       </div>
     </div>
   </article>
   {% endfor %}
 </div>
-{% else %}
-<div class="alert alert-info" role="status">No catalogue products are published yet.</div>
+
+{% if products.paginator.num_pages > 1 %}
+<nav class="mt-5" aria-label="Catalogue result pages">
+  <ul class="pagination justify-content-center">
+    {% if products.has_previous %}<li class="page-item"><a class="page-link" href="?{% if pagination_querystring %}{{ pagination_querystring }}&amp;{% endif %}page={{ products.previous_page_number }}" rel="prev">Previous</a></li>{% endif %}
+    <li class="page-item active" aria-current="page"><span class="page-link">Page {{ products.number }} of {{ products.paginator.num_pages }}</span></li>
+    {% if products.has_next %}<li class="page-item"><a class="page-link" href="?{% if pagination_querystring %}{{ pagination_querystring }}&amp;{% endif %}page={{ products.next_page_number }}" rel="next">Next</a></li>{% endif %}
+  </ul>
+</nav>
 {% endif %}
+{% else %}
+<section class="catalogue-empty text-center" role="status">
+  <span class="catalogue-empty__mark" aria-hidden="true">JSK</span>
+  {% if catalogue_filters_active %}
+    <h2 class="h3">No pieces match those filters</h2>
+    <p>Try a broader search or clear the filters to see the complete showroom catalogue.</p>
+    <a class="btn btn-primary" href="{% pageurl page %}">View all jewellery</a>
+  {% else %}
+    <h2 class="h3">Our online collection is being prepared</h2>
+    <p>Our Vellore showroom remains open for jewellery enquiries and in-person selection.</p>
+    <a class="btn btn-primary" href="{% url 'contact' %}">Contact the showroom</a>
+  {% endif %}
+</section>
+{% endif %}
+
+<aside class="catalogue-showroom-note mt-5" aria-labelledby="catalogue-showroom-heading">
+  <div>
+    <p class="page-eyebrow mb-2">Showroom service</p>
+    <h2 class="h3" id="catalogue-showroom-heading">See the details in person</h2>
+    <p class="mb-0">Visit us in Thorapadi, Vellore, to confirm current availability, specifications and final price before purchase.</p>
+  </div>
+  <a class="btn btn-outline-primary flex-shrink-0" href="{% url 'contact' %}">Plan your visit</a>
+</aside>
 {% endblock %}

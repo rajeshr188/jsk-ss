@@ -208,11 +208,15 @@ here are not implemented behavior and do not relax the financial invariants in
   submission, publisher approval, publish/unpublish visibility, and actor-attributed
   Wagtail audit history tests pass. Workflow email is not an activation dependency;
   production group assignment remains part of rollout/training.
-- **FW-CATALOG-003 — Public catalogue:** Add accessible Bootstrap 5 catalogue and
-  product pages, responsive R2-backed images, SEO metadata, filtering/search, enquiry
-  calls to action, and clear showroom availability language. Exit when accessibility,
-  performance, structured-content, empty-state, and public/draft visibility checks
-  pass on mobile and desktop.
+- **FW-CATALOG-003 — Public catalogue (completed locally 2026-08-24):** Accessible
+  Bootstrap 5 catalogue/product pages now provide live-only search, category and
+  collection filters, 12-item pagination, responsive Wagtail renditions, empty states,
+  canonical/Open Graph/Product and CollectionPage metadata, and phone/email/showroom
+  enquiry paths. Global navigation is protected by a default-off rollout flag and a
+  second live/public check. Automated checks cover discovery, structured content,
+  responsive image attributes, showroom-only wording, pagination, and draft/public
+  visibility; production browser accessibility/performance proof remains in
+  `FW-CATALOG-004`.
 - **FW-CATALOG-004 — Production rollout:** Back up the database and media inventory,
   run additive migrations against a release candidate, verify the custom media domain,
   security headers, monitoring, restore procedure, and application rollback, then

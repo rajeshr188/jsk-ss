@@ -572,6 +572,7 @@ APP_RELEASE=<immutable-commit-or-image-id>
 ALLOWED_HOSTS=savings.example.com
 CSRF_TRUSTED_ORIGINS=https://savings.example.com
 WAGTAILADMIN_BASE_URL=https://savings.example.com
+PUBLIC_CATALOGUE_ENABLED=False
 
 MEDIA_STORAGE_BACKEND=r2
 R2_ACCOUNT_ID=<32-character-cloudflare-account-id>
@@ -619,6 +620,11 @@ Configuration rules:
   the public origin uses a non-default port.
 - `WAGTAILADMIN_BASE_URL` is the public origin used to build absolute CMS links. Do
   not include `/cms/` or a trailing slash.
+- Keep `PUBLIC_CATALOGUE_ENABLED=False` through the initial catalogue deployment.
+  Change it to `True` only after the catalogue root and reviewed products are live and
+  their direct public URLs pass desktop/mobile, metadata, rendition, and enquiry checks.
+  The application independently requires the catalogue root to remain live/public;
+  switching the flag back to `False` is the fast navigation rollback.
 - `MEDIA_STORAGE_BACKEND=r2` is mandatory when Wagtail is deployed. Use a separate
   R2 Standard bucket and Object Read & Write token for each environment. Scope each
   token to its one bucket; never expose either credential to browser code or logs.
@@ -1087,6 +1093,16 @@ must explicitly assign an active staff user to `Catalogue Editors`, `Catalogue
 Publishers`, or `Catalogue Administrators`. An application `OWNER` role alone must
 never be treated as CMS authorization. Retain the successful check output with the
 release evidence.
+
+Keep `PUBLIC_CATALOGUE_ENABLED=False` during that authorization rollout. After an
+authorized publisher has approved the catalogue root and initial products, verify the
+direct `/jewellery/` and product URLs, responsive media-domain renditions, canonical
+and Open Graph metadata, JSON-LD, filters, empty/no-result handling, enquiry links,
+and mobile/desktop accessibility. Then set `PUBLIC_CATALOGUE_ENABLED=True`, validate
+the Compose configuration, recreate `web`, and confirm the Jewellery link appears in
+both primary and footer navigation. If discovery must be withdrawn, set the flag back
+to `False` and recreate `web`; do not unpublish or delete content merely to hide the
+navigation while an incident is assessed.
 
 On the current single-host topology, expect a brief maintenance window. Start the
 candidate web container while Caddy remains stopped, and wait until `web` reports

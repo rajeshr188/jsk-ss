@@ -1,6 +1,8 @@
 from decimal import Decimal
+from urllib.parse import urlencode
 
 from django import forms
+from django.core.paginator import Paginator
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
@@ -83,8 +85,40 @@ class CatalogIndexPage(Page):
     content_panels = Page.content_panels + [FieldPanel("intro")]
 
     def get_context(self, request, *args, **kwargs):
+        from .selectors import (
+            CATALOG_PAGE_SIZE,
+            CatalogueFilters,
+            catalogue_facets,
+            filter_catalogue_products,
+            published_products,
+        )
+
         context = super().get_context(request, *args, **kwargs)
-        context["products"] = self.get_children().live().public().specific()
+        filters = CatalogueFilters.from_request(request)
+        all_products = published_products(self)
+        categories, collections = catalogue_facets(all_products)
+        products = filter_catalogue_products(all_products, filters)
+        paginator = Paginator(products, CATALOG_PAGE_SIZE)
+        page_number = request.GET.get("page")
+
+        filter_parameters = {}
+        if filters.query:
+            filter_parameters["q"] = filters.query
+        if filters.category_slug:
+            filter_parameters["category"] = filters.category_slug
+        if filters.collection_slug:
+            filter_parameters["collection"] = filters.collection_slug
+
+        context.update(
+            {
+                "products": paginator.get_page(page_number),
+                "categories": categories,
+                "collections": collections,
+                "catalogue_filters": filters,
+                "catalogue_filters_active": filters.is_active,
+                "pagination_querystring": urlencode(filter_parameters),
+            }
+        )
         return context
 
     class Meta:
@@ -160,6 +194,27 @@ class ProductPage(Page):
         index.FilterField("category"),
         index.FilterField("featured"),
     ]
+
+    def get_context(self, request, *args, **kwargs):
+        context = super().get_context(request, *args, **kwargs)
+        gallery_images = list(
+            self.gallery_images.select_related("image").order_by("sort_order", "pk")
+        )
+        product_collections = list(self.collections.all())
+        primary_image_url = ""
+        if gallery_images:
+            rendition = gallery_images[0].image.get_rendition(
+                "fill-1200x900|format-webp"
+            )
+            primary_image_url = request.build_absolute_uri(rendition.url)
+        context.update(
+            {
+                "gallery_images": gallery_images,
+                "product_collections": product_collections,
+                "primary_image_url": primary_image_url,
+            }
+        )
+        return context
 
     class Meta:
         verbose_name = "product page"
