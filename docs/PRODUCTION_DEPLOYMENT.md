@@ -1068,6 +1068,26 @@ docker compose --env-file .env.production -f compose.production.yml \
   run --rm --no-deps web python manage.py migrate --noinput
 ```
 
+For a release containing the catalogue authorization milestone, reconcile the
+application-owned CMS groups, catalogue subtree, media collection, and approval
+workflow while Caddy is still stopped. The command is idempotent but intentionally
+resets the three `Catalogue ...` groups to the reviewed least-privilege matrix; do
+not reuse those group names for unrelated permissions:
+
+```bash
+docker compose --env-file .env.production -f compose.production.yml \
+  run --rm --no-deps web python manage.py configure_catalog_permissions
+docker compose --env-file .env.production -f compose.production.yml \
+  run --rm --no-deps web python manage.py configure_catalog_permissions --check
+```
+
+This creates only a **draft** catalogue page and does not grant any user access.
+After the production rollout and media-recovery limitation are accepted, a superuser
+must explicitly assign an active staff user to `Catalogue Editors`, `Catalogue
+Publishers`, or `Catalogue Administrators`. An application `OWNER` role alone must
+never be treated as CMS authorization. Retain the successful check output with the
+release evidence.
+
 On the current single-host topology, expect a brief maintenance window. Start the
 candidate web container while Caddy remains stopped, and wait until `web` reports
 healthy. Do not restore public traffic before that health gate:

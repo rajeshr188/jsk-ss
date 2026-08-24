@@ -199,10 +199,15 @@ here are not implemented behavior and do not relax the financial invariants in
   showroom-only boundary tests pass; no inventory, cart, checkout, invoicing,
   fulfilment, or financial mutations were introduced. Production promotion remains
   a later catalogue rollout step.
-- **FW-CATALOG-002 — Publishing and authorization:** Define least-privilege editor,
-  publisher, and administrator groups; require explicit CMS authorization independent
-  of application role; and test draft privacy, publish/unpublish, audit history, and
-  owner workflow. Enable workflow email only after production SMTP is verified.
+- **FW-CATALOG-002 — Publishing and authorization (completed locally 2026-08-24):**
+  An explicit idempotent bootstrap creates a draft catalogue root, dedicated media
+  collection, subtree-scoped Catalogue Editors/Publishers/Administrators groups,
+  collection-scoped image permissions, and a publisher approval workflow. Group
+  membership is never inferred from application role, and non-staff users remain
+  denied if mistakenly assigned. Drift detection, CMS entry, draft privacy, editor
+  submission, publisher approval, publish/unpublish visibility, and actor-attributed
+  Wagtail audit history tests pass. Workflow email is not an activation dependency;
+  production group assignment remains part of rollout/training.
 - **FW-CATALOG-003 — Public catalogue:** Add accessible Bootstrap 5 catalogue and
   product pages, responsive R2-backed images, SEO metadata, filtering/search, enquiry
   calls to action, and clear showroom availability language. Exit when accessibility,

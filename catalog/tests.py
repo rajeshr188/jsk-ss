@@ -2,13 +2,18 @@ from decimal import Decimal
 from io import BytesIO
 
 from PIL import Image as PillowImage
-from django.contrib.auth.models import AnonymousUser
+from django.contrib.auth import get_user_model
+from django.contrib.auth.models import AnonymousUser, Group
 from django.core.exceptions import ValidationError
 from django.core.files.images import ImageFile
+from django.core.management import call_command
+from django.core.management.base import CommandError
 from django.db import IntegrityError, transaction
 from django.test import RequestFactory, TestCase, override_settings
+from django.urls import reverse
 from wagtail.images import get_image_model
-from wagtail.models import Collection, Locale, Page
+from wagtail.images.permissions import permission_policy as image_permission_policy
+from wagtail.models import Collection, Locale, Page, PageLogEntry, Site, WorkflowState
 
 from .models import (
     CatalogIndexPage,
@@ -16,6 +21,17 @@ from .models import (
     ProductCollection,
     ProductImage,
     ProductPage,
+)
+from .permissions import (
+    ADMIN_MODEL_PERMISSIONS,
+    CATALOG_ADMIN_GROUP,
+    CATALOG_EDITOR_GROUP,
+    CATALOG_MEDIA_COLLECTION,
+    CATALOG_PUBLISHER_GROUP,
+    CATALOG_REVIEW_TASK,
+    CATALOG_WORKFLOW,
+    CATALOG_ROLES,
+    catalog_permission_configuration_errors,
 )
 
 
@@ -181,3 +197,257 @@ class CatalogueDomainTests(TestCase):
             "Polished gold ring on a neutral display",
         )
         self.assertEqual((rendition.width, rendition.height), (6, 4))
+
+
+@override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
+class CataloguePublishingAuthorizationTests(TestCase):
+    password = "correct-horse-battery-staple"
+
+    def setUp(self):
+        if not Locale.objects.exists():
+            Locale.objects.create(language_code="en")
+        root = Page.get_first_root_node()
+        if root is None:
+            root = Page.add_root(title="Root", slug="root")
+
+        site = Site.objects.filter(is_default_site=True).first()
+        if site is None:
+            site_root = root.get_children().first()
+            if site_root is None:
+                site_root = root.add_child(
+                    instance=Page(title="Site root", slug="home")
+                )
+            Site.objects.create(
+                hostname="testserver",
+                port=80,
+                root_page=site_root,
+                is_default_site=True,
+            )
+        else:
+            site.hostname = "testserver"
+            site.port = 80
+            site.save(update_fields=["hostname", "port"])
+
+        call_command("configure_catalog_permissions", verbosity=0)
+        self.catalogue = CatalogIndexPage.objects.get()
+        self.groups = {
+            role.name: Group.objects.get(name=role.name)
+            for role in CATALOG_ROLES
+        }
+
+        user_model = get_user_model()
+        self.editor = user_model.objects.create_user(
+            username="catalog-editor@example.com",
+            email="catalog-editor@example.com",
+            password=self.password,
+            role=user_model.Role.STAFF,
+            is_staff=True,
+        )
+        self.publisher = user_model.objects.create_user(
+            username="catalog-publisher@example.com",
+            email="catalog-publisher@example.com",
+            password=self.password,
+            role=user_model.Role.STAFF,
+            is_staff=True,
+        )
+        self.administrator = user_model.objects.create_user(
+            username="catalog-administrator@example.com",
+            email="catalog-administrator@example.com",
+            password=self.password,
+            role=user_model.Role.STAFF,
+            is_staff=True,
+        )
+        self.non_staff_group_member = user_model.objects.create_user(
+            username="non-staff-catalog-member@example.com",
+            email="non-staff-catalog-member@example.com",
+            password=self.password,
+            role=user_model.Role.CUSTOMER,
+            is_staff=False,
+        )
+        self.editor.groups.add(self.groups[CATALOG_EDITOR_GROUP])
+        self.publisher.groups.add(self.groups[CATALOG_PUBLISHER_GROUP])
+        self.administrator.groups.add(self.groups[CATALOG_ADMIN_GROUP])
+
+        self.category = ProductCategory.objects.create(
+            name="Gold rings",
+            slug="gold-rings",
+        )
+
+    def make_draft_product(self):
+        product = ProductPage(
+            title="Workflow gold ring",
+            slug="workflow-gold-ring",
+            product_code="JSK-WF-001",
+            category=self.category,
+            short_description="A draft product awaiting catalogue review.",
+            live=False,
+            owner=self.editor,
+        )
+        self.catalogue.add_child(instance=product)
+        product.save_revision(user=self.editor)
+        return product
+
+    def test_configuration_is_idempotent_and_repairs_permission_drift(self):
+        self.assertEqual(catalog_permission_configuration_errors(), [])
+        self.assertFalse(self.catalogue.live)
+        self.assertTrue(
+            Collection.get_first_root_node()
+            .get_children()
+            .filter(name=CATALOG_MEDIA_COLLECTION)
+            .exists()
+        )
+
+        call_command("configure_catalog_permissions", verbosity=0)
+        call_command("configure_catalog_permissions", "--check", verbosity=0)
+        self.assertEqual(CatalogIndexPage.objects.count(), 1)
+
+        editor_group = self.groups[CATALOG_EDITOR_GROUP]
+        editor_group.permissions.clear()
+        with self.assertRaises(CommandError):
+            call_command("configure_catalog_permissions", "--check", verbosity=0)
+
+        call_command("configure_catalog_permissions", verbosity=0)
+        self.assertEqual(catalog_permission_configuration_errors(), [])
+
+    def test_role_matrix_is_scoped_to_catalogue_content_and_media(self):
+        editor_permissions = self.catalogue.permissions_for_user(self.editor)
+        publisher_permissions = self.catalogue.permissions_for_user(self.publisher)
+        administrator_permissions = self.catalogue.permissions_for_user(
+            self.administrator
+        )
+
+        self.assertTrue(editor_permissions.can_edit())
+        self.assertTrue(editor_permissions.can_add_subpage())
+        self.assertFalse(editor_permissions.can_publish())
+        self.assertFalse(editor_permissions.can_unlock())
+
+        self.assertTrue(publisher_permissions.can_publish())
+        self.assertTrue(publisher_permissions.can_lock())
+        self.assertTrue(publisher_permissions.can_unlock())
+        self.assertTrue(administrator_permissions.can_publish())
+        self.assertFalse(
+            Site.objects.get(is_default_site=True)
+            .root_page.permissions_for_user(self.editor)
+            .can_edit()
+        )
+
+        catalogue_media = Collection.get_first_root_node().get_children().get(
+            name=CATALOG_MEDIA_COLLECTION
+        )
+        editable_collections = (
+            image_permission_policy.collections_user_has_any_permission_for(
+                self.editor,
+                ["add", "change"],
+            )
+        )
+        self.assertTrue(editable_collections.filter(pk=catalogue_media.pk).exists())
+        self.assertFalse(
+            editable_collections.filter(pk=Collection.get_first_root_node().pk).exists()
+        )
+
+        administrator_group = self.groups[CATALOG_ADMIN_GROUP]
+        self.assertEqual(
+            set(
+                administrator_group.permissions.values_list(
+                    "content_type__app_label",
+                    "codename",
+                )
+            ),
+            ADMIN_MODEL_PERMISSIONS,
+        )
+        self.assertFalse(
+            administrator_group.permissions.filter(
+                content_type__app_label__in=["accounts", "auth", "schemes"]
+            ).exists()
+        )
+        self.assertFalse(
+            administrator_group.permissions.filter(
+                content_type__app_label="wagtaildocs"
+            ).exists()
+        )
+
+        self.client.force_login(self.editor)
+        self.assertEqual(self.client.get(reverse("wagtailadmin_home")).status_code, 200)
+
+        self.non_staff_group_member.groups.add(self.groups[CATALOG_EDITOR_GROUP])
+        self.client.force_login(self.non_staff_group_member)
+        response = self.client.get(reverse("wagtailadmin_home"))
+        self.assertRedirects(
+            response,
+            f'{reverse("wagtailadmin_login")}?next={reverse("wagtailadmin_home")}',
+            fetch_redirect_response=False,
+        )
+        self.assertTrue(
+            any(
+                "contains a non-staff user" in error
+                for error in catalog_permission_configuration_errors()
+            )
+        )
+
+    def test_editor_submission_requires_publisher_and_retains_audit_history(self):
+        self.assertEqual(self.client.get("/jewellery/").status_code, 404)
+        self.catalogue.get_latest_revision().publish(user=self.publisher)
+        self.catalogue.refresh_from_db()
+
+        product = self.make_draft_product()
+        product_url = "/jewellery/workflow-gold-ring/"
+        self.assertEqual(self.client.get(product_url).status_code, 404)
+        self.assertFalse(product.permissions_for_user(self.editor).can_publish())
+        self.assertTrue(product.permissions_for_user(self.publisher).can_publish())
+
+        workflow = product.get_workflow()
+        self.assertEqual(workflow.name, CATALOG_WORKFLOW)
+        self.assertEqual(workflow.tasks.get().specific.name, CATALOG_REVIEW_TASK)
+
+        workflow_state = workflow.start(product, user=self.editor)
+        self.assertEqual(workflow_state.status, WorkflowState.STATUS_IN_PROGRESS)
+        self.assertEqual(
+            workflow_state.current_task_state.task.specific.get_actions(
+                product,
+                self.editor,
+            ),
+            [],
+        )
+        self.assertIn(
+            "approve",
+            {
+                action[0]
+                for action in workflow_state.current_task_state.task.specific.get_actions(
+                    product,
+                    self.publisher,
+                )
+            },
+        )
+
+        workflow_state.current_task_state.specific.approve(
+            user=self.publisher,
+            comment="Approved for showroom catalogue publication.",
+        )
+        workflow_state.refresh_from_db()
+        product.refresh_from_db()
+
+        self.assertEqual(workflow_state.status, WorkflowState.STATUS_APPROVED)
+        self.assertTrue(product.live)
+        self.assertEqual(self.client.get(product_url).status_code, 200)
+
+        product.unpublish(user=self.publisher)
+        product.refresh_from_db()
+        self.assertFalse(product.live)
+        self.assertEqual(self.client.get(product_url).status_code, 404)
+
+        log_entries = PageLogEntry.objects.filter(page=product)
+        self.assertTrue(
+            log_entries.filter(action="wagtail.workflow.start", user=self.editor).exists()
+        )
+        self.assertTrue(
+            log_entries.filter(
+                action="wagtail.workflow.approve",
+                user=self.publisher,
+            ).exists()
+        )
+        self.assertTrue(
+            log_entries.filter(action="wagtail.publish", user=self.publisher).exists()
+        )
+        self.assertTrue(
+            log_entries.filter(action="wagtail.unpublish", user=self.publisher).exists()
+        )
