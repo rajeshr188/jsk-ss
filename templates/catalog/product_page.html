@@ -1,0 +1,42 @@
+{% extends "_base.html" %}
+{% load wagtailcore_tags wagtailimages_tags %}
+
+{% block title %}{{ page.seo_title|default:page.title }} | Jai Sri Krishna Jewelley{% endblock %}
+{% block meta_description %}{{ page.search_description|default:page.short_description }}{% endblock %}
+
+{% block content %}
+<article>
+  <header class="mb-4">
+    <p class="eyebrow mb-2">{{ page.category.name }}</p>
+    <h1>{{ page.title }}</h1>
+    <p class="lead">{{ page.short_description }}</p>
+    <p class="small text-muted">Catalogue reference {{ page.product_code }}</p>
+  </header>
+
+  {% if page.gallery_images.all %}
+  <div class="row g-3 mb-4" aria-label="Product images">
+    {% for gallery_image in page.gallery_images.all %}
+      {% image gallery_image.image fill-720x540 as rendition %}
+      <figure class="col-md-6">
+        <img class="img-fluid rounded" src="{{ rendition.url }}" width="{{ rendition.width }}" height="{{ rendition.height }}" alt="{{ gallery_image.alt_text }}">
+        {% if gallery_image.caption %}<figcaption class="small text-muted mt-2">{{ gallery_image.caption }}</figcaption>{% endif %}
+      </figure>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if page.description %}<div class="mb-4">{{ page.description|richtext }}</div>{% endif %}
+
+  <section class="card shadow-sm mb-4" aria-labelledby="showroom-information">
+    <div class="card-body">
+      <h2 class="h4" id="showroom-information">Showroom information</h2>
+      {% if page.display_price_inr %}
+      <p class="fs-4 fw-semibold mb-2">&#8377;{{ page.display_price_inr|floatformat:2 }}</p>
+      {% endif %}
+      <p>{{ page.enquiry_note }}</p>
+      <p class="small text-muted mb-3">The displayed value is catalogue information, not a Scheme Rate, customer entitlement, invoice, or online checkout price.</p>
+      <a class="btn btn-primary" href="{% url 'contact' %}">Contact the showroom</a>
+    </div>
+  </section>
+</article>
+{% endblock %}

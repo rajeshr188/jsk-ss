@@ -190,11 +190,15 @@ here are not implemented behavior and do not relax the financial invariants in
   periodic restore test exist, retain approved source photographs outside R2 and do
   not treat R2 as their only copy. Production editor activation requires explicit
   acceptance of this limitation and a source-original retention process.
-- **FW-CATALOG-001 — Catalogue domain:** Implement a `CatalogIndexPage`, focused
-  `ProductPage`, image gallery, and reusable category/collection snippets. Model
-  product discovery and showroom enquiry only; do not introduce inventory, cart,
-  invoicing, fulfilment, or reuse Scheme Rates as catalogue prices. Exit when model
-  validation, uniqueness, preview, revision, and image tests pass.
+- **FW-CATALOG-001 — Catalogue domain (completed locally 2026-08-24):** A dedicated
+  `catalog` application provides one `CatalogIndexPage`, focused `ProductPage`,
+  reusable category and marketing-collection snippets, and ordered image galleries
+  with required alt text. Optional positive INR display prices are explicitly
+  informational and independent of Scheme Rates or customer entitlements. Model
+  validation, case-insensitive uniqueness, preview, revision, image, rendition, and
+  showroom-only boundary tests pass; no inventory, cart, checkout, invoicing,
+  fulfilment, or financial mutations were introduced. Production promotion remains
+  a later catalogue rollout step.
 - **FW-CATALOG-002 — Publishing and authorization:** Define least-privilege editor,
   publisher, and administrator groups; require explicit CMS authorization independent
   of application role; and test draft privacy, publish/unpublish, audit history, and

@@ -1,0 +1,32 @@
+{% extends "_base.html" %}
+{% load wagtailcore_tags %}
+
+{% block title %}{{ page.seo_title|default:page.title }} | Jai Sri Krishna Jewelley{% endblock %}
+{% block meta_description %}{{ page.search_description|default:"Explore jewellery available for showroom enquiry at Jai Sri Krishna Jewelley in Vellore." }}{% endblock %}
+
+{% block content %}
+<header class="mb-4">
+  <p class="eyebrow mb-2">Showroom catalogue</p>
+  <h1>{{ page.title }}</h1>
+  {% if page.intro %}<div class="lead">{{ page.intro|richtext }}</div>{% endif %}
+</header>
+
+{% if products %}
+<div class="row g-4">
+  {% for product in products %}
+  <article class="col-md-6 col-xl-4">
+    <div class="card h-100 shadow-sm">
+      <div class="card-body">
+        <p class="small text-muted mb-2">{{ product.category.name }}</p>
+        <h2 class="h4"><a href="{% pageurl product %}">{{ product.title }}</a></h2>
+        <p>{{ product.short_description }}</p>
+        <p class="small mb-0">Reference {{ product.product_code }}</p>
+      </div>
+    </div>
+  </article>
+  {% endfor %}
+</div>
+{% else %}
+<div class="alert alert-info" role="status">No catalogue products are published yet.</div>
+{% endif %}
+{% endblock %}

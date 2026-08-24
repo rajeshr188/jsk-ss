@@ -2,7 +2,7 @@
 
 ## Current milestone
 
-Wagtail catalogue domain — foundation branch ready for integration
+Wagtail catalogue domain — FW-CATALOG-001 complete locally
 
 ## Completed
 
@@ -155,15 +155,20 @@ Wagtail catalogue domain — foundation branch ready for integration
   scoped to the production bucket passed the complete smoke, the old token was
   deleted, and the new token passed again. A transient local DNS/TLS failure during a
   WAF probe recovered through bounded retries without weakening any access control.
+- `FW-CATALOG-001` adds a bounded `catalog` application with one catalogue index,
+  focused product pages, reusable category and marketing-collection snippets, ordered
+  Wagtail image galleries with required alt text, revision-safe content, and an
+  optional positive informational INR display price. The model and preview templates
+  support product discovery and showroom enquiry only; they do not introduce
+  inventory, carts, checkout, invoices, fulfilment, payments, or Scheme Rate coupling.
 
 ## In progress
 
 - The Bootstrap 5 UI modernization is merged into `main` at `24ed76d`; production
   promotion remains separate from the Wagtail foundation work.
-- `FW-CMS-002` and functional `FW-MEDIA-001` are complete on
-  `agent/wagtail-foundation`. Integrate that branch through PR/CI before starting
-  `FW-CATALOG-001` from updated `main`; do not stack catalogue models onto the
-  unmerged foundation branch.
+- `FW-CMS-002` and functional `FW-MEDIA-001` are merged into `main`. `FW-CATALOG-001`
+  is complete locally on `agent/catalog-domain`; integrate it through PR/CI before
+  starting `FW-CATALOG-002` publishing and authorization work from updated `main`.
 - `FW-MEDIA-002` tracks the accepted backup/recovery and usage-monitoring deferral.
   It does not block local catalogue development, but approved source photographs must
   remain outside R2 until an isolated backup target and restore proof exist.
@@ -218,10 +223,11 @@ Wagtail catalogue domain — foundation branch ready for integration
 - Plan-specific early-discontinuation pricing, payment-order
   expiry, eligibility reminders, public onboarding, and partial-settlement policy are
   not yet defined.
-- The CMS and R2 foundations exist locally and real non-production/production storage,
-  access, cache, and rotation smokes pass, but there is no catalogue model and no
+- The CMS, R2, and catalogue-domain foundations exist locally, and real non-production/
+  production storage, access, cache, and rotation smokes pass. Catalogue publishing
+  authorization and public catalogue polish are not yet implemented, and there is no
   isolated media backup/restore proof. Retain approved source photographs outside R2;
-  production must not rely on R2 as their only copy. The Wagtail/R2 branch is not yet
+  production must not rely on R2 as their only copy. The catalogue branch is not yet
   merged or deployed.
 - The detailed, prioritized backlog and milestone-by-milestone limitation history
   are maintained in [Future work](FUTURE_WORK.md).
@@ -236,7 +242,8 @@ Wagtail catalogue domain — foundation branch ready for integration
   static collection, and an applied-migration check. Wagtail/taggit migrations are
   applied to local PostgreSQL only; production has not received them.
 - PostgreSQL 16 migrations applied successfully.
-- 160 tests pass, including R2 configuration and signed/private-original versus
+- 167 tests pass, including catalogue hierarchy, validation, case-insensitive
+  uniqueness, preview, revision, gallery and rendition coverage; R2 configuration and signed/private-original versus
   public-rendition URL isolation, no-residue upload/read/rendition/cleanup behavior,
   production media deployment gates, explicit Wagtail permission and route-precedence checks,
   public INR-contribution/metal-to-jewellery copy coverage,
@@ -253,8 +260,8 @@ Wagtail catalogue domain — foundation branch ready for integration
   redemption precision, over-redemption protection,
   idempotency, partial/full closure, denomination separation, access control,
   PostgreSQL constraints, and all prior regressions.
-- Migrations through `schemes.0010_manual_scheme_rates` are applied to the current
-  production deployment and local development database.
+- Migrations through `schemes.0010_manual_scheme_rates` are applied to production;
+  `catalog.0001_initial` is additionally applied to the local development database.
 - Migration drift check reports no changes.
 - Django system check and migration drift check pass.
 - The rendered anonymous homepage passes Deque axe-core 4.13's WCAG AA
@@ -306,10 +313,11 @@ Wagtail catalogue domain — foundation branch ready for integration
 
 ## Next recommended step
 
-Push `agent/wagtail-foundation`, open and review its PR, require CI to pass, and merge
-it into `main`. Then fast-forward local `main` and create `agent/catalog-domain` for
-`FW-CATALOG-001`. Keep the accepted `FW-MEDIA-002` recovery/monitoring limitation
-visible and retain source photographs outside R2.
+Commit and push `agent/catalog-domain`, open and review its PR, require CI to pass, and
+merge it into `main`. Then fast-forward local `main` and create a fresh branch for
+`FW-CATALOG-002`, defining least-privilege editor/publisher permissions and testing
+draft privacy plus publish/unpublish history. Keep the accepted `FW-MEDIA-002`
+recovery/monitoring limitation visible and retain source photographs outside R2.
 
 Complete the CASH product-boundary decision and enforce it in enrolment and payment
 services before submitting the public website and policy URLs to Razorpay. Keep live
