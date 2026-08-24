@@ -20,9 +20,15 @@ class Command(BaseCommand):
     def _read_public_rendition(self, name):
         url = f"https://{settings.R2_CUSTOM_DOMAIN}/{quote(name, safe='/')}"
         request = Request(url, headers={"User-Agent": "jsk-r2-storage-check/1.0"})
+        last_http_status = None
+        network_failure = False
+        served_rendition = False
         for _ in range(3):
             try:
                 with urlopen(request, timeout=10) as response:
+                    served_rendition = True
+                    last_http_status = None
+                    network_failure = False
                     if response.status != 200 or not response.read(8):
                         raise CommandError(
                             "The R2 custom domain did not return the generated rendition"
@@ -37,10 +43,20 @@ class Command(BaseCommand):
                         )
                     if response.headers.get("CF-Cache-Status", "").upper() == "HIT":
                         return
-            except (HTTPError, URLError, TimeoutError) as exc:
-                raise CommandError(
-                    "The R2 custom domain could not serve the generated rendition"
-                ) from exc
+            except HTTPError as exc:
+                last_http_status = exc.code
+            except (URLError, TimeoutError):
+                network_failure = True
+        if last_http_status is not None:
+            raise CommandError(
+                f"The R2 custom domain returned HTTP {last_http_status} "
+                "for the generated rendition"
+            )
+        if network_failure and not served_rendition:
+            raise CommandError(
+                "The R2 custom domain had a DNS, network, or TLS failure while "
+                "serving the generated rendition"
+            )
         raise CommandError("The public rendition did not produce a Cloudflare cache HIT")
 
     def _require_blocked_custom_domain_path(self, name):

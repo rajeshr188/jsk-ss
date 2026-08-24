@@ -235,8 +235,9 @@ class WagtailMediaPipelineTests(TestCase):
 
         with self.assertRaisesMessage(
             CommandError,
-            "could not serve the generated rendition",
+            "DNS, network, or TLS failure",
         ):
             call_command("check_media_storage")
 
         self.assertEqual(image_model.objects.count(), image_count)
+        self.assertEqual(urlopen.call_count, 3)
