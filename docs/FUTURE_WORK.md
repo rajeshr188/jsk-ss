@@ -175,10 +175,11 @@ here are not implemented behavior and do not relax the financial invariants in
   rejects an unsafe production configuration. Automated configuration, URL-isolation,
   upload, read, rendition, cleanup, and deployment-check tests pass. The production
   runbook records isolated buckets, bucket-scoped Object Read & Write tokens, the
-  smoke command, CORS/cache/WAF policy, token rotation, and media recovery. Complete
-  the work item only after separate non-production and production R2 Standard buckets
-  are provisioned and the real upload/rendition/retrieval/cleanup check, custom-domain
-  controls, credential rotation, usage monitoring, and recovery exercise have retained
+  smoke command, CORS/cache/WAF policy, token rotation, and media recovery. A real
+  isolated non-production R2 upload/read/rendition/cleanup smoke passed on 2026-08-24
+  without retaining the temporary media. Complete the work item only after the
+  production R2 Standard bucket is provisioned and the custom-domain controls,
+  credential rotation, usage monitoring, and recovery exercise have retained
   evidence. Do not use the rate-limited `r2.dev` endpoint in production.
 - **FW-CATALOG-001 — Catalogue domain:** Implement a `CatalogIndexPage`, focused
   `ProductPage`, image gallery, and reusable category/collection snippets. Model

@@ -674,6 +674,10 @@ for application static files.
    rendition, then deletes its database rows and both objects. It must report all
    four checks as successful, leave no `r2-storage-check-*` object, and expose no
    credential or signed URL in output.
+
+   Evidence recorded 2026-08-24: the isolated non-production command reported that
+   upload, read, rendition, and cleanup all passed. No credential, URL, or temporary
+   object identifier is retained in the repository.
 5. Before production, add `jaishrikrishnajewellery.com` as a zone in the same
    Cloudflare account and connect `media.jaishrikrishnajewellery.com` to the
    production bucket under **R2 → bucket → Settings → Custom Domains**. If the
@@ -681,6 +685,13 @@ for application static files.
    apex, `www`, MX, TXT, CAA, and verification records before changing nameservers or
    using Cloudflare's supported partial-zone setup. Never CNAME the media hostname to
    an `r2.dev` address.
+
+   DNS baseline observed 2026-08-24: authority remains on `ns1.linode.com` through
+   `ns5.linode.com`; the apex and `www` resolve to `172.235.9.77`; MX records point
+   to `smtp.secureserver.net` at priority 0 and `mailstore1.secureserver.net` at
+   priority 10; TXT includes `v=spf1 include:secureserver.net -all` and `T1327472`.
+   This public snapshot is not a complete zone export. Export and compare every
+   Linode DNS record before changing the registrar's nameservers.
 6. Disable the production bucket's public `r2.dev` URL. On the Cloudflare zone, add
    one zone-level WAF custom rule with the **Block** action:
 

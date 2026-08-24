@@ -2,7 +2,7 @@
 
 ## Current milestone
 
-Cloudflare R2 media foundation — repository implementation complete; live proof pending
+Cloudflare R2 media foundation — staging smoke passed; production controls pending
 
 ## Completed
 
@@ -139,15 +139,18 @@ Cloudflare R2 media foundation — repository implementation complete; live proo
   use a separate public custom-domain storage alias. Production checks reject local
   media, `r2.dev`, missing owned media domains, and non-view document serving. A
   no-residue command exercises real upload, read, rendition, and cleanup behavior.
+- The isolated non-production R2 smoke passed on 2026-08-24: Django uploaded and read
+  the original, generated and read a Wagtail rendition, and removed the temporary
+  database and object-storage records without printing credentials or signed URLs.
 
 ## In progress
 
 - The Bootstrap 5 UI modernization is merged into `main` at `24ed76d`; production
   promotion remains separate from the Wagtail foundation work.
 - `FW-CMS-002` is complete locally. `FW-MEDIA-001` is implemented and tested in the
-  repository, but its external exit criteria remain: isolated R2 buckets, real
-  non-production smoke proof, production custom-domain/WAF/cache controls, token
-  rotation, monitoring, and recovery evidence. Catalogue models and production
+  repository, and its real non-production R2 smoke has passed. Its remaining external
+  exit criteria are the separate production bucket, custom-domain/WAF/cache controls,
+  token rotation, monitoring, and recovery evidence. Catalogue models and production
   promotion remain blocked until that operational proof is retained.
 - Environment-specific production proof: isolated database restoration, real email
   delivery, external alert routing/exercises, and coordinated secret-rotation drills.
@@ -288,12 +291,13 @@ Cloudflare R2 media foundation — repository implementation complete; live proo
 
 ## Next recommended step
 
-Provision the isolated non-production R2 Standard bucket and its bucket-scoped Object
-Read & Write token, place the credentials only in an ignored local environment file,
-and run the documented `check_media_storage` command. Then retain evidence for the
-owned custom-domain/WAF/cache controls, token-rotation rehearsal, monitoring, and
-media recovery exercise. Do not create catalogue models or promote the CMS foundation
-to production until those durable-media behaviors are proven.
+Export the complete Linode DNS zone, reproduce and verify it in a Cloudflare zone,
+and only then change authoritative nameservers so the owned R2 media domain can be
+attached without interrupting the application or GoDaddy-hosted mail records. After
+DNS is stable, provision the separate production bucket and retain evidence for the
+custom-domain/WAF/cache controls, token-rotation rehearsal, monitoring, and media
+recovery exercise. Do not create catalogue models or promote the CMS foundation to
+production until those durable-media behaviors are proven.
 
 Complete the CASH product-boundary decision and enforce it in enrolment and payment
 services before submitting the public website and policy URLs to Razorpay. Keep live
