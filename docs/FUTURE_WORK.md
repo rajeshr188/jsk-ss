@@ -160,12 +160,13 @@ here are not implemented behavior and do not relax the financial invariants in
   [ADR-0004](decisions/ADR-0004-wagtail-catalog-cms.md) accepts Wagtail 7.4 LTS as a
   bounded catalogue CMS while preserving the existing Django application,
   `accounts.CustomUser`, Bootstrap 5 public UI, and financial-domain separation.
-- **FW-CMS-002 — Foundation spike:** On `agent/wagtail-foundation`, add the smallest
-  Wagtail integration needed to prove dependency compatibility, additive migrations,
-  `/cms/` and admin coexistence, custom-user access, Django checks, and unchanged
-  financial regressions. Keep catalogue models and production deployment out of this
-  first code change. Exit when a customer is denied CMS access, an explicitly
-  authorized staff user can enter it, and the full regression suite passes.
+- **FW-CMS-002 — Foundation spike (completed locally 2026-08-24):** Wagtail 7.4.3 is
+  integrated additively at `/cms/` with PostgreSQL search, the existing
+  `accounts.CustomUser`, `/admin/`, `/scheme/`, public-route precedence, restricted
+  document types, and development-only local media. A customer and an owner without
+  `wagtailadmin.access_admin` are denied; an explicitly authorized staff user can
+  enter. Wagtail migrations apply locally and all 147 tests pass. Production
+  promotion is deliberately blocked until `FW-MEDIA-001` is complete.
 - **FW-MEDIA-001 — Cloudflare R2 media foundation:** Provision separate non-production
   and production R2 Standard buckets, use bucket-scoped Object Read & Write tokens,
   configure `django-storages` through environment variables, and retain WhiteNoise

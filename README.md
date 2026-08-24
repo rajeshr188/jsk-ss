@@ -42,6 +42,7 @@ Alternatively, set `DJANGO_SECRET_KEY` and run `docker compose up --build`; Comp
 | `APP_RELEASE` | production | Commit SHA or immutable image version included in health responses |
 | `ALLOWED_HOSTS` | no | Comma-separated host names |
 | `CSRF_TRUSTED_ORIGINS` | no | Comma-separated trusted origins |
+| `WAGTAILADMIN_BASE_URL` | CMS | Public origin used for absolute Wagtail admin links; omit `/cms/` and a trailing slash |
 | `DEFAULT_FROM_EMAIL` | no | Sender for authentication emails |
 | `EMAIL_BACKEND` | production | Delivery backend; deploy checks reject console, dummy, and in-memory backends |
 | `EMAIL_HOST`, `EMAIL_PORT` | SMTP | SMTP server and port |

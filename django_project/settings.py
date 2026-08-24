@@ -76,6 +76,7 @@ INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
+    "django.contrib.postgres",
     "django.contrib.sessions",
     "django.contrib.messages",
     "whitenoise.runserver_nostatic",
@@ -86,6 +87,20 @@ INSTALLED_APPS = [
     "allauth.account",
     "crispy_forms",
     "crispy_bootstrap5",
+    "wagtail.contrib.forms",
+    "wagtail.contrib.redirects",
+    "wagtail.embeds",
+    "wagtail.sites",
+    "wagtail.users",
+    "wagtail.snippets",
+    "wagtail.documents",
+    "wagtail.images",
+    "wagtail.search",
+    "wagtail.admin",
+    "wagtail",
+    "modelcluster",
+    "taggit",
+    "django_filters",
     # Local
     "accounts",
     "pages",
@@ -103,6 +118,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "allauth.account.middleware.AccountMiddleware",  # django-allauth
+    "wagtail.contrib.redirects.middleware.RedirectMiddleware",
 ]
 
 if DEBUG:
@@ -197,6 +213,11 @@ STATIC_URL = "/static/"
 # https://docs.djangoproject.com/en/dev/ref/contrib/staticfiles/#std:setting-STATICFILES_DIRS
 STATICFILES_DIRS = [BASE_DIR / "static"]
 
+# Local uploaded-media storage is sufficient only for development and this
+# foundation spike. Production media will move to Cloudflare R2 in FW-MEDIA-001.
+MEDIA_ROOT = BASE_DIR / "media"
+MEDIA_URL = "/media/"
+
 # https://whitenoise.readthedocs.io/en/latest/django.html
 STORAGES = {
     "default": {
@@ -214,6 +235,22 @@ STORAGES = {
 # Default primary key field type
 # https://docs.djangoproject.com/en/stable/ref/settings/#default-auto-field
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# Wagtail is a bounded catalogue CMS. Existing public and financial routes remain
+# ordinary Django views until their own approved implementation phase.
+WAGTAIL_SITE_NAME = "Jai Sri Krishna Jewelley Catalogue"
+WAGTAILADMIN_BASE_URL = os.getenv(
+    "WAGTAILADMIN_BASE_URL",
+    "http://localhost:8000" if DEBUG else "https://jaishrikrishnajewellery.com",
+).strip().rstrip("/")
+WAGTAILSEARCH_BACKENDS = {
+    "default": {
+        "BACKEND": "wagtail.search.backends.database",
+    }
+}
+DATA_UPLOAD_MAX_NUMBER_FIELDS = 10_000
+WAGTAILDOCS_EXTENSIONS = ["csv", "docx", "odt", "pdf", "pptx", "rtf", "txt", "xlsx"]
+WAGTAILDOCS_MAX_UPLOAD_SIZE = 10 * 1024 * 1024
 
 # django-crispy-forms
 # https://django-crispy-forms.readthedocs.io/en/latest/install.html#template-packs

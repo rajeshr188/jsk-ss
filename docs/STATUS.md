@@ -2,7 +2,7 @@
 
 ## Current milestone
 
-Wagtail catalogue foundation — architecture accepted; implementation not started
+Wagtail catalogue foundation — local compatibility spike complete; R2 is next
 
 ## Completed
 
@@ -128,19 +128,19 @@ Wagtail catalogue foundation — architecture accepted; implementation not start
   explains their family partnership, and uses accessible monogram portraits until
   approved photographs are supplied. Its route is retained for later publication,
   but links to it are currently hidden from public navigation and page calls to action.
-- Wagtail feasibility is accepted in ADR-0004 as a bounded catalogue CMS. The
-  decision preserves the existing Django financial application, custom user,
-  Bootstrap 5 frontend, and Django admin, and selects Cloudflare R2 Standard as the
-  initial uploaded-media store. No Wagtail dependency or database migration has yet
-  been added.
+- Wagtail feasibility is accepted in ADR-0004 as a bounded catalogue CMS. Wagtail
+  7.4.3 now runs additively with PostgreSQL search, `accounts.CustomUser`, `/cms/`,
+  the existing `/admin/` and `/scheme/` routes, and unchanged Bootstrap 5 public
+  pages. CMS entry requires the explicit `wagtailadmin.access_admin` permission;
+  customer and application-owner roles alone do not grant it.
 
 ## In progress
 
 - The Bootstrap 5 UI modernization is merged into `main` at `24ed76d`; production
   promotion remains separate from the Wagtail foundation work.
-- The phased Wagtail work is registered as `FW-CMS-002`, `FW-MEDIA-001`, and
-  `FW-CATALOG-001` through `FW-CATALOG-004`. The next code change is a deliberately
-  small compatibility and authorization spike, not a catalogue implementation.
+- `FW-CMS-002` is complete locally. The remaining phased Wagtail work is registered
+  as `FW-MEDIA-001` and `FW-CATALOG-001` through `FW-CATALOG-004`; Cloudflare R2
+  media isolation is next, before catalogue models or production promotion.
 - Environment-specific production proof: isolated database restoration, real email
   delivery, external alert routing/exercises, and coordinated secret-rotation drills.
   The stable owned domain/TLS/proxy path and repository observability foundation are
@@ -192,9 +192,10 @@ Wagtail catalogue foundation — architecture accepted; implementation not start
 - Plan-specific early-discontinuation pricing, payment-order
   expiry, eligibility reminders, public onboarding, and partial-settlement policy are
   not yet defined.
-- There is no CMS, catalogue model, upload workflow, or R2 configuration in the
-  application yet. Production's read-only container and local media storage cannot
-  safely persist uploads; R2 must be proven before real catalogue media is accepted.
+- The CMS foundation exists locally, but there is no catalogue model or R2
+  configuration. Local filesystem media is development-only; production's read-only
+  container cannot persist uploads, so this branch must not be promoted until R2 is
+  proven and real catalogue media must not yet be accepted.
 - The detailed, prioritized backlog and milestone-by-milestone limitation history
   are maintained in [Future work](FUTURE_WORK.md).
 
@@ -204,10 +205,12 @@ Wagtail catalogue foundation — architecture accepted; implementation not start
 
 ## Verification
 
-- The Wagtail feasibility update is documentation-only; it adds no dependency,
-  migration, route, database table, storage credential, or production behavior.
+- Wagtail 7.4.3 and Django 6.0.4 pass system checks, production-shaped deploy checks,
+  static collection, and an applied-migration check. Wagtail/taggit migrations are
+  applied to local PostgreSQL only; production has not received them.
 - PostgreSQL 16 migrations applied successfully.
-- 143 tests pass, including public INR-contribution/metal-to-jewellery copy coverage,
+- 147 tests pass, including explicit Wagtail permission and route-precedence checks,
+  public INR-contribution/metal-to-jewellery copy coverage,
   owner-only Scheme Rate publication, large-change
   confirmation, no-rate payment blocking, pre-order locking, rate-change race
   behavior, durable verified-payment/allocation transition, production-shaped
@@ -274,10 +277,10 @@ Wagtail catalogue foundation — architecture accepted; implementation not start
 
 ## Next recommended step
 
-Review and accept ADR-0004 and the phased catalogue gates, then implement only the
-`FW-CMS-002` Wagtail foundation spike on `agent/wagtail-foundation`. Keep it separate
-from R2 provisioning and catalogue models so compatibility, authorization, migration,
-and rollback behavior can be reviewed independently.
+Implement `FW-MEDIA-001` next with isolated non-production Cloudflare R2 credentials,
+an environment-selected `django-storages` backend, and upload/rendition/retrieval tests.
+Keep WhiteNoise for static files and do not create catalogue models or promote the
+CMS foundation to production until durable media behavior and recovery are proven.
 
 Complete the CASH product-boundary decision and enforce it in enrolment and payment
 services before submitting the public website and policy URLs to Razorpay. Keep live

@@ -569,6 +569,7 @@ APP_RELEASE=<immutable-commit-or-image-id>
 
 ALLOWED_HOSTS=savings.example.com
 CSRF_TRUSTED_ORIGINS=https://savings.example.com
+WAGTAILADMIN_BASE_URL=https://savings.example.com
 
 DATABASE_URL=postgresql://<app-user>:<url-encoded-password>@<private-host>:5432/<database>?sslmode=require
 DATABASE_CONN_MAX_AGE=60
@@ -606,6 +607,9 @@ Configuration rules:
 - `ALLOWED_HOSTS` contains bare hostnames, not schemes or paths. Do not use `*`.
 - `CSRF_TRUSTED_ORIGINS` contains complete HTTPS origins and includes a port only if
   the public origin uses a non-default port.
+- `WAGTAILADMIN_BASE_URL` is the public origin used to build absolute CMS links. Do
+  not include `/cms/` or a trailing slash. Do not promote Wagtail to production until
+  `FW-MEDIA-001` replaces instance-local uploaded media with the approved R2 backend.
 - Percent-encode reserved characters in database usernames/passwords. Require
   `sslmode=require` or the stronger certificate-validation mode supported by the
   provider. Prefer a private network in addition to TLS where available; the selected
