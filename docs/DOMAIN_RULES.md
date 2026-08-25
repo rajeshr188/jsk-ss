@@ -168,6 +168,11 @@ This is the canonical source for stable business rules.
   and the explicit `PUBLIC_CATALOGUE_ENABLED` rollout flag. Keep the flag disabled
   until reviewed content and its direct public URLs pass rollout checks; disabling it
   removes discovery links without changing Wagtail revision or publication history.
+- **CAT-011:** `SchemePlan` and its audited Django workflows remain authoritative for
+  all savings-plan and financial terms. Any future Wagtail-managed Scheme Plan image
+  or marketing copy is presentation-only: it must link to rather than replace the
+  plan, must not duplicate or control financial fields, and its deletion, unpublishing,
+  or media failure must not change enrolment terms or historical financial records.
 
 ## Precision
 

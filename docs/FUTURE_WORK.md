@@ -160,7 +160,7 @@ here are not implemented behavior and do not relax the financial invariants in
   [ADR-0004](decisions/ADR-0004-wagtail-catalog-cms.md) accepts Wagtail 7.4 LTS as a
   bounded catalogue CMS while preserving the existing Django application,
   `accounts.CustomUser`, Bootstrap 5 public UI, and financial-domain separation.
-- **FW-CMS-002 — Foundation spike (completed locally 2026-08-24):** Wagtail 7.4.3 is
+- **FW-CMS-002 — Foundation spike (completed 2026-08-24):** Wagtail 7.4.3 is
   integrated additively at `/cms/` with PostgreSQL search, the existing
   `accounts.CustomUser`, `/admin/`, `/scheme/`, public-route precedence, restricted
   document types, and development-only local media. A customer and an owner without
@@ -190,7 +190,7 @@ here are not implemented behavior and do not relax the financial invariants in
   periodic restore test exist, retain approved source photographs outside R2 and do
   not treat R2 as their only copy. Production editor activation requires explicit
   acceptance of this limitation and a source-original retention process.
-- **FW-CATALOG-001 — Catalogue domain (completed locally 2026-08-24):** A dedicated
+- **FW-CATALOG-001 — Catalogue domain (completed 2026-08-24):** A dedicated
   `catalog` application provides one `CatalogIndexPage`, focused `ProductPage`,
   reusable category and marketing-collection snippets, and ordered image galleries
   with required alt text. Optional positive INR display prices are explicitly
@@ -199,7 +199,7 @@ here are not implemented behavior and do not relax the financial invariants in
   showroom-only boundary tests pass; no inventory, cart, checkout, invoicing,
   fulfilment, or financial mutations were introduced. Production promotion remains
   a later catalogue rollout step.
-- **FW-CATALOG-002 — Publishing and authorization (completed locally 2026-08-24):**
+- **FW-CATALOG-002 — Publishing and authorization (completed 2026-08-24):**
   An explicit idempotent bootstrap creates a draft catalogue root, dedicated media
   collection, subtree-scoped Catalogue Editors/Publishers/Administrators groups,
   collection-scoped image permissions, and a publisher approval workflow. Group
@@ -208,7 +208,7 @@ here are not implemented behavior and do not relax the financial invariants in
   submission, publisher approval, publish/unpublish visibility, and actor-attributed
   Wagtail audit history tests pass. Workflow email is not an activation dependency;
   production group assignment remains part of rollout/training.
-- **FW-CATALOG-003 — Public catalogue (completed locally 2026-08-24):** Accessible
+- **FW-CATALOG-003 — Public catalogue (completed 2026-08-24):** Accessible
   Bootstrap 5 catalogue/product pages now provide live-only search, category and
   collection filters, 12-item pagination, responsive Wagtail renditions, empty states,
   canonical/Open Graph/Product and CollectionPage metadata, and phone/email/showroom
@@ -217,11 +217,24 @@ here are not implemented behavior and do not relax the financial invariants in
   responsive image attributes, showroom-only wording, pagination, and draft/public
   visibility; production browser accessibility/performance proof remains in
   `FW-CATALOG-004`.
-- **FW-CATALOG-004 — Production rollout:** Back up the database and media inventory,
-  run additive migrations against a release candidate, verify the custom media domain,
-  security headers, monitoring, restore procedure, and application rollback, then
-  train authorized editors. Existing public pages remain Django-owned until a later
-  approved content/URL migration.
+- **FW-CATALOG-004 — Production rollout (completed 2026-08-25):** Production release
+  `2311ccf` was promoted after a current database recovery point and clean financial
+  baseline. Additive Wagtail/taggit/catalogue migrations, authorization reconciliation,
+  R2 upload/read/rendition/cleanup, explicit staff publishing access, reviewed content,
+  direct mobile/desktop browser checks, health checks, and navigation activation all
+  passed. `FW-MEDIA-002` remains an accepted limitation, so approved source originals
+  must remain independently retained outside R2.
+- **FW-CMS-003 — Optional editorial-page migration:** Retain the current hybrid
+  architecture. Catalogue pages remain Wagtail-owned; savings plans, financial flows,
+  policies, contact identity, and the conversion-focused homepage remain Django-owned
+  unless a later page-specific content/URL migration is reviewed. About and Our Story
+  are the first low-risk candidates if owner self-editing creates a real need.
+- **FW-CATALOG-005 — Scheme Plan marketing media:** If richer plan marketing is later
+  required, design an optional Wagtail-managed image/editorial presentation linked to
+  an authoritative `SchemePlan`. Do not duplicate or let CMS state control contribution
+  amounts, duration, frequency, metal, bonus, eligibility, public-listing state, or
+  enrolment terms. Define deletion/unpublish fallbacks, accessibility, approval, and
+  historical-enrolment behavior before implementation.
 
 ## Prioritization rule
 
