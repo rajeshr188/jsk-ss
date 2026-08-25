@@ -2,7 +2,7 @@
 
 ## Current milestone
 
-Public Wagtail catalogue — FW-CATALOG-003 complete locally
+Public Wagtail catalogue — FW-CATALOG-004 production rollout complete
 
 ## Completed
 
@@ -175,16 +175,22 @@ Public Wagtail catalogue — FW-CATALOG-003 complete locally
   Graph/JSON-LD metadata, and explicit phone, email, and Vellore-showroom enquiry
   paths. Global navigation remains default-off for safe rollout and appears only when
   the flag is enabled and the catalogue root is independently live/public.
+- `FW-CATALOG-004` completed production rollout on 2026-08-25. Release `2311ccf`
+  applied the additive Wagtail, taggit, and `catalog.0001` migrations; reconciled and
+  validated the bounded catalogue authorization; passed the production R2
+  upload/read/rendition/cleanup smoke; assigned explicit staff publishing access;
+  published reviewed catalogue content; passed direct mobile/desktop browser checks;
+  and enabled public catalogue navigation only after those gates succeeded.
+- The accepted long-term shape is hybrid: Wagtail owns catalogue/editorial content,
+  while Django and the `SchemePlan` domain remain authoritative for savings-plan and
+  financial behavior. Future Scheme Plan images or richer marketing copy may be
+  Wagtail-managed presentation linked to a plan, but must not duplicate or control
+  contribution, duration, metal, bonus, eligibility, publication, or enrolment terms.
 
 ## In progress
 
-- The Bootstrap 5 UI modernization is merged into `main` at `24ed76d`; production
-  promotion remains separate from the Wagtail catalogue rollout.
-- `FW-CMS-002`, functional `FW-MEDIA-001`, and `FW-CATALOG-001` are merged through
-  PR #7; `FW-CATALOG-002` is merged through PR #8 at `2400457`. `FW-CATALOG-003` is
-  complete locally on `agent/public-catalogue` and awaits its own reviewed PR/CI merge.
 - `FW-MEDIA-002` tracks the accepted backup/recovery and usage-monitoring deferral.
-  It does not block local catalogue development, but approved source photographs must
+  It does not block catalogue use, but approved source photographs must
   remain outside R2 until an isolated backup target and restore proof exist.
 - Environment-specific production proof: isolated database restoration, real email
   delivery, external alert routing/exercises, and coordinated secret-rotation drills.
@@ -196,10 +202,11 @@ Public Wagtail catalogue — FW-CATALOG-003 complete locally
   CA are in place, SSH access is verified, Docker is installed, and the owned domain
   returns liveness and PostgreSQL readiness `200` through Caddy-managed HTTPS;
   production email, external alerts, and Razorpay live-mode readiness remain.
-- Production release `2f87e042a72cb5c95222d619bb1ca8edbe7831e6` is healthy with
-  migration `schemes.0010_manual_scheme_rates` applied, zero reported financial
-  exceptions, and successful live, ready, static, and public-page checks. All public
-  compliance routes return `200`, and an owner-reviewed active plan is publicly listed.
+- Production release `2311ccfa95b3bd6bd58caa1f5734fcd2cfe51790` is healthy with
+  migrations through `schemes.0010_manual_scheme_rates` and `catalog.0001_initial`
+  applied, zero reported financial exceptions, successful live/ready checks, valid
+  catalogue authorization, working R2 media, published reviewed products, and public
+  Jewellery links in the primary and footer navigation.
 
 ## Known limitations
 
@@ -237,14 +244,10 @@ Public Wagtail catalogue — FW-CATALOG-003 complete locally
 - Plan-specific early-discontinuation pricing, payment-order
   expiry, eligibility reminders, public onboarding, and partial-settlement policy are
   not yet defined.
-- The CMS, R2, catalogue domain, publishing authorization, and public catalogue exist
-  in the repository, and real non-production/production storage, access, cache, and
-  rotation smokes pass. No production staff user has yet been assigned a catalogue
-  group, `PUBLIC_CATALOGUE_ENABLED` remains default-off, and there is no isolated media
-  backup/restore proof. Retain approved source photographs outside R2; production must
-  not rely on R2 as their only copy. Catalogue migrations, authorization bootstrap,
-  editor training, reviewed content, browser proof, and navigation activation remain
-  `FW-CATALOG-004` rollout work.
+- The production catalogue is active and its deployment, authorization, content,
+  browser, and R2 smoke gates pass. There is still no isolated media backup/restore
+  proof. Retain approved source photographs outside R2; production must not rely on
+  R2 as their only copy. This accepted limitation remains `FW-MEDIA-002`.
 - The detailed, prioritized backlog and milestone-by-milestone limitation history
   are maintained in [Future work](FUTURE_WORK.md).
 
@@ -255,8 +258,8 @@ Public Wagtail catalogue — FW-CATALOG-003 complete locally
 ## Verification
 
 - Wagtail 7.4.3 and Django 6.0.4 pass system checks, production-shaped deploy checks,
-  static collection, and an applied-migration check. Wagtail/taggit migrations are
-  applied to local PostgreSQL only; production has not received them.
+  static collection, and an applied-migration check. Wagtail, taggit, and catalogue
+  migrations are applied to production PostgreSQL.
 - PostgreSQL 16 migrations applied successfully.
 - 177 tests pass, including public catalogue search/category/collection filtering,
   bounded pagination, responsive renditions, canonical/Open Graph/JSON-LD metadata,
@@ -281,8 +284,8 @@ Public Wagtail catalogue — FW-CATALOG-003 complete locally
   redemption precision, over-redemption protection,
   idempotency, partial/full closure, denomination separation, access control,
   PostgreSQL constraints, and all prior regressions.
-- Migrations through `schemes.0010_manual_scheme_rates` are applied to production;
-  `catalog.0001_initial` is additionally applied to the local development database.
+- Migrations through `schemes.0010_manual_scheme_rates` and `catalog.0001_initial`,
+  including their Wagtail/taggit dependencies, are applied to production.
 - Migration drift check reports no changes.
 - Django system check and migration drift check pass.
 - The rendered anonymous homepage passes Deque axe-core 4.13's WCAG AA
@@ -333,14 +336,6 @@ Public Wagtail catalogue — FW-CATALOG-003 complete locally
   exports; all tagged records were rolled back.
 
 ## Next recommended step
-
-Commit and push the cohesive `agent/public-catalogue` implementation, open and review
-its PR, require CI to pass, and merge it into `main`. Then execute `FW-CATALOG-004` as
-a separate production-rollout change: preserve database/media recovery points, deploy
-the additive catalogue migrations, reconcile authorization, create and train explicit
-staff publishers, publish reviewed content, prove R2 renditions and public pages on
-mobile/desktop, and only then enable `PUBLIC_CATALOGUE_ENABLED`. Keep the accepted
-`FW-MEDIA-002` recovery limitation visible and retain source photographs outside R2.
 
 Complete the CASH product-boundary decision and enforce it in enrolment and payment
 services before submitting the public website and policy URLs to Razorpay. Keep live

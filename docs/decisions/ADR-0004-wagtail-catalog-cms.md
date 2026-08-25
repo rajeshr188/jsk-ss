@@ -54,6 +54,14 @@ The integration must observe these boundaries:
 - Leave existing public, policy, savings-plan, and account pages as ordinary Django
   views initially. Moving a page into Wagtail requires a later, explicit content and
   URL-migration decision.
+- Retain a hybrid ownership model after catalogue launch. About and Our Story may be
+  evaluated as low-risk editorial migrations if owner self-editing becomes valuable;
+  the homepage, policy/contact identity, and savings-plan surfaces stay Django-owned
+  until separately reviewed.
+- Keep `SchemePlan` authoritative in the Django financial domain. Future Wagtail
+  images or marketing copy may be linked to a plan for presentation, but CMS content
+  must not duplicate or control plan amounts, durations, frequency, metal, bonus,
+  eligibility, public-listing state, or enrolment terms.
 
 Cloudflare R2 Standard storage is selected for uploaded media, initially using its
 free usage allowance. The application will use R2's S3-compatible API through
