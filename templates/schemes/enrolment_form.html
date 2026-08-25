@@ -12,7 +12,7 @@
     {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
     <fieldset class="form-section">
       <legend>Scheme terms</legend>
-      <p class="form-section-description">Select the plan and the denomination in which entitlement will be recorded.</p>
+      <p class="form-section-description">Select the plan and whether entitlement will be recorded as gold or silver.</p>
       {{ form.plan|as_crispy_field }}
       {{ form.savings_mode|as_crispy_field }}
     </fieldset>

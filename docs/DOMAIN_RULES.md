@@ -11,12 +11,18 @@ This is the canonical source for stable business rules.
 
 ## Scheme and contribution rules
 
-- **SCH-001:** Savings modes are separate `CASH`, `GOLD`, and `SILVER` liability dimensions.
+- **SCH-001:** Historical liabilities remain separated into `CASH`, `GOLD`, and
+  `SILVER` dimensions; new production enrolments are limited to `GOLD` and `SILVER`.
 - **SCH-002:** An account snapshots the plan's economic terms at enrolment; later plan edits do not rewrite the agreement.
 - **SCH-003:** Minimum and default durations are at least 12 months; the agreed duration cannot be below the plan minimum.
 - **SCH-004:** Eligibility is the account start date plus agreed calendar months. Eligibility does not itself redeem or close an account.
 - **SCH-005:** A plan appears on the public savings plans page only when it is both active and explicitly marked publicly listed. New and migrated plans default to not publicly listed.
 - **SCH-006:** Public plan edits affect the current offer for future enrolments only; existing scheme accounts retain their snapshotted economic terms.
+- **SCH-007:** CASH enrolment and contribution initiation are development-only
+  compatibility paths used to retain historical financial regression coverage.
+  With `DEBUG=False`, the service layer rejects both operations, the owner cannot
+  select CASH during enrolment, and direct payment URLs for historical CASH accounts
+  are blocked. Existing CASH records remain readable and are never rewritten.
 - **CON-001:** Amount rules (`FIXED`/`VARIABLE`) and frequency rules (`ONCE_PER_MONTH`/`FLEXIBLE`) are independent.
 - **CON-002:** Monthly periods use deterministic calendar keys such as `2026-08`, never rolling 30-day windows.
 - **CON-003:** `ONCE_PER_MONTH` permits one successfully paid contribution per scheme account and calendar month. Both `PAID` and `PAID_UNALLOCATED` consume the opportunity; `PENDING` and `FAILED` attempts do not.
@@ -46,13 +52,16 @@ This is the canonical source for stable business rules.
 - **RATE-002:** A metal contribution must lock its current applicable `SchemeRate` before mock payment initiation or Razorpay order creation.
 - **RATE-003:** Publishing a new `SchemeRate` never changes an already locked contribution.
 - **RATE-004:** Publishing a new `SchemeRate` never changes historical `MetalAllocation` quantity.
-- **RATE-005:** A gold or silver payment cannot be initiated when no valid current `SchemeRate` exists. Cash payment remains unaffected.
+- **RATE-005:** A gold or silver payment cannot be initiated when no valid current `SchemeRate` exists.
 - **RATE-006:** Published Scheme Rates used by financial allocations are immutable and protected from deletion.
 - **RATE-007:** Current rate means the latest applicable record for the metal ordered by `effective_from`, publication time, and ID. Publication appends a record; there is no mutable active flag.
 - **RATE-008:** Gold uses the established 24K fineness `0.9999`; silver uses `0.9990`. Publication accepts a positive `Decimal` rate only.
 - **RATE-009:** Only an active owner or superuser may publish. Every publication records publisher, timestamp, optional note, and immutable audit event.
 
-## Cash bonus rules
+## Historical cash bonus rules
+
+These rules preserve existing CASH records and regression behavior. They do not
+authorize new production CASH enrolments or contributions under `SCH-007`.
 
 - **BON-001:** A scheme plan may define a cash bonus percentage from 0% through 100%
   and a minimum qualifying duration of at least 12 months. Zero percent disables bonus.
@@ -83,7 +92,10 @@ This is the canonical source for stable business rules.
   principal components of completed redemptions; cash redeemable amount adds only
   outstanding earned bonus. Gold and silver outstanding each equal paid allocated
   grams minus completed redemptions in the same metal.
-- **RED-007:** Cash accounts may settle as `CASH` or `JEWELLERY_PURCHASE`; gold and silver accounts may settle as `METAL` or `JEWELLERY_PURCHASE`. Metal-to-cash conversion is undefined and rejected.
+- **RED-007:** A historical CASH account with an existing entitlement may settle as
+  `CASH` or `JEWELLERY_PURCHASE`; gold and silver accounts may settle as `METAL` or
+  `JEWELLERY_PURCHASE`. Preserving legacy settlement does not reopen CASH enrolment or
+  contributions. Metal-to-cash conversion is undefined and rejected.
 - **RED-008:** Partial redemption leaves an eligible account open. Redeeming the exact remaining entitlement changes its stored status to `REDEEMED`.
 - **RED-009:** Every redemption submission has a unique idempotency key. Replaying the same key and details returns the existing event; changing details with a used key is rejected.
 - **RED-010:** Jewellery-purchase redemption requires an external invoice or sales reference. The MVP records the reference, entitlement settled, and notes but does not manage inventory or invoices.

@@ -2,7 +2,7 @@ from datetime import date, datetime, timedelta
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
@@ -82,6 +82,7 @@ def make_allocation(contribution, metal, quantity, historical_rate, effective_fr
     )
 
 
+@override_settings(DEBUG=True)
 class OwnerLiabilitySelectorTests(TestCase):
     def setUp(self):
         self.customer, self.accounts = make_liability_accounts()
@@ -170,6 +171,7 @@ class OwnerLiabilitySelectorTests(TestCase):
         self.assertEqual(summary.unallocated_payment_count, 1)
 
 
+@override_settings(DEBUG=True)
 class OwnerLiabilityDashboardTests(TestCase):
     def setUp(self):
         self.owner = make_owner("dashboard")

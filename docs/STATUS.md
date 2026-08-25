@@ -2,7 +2,7 @@
 
 ## Current milestone
 
-Public Wagtail catalogue — FW-CATALOG-004 production rollout complete
+Metal-only production boundary — implementation complete locally
 
 ## Completed
 
@@ -189,6 +189,11 @@ Public Wagtail catalogue — FW-CATALOG-004 production rollout complete
 
 ## In progress
 
+- `FW-PRODUCT-001` blocks new production CASH enrolments and contributions while
+  preserving historical records and settlement code. The pre-change production audit
+  found one open CASH account with no pending payment, verified payment, INR exposure,
+  redemption, or nonzero plan bonus. Focused boundary and deployment-check tests pass;
+  reviewed PR/CI and production promotion remain.
 - `FW-MEDIA-002` tracks the accepted backup/recovery and usage-monitoring deferral.
   It does not block catalogue use, but approved source photographs must
   remain outside R2 until an isolated backup target and restore proof exist.
@@ -214,12 +219,11 @@ Public Wagtail catalogue — FW-CATALOG-004 production rollout complete
   it is paid or failed. Add expiry only with a reviewed payment-order lifecycle design.
 - Razorpay is verified only in Test Mode. Live keys remain rejected until production
   payment, reconciliation, refund, dispute, monitoring, and secret-rotation procedures exist.
-- Public prospect and policy pages now market only gold/silver jewellery purchase
-  plans, but owner workflows and the database still permit CASH accounts, bonus rules,
-  maturity cash settlement, and Razorpay test payments. Copy alone does not enforce
-  that product boundary. Before Razorpay submission or Live Mode, decide whether CASH
-  is legacy-only, enforce that decision in enrolment/payment services, and obtain
-  qualified legal review and written provider approval for the permitted flow.
+- Public prospect and policy pages market only gold/silver jewellery purchase plans.
+  The local `FW-PRODUCT-001` candidate now enforces that boundary for new production
+  enrolments and contributions while preserving historical CASH records. It is not
+  effective in production until its reviewed release is deployed. Qualified legal,
+  accounting, and provider review of the marketed flow still remains necessary.
 - Temporary quick-tunnel URLs have no uptime guarantee; deployment requires a stable,
   owned HTTPS endpoint and synchronized webhook-secret configuration.
 - Repository health checks, privacy-reduced edge access logs, and a financial-
@@ -261,7 +265,8 @@ Public Wagtail catalogue — FW-CATALOG-004 production rollout complete
   static collection, and an applied-migration check. Wagtail, taggit, and catalogue
   migrations are applied to production PostgreSQL.
 - PostgreSQL 16 migrations applied successfully.
-- 177 tests pass, including public catalogue search/category/collection filtering,
+- 186 tests pass, including the production metal-only boundary and CASH preflight,
+  public catalogue search/category/collection filtering,
   bounded pagination, responsive renditions, canonical/Open Graph/JSON-LD metadata,
   accessible discovery and empty states, rollout-gated navigation, direct draft/live
   visibility, catalogue authorization drift repair, exact role/media scope, editor
@@ -337,10 +342,13 @@ Public Wagtail catalogue — FW-CATALOG-004 production rollout complete
 
 ## Next recommended step
 
-Complete the CASH product-boundary decision and enforce it in enrolment and payment
-services before submitting the public website and policy URLs to Razorpay. Keep live
-keys disabled until legal/provider review and live-mode operating procedures are
-approved. Retain the owned
+Commit, review, merge, and deploy `FW-PRODUCT-001`. Immediately before promotion,
+repeat the CASH exposure audit and stop if any pending/verified CASH payment or cash
+liability has appeared. After deployment, prove the existing empty legacy account is
+readable but has no payment action and its direct payment URL returns `403`.
+
+Keep live keys disabled until legal/provider review and live-mode operating procedures
+are approved. Retain the owned
 DNS/TLS and release evidence and complete
 `FW-PROD-001` through `FW-PROD-003`: a recorded database restore/reconciliation drill,
 stable owned HTTPS plus alerts, real email delivery, and secret-rotation rehearsal.

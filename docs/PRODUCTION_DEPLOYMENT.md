@@ -1104,6 +1104,32 @@ both primary and footer navigation. If discovery must be withdrawn, set the flag
 to `False` and recreate `web`; do not unpublish or delete content merely to hide the
 navigation while an incident is assessed.
 
+For the `FW-PRODUCT-001` metal-only boundary release, repeat the read-only CASH audit
+immediately before stopping traffic. The approved baseline is one open CASH account,
+zero pending CASH payments, zero verified CASH payments/INR, zero CASH redemptions,
+and zero plans with a nonzero cash bonus. Stop and investigate if any monetary or
+pending-payment value differs; do not strand or silently rewrite a customer payment.
+This release has no schema migration and preserves the empty account as an inert
+historical record.
+
+Run the candidate image against production configuration while traffic is still on
+the previous release:
+
+```bash
+docker compose --env-file .env.production -f compose.production.yml \
+  run --rm --no-deps web python manage.py check_cash_boundary
+```
+
+The command must report `status=ok`, `cash_activity_enabled=False`, and zero pending
+payments, verified payments/INR, redemptions, and nonzero cash-bonus plans. Account
+counts are informational and may retain the approved empty historical record.
+
+After the candidate is healthy, confirm `DJANGO_DEBUG=False`, verify gold/silver
+enrolment remains available, and sign in as the historical CASH customer to prove the
+account and statement remain readable, no Pay action is rendered, and the direct
+contribution URL returns `403`. Re-run `check_financial_exceptions` and the aggregate
+liability snapshot. The release must not change the approved zero CASH exposure.
+
 On the current single-host topology, expect a brief maintenance window. Start the
 candidate web container while Caddy remains stopped, and wait until `web` reports
 healthy. Do not restore public traffic before that health gate:

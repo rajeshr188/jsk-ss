@@ -6,7 +6,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 
 from .models import Redemption, SchemeAccount, SchemePlan, SchemeRate
-from .services import validate_contribution_allowed
+from .services import cash_scheme_activity_is_enabled, validate_contribution_allowed
 
 
 class CustomerCreateForm(forms.Form):
@@ -62,6 +62,12 @@ class SchemePlanForm(forms.ModelForm):
             ),
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not cash_scheme_activity_is_enabled():
+            self.fields.pop("cash_bonus_percentage", None)
+            self.fields.pop("cash_bonus_minimum_months", None)
+
 
 class SchemePlanChangeForm(SchemePlanForm):
     class Meta(SchemePlanForm.Meta):
@@ -70,7 +76,7 @@ class SchemePlanChangeForm(SchemePlanForm):
             **SchemePlanForm.Meta.help_texts,
             "publicly_listed": (
                 "Publishes this savings plan's name, description, contribution amounts, "
-                "frequency, duration, and cash-bonus terms when the plan is active."
+                "frequency, and duration when the plan is active."
             ),
         }
 
@@ -95,6 +101,12 @@ class EnrolmentForm(forms.Form):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["plan"].queryset = SchemePlan.objects.filter(active=True)
+        if not cash_scheme_activity_is_enabled():
+            self.fields["savings_mode"].choices = [
+                choice
+                for choice in SchemeAccount.SavingsMode.choices
+                if choice[0] != SchemeAccount.SavingsMode.CASH
+            ]
 
     def clean(self):
         cleaned = super().clean()

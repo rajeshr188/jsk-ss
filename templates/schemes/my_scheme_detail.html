@@ -14,7 +14,9 @@
   <div class="page-actions d-print-none">
   <a class="btn btn-outline-dark" href="{% url 'schemes:scheme_statement' scheme_account.scheme_number %}">Print statement</a>
   {% if payment_gateway_enabled and scheme_account.effective_status != 'REDEEMED' %}
-    {% if scheme_account.savings_mode == 'CASH' or current_scheme_rate %}
+    {% if scheme_account.savings_mode == 'CASH' and cash_scheme_activity_enabled %}
+    <a class="btn btn-jsk" href="{% url 'schemes:pay_contribution' scheme_account.scheme_number %}">Pay now</a>
+    {% elif current_scheme_rate %}
     <a class="btn btn-jsk" href="{% url 'schemes:pay_contribution' scheme_account.scheme_number %}">Pay now</a>
     {% endif %}
   {% endif %}
@@ -35,6 +37,7 @@
 {% endif %}
 
 {% if scheme_account.savings_mode == 'CASH' %}
+{% if not cash_scheme_activity_enabled %}<div class="alert alert-secondary" role="status">This legacy cash scheme is retained for historical reference. New cash contributions are unavailable.</div>{% endif %}
 <div class="card stat-card stat-card--cash mb-4"><div class="card-body p-4">
   <div class="stat-label">Redeemable cash amount</div>
   <div class="stat-value">₹{{ cash_bonus.redeemable_amount|floatformat:2 }}</div>
@@ -80,7 +83,9 @@
           <br><a href="{% url 'schemes:contribution_receipt' contribution.pk %}">Receipt</a>
           {% endif %}
           {% if contribution.status == 'PENDING' and contribution.payment_gateway == 'razorpay' and contribution.gateway_order_id %}
+          {% if contribution.scheme_account.savings_mode != 'CASH' or cash_scheme_activity_enabled %}
           <br><a href="{% url 'schemes:razorpay_checkout' contribution.pk %}">Resume test payment</a>
+          {% endif %}
           {% endif %}
         </td>
       </tr>
@@ -110,7 +115,9 @@
     <a class="btn btn-sm btn-outline-dark" href="{% url 'schemes:contribution_receipt' contribution.pk %}">View receipt</a>
     {% endif %}
     {% if contribution.status == 'PENDING' and contribution.payment_gateway == 'razorpay' and contribution.gateway_order_id %}
+    {% if contribution.scheme_account.savings_mode != 'CASH' or cash_scheme_activity_enabled %}
     <a class="btn btn-sm btn-jsk" href="{% url 'schemes:razorpay_checkout' contribution.pk %}">Resume test payment</a>
+    {% endif %}
     {% endif %}
   </div></article>
   {% empty %}<div class="card empty-state"><p class="mb-0">No contributions yet.</p></div>{% endfor %}

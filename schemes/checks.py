@@ -6,6 +6,15 @@ from django.core.checks import Error, Tags, Warning, register
 def production_configuration(app_configs, **kwargs):
     issues = []
 
+    if settings.DEBUG:
+        issues.append(
+            Error(
+                "DEBUG must be disabled in production; it also enables legacy CASH test activity.",
+                hint="Set DJANGO_DEBUG=False for every production process.",
+                id="jsk.E015",
+            )
+        )
+
     if settings.PAYMENT_GATEWAY == "mock":
         issues.append(
             Error(
