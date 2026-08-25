@@ -625,6 +625,10 @@ Configuration rules:
   their direct public URLs pass desktop/mobile, metadata, rendition, and enquiry checks.
   The application independently requires the catalogue root to remain live/public;
   switching the flag back to `False` is the fast navigation rollback.
+- Keep `PUBLIC_EDITORIAL_PAGES_ENABLED=False` through the initial editorial migration.
+  With the flag disabled—or when a CMS page is draft, restricted, or unpublished—the
+  stable `/about/` and `/our-story/` routes serve their reviewed Django fallbacks.
+  Enable it only after editorial authorization and the live About revision pass review.
 - `MEDIA_STORAGE_BACKEND=r2` is mandatory when Wagtail is deployed. Use a separate
   R2 Standard bucket and Object Read & Write token for each environment. Scope each
   token to its one bucket; never expose either credential to browser code or logs.
@@ -1103,6 +1107,33 @@ the Compose configuration, recreate `web`, and confirm the Jewellery link appear
 both primary and footer navigation. If discovery must be withdrawn, set the flag back
 to `False` and recreate `web`; do not unpublish or delete content merely to hide the
 navigation while an incident is assessed.
+
+For a release containing `FW-CMS-003`, keep
+`PUBLIC_EDITORIAL_PAGES_ENABLED=False`, apply `pages.0001_initial`, and reconcile the
+separate Editorial groups, media collection, seeded draft pages, and approval workflow:
+
+```bash
+docker compose --env-file .env.production -f compose.production.yml \
+  run --rm --no-deps web python manage.py configure_editorial_pages
+docker compose --env-file .env.production -f compose.production.yml \
+  run --rm --no-deps web python manage.py configure_editorial_pages --check
+```
+
+The command is idempotent and does not overwrite later editor revisions. It resets
+only the dedicated `Editorial Editors`, `Editorial Publishers`, and
+`Editorial Administrators` groups to their reviewed page/media scopes; never reuse
+those names for other access. It creates About and Our Story as drafts and grants no
+user membership. Explicitly assign an active staff user, review preview and metadata,
+approve and publish About, and confirm `/about/` still shows the static fallback while
+the flag is false. Our Story remains unlinked and may stay draft.
+
+After approval, set `PUBLIC_EDITORIAL_PAGES_ENABLED=True`, validate Compose, recreate
+only `web`, and verify `/about/` on desktop/mobile, its R2 rendition when an image is
+used, and the unchanged policy, Contact, Savings Plans, homepage, and authenticated
+routes. Verify `/our-story/` directly only if its CMS revision was deliberately
+published; it must not appear in navigation. Fast rollback is to set the flag to
+`False` and recreate `web`, which immediately restores both reviewed Django fallbacks
+without deleting Wagtail revisions or media.
 
 For the `FW-PRODUCT-001` metal-only boundary release, repeat the read-only CASH audit
 immediately before stopping traffic. The approved baseline is one open CASH account,

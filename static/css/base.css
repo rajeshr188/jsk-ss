@@ -1270,6 +1270,24 @@ dl.row dt {
   background: linear-gradient(145deg, var(--jsk-primary), #3d2117);
 }
 
+.profile-portrait-image {
+  display: block;
+  width: 100%;
+  height: 19rem;
+  object-fit: cover;
+}
+
+.editorial-hero {
+  overflow: hidden;
+  border-radius: 0.9rem;
+}
+
+.editorial-hero img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
 .profile-portrait::before,
 .profile-portrait::after {
   position: absolute;

@@ -1,0 +1,66 @@
+{% extends '_base.html' %}
+{% load wagtailcore_tags wagtailimages_tags %}
+
+{% block title %}{% firstof page.seo_title page.title %} | Jai Sri Krishna Jewelley{% endblock %}
+{% block meta_description %}{{ page.search_description }}{% endblock %}
+
+{% block content %}
+<section class="story-hero text-center" aria-labelledby="story-title">
+  <p class="text-uppercase small fw-semibold text-secondary mb-2">{{ page.eyebrow }}</p>
+  <h1 id="story-title">{{ page.title }}</h1>
+  <p class="lead mx-auto mb-0">{{ page.introduction }}</p>
+</section>
+
+<section class="row g-4 mt-1" aria-label="Owner and developer profiles">
+  <div class="col-lg-6">
+    <article class="profile-card h-100">
+      {% if page.business_owner_image %}
+        {% image page.business_owner_image fill-900x650 format-webp as owner_image %}
+        <img class="profile-portrait-image" src="{{ owner_image.url }}" width="{{ owner_image.width }}" height="{{ owner_image.height }}" alt="{{ page.business_owner_image_alt }}" loading="lazy" decoding="async">
+      {% else %}
+        <div class="profile-portrait profile-portrait--owner" role="img" aria-label="Profile placeholder for {{ page.business_owner_name }}">
+          <span aria-hidden="true">DK</span>
+        </div>
+      {% endif %}
+      <div class="profile-card__body">
+        <p class="profile-role">{{ page.business_owner_role }}</p>
+        <h2>{{ page.business_owner_name }}</h2>
+        <p class="profile-tagline">{{ page.business_owner_tagline }}</p>
+        <div class="rich-text">{{ page.business_owner_bio|richtext }}</div>
+      </div>
+    </article>
+  </div>
+
+  <div class="col-lg-6">
+    <article class="profile-card h-100">
+      {% if page.developer_image %}
+        {% image page.developer_image fill-900x650 format-webp as developer_image %}
+        <img class="profile-portrait-image" src="{{ developer_image.url }}" width="{{ developer_image.width }}" height="{{ developer_image.height }}" alt="{{ page.developer_image_alt }}" loading="lazy" decoding="async">
+      {% else %}
+        <div class="profile-portrait profile-portrait--developer" role="img" aria-label="Profile placeholder for {{ page.developer_name }}">
+          <span aria-hidden="true">RR</span>
+        </div>
+      {% endif %}
+      <div class="profile-card__body">
+        <p class="profile-role">{{ page.developer_role }}</p>
+        <h2>{{ page.developer_name }}</h2>
+        <p class="profile-tagline">{{ page.developer_tagline }}</p>
+        <div class="rich-text">{{ page.developer_bio|richtext }}</div>
+        <a class="profile-contact" href="mailto:{{ page.developer_email }}" aria-label="Email {{ page.developer_name }} at {{ page.developer_email }}">{{ page.developer_email }}</a>
+      </div>
+    </article>
+  </div>
+</section>
+
+<section class="partnership-card mt-4 mt-lg-5">
+  <div>
+    <p class="text-uppercase small fw-semibold text-secondary mb-2">Family and craft</p>
+    <h2>{{ page.partnership_heading }}</h2>
+    <div class="rich-text">{{ page.partnership_story|richtext }}</div>
+  </div>
+  <div class="d-flex flex-wrap gap-2">
+    <a class="btn btn-jsk" href="{% url 'pricing' %}">View savings plans</a>
+    <a class="btn btn-outline-dark" href="{% url 'contact' %}">Contact the showroom</a>
+  </div>
+</section>
+{% endblock content %}
