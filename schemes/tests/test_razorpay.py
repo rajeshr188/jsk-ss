@@ -27,7 +27,7 @@ from schemes.payments import (
     PaymentOrder,
     RazorpayPaymentGateway,
 )
-from schemes.selectors import get_cash_balance
+from schemes.selectors import get_cash_balance, get_metal_balance
 from schemes.services import (
     confirm_razorpay_contribution,
     create_customer,
@@ -382,7 +382,16 @@ class RazorpayServiceTests(TestCase):
 @override_settings(**RAZORPAY_SETTINGS)
 class RazorpayViewTests(TestCase):
     def setUp(self):
-        self.customer, self.account = make_account(email="view-rzp@example.com")
+        self.customer, self.account = make_account(
+            email="view-rzp@example.com",
+            mode=SchemeAccount.SavingsMode.GOLD,
+        )
+        SchemeRate.objects.create(
+            metal=SchemeRate.Metal.GOLD,
+            rate_per_gram=Decimal("12500.0000"),
+            purity=Decimal("0.9999"),
+            effective_from=timezone.now(),
+        )
         self.client.force_login(self.customer.user)
 
     def test_customer_creates_order_and_sees_checkout(self):
@@ -420,7 +429,7 @@ class RazorpayViewTests(TestCase):
         )
         contribution = Contribution.objects.get()
         self.assertEqual(contribution.status, Contribution.Status.FAILED)
-        self.assertEqual(get_cash_balance(self.account), Decimal("0.00"))
+        self.assertEqual(get_metal_balance(self.account), Decimal("0.000000"))
 
     def test_order_provider_failure_returns_500_and_no_entitlement(self):
         with patch(
@@ -433,10 +442,13 @@ class RazorpayViewTests(TestCase):
             )
         self.assertEqual(response.status_code, 500)
         self.assertEqual(Contribution.objects.get().status, Contribution.Status.FAILED)
-        self.assertEqual(get_cash_balance(self.account), Decimal("0.00"))
+        self.assertEqual(get_metal_balance(self.account), Decimal("0.000000"))
 
     def test_customer_cannot_open_another_customers_checkout(self):
-        other_customer, other_account = make_account(email="other-rzp@example.com")
+        other_customer, other_account = make_account(
+            email="other-rzp@example.com",
+            mode=SchemeAccount.SavingsMode.GOLD,
+        )
         contribution = initiate_contribution(
             scheme_account=other_account,
             amount=Decimal("5000.00"),
@@ -476,7 +488,7 @@ class RazorpayViewTests(TestCase):
         self.assertContains(detail, "verified successfully")
         contribution.refresh_from_db()
         self.assertEqual(contribution.status, Contribution.Status.PAID)
-        self.assertEqual(get_cash_balance(self.account), Decimal("5000.00"))
+        self.assertEqual(get_metal_balance(self.account), Decimal("0.400000"))
 
     def test_missing_verification_fields_return_400_and_no_entitlement(self):
         contribution = initiate_contribution(
@@ -494,7 +506,7 @@ class RazorpayViewTests(TestCase):
         self.assertFalse(response.json()["success"])
         contribution.refresh_from_db()
         self.assertEqual(contribution.status, Contribution.Status.PENDING)
-        self.assertEqual(get_cash_balance(self.account), Decimal("0.00"))
+        self.assertEqual(get_metal_balance(self.account), Decimal("0.000000"))
 
     def test_signature_mismatch_returns_400_and_no_entitlement(self):
         contribution = initiate_contribution(
@@ -520,7 +532,7 @@ class RazorpayViewTests(TestCase):
         self.assertFalse(response.json()["success"])
         contribution.refresh_from_db()
         self.assertEqual(contribution.status, Contribution.Status.PENDING)
-        self.assertEqual(get_cash_balance(self.account), Decimal("0.00"))
+        self.assertEqual(get_metal_balance(self.account), Decimal("0.000000"))
 
     def test_invalid_webhook_signature_creates_no_event(self):
         response = self.client.post(
@@ -570,4 +582,4 @@ class RazorpayViewTests(TestCase):
         self.assertEqual(response.json(), {"status": "processed"})
         contribution.refresh_from_db()
         self.assertEqual(contribution.status, Contribution.Status.PAID)
-        self.assertEqual(get_cash_balance(self.account), Decimal("5000.00"))
+        self.assertEqual(get_metal_balance(self.account), Decimal("0.400000"))

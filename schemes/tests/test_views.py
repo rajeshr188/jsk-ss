@@ -53,7 +53,7 @@ class OwnerFlowTests(TestCase):
             reverse("schemes:customer_enroll", args=[customer.pk]),
             {
                 "plan": plan.pk,
-                "savings_mode": SchemeAccount.SavingsMode.CASH,
+                "savings_mode": SchemeAccount.SavingsMode.GOLD,
                 "start_date": "2026-08-01",
                 "agreed_months": 12,
                 "audit_reason": "Customer requested enrolment at the store.",
@@ -112,7 +112,7 @@ class CustomerIsolationTests(TestCase):
         account_a = enroll_customer(
             customer=customer_a,
             plan=plan,
-            savings_mode=SchemeAccount.SavingsMode.CASH,
+            savings_mode=SchemeAccount.SavingsMode.GOLD,
             start_date=date(2026, 8, 1),
         )
         account_b = enroll_customer(

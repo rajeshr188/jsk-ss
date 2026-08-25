@@ -31,12 +31,12 @@
       {{ form.default_months|as_crispy_field }}
       {{ form.allow_contributions_after_eligibility|as_crispy_field }}
     </fieldset>
-    <fieldset class="form-section">
+    {% if form.cash_bonus_percentage %}<fieldset class="form-section">
       <legend>Cash bonus terms</legend>
       <p class="form-section-description">These fields apply only when a customer is enrolled in cash mode.</p>
       {{ form.cash_bonus_percentage|as_crispy_field }}
       {{ form.cash_bonus_minimum_months|as_crispy_field }}
-    </fieldset>
+    </fieldset>{% endif %}
     <fieldset class="form-section">
       <legend>Availability{% if form.audit_reason %} and audit record{% endif %}</legend>
       {{ form.active|as_crispy_field }}

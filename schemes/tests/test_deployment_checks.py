@@ -20,6 +20,7 @@ class ProductionConfigurationCheckTests(SimpleTestCase):
         )
 
     @override_settings(
+        DEBUG=False,
         PAYMENT_GATEWAY="razorpay",
         RAZORPAY_KEY_ID="rzp_test_example",
         RAZORPAY_KEY_SECRET="not-a-real-secret",
@@ -36,6 +37,10 @@ class ProductionConfigurationCheckTests(SimpleTestCase):
     )
     def test_production_configuration_can_pass(self):
         self.assertEqual(production_configuration(None), [])
+
+    @override_settings(DEBUG=True)
+    def test_debug_is_rejected_for_production(self):
+        self.assertIn("jsk.E015", self.issue_ids())
 
     @override_settings(
         APP_RELEASE="unknown",

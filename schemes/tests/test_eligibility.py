@@ -34,7 +34,7 @@ def make_account(*, customer, plan, eligible_from, status=SchemeAccount.Status.A
     account = enroll_customer(
         customer=customer,
         plan=plan,
-        savings_mode=SchemeAccount.SavingsMode.CASH,
+        savings_mode=SchemeAccount.SavingsMode.GOLD,
         start_date=date(2025, 1, 1),
     )
     account.eligible_from = eligible_from

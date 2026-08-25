@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib import admin
 
 from .models import (
@@ -36,6 +37,12 @@ class SchemePlanAdmin(admin.ModelAdmin):
     search_fields = ("code", "name")
     readonly_fields = ("publicly_listed", "created_at", "updated_at")
 
+    def get_readonly_fields(self, request, obj=None):
+        fields = list(super().get_readonly_fields(request, obj))
+        if not settings.DEBUG:
+            fields.extend(["cash_bonus_percentage", "cash_bonus_minimum_months"])
+        return fields
+
 
 @admin.register(SchemeAccount)
 class SchemeAccountAdmin(admin.ModelAdmin):
@@ -63,6 +70,15 @@ class SchemeAccountAdmin(admin.ModelAdmin):
         "created_at",
         "updated_at",
     )
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def get_readonly_fields(self, request, obj=None):
+        return tuple(field.name for field in self.model._meta.fields)
 
 
 @admin.register(Contribution)

@@ -4,6 +4,7 @@ import secrets
 from datetime import date
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.db import IntegrityError, transaction
@@ -41,6 +42,14 @@ SCHEME_RATE_PURITY = {
     SchemeRate.Metal.GOLD: Decimal("0.9999"),
     SchemeRate.Metal.SILVER: Decimal("0.9990"),
 }
+CASH_SCHEME_ACTIVITY_UNAVAILABLE = (
+    "Cash savings are closed to new activity. Choose a gold or silver savings mode."
+)
+
+
+def cash_scheme_activity_is_enabled():
+    """Retain CASH workflows only for local historical regression coverage."""
+    return settings.DEBUG
 
 
 def _actor_label(actor):
@@ -179,6 +188,11 @@ def enroll_customer(
     performed_by=None,
     reason="Customer enrolled through service.",
 ):
+    if (
+        savings_mode == SchemeAccount.SavingsMode.CASH
+        and not cash_scheme_activity_is_enabled()
+    ):
+        raise ValidationError({"savings_mode": CASH_SCHEME_ACTIVITY_UNAVAILABLE})
     plan.full_clean()
     if not plan.active:
         raise ValidationError({"plan": "Only active plans can accept new enrolments."})
@@ -292,6 +306,11 @@ def validate_contribution_allowed(
     contribution_period=None,
     exclude_contribution_id=None,
 ):
+    if (
+        scheme_account.savings_mode == SchemeAccount.SavingsMode.CASH
+        and not cash_scheme_activity_is_enabled()
+    ):
+        raise ValidationError(CASH_SCHEME_ACTIVITY_UNAVAILABLE)
     contribution_date = contribution_date or timezone.localdate()
     if scheme_account.status == SchemeAccount.Status.REDEEMED:
         raise ValidationError("A redeemed scheme cannot receive contributions.")

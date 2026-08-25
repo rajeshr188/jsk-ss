@@ -67,6 +67,7 @@ from .selectors import (
     get_outstanding_entitlement,
 )
 from .services import (
+    cash_scheme_activity_is_enabled,
     create_customer,
     complete_redemption,
     enroll_customer,
@@ -512,7 +513,14 @@ def customer_detail(request, customer_id):
         ),
         pk=customer_id,
     )
-    return render(request, "schemes/customer_detail.html", {"customer": customer})
+    return render(
+        request,
+        "schemes/customer_detail.html",
+        {
+            "customer": customer,
+            "cash_scheme_activity_enabled": cash_scheme_activity_is_enabled(),
+        },
+    )
 
 
 @owner_required
@@ -605,6 +613,7 @@ def my_schemes(request):
             "scheme_accounts": accounts,
             "mock_payment_enabled": mock_payment_is_enabled(),
             "payment_gateway_enabled": payment_gateway_is_configured(),
+            "cash_scheme_activity_enabled": cash_scheme_activity_is_enabled(),
         },
     )
 
@@ -632,6 +641,7 @@ def my_scheme_detail(request, scheme_number):
             "mock_payment_enabled": mock_payment_is_enabled(),
             "payment_gateway_enabled": payment_gateway_is_configured(),
             "current_scheme_rate": current_scheme_rate,
+            "cash_scheme_activity_enabled": cash_scheme_activity_is_enabled(),
         },
     )
 
@@ -643,6 +653,19 @@ def pay_contribution(request, scheme_number):
     account = get_customer_scheme_account(request.user, scheme_number)
     if account is None:
         raise Http404
+    if (
+        account.savings_mode == SchemeAccount.SavingsMode.CASH
+        and not cash_scheme_activity_is_enabled()
+    ):
+        return render(
+            request,
+            "schemes/contribution_form.html",
+            {
+                "scheme_account": account,
+                "cash_activity_unavailable": True,
+            },
+            status=403,
+        )
     current_scheme_rate = (
         get_current_scheme_rate(account.savings_mode)
         if account.savings_mode

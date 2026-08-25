@@ -36,10 +36,15 @@
       <dt class="col-sm-5">Current Scheme Rate</dt><dd class="col-sm-7">{% if account.current_scheme_rate %}₹{{ account.current_scheme_rate.rate_per_gram|floatformat:4 }}/g{% else %}Not published{% endif %}</dd>
       {% endif %}
     </dl>
+    {% if account.savings_mode == 'CASH' and not cash_scheme_activity_enabled %}
+    <div class="alert alert-secondary mt-3 mb-0" role="status">This legacy cash scheme is retained for historical reference. New cash contributions are unavailable.</div>
+    {% endif %}
     <div class="d-flex flex-wrap gap-2 mt-4">
       <a class="btn btn-outline-dark" href="{% url 'schemes:my_scheme_detail' account.scheme_number %}">View history</a>
       {% if payment_gateway_enabled and account.effective_status != 'REDEEMED' %}
-        {% if account.savings_mode == 'CASH' or account.current_scheme_rate %}
+        {% if account.savings_mode == 'CASH' and cash_scheme_activity_enabled %}
+        <a class="btn btn-jsk" href="{% url 'schemes:pay_contribution' account.scheme_number %}">Pay now</a>
+        {% elif account.current_scheme_rate %}
         <a class="btn btn-jsk" href="{% url 'schemes:pay_contribution' account.scheme_number %}">Pay now</a>
         {% endif %}
       {% endif %}

@@ -98,6 +98,7 @@ def make_metal_entitlement(account, quantity, reference):
     )
 
 
+@override_settings(DEBUG=True)
 class RedemptionServiceTests(TestCase):
     def setUp(self):
         self.owner, self.customer, self.plan = make_redemption_fixture()
