@@ -97,14 +97,17 @@ here are not implemented behavior and do not relax the financial invariants in
 
 ## Payments and settlement operations
 
-- **FW-PRODUCT-001 — Metal-only production boundary (completed locally
-  2026-08-25):** Production CASH enrolment and contribution initiation are blocked
+- **FW-PRODUCT-001 — Metal-only production boundary (completed in production
+  2026-08-25):** Release `93ba4273c976cd427d86a79a58454e2b7e58c55f`
+  blocks production CASH enrolment and contribution initiation
   in services and UI whenever `DEBUG=False`; owner forms expose only gold/silver,
   direct legacy CASH payment URLs return `403`, and production checks reject DEBUG.
   Historical CASH reads, statements, exports, bonus calculations, redemptions, and
-  audit records remain intact. The production audit found one open CASH account with
+  audit records remain intact. Pre- and post-release production audits found one open
+  CASH account with
   zero pending/verified payments, zero INR exposure, zero redemptions, and no nonzero
-  cash-bonus plan. Promotion remains a separate reviewed deployment gate.
+  cash-bonus plan. Live/readiness, financial-exception, log, and manual UI checks
+  passed; the release required no schema migration.
 - **FW-PRODUCT-002 — Empty legacy CASH account disposition:** The one production
   CASH account remains an inert historical record because the lifecycle currently has
   no audited cancellation state. Decide with the customer/business owner whether a

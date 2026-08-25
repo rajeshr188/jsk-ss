@@ -2,7 +2,7 @@
 
 ## Current milestone
 
-Metal-only production boundary — implementation complete locally
+Metal-only production boundary — production rollout complete
 
 ## Completed
 
@@ -186,14 +186,18 @@ Metal-only production boundary — implementation complete locally
   financial behavior. Future Scheme Plan images or richer marketing copy may be
   Wagtail-managed presentation linked to a plan, but must not duplicate or control
   contribution, duration, metal, bonus, eligibility, publication, or enrolment terms.
+- `FW-PRODUCT-001` completed production rollout on 2026-08-25 in release
+  `93ba4273c976cd427d86a79a58454e2b7e58c55f`. The release used the recorded
+  2026-08-24 12:00 PM IST managed recovery point, passed deployment and migration-plan
+  gates with no schema changes, and preserved the one empty historical CASH account.
+  Production now rejects new CASH enrolments and contributions, exposes only gold and
+  silver during enrolment, retains the historical account and statement without a Pay
+  action, and returns `403` from its direct contribution route. Post-release live and
+  ready checks returned `200`; the CASH boundary and financial-exception checks both
+  reported `status=ok` with zero CASH exposure and zero exceptions.
 
 ## In progress
 
-- `FW-PRODUCT-001` blocks new production CASH enrolments and contributions while
-  preserving historical records and settlement code. The pre-change production audit
-  found one open CASH account with no pending payment, verified payment, INR exposure,
-  redemption, or nonzero plan bonus. Focused boundary and deployment-check tests pass;
-  reviewed PR/CI and production promotion remain.
 - `FW-MEDIA-002` tracks the accepted backup/recovery and usage-monitoring deferral.
   It does not block catalogue use, but approved source photographs must
   remain outside R2 until an isolated backup target and restore proof exist.
@@ -207,11 +211,12 @@ Metal-only production boundary — implementation complete locally
   CA are in place, SSH access is verified, Docker is installed, and the owned domain
   returns liveness and PostgreSQL readiness `200` through Caddy-managed HTTPS;
   production email, external alerts, and Razorpay live-mode readiness remain.
-- Production release `2311ccfa95b3bd6bd58caa1f5734fcd2cfe51790` is healthy with
+- Production release `93ba4273c976cd427d86a79a58454e2b7e58c55f` is healthy with
   migrations through `schemes.0010_manual_scheme_rates` and `catalog.0001_initial`
   applied, zero reported financial exceptions, successful live/ready checks, valid
   catalogue authorization, working R2 media, published reviewed products, and public
-  Jewellery links in the primary and footer navigation.
+  Jewellery links in the primary and footer navigation. Its production metal-only
+  boundary passed the post-release CASH preflight and manual owner/customer smoke.
 
 ## Known limitations
 
@@ -220,10 +225,9 @@ Metal-only production boundary — implementation complete locally
 - Razorpay is verified only in Test Mode. Live keys remain rejected until production
   payment, reconciliation, refund, dispute, monitoring, and secret-rotation procedures exist.
 - Public prospect and policy pages market only gold/silver jewellery purchase plans.
-  The local `FW-PRODUCT-001` candidate now enforces that boundary for new production
-  enrolments and contributions while preserving historical CASH records. It is not
-  effective in production until its reviewed release is deployed. Qualified legal,
-  accounting, and provider review of the marketed flow still remains necessary.
+  Production enforces that boundary for new enrolments and contributions while
+  preserving the one empty historical CASH record. Qualified legal, accounting, and
+  provider review of the marketed flow still remains necessary.
 - Temporary quick-tunnel URLs have no uptime guarantee; deployment requires a stable,
   owned HTTPS endpoint and synchronized webhook-secret configuration.
 - Repository health checks, privacy-reduced edge access logs, and a financial-
@@ -315,6 +319,10 @@ Metal-only production boundary — implementation complete locally
 - The deployed Linode application returns `200` from both liveness and PostgreSQL
   readiness over `https://jaishrikrishnajewellery.com`; the valid ACME contact and
   Caddy-managed certificate corrected the initial placeholder-contact failure.
+- Production release `93ba4273c976cd427d86a79a58454e2b7e58c55f` passed immutable
+  image identity, no-op migration, live/readiness, CASH-boundary, financial-exception,
+  log review, and manual metal-only UI checks on 2026-08-25. The retained CASH account
+  has no pending or verified payments, INR liability, redemption, or enabled Pay path.
 - Live-server checkpoint passes for owner and customer login, UI-created plan/customer/CASH-GOLD-SILVER enrolments, three mock payments, customer entitlements, owner contribution visibility, and exact liability/activity deltas.
 - Manual Scheme Rate regressions verify owner-only gold/silver publication, validation,
   append-only history, latest-applicable selection, large-change confirmation,
@@ -341,11 +349,6 @@ Metal-only production boundary — implementation complete locally
   exports; all tagged records were rolled back.
 
 ## Next recommended step
-
-Commit, review, merge, and deploy `FW-PRODUCT-001`. Immediately before promotion,
-repeat the CASH exposure audit and stop if any pending/verified CASH payment or cash
-liability has appeared. After deployment, prove the existing empty legacy account is
-readable but has no payment action and its direct payment URL returns `403`.
 
 Keep live keys disabled until legal/provider review and live-mode operating procedures
 are approved. Retain the owned
