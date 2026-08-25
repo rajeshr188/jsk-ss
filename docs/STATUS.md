@@ -2,7 +2,7 @@
 
 ## Current milestone
 
-Metal-only production boundary — production rollout complete
+Editorial About and Our Story CMS — implementation complete locally
 
 ## Completed
 
@@ -198,6 +198,11 @@ Metal-only production boundary — production rollout complete
 
 ## In progress
 
+- `FW-CMS-003` adds constrained Wagtail About and Our Story pages with seeded drafts,
+  dedicated least-privilege groups, an editorial media collection, publisher approval,
+  stable `/about/` and `/our-story/` routes, and a default-off static fallback. Local
+  migration and authorization checks pass; reviewed PR/CI and production rollout
+  remain. Our Story remains absent from global navigation.
 - `FW-MEDIA-002` tracks the accepted backup/recovery and usage-monitoring deferral.
   It does not block catalogue use, but approved source photographs must
   remain outside R2 until an isolated backup target and restore proof exist.
@@ -349,6 +354,12 @@ Metal-only production boundary — production rollout complete
   exports; all tagged records were rolled back.
 
 ## Next recommended step
+
+Commit, review, and merge `FW-CMS-003`. Deploy `pages.0001_initial` with
+`PUBLIC_EDITORIAL_PAGES_ENABLED=False`, run and verify
+`configure_editorial_pages`, explicitly assign trained staff, and publish reviewed
+About content before activating the flag. Keep Our Story unlinked and leave its draft
+or publication decision separate.
 
 Keep live keys disabled until legal/provider review and live-mode operating procedures
 are approved. Retain the owned

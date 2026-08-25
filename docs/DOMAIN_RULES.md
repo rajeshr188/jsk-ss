@@ -186,6 +186,30 @@ authorize new production CASH enrolments or contributions under `SCH-007`.
   plan, must not duplicate or control financial fields, and its deletion, unpublishing,
   or media failure must not change enrolment terms or historical financial records.
 
+## Editorial content boundaries
+
+- **EDIT-001:** Wagtail may own only the About and Our Story editorial fields in this
+  phase. The homepage, contact identity, policies, public `SchemePlan` terms, and every
+  authenticated or financial workflow remain Django-owned.
+- **EDIT-002:** `/about/` and `/our-story/` remain stable Django named routes. A route
+  serves its single live/public Wagtail page only when
+  `PUBLIC_EDITORIAL_PAGES_ENABLED=True`; a missing, draft, restricted, or unpublished
+  CMS page falls back to the reviewed Django template.
+- **EDIT-003:** Plan, rate, payment, eligibility, fulfilment, and policy explanations
+  rendered on the About page remain application-owned template content. Editorial
+  rich text is limited to business background and must not become a source of
+  financial or compliance terms.
+- **EDIT-004:** Editorial CMS access requires explicit active staff membership in a
+  dedicated Editorial group. Editors may revise and submit; Publishers and Editorial
+  Administrators may approve and publish. Editorial permissions and media are
+  isolated from Catalogue groups and from `CustomUser.role`.
+- **EDIT-005:** Our Story remains absent from public navigation until a separate
+  display decision. Publishing its Wagtail revision may replace the directly
+  accessible static page, but cannot add a navigation link by itself.
+- **EDIT-006:** Optional editorial images require meaningful alt text, use the
+  dedicated Editorial media collection, and remain subject to `FW-MEDIA-002` source-
+  original retention until isolated media backup and restore proof exists.
+
 ## Precision
 
 Money uses 2 decimal places. Contribution and cash-redemption input with more than 2 decimal places is rejected rather than silently rounded. Cash bonus calculations use `ROUND_HALF_UP` to 2 decimal places. Metal quantities and metal-redemption input use 6 decimal places; excess precision is rejected. Allocation calculations use `ROUND_HALF_UP`. Scheme Rates and purity metadata use 4 decimal places.

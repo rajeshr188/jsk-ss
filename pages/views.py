@@ -7,6 +7,8 @@ from django.views.decorators.http import require_GET
 from django.views.generic import ListView, TemplateView
 
 from schemes.models import SchemePlan
+from .models import AboutPage, OurStoryPage
+from .selectors import public_editorial_page
 
 logger = logging.getLogger(__name__)
 
@@ -40,12 +42,25 @@ class HomePageView(TemplateView):
     template_name = "pages/home.html"
 
 
-class AboutPageView(TemplateView):
+class EditorialPageFallbackMixin:
+    editorial_page_model = None
+
+    def get(self, request, *args, **kwargs):
+        if settings.PUBLIC_EDITORIAL_PAGES_ENABLED:
+            page = public_editorial_page(self.editorial_page_model)
+            if page is not None:
+                return page.specific.serve(request)
+        return super().get(request, *args, **kwargs)
+
+
+class AboutPageView(EditorialPageFallbackMixin, TemplateView):
     template_name = "pages/about.html"
+    editorial_page_model = AboutPage
 
 
-class OurStoryPageView(TemplateView):
+class OurStoryPageView(EditorialPageFallbackMixin, TemplateView):
     template_name = "pages/our_story.html"
+    editorial_page_model = OurStoryPage
 
 
 class ContactPageView(TemplateView):

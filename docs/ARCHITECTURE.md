@@ -7,7 +7,12 @@ This is a server-rendered, single-business Django application. Customers authent
 ## Django apps
 
 - `accounts`: Lithium's custom user, allauth integration, and simple `OWNER`/`STAFF`/`CUSTOMER` application roles.
-- `pages`: public landing and about pages.
+- `pages`: Django-owned landing, policy, contact, and savings-plan views plus the
+  rollout-gated Wagtail About and Our Story editorial page types. Stable Django named
+  routes serve a live/public CMS revision only when explicitly enabled and otherwise
+  retain the reviewed static fallback.
+- `catalog`: bounded Wagtail catalogue pages, taxonomy, public discovery, and
+  separately scoped catalogue authorization.
 - `schemes`: customer profiles, reusable plans, scheme agreements, contributions, payment boundary, services, selectors, forms, and owner/customer views.
 
 ## Model relationships
@@ -48,6 +53,12 @@ graph TD
 Lithium's `CustomUser` and django-allauth remain authoritative. Superusers and `OWNER` users have owner access. Customer queries are always scoped through the authenticated user's one-to-one `Customer` record.
 
 Public customer signup is intentionally closed during the MVP. The owner creates a customer login and profile together, then explicitly enrols that customer into a scheme agreement. This prevents an allauth login from being mistaken for an active financial agreement.
+
+Wagtail authorization is independent of application roles. Dedicated Editorial and
+Catalogue groups scope page and media access to their respective content; neither an
+application `OWNER` role nor membership in one CMS area grants access to the other.
+The homepage, policies, contact identity, `SchemePlan`, and every financial workflow
+remain Django-owned.
 
 ### Future public customer signup
 

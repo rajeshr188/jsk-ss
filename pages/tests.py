@@ -1,10 +1,39 @@
 from decimal import Decimal
+from io import StringIO
 from unittest.mock import patch
 
+from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
+from django.core.exceptions import ValidationError
+from django.core.management import call_command
+from django.core.management.base import CommandError
 from django.db import OperationalError
 from django.test import SimpleTestCase, TestCase, override_settings
 from django.urls import reverse
+from wagtail.models import (
+    Collection,
+    Locale,
+    Page,
+    PageLogEntry,
+    Site,
+    WorkflowPage,
+    WorkflowState,
+)
 
+from catalog.permissions import (
+    CATALOG_EDITOR_GROUP,
+    catalog_permission_configuration_errors,
+)
+from pages.models import AboutPage, OurStoryPage
+from pages.permissions import (
+    EDITORIAL_ADMIN_GROUP,
+    EDITORIAL_EDITOR_GROUP,
+    EDITORIAL_MEDIA_COLLECTION,
+    EDITORIAL_PUBLISHER_GROUP,
+    EDITORIAL_ROLES,
+    EDITORIAL_WORKFLOW,
+    editorial_permission_configuration_errors,
+)
 from schemes.models import SchemePlan
 
 
@@ -192,3 +221,279 @@ class HealthEndpointTests(TestCase):
     def test_health_endpoints_reject_post(self):
         self.assertEqual(self.client.post(reverse("health_live")).status_code, 405)
         self.assertEqual(self.client.post(reverse("health_ready")).status_code, 405)
+
+
+class EditorialCmsTests(TestCase):
+    password = "correct-horse-battery-staple"
+
+    def setUp(self):
+        if not Locale.objects.exists():
+            Locale.objects.create(language_code="en")
+        root = Page.get_first_root_node()
+        if root is None:
+            root = Page.add_root(title="Root", slug="root")
+        site_root = root.get_children().first()
+        if site_root is None:
+            site_root = root.add_child(instance=Page(title="Site root", slug="home"))
+        Site.objects.update_or_create(
+            is_default_site=True,
+            defaults={
+                "hostname": "testserver",
+                "port": 80,
+                "root_page": site_root,
+            },
+        )
+        call_command("configure_editorial_pages", verbosity=0)
+        self.about = AboutPage.objects.get()
+        self.story = OurStoryPage.objects.get()
+
+    def publish(self, page, *, user=None):
+        page.save_revision(user=user).publish(user=user)
+        page.refresh_from_db()
+
+    def test_configuration_seeds_drafts_and_is_idempotent(self):
+        self.assertFalse(self.about.live)
+        self.assertFalse(self.story.live)
+        self.assertEqual(self.about.slug, "about")
+        self.assertEqual(self.story.slug, "our-story")
+        self.assertEqual(self.story.developer_name, "Rajesh Rathod H")
+        self.assertEqual(self.story.developer_email, "rajeshrathodh@gmail.com")
+        self.assertTrue(
+            Collection.get_first_root_node()
+            .get_children()
+            .filter(name=EDITORIAL_MEDIA_COLLECTION)
+            .exists()
+        )
+        self.assertEqual(
+            set(Group.objects.filter(name__startswith="Editorial ").values_list("name", flat=True)),
+            {role.name for role in EDITORIAL_ROLES},
+        )
+        self.assertEqual(editorial_permission_configuration_errors(), [])
+
+        self.about.introduction = "Reviewed custom introduction."
+        self.about.save_revision()
+        call_command("configure_editorial_pages", verbosity=0)
+        call_command("configure_editorial_pages", "--check", verbosity=0)
+
+        self.assertEqual(AboutPage.objects.count(), 1)
+        self.assertEqual(OurStoryPage.objects.count(), 1)
+        self.assertEqual(
+            AboutPage.objects.get().get_latest_revision_as_object().introduction,
+            "Reviewed custom introduction.",
+        )
+
+    @override_settings(PUBLIC_EDITORIAL_PAGES_ENABLED=True)
+    def test_draft_pages_keep_reviewed_django_fallbacks(self):
+        about_response = self.client.get(reverse("about"))
+        story_response = self.client.get(reverse("our_story"))
+
+        self.assertContains(about_response, "About Jai Sri Krishna Jewelley")
+        self.assertContains(about_response, "accumulated metal quantity may be applied")
+        self.assertContains(story_response, "Dilip Kumar")
+        self.assertContains(story_response, "Rajesh Rathod H")
+
+    @override_settings(PUBLIC_EDITORIAL_PAGES_ENABLED=False)
+    def test_disabled_rollout_ignores_a_live_cms_revision(self):
+        self.about.introduction = "CMS-only introduction marker."
+        self.publish(self.about)
+
+        response = self.client.get(reverse("about"))
+
+        self.assertNotContains(response, "CMS-only introduction marker")
+        self.assertContains(response, "accumulated metal quantity may be applied")
+
+    @override_settings(PUBLIC_EDITORIAL_PAGES_ENABLED=True)
+    def test_live_about_is_served_at_the_stable_named_route(self):
+        self.about.introduction = "CMS-managed business introduction."
+        self.publish(self.about)
+
+        response = self.client.get(reverse("about"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["page"].specific, self.about)
+        self.assertContains(response, "CMS-managed business introduction")
+        self.assertContains(response, "accumulated metal quantity may be applied")
+        self.assertEqual(reverse("about"), "/about/")
+
+    @override_settings(PUBLIC_EDITORIAL_PAGES_ENABLED=True)
+    def test_unpublishing_about_restores_the_static_fallback(self):
+        self.about.introduction = "Temporary CMS introduction."
+        self.publish(self.about)
+        self.about.unpublish()
+
+        response = self.client.get(reverse("about"))
+
+        self.assertNotContains(response, "Temporary CMS introduction")
+        self.assertContains(response, "About Jai Sri Krishna Jewelley")
+
+    @override_settings(PUBLIC_EDITORIAL_PAGES_ENABLED=True)
+    def test_live_story_uses_cms_content_but_remains_unlinked(self):
+        self.story.introduction = "CMS-managed family story."
+        self.publish(self.story)
+
+        story_response = self.client.get(reverse("our_story"))
+        self.assertContains(story_response, "CMS-managed family story")
+        self.assertContains(story_response, "Rajesh Rathod H")
+
+        for route_name in ("home", "about"):
+            with self.subTest(route_name=route_name):
+                response = self.client.get(reverse(route_name))
+                self.assertNotContains(response, f'href="{reverse("our_story")}"')
+
+    def test_profile_images_require_accessible_alt_text(self):
+        self.story.business_owner_image_id = 999999
+        self.story.business_owner_image_alt = ""
+
+        with self.assertRaises(ValidationError) as raised:
+            self.story.clean()
+
+        self.assertIn("business_owner_image_alt", raised.exception.message_dict)
+
+    def test_editorial_roles_are_scoped_to_editorial_pages_and_media(self):
+        user_model = get_user_model()
+        editor = user_model.objects.create_user(
+            username="editorial-editor@example.com",
+            email="editorial-editor@example.com",
+            password=self.password,
+            role=user_model.Role.STAFF,
+            is_staff=True,
+        )
+        publisher = user_model.objects.create_user(
+            username="editorial-publisher@example.com",
+            email="editorial-publisher@example.com",
+            password=self.password,
+            role=user_model.Role.STAFF,
+            is_staff=True,
+        )
+        editor.groups.add(Group.objects.get(name=EDITORIAL_EDITOR_GROUP))
+        publisher.groups.add(Group.objects.get(name=EDITORIAL_PUBLISHER_GROUP))
+
+        self.assertTrue(self.about.permissions_for_user(editor).can_edit())
+        self.assertFalse(self.about.permissions_for_user(editor).can_publish())
+        self.assertTrue(self.story.permissions_for_user(publisher).can_publish())
+        self.assertFalse(
+            Site.objects.get(is_default_site=True)
+            .root_page.permissions_for_user(editor)
+            .can_edit()
+        )
+        self.assertEqual(
+            WorkflowPage.objects.filter(
+                page__in=[self.about, self.story],
+                workflow__name=EDITORIAL_WORKFLOW,
+            ).count(),
+            2,
+        )
+
+    def test_editor_submission_requires_publisher_and_retains_audit_history(self):
+        user_model = get_user_model()
+        editor = user_model.objects.create_user(
+            username="editorial-workflow-editor@example.com",
+            email="editorial-workflow-editor@example.com",
+            password=self.password,
+            role=user_model.Role.STAFF,
+            is_staff=True,
+        )
+        publisher = user_model.objects.create_user(
+            username="editorial-workflow-publisher@example.com",
+            email="editorial-workflow-publisher@example.com",
+            password=self.password,
+            role=user_model.Role.STAFF,
+            is_staff=True,
+        )
+        editor.groups.add(Group.objects.get(name=EDITORIAL_EDITOR_GROUP))
+        publisher.groups.add(Group.objects.get(name=EDITORIAL_PUBLISHER_GROUP))
+
+        self.about.introduction = "Editorial workflow candidate."
+        self.about.save_revision(user=editor)
+        workflow = self.about.get_workflow()
+        workflow_state = workflow.start(self.about, user=editor)
+
+        self.assertEqual(workflow_state.status, WorkflowState.STATUS_IN_PROGRESS)
+        self.assertEqual(
+            workflow_state.current_task_state.task.specific.get_actions(
+                self.about,
+                editor,
+            ),
+            [],
+        )
+        self.assertIn(
+            "approve",
+            {
+                action[0]
+                for action in workflow_state.current_task_state.task.specific.get_actions(
+                    self.about,
+                    publisher,
+                )
+            },
+        )
+
+        workflow_state.current_task_state.specific.approve(
+            user=publisher,
+            comment="Approved business editorial copy.",
+        )
+        workflow_state.refresh_from_db()
+        self.about.refresh_from_db()
+
+        self.assertEqual(workflow_state.status, WorkflowState.STATUS_APPROVED)
+        self.assertTrue(self.about.live)
+        self.assertTrue(
+            PageLogEntry.objects.filter(
+                page=self.about,
+                action="wagtail.workflow.start",
+                user=editor,
+            ).exists()
+        )
+        self.assertTrue(
+            PageLogEntry.objects.filter(
+                page=self.about,
+                action="wagtail.workflow.approve",
+                user=publisher,
+            ).exists()
+        )
+
+    def test_non_staff_membership_and_permission_drift_fail_closed(self):
+        user_model = get_user_model()
+        customer = user_model.objects.create_user(
+            username="non-staff-editorial@example.com",
+            email="non-staff-editorial@example.com",
+            password=self.password,
+            role=user_model.Role.CUSTOMER,
+            is_staff=False,
+        )
+        editor_group = Group.objects.get(name=EDITORIAL_EDITOR_GROUP)
+        customer.groups.add(editor_group)
+
+        with self.assertRaises(CommandError):
+            call_command(
+                "configure_editorial_pages",
+                "--check",
+                stdout=StringIO(),
+            )
+
+        customer.groups.clear()
+        editor_group.permissions.clear()
+        with self.assertRaises(CommandError):
+            call_command(
+                "configure_editorial_pages",
+                "--check",
+                stdout=StringIO(),
+            )
+
+    def test_catalogue_and_editorial_authorization_remain_independent(self):
+        call_command("configure_catalog_permissions", verbosity=0)
+        self.assertEqual(catalog_permission_configuration_errors(), [])
+        editorial_group_ids = set(
+            Group.objects.filter(name__startswith="Editorial ").values_list("pk", flat=True)
+        )
+        catalogue_group = Group.objects.get(name=CATALOG_EDITOR_GROUP)
+
+        call_command("configure_editorial_pages", verbosity=0)
+
+        self.assertEqual(catalog_permission_configuration_errors(), [])
+        self.assertEqual(editorial_permission_configuration_errors(), [])
+        self.assertNotIn(catalogue_group.pk, editorial_group_ids)
+        self.assertFalse(
+            catalogue_group.permissions.filter(
+                content_type__app_label="pages"
+            ).exists()
+        )

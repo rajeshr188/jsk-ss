@@ -240,11 +240,14 @@ here are not implemented behavior and do not relax the financial invariants in
   direct mobile/desktop browser checks, health checks, and navigation activation all
   passed. `FW-MEDIA-002` remains an accepted limitation, so approved source originals
   must remain independently retained outside R2.
-- **FW-CMS-003 — Optional editorial-page migration:** Retain the current hybrid
-  architecture. Catalogue pages remain Wagtail-owned; savings plans, financial flows,
-  policies, contact identity, and the conversion-focused homepage remain Django-owned
-  unless a later page-specific content/URL migration is reviewed. About and Our Story
-  are the first low-risk candidates if owner self-editing creates a real need.
+- **FW-CMS-003 — Editorial-page migration (completed locally 2026-08-25):** About and
+  Our Story now have constrained Wagtail page types, seeded draft content, optional
+  accessible R2-backed images, dedicated Editorial groups/media/workflow, stable named
+  routes, and a default-off rollout gate with reviewed Django fallbacks. Catalogue
+  permissions remain independent; savings plans, financial flows, policies, contact
+  identity, and the conversion-focused homepage remain Django-owned. Production
+  migration, staff assignment, content approval, and flag activation remain a separate
+  reviewed rollout.
 - **FW-CATALOG-005 — Scheme Plan marketing media:** If richer plan marketing is later
   required, design an optional Wagtail-managed image/editorial presentation linked to
   an authoritative `SchemePlan`. Do not duplicate or let CMS state control contribution

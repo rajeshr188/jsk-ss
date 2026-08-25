@@ -257,6 +257,9 @@ WAGTAILADMIN_BASE_URL = os.getenv(
 # Activate public navigation only after the catalogue root has been reviewed and
 # published. The context processor still resolves live/public state when enabled.
 PUBLIC_CATALOGUE_ENABLED = env_bool("PUBLIC_CATALOGUE_ENABLED", False)
+# About and Our Story retain their reviewed Django fallbacks until their live Wagtail
+# revisions have passed rollout checks and this separate gate is enabled.
+PUBLIC_EDITORIAL_PAGES_ENABLED = env_bool("PUBLIC_EDITORIAL_PAGES_ENABLED", False)
 WAGTAILSEARCH_BACKENDS = {
     "default": {
         "BACKEND": "wagtail.search.backends.database",

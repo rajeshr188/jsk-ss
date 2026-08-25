@@ -44,6 +44,7 @@ Alternatively, set `DJANGO_SECRET_KEY` and run `docker compose up --build`; Comp
 | `CSRF_TRUSTED_ORIGINS` | no | Comma-separated trusted origins |
 | `WAGTAILADMIN_BASE_URL` | CMS | Public origin used for absolute Wagtail admin links; omit `/cms/` and a trailing slash |
 | `PUBLIC_CATALOGUE_ENABLED` | catalogue rollout | Default-off boolean; exposes global navigation only when the catalogue root is also live/public |
+| `PUBLIC_EDITORIAL_PAGES_ENABLED` | editorial rollout | Default-off boolean; serves live Wagtail About/Our Story revisions while retaining reviewed Django fallbacks |
 | `MEDIA_STORAGE_BACKEND` | media | `filesystem` for local development or `r2` for Cloudflare R2; production checks require `r2` |
 | `R2_ACCOUNT_ID` | R2 | Cloudflare's 32-character account ID; server-side only |
 | `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` | R2 | Object Read & Write credentials scoped to exactly one media bucket |

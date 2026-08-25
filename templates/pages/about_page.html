@@ -1,0 +1,44 @@
+{% extends '_base.html' %}
+{% load wagtailcore_tags wagtailimages_tags %}
+
+{% block title %}{% firstof page.seo_title page.title %} | Jai Sri Krishna Jewelley{% endblock %}
+{% block meta_description %}{{ page.search_description }}{% endblock %}
+
+{% block content %}
+<div class="policy-page">
+  <p class="text-uppercase small fw-semibold text-secondary mb-2">{{ page.eyebrow }}</p>
+  <h1>{{ page.title }}</h1>
+  <p class="lead">{{ page.introduction }}</p>
+
+  {% if page.hero_image %}
+    {% image page.hero_image fill-1200x675 format-webp as hero_image %}
+    <figure class="editorial-hero mt-4">
+      <img src="{{ hero_image.url }}" width="{{ hero_image.width }}" height="{{ hero_image.height }}" alt="{{ page.hero_image_alt }}" loading="eager" decoding="async">
+    </figure>
+  {% endif %}
+
+  <h2>{{ page.business_story_heading }}</h2>
+  <div class="rich-text">{{ page.business_story|richtext }}</div>
+
+  <h2>Our savings schemes</h2>
+  <p>Customers choose gold or silver when they enrol. Each enrolment records its INR contribution amount or range, frequency, duration, and eligibility date. Before each payment, the applicable Jai Sri Krishna Jewelley Scheme Rate is shown and locked; after verification, the contribution is converted to a recorded quantity of the selected metal.</p>
+  <p>At eligibility, the accumulated metal quantity may be applied toward eligible jewellery or a matching-metal coin at our showroom. Product selection, final pricing, taxes, making charges, wastage/value addition, invoicing, and collection are completed at the showroom.</p>
+  <p>The online service lets enrolled customers make contributions, review their history and metal quantities, and access acknowledgements and statements. It is not a bank deposit, an interest-bearing account, a metal-trading service, or an online jewellery inventory.</p>
+
+  <h2>How enrolment works</h2>
+  <ol>
+    <li>Review the currently available <a href="{% url 'pricing' %}">savings plans</a>.</li>
+    <li>Contact or visit our showroom to discuss the suitable plan and metal choice.</li>
+    <li>After the terms are agreed, the store creates the customer login and scheme enrolment.</li>
+    <li>The enrolled customer signs in to make eligible contributions and track the scheme.</li>
+  </ol>
+  <p>Public self-registration is not currently offered. A login alone does not create a scheme agreement.</p>
+
+  <h2>Visit us</h2>
+  <p>Jai Sri Krishna Jewelley<br>No. 155, Azad Road<br>Thorapadi, Vellore<br>Tamil Nadu 632001, India</p>
+  <div class="d-flex flex-wrap gap-2">
+    <a class="btn btn-jsk" href="{% url 'pricing' %}">View savings plans</a>
+    <a class="btn btn-outline-dark" href="{% url 'contact' %}">Contact the showroom</a>
+  </div>
+</div>
+{% endblock content %}
