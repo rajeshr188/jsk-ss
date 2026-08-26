@@ -34,10 +34,11 @@ here are not implemented behavior and do not relax the financial invariants in
   marking this item complete.
 - **FW-PROD-003 — Delivery verified; rotations remain:** Postmark approved the
   account and a real password-reset message reached the controlled Gmail mailbox on
-  2026-08-26. Correct the production Django Site identity from `example.com`, deploy
-  and verify direct untracked authentication links, then retain evidence. The owner
-  explicitly deferred the SMTP token-rotation rehearsal; Django, database, SMTP,
-  Razorpay API, and webhook rotation drills therefore remain open.
+  2026-08-26. The production Django Site identity was corrected from `example.com` to
+  the owned domain on 2026-08-26. Deploy and verify direct untracked authentication
+  links, then retain evidence. The owner explicitly deferred the SMTP token-rotation
+  rehearsal; Django, database, SMTP, Razorpay API, and webhook rotation drills
+  therefore remain open.
 - **FW-PROD-004 — Image-build confirmation (completed locally 2026-08-18):** The
   hardened image builds with production static assets and runs as the unprivileged
   `app` user. The same build is an independent CI gate on the next GitHub run.

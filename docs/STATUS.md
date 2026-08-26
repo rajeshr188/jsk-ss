@@ -211,16 +211,18 @@ production deployment pending
 ## In progress
 
 - `FW-AUTH-001` is implemented on `agent/customer-invitations`; focused authentication
-  and owner-flow regressions pass. Review, merge, integrity preflight, additive
-  migration, proxy reload, and controlled-mailbox production proof remain.
+  and owner-flow regressions pass. The operator corrected the two known active login-
+  email matches and changed production Site 1 to the owned domain on 2026-08-26.
+  Review, merge, candidate integrity preflight, additive migration, proxy reload, and
+  controlled-mailbox production proof remain.
 - `FW-MEDIA-002` tracks the accepted backup/recovery and usage-monitoring deferral.
   It does not block catalogue use, but approved source photographs must
   remain outside R2 until an isolated backup target and restore proof exist.
 - Environment-specific production proof: isolated database restoration, external
   alert routing/exercises, and coordinated secret-rotation drills. Postmark SMTP and
-  real password-reset delivery passed on 2026-08-26, but the production Django Site
-  identity and direct untracked-link behavior still require correction/deployment
-  evidence. The owner deferred SMTP token rotation. The stable owned domain/TLS/proxy
+  real password-reset delivery passed on 2026-08-26, and production Site 1 now uses
+  `jaishrikrishnajewellery.com`. Direct untracked-link behavior still requires
+  deployment evidence. The owner deferred SMTP token rotation. The stable owned domain/TLS/proxy
   path and repository observability foundation are operational; Better Stack and
   Linode alert activation still require account-side configuration and retained test
   evidence.
@@ -369,8 +371,8 @@ production deployment pending
 ## Next recommended step
 
 Review and merge `FW-AUTH-001`. Before its additive `accounts.0003` migration, run
-the documented auth-email integrity preflight and deliberately resolve any duplicate
-login emails. Correct the production Django Site record from `example.com`, load the
+the candidate's documented auth-email integrity preflight and record
+`duplicate_groups=0`, confirming the operator's duplicate correction. Load the
 token-path Caddy log exclusion, deploy with a 72-hour invitation lifetime, then prove
 create/invite/accept/resend/password-reset behavior through a controlled mailbox.
 
