@@ -2,8 +2,7 @@
 
 ## Current milestone
 
-Customer invitation onboarding (`FW-AUTH-001`) — production CSRF/referrer-policy
-hotfix in progress
+Customer invitation onboarding (`FW-AUTH-001`) — production acceptance complete
 
 ## Completed
 
@@ -31,6 +30,9 @@ hotfix in progress
 - Owner-only, one-time customer password-setup invitations with digest-only secrets,
   bounded expiry, safe resend/supersession, delivery state, and explicit separation
   between login activation and financial enrolment. Public signup remains closed.
+- Production release `f9081c1a52a3ce3dc99e1d816cce9846a5b31f92` corrected the
+  token-page CSRF/referrer policy; controlled invitation password setup and subsequent
+  forgot-password reset both passed on 2026-08-26.
 - Direct untracked authentication links, non-cacheable token responses that disclose
   only their origin and not the secret-bearing path,
   Caddy token-path log exclusion, removal of the redundant Gunicorn full-path access
@@ -211,22 +213,14 @@ hotfix in progress
 
 ## In progress
 
-- `FW-AUTH-001` and `accounts.0003` reached production in release
-  `6fe771b99a0495442e1ea639c7eaf9d5e69acb12` on 2026-08-26 after zero auth-email
-  integrity and financial-exception gates. Controlled-browser proof exposed a
-  response-policy defect: `no-referrer` produced `Origin: null` on invitation and
-  password-reset submissions, which Django correctly rejected. A focused hotfix changes
-  only secret-bearing responses to `strict-origin`, preserving path confidentiality
-  while restoring same-origin CSRF validation. Review, merge, deploy, and controlled-
-  mailbox invitation/password-reset proof remain.
 - `FW-MEDIA-002` tracks the accepted backup/recovery and usage-monitoring deferral.
   It does not block catalogue use, but approved source photographs must
   remain outside R2 until an isolated backup target and restore proof exist.
 - Environment-specific production proof: isolated database restoration, external
   alert routing/exercises, and coordinated secret-rotation drills. Postmark SMTP and
-  real password-reset delivery passed on 2026-08-26, and production Site 1 now uses
-  `jaishrikrishnajewellery.com`. Direct untracked-link behavior still requires
-  deployment evidence. The owner deferred SMTP token rotation. The stable owned domain/TLS/proxy
+  real password-reset delivery passed on 2026-08-26, production Site 1 now uses
+  `jaishrikrishnajewellery.com`, and direct invitation/password-reset credential setup
+  passed after the CSRF-policy hotfix. The owner deferred SMTP token rotation. The stable owned domain/TLS/proxy
   path and repository observability foundation are operational; Better Stack and
   Linode alert activation still require account-side configuration and retained test
   evidence.
@@ -234,9 +228,10 @@ hotfix in progress
   provisioned in one region. Database/Cloud Firewall access controls and the database
   CA are in place, SSH access is verified, Docker is installed, and the owned domain
   returns liveness and PostgreSQL readiness `200` through Caddy-managed HTTPS;
-  production email, external alerts, and Razorpay live-mode readiness remain.
-- Production release `71f3e9cea5376cfb0a362ee13510a1162015649f` is healthy with
-  migrations through `schemes.0010_manual_scheme_rates` and `catalog.0001_initial`
+  external alerts and Razorpay live-mode readiness remain.
+- Production release `f9081c1a52a3ce3dc99e1d816cce9846a5b31f92` is healthy with
+  `schemes.0010_manual_scheme_rates`, `catalog.0001_initial`, `pages.0001_initial`,
+  and `accounts.0003_customerinvitation_and_more`
   applied, zero reported financial exceptions, successful live/ready checks, valid
   catalogue authorization, working R2 media, published reviewed products, and public
   Jewellery links in the primary and footer navigation. Its production metal-only
@@ -373,11 +368,6 @@ hotfix in progress
   exports; all tagged records were rolled back.
 
 ## Next recommended step
-
-Review, merge, and deploy the `FW-AUTH-001` CSRF/referrer-policy hotfix with no schema
-change. Confirm token responses return `no-store` and `Referrer-Policy: strict-origin`,
-then prove create/invite/accept/resend/password-reset behavior through a controlled
-mailbox without exposing any token URL.
 
 Keep live keys disabled until legal/provider review and live-mode operating procedures
 are approved. Retain the owned

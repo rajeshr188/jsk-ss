@@ -1100,6 +1100,13 @@ After rollout, use a controlled customer mailbox to verify all of the following:
    warning may contain only `[REDACTED]`; do not print either real URL while testing.
 6. Password reset uses the owned site name/domain and remains a direct, untracked URL.
 
+Production evidence recorded 2026-08-26: release
+`f9081c1a52a3ce3dc99e1d816cce9846a5b31f92` returned `strict-origin` on the
+token paths, accepted a newly invited customer's password setup, and subsequently
+accepted that customer's forgot-password reset flow. The earlier `Origin: null`
+rejection no longer occurred; CSRF enforcement, `no-store`, token redaction, and
+edge-log exclusions remained enabled.
+
 If the candidate must be rolled back after this additive migration, the previous image
 can run against the extended schema. Its old owner form would again ask for temporary
 passwords, so suspend customer creation until the corrected candidate is restored.
