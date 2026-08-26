@@ -1,12 +1,16 @@
 from datetime import date
 from decimal import Decimal
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
-from django.test import TestCase
+from django.core import mail
+from django.core.exceptions import ValidationError
+from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from schemes.models import Customer, SchemeAccount, SchemePlan
 from schemes.services import create_customer, enroll_customer
+from accounts.models import CustomerInvitation
 
 
 def make_plan():
@@ -23,6 +27,7 @@ def make_plan():
     )
 
 
+@override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
 class OwnerFlowTests(TestCase):
     def setUp(self):
         self.owner = get_user_model().objects.create_user(
@@ -41,12 +46,15 @@ class OwnerFlowTests(TestCase):
                 "email": "meera@example.com",
                 "mobile_number": "9988776655",
                 "address": "Agra",
-                "password1": "customer-password-strong",
-                "password2": "customer-password-strong",
             },
         )
         customer = Customer.objects.get(email="meera@example.com")
         self.assertRedirects(response, reverse("schemes:customer_detail", args=[customer.pk]))
+        self.assertFalse(customer.user.has_usable_password())
+        self.assertEqual(CustomerInvitation.objects.filter(user=customer.user).count(), 1)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn("/accounts/invitations/", mail.outbox[0].body)
+        self.assertEqual(customer.scheme_accounts.count(), 0)
 
         plan = make_plan()
         response = self.client.post(
@@ -63,6 +71,70 @@ class OwnerFlowTests(TestCase):
         account = customer.scheme_accounts.get()
         self.assertEqual(account.eligible_from, date(2027, 8, 1))
         self.assertEqual(account.fixed_amount_snapshot, Decimal("5000.00"))
+
+    def test_owner_can_resend_invitation_and_old_invitation_is_superseded(self):
+        response = self.client.post(
+            reverse("schemes:customer_add"),
+            {
+                "full_name": "Meera Gupta",
+                "email": "meera@example.com",
+                "mobile_number": "9988776655",
+                "address": "Agra",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        customer = Customer.objects.get(email="meera@example.com")
+        first = CustomerInvitation.objects.get(user=customer.user)
+
+        response = self.client.post(
+            reverse("schemes:customer_invitation_resend", args=[customer.pk])
+        )
+
+        self.assertRedirects(
+            response,
+            reverse("schemes:customer_detail", args=[customer.pk]),
+        )
+        first.refresh_from_db()
+        self.assertIsNotNone(first.revoked_at)
+        self.assertEqual(CustomerInvitation.objects.filter(user=customer.user).count(), 2)
+        self.assertEqual(len(mail.outbox), 2)
+
+    def test_customer_creation_rolls_back_if_invitation_cannot_be_issued(self):
+        with patch(
+            "schemes.services.issue_customer_invitation",
+            side_effect=ValidationError("Invitation setup failed safely."),
+        ):
+            response = self.client.post(
+                reverse("schemes:customer_add"),
+                {
+                    "full_name": "Rollback Customer",
+                    "email": "rollback@example.com",
+                    "mobile_number": "9988776655",
+                    "address": "Vellore",
+                },
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Invitation setup failed safely.")
+        self.assertFalse(Customer.objects.filter(email="rollback@example.com").exists())
+        self.assertFalse(
+            get_user_model().objects.filter(email="rollback@example.com").exists()
+        )
+
+    def test_customer_cannot_resend_an_invitation(self):
+        customer = create_customer(
+            full_name="Customer User",
+            email="ordinary@example.com",
+            mobile_number="9000000000",
+            password=None,
+        )
+        self.client.force_login(customer.user)
+
+        response = self.client.post(
+            reverse("schemes:customer_invitation_resend", args=[customer.pk])
+        )
+
+        self.assertEqual(response.status_code, 403)
 
     def test_customer_cannot_open_owner_dashboard(self):
         customer = create_customer(

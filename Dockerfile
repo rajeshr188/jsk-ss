@@ -36,4 +36,4 @@ EXPOSE 8000
 
 USER app
 
-CMD ["gunicorn", "--no-control-socket", "--bind", ":8000", "--workers", "2", "--timeout", "30", "--graceful-timeout", "30", "--max-requests", "1000", "--max-requests-jitter", "100", "--access-logfile", "-", "--error-logfile", "-", "django_project.wsgi"]
+CMD ["gunicorn", "--no-control-socket", "--bind", ":8000", "--workers", "2", "--timeout", "30", "--graceful-timeout", "30", "--max-requests", "1000", "--max-requests-jitter", "100", "--error-logfile", "-", "django_project.wsgi"]

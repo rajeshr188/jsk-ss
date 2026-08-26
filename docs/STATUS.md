@@ -2,7 +2,8 @@
 
 ## Current milestone
 
-Editorial About and Our Story CMS — implementation complete locally
+Customer invitation onboarding (`FW-AUTH-001`) — implementation complete locally;
+production deployment pending
 
 ## Completed
 
@@ -27,6 +28,13 @@ Editorial About and Our Story CMS — implementation complete locally
   plan/contact actions and pre-enrolment policy links remain prominent.
 - Owner/customer roles, customer records, reusable plans, and snapshotted enrolments.
 - Owner customer-management flow and isolated customer scheme view.
+- Owner-only, one-time customer password-setup invitations with digest-only secrets,
+  bounded expiry, safe resend/supersession, delivery state, and explicit separation
+  between login activation and financial enrolment. Public signup remains closed.
+- Direct untracked authentication links, non-cacheable/non-referrable token responses,
+  Caddy token-path log exclusion, removal of the redundant Gunicorn full-path access
+  log, and case-insensitive login-email uniqueness with a stop-before-migration
+  integrity check.
 - Append-oriented contributions with pending/paid/paid-unallocated/failed states.
 - Fixed/variable amount validation and once-per-month/flexible frequency rules.
 - Debug-only mock payment adapter with verified, idempotent confirmation.
@@ -186,6 +194,10 @@ Editorial About and Our Story CMS — implementation complete locally
   financial behavior. Future Scheme Plan images or richer marketing copy may be
   Wagtail-managed presentation linked to a plan, but must not duplicate or control
   contribution, duration, metal, bonus, eligibility, publication, or enrolment terms.
+- `FW-CMS-003` completed production rollout on 2026-08-25 in release
+  `71f3e9cea5376cfb0a362ee13510a1162015649f`. The additive `pages.0001_initial`
+  migration and editorial authorization configuration completed; About and Our Story
+  remain bounded Wagtail editorial types, and Our Story stays outside global navigation.
 - `FW-PRODUCT-001` completed production rollout on 2026-08-25 in release
   `93ba4273c976cd427d86a79a58454e2b7e58c55f`. The release used the recorded
   2026-08-24 12:00 PM IST managed recovery point, passed deployment and migration-plan
@@ -198,19 +210,20 @@ Editorial About and Our Story CMS — implementation complete locally
 
 ## In progress
 
-- `FW-CMS-003` adds constrained Wagtail About and Our Story pages with seeded drafts,
-  dedicated least-privilege groups, an editorial media collection, publisher approval,
-  stable `/about/` and `/our-story/` routes, and a default-off static fallback. Local
-  migration and authorization checks pass; reviewed PR/CI and production rollout
-  remain. Our Story remains absent from global navigation.
+- `FW-AUTH-001` is implemented on `agent/customer-invitations`; focused authentication
+  and owner-flow regressions pass. Review, merge, integrity preflight, additive
+  migration, proxy reload, and controlled-mailbox production proof remain.
 - `FW-MEDIA-002` tracks the accepted backup/recovery and usage-monitoring deferral.
   It does not block catalogue use, but approved source photographs must
   remain outside R2 until an isolated backup target and restore proof exist.
-- Environment-specific production proof: isolated database restoration, real email
-  delivery, external alert routing/exercises, and coordinated secret-rotation drills.
-  The stable owned domain/TLS/proxy path and repository observability foundation are
-  operational; Better Stack and Linode alert activation still require account-side
-  configuration and retained test evidence.
+- Environment-specific production proof: isolated database restoration, external
+  alert routing/exercises, and coordinated secret-rotation drills. Postmark SMTP and
+  real password-reset delivery passed on 2026-08-26, but the production Django Site
+  identity and direct untracked-link behavior still require correction/deployment
+  evidence. The owner deferred SMTP token rotation. The stable owned domain/TLS/proxy
+  path and repository observability foundation are operational; Better Stack and
+  Linode alert activation still require account-side configuration and retained test
+  evidence.
 - The Ubuntu 24.04 Compute Instance and three-node Managed PostgreSQL 16 cluster are
   provisioned in one region. Database/Cloud Firewall access controls and the database
   CA are in place, SSH access is verified, Docker is installed, and the owned domain
@@ -254,9 +267,9 @@ Editorial About and Our Story CMS — implementation complete locally
   forfeiture, tax treatment, or expected-future-contribution projection.
 - Bonus liability reads are calculated per cash account; aggregate optimization is
   deferred until measured account volume requires it.
-- Plan-specific early-discontinuation pricing, payment-order
-  expiry, eligibility reminders, public onboarding, and partial-settlement policy are
-  not yet defined.
+- Plan-specific early-discontinuation pricing, payment-order expiry, eligibility
+  reminders, open public self-registration, and partial-settlement policy are not yet
+  defined. Owner-invitation onboarding is implemented locally but not yet deployed.
 - The production catalogue is active and its deployment, authorization, content,
   browser, and R2 smoke gates pass. There is still no isolated media backup/restore
   proof. Retain approved source photographs outside R2; production must not rely on
@@ -355,17 +368,17 @@ Editorial About and Our Story CMS — implementation complete locally
 
 ## Next recommended step
 
-Commit, review, and merge `FW-CMS-003`. Deploy `pages.0001_initial` with
-`PUBLIC_EDITORIAL_PAGES_ENABLED=False`, run and verify
-`configure_editorial_pages`, explicitly assign trained staff, and publish reviewed
-About content before activating the flag. Keep Our Story unlinked and leave its draft
-or publication decision separate.
+Review and merge `FW-AUTH-001`. Before its additive `accounts.0003` migration, run
+the documented auth-email integrity preflight and deliberately resolve any duplicate
+login emails. Correct the production Django Site record from `example.com`, load the
+token-path Caddy log exclusion, deploy with a 72-hour invitation lifetime, then prove
+create/invite/accept/resend/password-reset behavior through a controlled mailbox.
 
 Keep live keys disabled until legal/provider review and live-mode operating procedures
 are approved. Retain the owned
 DNS/TLS and release evidence and complete
 `FW-PROD-001` through `FW-PROD-003`: a recorded database restore/reconciliation drill,
-stable owned HTTPS plus alerts, real email delivery, and secret-rotation rehearsal.
+stable owned HTTPS plus alerts, and the deliberately deferred secret-rotation drills.
 Define Razorpay live-mode reconciliation, refund, and dispute operations before
 handling real customer funds. Follow the
 [Production and deployment guide](PRODUCTION_DEPLOYMENT.md) and retain evidence for

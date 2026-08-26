@@ -14,6 +14,7 @@ from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt
 
 from accounts.models import CustomUser
+from accounts.services import issue_customer_invitation, send_customer_invitation
 
 from .forms import (
     AuditReasonForm,
@@ -50,6 +51,7 @@ from .selectors import (
     get_contribution_receipt_summary,
     get_customer_scheme_account,
     get_customer_scheme_summary,
+    get_latest_customer_invitation,
     get_current_scheme_rate,
     get_current_scheme_rates,
     get_metal_balance,
@@ -68,7 +70,7 @@ from .selectors import (
 )
 from .services import (
     cash_scheme_activity_is_enabled,
-    create_customer,
+    create_invited_customer,
     complete_redemption,
     enroll_customer,
     confirm_razorpay_contribution,
@@ -488,19 +490,45 @@ def customer_add(request):
     form = CustomerCreateForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
         try:
-            customer = create_customer(
+            customer, invitation, raw_token = create_invited_customer(
                 full_name=form.cleaned_data["full_name"],
                 email=form.cleaned_data["email"],
                 mobile_number=form.cleaned_data["mobile_number"],
                 address=form.cleaned_data["address"],
-                password=form.cleaned_data["password1"],
+                invited_by=request.user,
             )
         except ValidationError as error:
-            for field, field_errors in error.message_dict.items():
-                for field_error in field_errors:
-                    form.add_error(field if field in form.fields else None, field_error)
+            if hasattr(error, "message_dict"):
+                for field, field_errors in error.message_dict.items():
+                    for field_error in field_errors:
+                        form.add_error(
+                            field if field in form.fields else None,
+                            field_error,
+                        )
+            else:
+                for field_error in error.messages:
+                    form.add_error(None, field_error)
         else:
-            messages.success(request, f"Customer {customer.full_name} created.")
+            setup_url = request.build_absolute_uri(
+                reverse(
+                    "customer_invitation_accept",
+                    kwargs={"invitation_id": invitation.pk, "token": raw_token},
+                )
+            )
+            if send_customer_invitation(
+                invitation=invitation,
+                raw_token=raw_token,
+                setup_url=setup_url,
+            ):
+                messages.success(
+                    request,
+                    f"Customer {customer.full_name} created. The login setup email was accepted by the email provider.",
+                )
+            else:
+                messages.warning(
+                    request,
+                    f"Customer {customer.full_name} was created, but the login setup email could not be sent. Use Resend invitation below.",
+                )
             return redirect("schemes:customer_detail", customer_id=customer.pk)
     return render(request, "schemes/customer_form.html", {"form": form})
 
@@ -518,9 +546,45 @@ def customer_detail(request, customer_id):
         "schemes/customer_detail.html",
         {
             "customer": customer,
+            "latest_invitation": get_latest_customer_invitation(customer),
             "cash_scheme_activity_enabled": cash_scheme_activity_is_enabled(),
         },
     )
+
+
+@owner_required
+@require_POST
+def customer_invitation_resend(request, customer_id):
+    customer = get_object_or_404(Customer.objects.select_related("user"), pk=customer_id)
+    try:
+        invitation, raw_token = issue_customer_invitation(
+            user=customer.user,
+            created_by=request.user,
+        )
+    except ValidationError as error:
+        messages.error(request, " ".join(error.messages))
+    else:
+        setup_url = request.build_absolute_uri(
+            reverse(
+                "customer_invitation_accept",
+                kwargs={"invitation_id": invitation.pk, "token": raw_token},
+            )
+        )
+        if send_customer_invitation(
+            invitation=invitation,
+            raw_token=raw_token,
+            setup_url=setup_url,
+        ):
+            messages.success(
+                request,
+                "A new login setup email was accepted by the email provider. The previous invitation is no longer valid.",
+            )
+        else:
+            messages.warning(
+                request,
+                "The new invitation was created, but its email could not be sent. You can try again safely.",
+            )
+    return redirect("schemes:customer_detail", customer_id=customer.pk)
 
 
 @owner_required

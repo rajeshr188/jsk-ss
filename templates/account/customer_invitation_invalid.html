@@ -1,0 +1,14 @@
+{% extends '_base.html' %}
+
+{% block title %}Invitation unavailable | Jai Sri Krishna Jewelley{% endblock %}
+
+{% block content %}
+<div class="auth-shell">
+  <div class="card auth-card">
+    <p class="page-eyebrow">Customer invitation</p>
+    <h1>Invitation unavailable</h1>
+    <p class="text-secondary mb-4">This invitation is invalid, expired, superseded, or has already been used. Contact the showroom if you need a new invitation.</p>
+    <a class="btn btn-outline-dark w-100" href="{% url 'contact' %}">Contact the showroom</a>
+  </div>
+</div>
+{% endblock %}

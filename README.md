@@ -52,6 +52,7 @@ Alternatively, set `DJANGO_SECRET_KEY` and run `docker compose up --build`; Comp
 | `R2_CUSTOM_DOMAIN` | production media | Owned public hostname for renditions, without scheme/path; `r2.dev` is rejected in production |
 | `R2_SIGNED_URL_EXPIRY_SECONDS` | no | Lifetime of private original/document URLs; defaults to `900` seconds |
 | `DEFAULT_FROM_EMAIL` | no | Sender for authentication emails |
+| `CUSTOMER_INVITATION_EXPIRY_HOURS` | no | Customer login invitation lifetime; defaults to `72`, bounded to `1`–`168` hours |
 | `EMAIL_BACKEND` | production | Delivery backend; deploy checks reject console, dummy, and in-memory backends |
 | `EMAIL_HOST`, `EMAIL_PORT` | SMTP | SMTP server and port |
 | `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD` | SMTP | SMTP credentials; password remains server-side |

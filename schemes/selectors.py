@@ -6,6 +6,8 @@ from django.db.models import Case, Count, DecimalField, F, OuterRef, Q, Subquery
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 
+from accounts.models import CustomerInvitation
+
 from .bonuses import cash_bonus_policy_for_account
 from .models import (
     AuditEvent,
@@ -264,6 +266,15 @@ def get_owner_customer(customer_id):
     return Customer.objects.select_related("user").prefetch_related(
         "scheme_accounts__plan"
     ).get(pk=customer_id)
+
+
+def get_latest_customer_invitation(customer):
+    return (
+        CustomerInvitation.objects.filter(user=customer.user)
+        .select_related("created_by")
+        .order_by("-created_at", "-pk")
+        .first()
+    )
 
 
 def get_customer_scheme_account(user, scheme_number):

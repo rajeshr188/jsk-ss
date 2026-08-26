@@ -48,6 +48,11 @@ urlpatterns = [
         views.customer_enroll,
         name="customer_enroll",
     ),
+    path(
+        "owner/customers/<int:customer_id>/invitation/resend/",
+        views.customer_invitation_resend,
+        name="customer_invitation_resend",
+    ),
     path("owner/plans/", views.plan_list, name="plan_list"),
     path("owner/plans/add/", views.plan_add, name="plan_add"),
     path("owner/plans/<int:plan_id>/edit/", views.plan_edit, name="plan_edit"),
