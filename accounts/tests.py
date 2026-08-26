@@ -8,7 +8,7 @@ from django.contrib.auth.models import Permission
 from django.core import mail
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
-from django.test import TestCase, override_settings
+from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
@@ -51,12 +51,12 @@ class AuthenticationSmokeTests(TestCase):
         self.assertContains(response, "Public signup is not available")
         self.assertContains(response, 'class="auth-shell"')
 
-    def test_password_reset_token_response_is_not_cacheable_or_referrable(self):
+    def test_password_reset_token_response_is_not_cacheable_or_path_referrable(self):
         response = self.client.get("/accounts/password/reset/key/not-a-real-token/")
 
         self.assertEqual(response["Cache-Control"], "no-store")
         self.assertEqual(response["Pragma"], "no-cache")
-        self.assertEqual(response["Referrer-Policy"], "no-referrer")
+        self.assertEqual(response["Referrer-Policy"], "strict-origin")
 
 
 @override_settings(
@@ -117,7 +117,7 @@ class CustomerInvitationTests(TestCase):
         get_response = self.client.get(url)
         self.assertEqual(get_response.status_code, 200)
         self.assertEqual(get_response["Cache-Control"], "no-store")
-        self.assertEqual(get_response["Referrer-Policy"], "no-referrer")
+        self.assertEqual(get_response["Referrer-Policy"], "strict-origin")
 
         response = self.client.post(
             url,
@@ -141,6 +141,45 @@ class CustomerInvitationTests(TestCase):
             ).exists()
         )
         self.assertContains(self.client.get(url), "Invitation unavailable")
+
+    def test_invitation_csrf_rejects_null_and_accepts_same_origin(self):
+        invitation, raw_token = self.issue()
+        url = self.invitation_url(invitation, raw_token)
+        csrf_client = Client(enforce_csrf_checks=True)
+        get_response = csrf_client.get(url, secure=True)
+        csrf_token = csrf_client.cookies["csrftoken"].value
+        form_data = {
+            "new_password1": "customer-password-strong",
+            "new_password2": "customer-password-strong",
+        }
+
+        rejected_response = csrf_client.post(
+            url,
+            form_data,
+            secure=True,
+            HTTP_ORIGIN="null",
+            HTTP_X_CSRFTOKEN=csrf_token,
+        )
+
+        self.assertEqual(rejected_response.status_code, 403)
+        invitation.refresh_from_db()
+        self.customer.refresh_from_db()
+        self.assertIsNone(invitation.accepted_at)
+        self.assertFalse(self.customer.has_usable_password())
+
+        accepted_response = csrf_client.post(
+            url,
+            form_data,
+            secure=True,
+            HTTP_ORIGIN="https://testserver",
+            HTTP_X_CSRFTOKEN=csrf_token,
+        )
+
+        self.assertRedirects(accepted_response, reverse("account_login"))
+        invitation.refresh_from_db()
+        self.customer.refresh_from_db()
+        self.assertIsNotNone(invitation.accepted_at)
+        self.assertTrue(self.customer.check_password("customer-password-strong"))
 
     def test_new_invitation_supersedes_old_token(self):
         first, first_token = self.issue()

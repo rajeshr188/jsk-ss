@@ -13,5 +13,7 @@ class SensitiveAuthPathMiddleware:
         if request.path.startswith(SENSITIVE_AUTH_PATH_PREFIXES):
             response["Cache-Control"] = "no-store"
             response["Pragma"] = "no-cache"
-            response["Referrer-Policy"] = "no-referrer"
+            # Share only the scheme and host. Django can validate the same-origin
+            # password POST without exposing the secret-bearing path to subresources.
+            response["Referrer-Policy"] = "strict-origin"
         return response

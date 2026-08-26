@@ -9,7 +9,7 @@ This is the canonical source for stable business rules.
 - **AUTH-003:** Future public registration must create a complete customer profile, verify identity/contact data as configured, and remain awaiting owner approval until enrolment.
 - **AUTH-004:** No publicly registered but unenrolled customer may contribute. Reopening allauth signup alone is insufficient.
 - **AUTH-005:** Only an active owner may issue or replace a customer invitation. Issuing a replacement revokes every older unused invitation for that customer; an account with a usable password must use password reset instead.
-- **AUTH-006:** Invitation secrets are random, stored only as one-way digests, expire within the configured bounded lifetime, and are accepted at most once. Secret-bearing responses are not cacheable or referrable, and their request paths are excluded from edge access logs.
+- **AUTH-006:** Invitation secrets are random, stored only as one-way digests, expire within the configured bounded lifetime, and are accepted at most once. Secret-bearing responses are not cacheable, their URL paths are withheld from Referer headers, and their request paths are excluded from edge access logs. The origin-only referrer policy must still permit Django to validate same-origin password submissions.
 - **AUTH-007:** Email-provider acceptance is delivery evidence, not proof that the customer received or used the message. Invitation acceptance establishes login access only and never creates a `SchemeAccount`, contribution, or financial entitlement.
 - **AUTH-008:** Nonblank login emails are unique case-insensitively. Historical duplicates must be investigated and resolved deliberately without automatically deleting, merging, or reassigning customer or financial records.
 

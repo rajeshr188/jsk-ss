@@ -1073,6 +1073,13 @@ the authoritative privacy-reduced request log while Gunicorn retains error outpu
 Django's console handler redacts invitation and password-reset secrets if a CSRF
 warning or application error includes either path.
 
+Token-bearing responses must return `Cache-Control: no-store`, `Pragma: no-cache`,
+and `Referrer-Policy: strict-origin`. Do not use `no-referrer`: production browser
+evidence showed that it can produce `Origin: null` on the password POST, which Django
+correctly rejects. `strict-origin` supplies only the scheme and host needed for CSRF
+validation and never discloses the invitation/reset path to subresources. Do not add
+`null` to `CSRF_TRUSTED_ORIGINS` or exempt either password endpoint from CSRF.
+
 Authentication email identity must also be correct. In Django admin, update the
 `SITE_ID=1` Sites record to domain `jaishrikrishnajewellery.com` and display name
 `Jai Sri Krishna Jewellery`; never leave `example.com`. In Postmark, keep click and open
