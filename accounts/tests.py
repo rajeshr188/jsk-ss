@@ -319,7 +319,7 @@ class WagtailAdminAccessTests(TestCase):
         response = self.client.get(reverse("wagtailadmin_home"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Jai Sri Krishna Jewelley Catalogue")
+        self.assertContains(response, "Jai Sri Krishna Jewellery Catalogue")
 
     def test_existing_django_routes_keep_precedence(self):
         self.assertEqual(reverse("admin:index"), "/admin/")

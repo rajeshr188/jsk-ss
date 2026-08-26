@@ -151,9 +151,9 @@ def _get_or_create_editorial_pages():
         AboutPage,
         slug="about",
         defaults={
-            "title": "About Jai Sri Krishna Jewelley",
+            "title": "About Jai Sri Krishna Jewellery",
             "search_description": (
-                "Learn about Jai Sri Krishna Jewelley and its owner-managed gold "
+                "Learn about Jai Sri Krishna Jewellery and its owner-managed gold "
                 "and silver jewellery purchase plans in Vellore."
             ),
             "introduction": (
@@ -175,15 +175,15 @@ def _get_or_create_editorial_pages():
             "title": "Two brothers, one shared vision",
             "search_description": (
                 "Meet brothers Dilip Kumar and Rajesh Rathod H, the business and "
-                "technology minds behind Jai Sri Krishna Jewelley."
+                "technology minds behind Jai Sri Krishna Jewellery."
             ),
             "introduction": (
-                "Jai Sri Krishna Jewelley brings together a love for serving customers "
+                "Jai Sri Krishna Jewellery brings together a love for serving customers "
                 "and a passion for building dependable software."
             ),
             "business_owner_bio": (
                 "<p>Dilip brings the business vision, jewellery experience, and "
-                "customer-first approach that guide Jai Sri Krishna Jewelley and its "
+                "customer-first approach that guide Jai Sri Krishna Jewellery and its "
                 "savings schemes.</p>"
             ),
             "developer_bio": (

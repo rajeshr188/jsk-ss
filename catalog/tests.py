@@ -416,7 +416,7 @@ class PublicCatalogueTests(TestCase):
         structured_data = json.loads(structured_data_match.group(1))
         self.assertEqual(structured_data["@type"], "Product")
         self.assertEqual(structured_data["sku"], "JSK-G-001")
-        self.assertEqual(structured_data["brand"]["name"], "Jai Sri Krishna Jewelley")
+        self.assertEqual(structured_data["brand"]["name"], "Jai Sri Krishna Jewellery")
         self.assertNotIn("offers", structured_data)
 
     def test_public_navigation_tracks_catalogue_publication(self):

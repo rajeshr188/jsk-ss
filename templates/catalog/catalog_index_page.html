@@ -1,8 +1,8 @@
 {% extends "_base.html" %}
 {% load wagtailcore_tags wagtailimages_tags %}
 
-{% block title %}{{ page.seo_title|default:page.title }} | Jai Sri Krishna Jewelley{% endblock %}
-{% block meta_description %}{{ page.search_description|default:"Explore gold and silver jewellery for showroom enquiry at Jai Sri Krishna Jewelley in Vellore." }}{% endblock %}
+{% block title %}{{ page.seo_title|default:page.title }} | Jai Sri Krishna Jewellery{% endblock %}
+{% block meta_description %}{{ page.search_description|default:"Explore gold and silver jewellery for showroom enquiry at Jai Sri Krishna Jewellery in Vellore." }}{% endblock %}
 {% block canonical_url %}<link rel="canonical" href="{{ page.full_url }}">{% endblock %}
 {% block social_meta %}
   <meta property="og:type" content="website">
@@ -16,9 +16,9 @@
   "@context": "https://schema.org",
   "@type": "CollectionPage",
   "name": "{{ page.title|escapejs }}",
-  "description": "{{ page.search_description|default:'Explore jewellery for showroom enquiry at Jai Sri Krishna Jewelley in Vellore.'|escapejs }}",
+  "description": "{{ page.search_description|default:'Explore jewellery for showroom enquiry at Jai Sri Krishna Jewellery in Vellore.'|escapejs }}",
   "url": "{{ page.full_url|escapejs }}",
-  "isPartOf": {"@type": "WebSite", "name": "Jai Sri Krishna Jewelley"},
+  "isPartOf": {"@type": "WebSite", "name": "Jai Sri Krishna Jewellery"},
   "mainEntity": {
     "@type": "ItemList",
     "numberOfItems": {{ products.paginator.count }},

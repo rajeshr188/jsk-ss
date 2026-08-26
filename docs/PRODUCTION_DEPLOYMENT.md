@@ -1,6 +1,6 @@
 # Production and Deployment Guide
 
-This is the canonical production runbook for the Jai Sri Krishna Jewelley
+This is the canonical production runbook for the Jai Sri Krishna Jewellery
 Savings Scheme. It covers the current Django 6, PostgreSQL, Gunicorn, WhiteNoise,
 Razorpay Test Mode, and manually published Scheme Rate build. Development setup remains in the
 [README](../README.md); business invariants remain in [Domain rules](DOMAIN_RULES.md).
@@ -593,7 +593,7 @@ EMAIL_HOST_PASSWORD=<smtp-password>
 EMAIL_USE_TLS=True
 EMAIL_USE_SSL=False
 EMAIL_TIMEOUT=10
-DEFAULT_FROM_EMAIL=Jai Sri Krishna Jewelley <noreply@example.com>
+DEFAULT_FROM_EMAIL=Jai Sri Krishna Jewellery <noreply@example.com>
 SERVER_EMAIL=errors@example.com
 
 PAYMENT_GATEWAY=razorpay
@@ -1075,7 +1075,7 @@ warning or application error includes either path.
 
 Authentication email identity must also be correct. In Django admin, update the
 `SITE_ID=1` Sites record to domain `jaishrikrishnajewellery.com` and display name
-`Jai Sri Krishna Jewelley`; never leave `example.com`. In Postmark, keep click and open
+`Jai Sri Krishna Jewellery`; never leave `example.com`. In Postmark, keep click and open
 tracking disabled for the authentication stream. The application additionally sends
 per-message opt-out headers, but provider configuration remains defense in depth.
 

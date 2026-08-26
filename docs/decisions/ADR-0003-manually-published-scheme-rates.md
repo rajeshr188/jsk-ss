@@ -5,7 +5,7 @@
 The original gold/silver workflow fetched an external XAU/XAG-to-INR quote only
 after payment verification, created a one-off `RateSnapshot`, and could leave a
 verified payment unallocated when the provider, network, credentials, or response
-failed. External market data can also differ from the rate Jai Sri Krishna Jewelley
+failed. External market data can also differ from the rate Jai Sri Krishna Jewellery
 intends to offer under its customer scheme.
 
 That architecture added a critical external dependency, provider configuration and

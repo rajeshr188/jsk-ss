@@ -2,14 +2,14 @@
 
 ## Current milestone
 
-Customer invitation onboarding (`FW-AUTH-001`) — implementation complete locally;
-production deployment pending
+Customer invitation onboarding (`FW-AUTH-001`) — merged to `main`; production
+deployment paused for the canonical business-name correction
 
 ## Completed
 
 - Lithium authentication, Bootstrap/crispy forms, WhiteNoise, and custom user preserved.
 - PostgreSQL-only environment configuration and India time zone.
-- Jai Sri Krishna Jewelley branding and canonical documentation.
+- Jai Sri Krishna Jewellery branding and canonical documentation.
 - Bootstrap 5-only responsive interface modernization with a simplified owner
   navigation, wider financial data surfaces, consistent cards/forms/tables,
   refreshed public and authenticated journeys, and keyboard/reduced-motion
@@ -210,11 +210,14 @@ production deployment pending
 
 ## In progress
 
-- `FW-AUTH-001` is implemented on `agent/customer-invitations`; focused authentication
-  and owner-flow regressions pass. The operator corrected the two known active login-
-  email matches and changed production Site 1 to the owned domain on 2026-08-26.
-  Review, merge, candidate integrity preflight, additive migration, proxy reload, and
-  controlled-mailbox production proof remain.
+- `FW-AUTH-001` was merged to `main` in `4b970a3e28ac5f1a6ec19c977f0ee1365b50ef94`;
+  focused authentication and owner-flow regressions pass. The operator corrected the
+  two known active login-email matches and changed production Site 1 to the owned domain
+  on 2026-08-26. Production deployment is paused before migration because that candidate
+  inherited the misspelled display name `Jai Sri Krishna Jewelley`. The replacement must
+  consistently use the canonical `Jai Sri Krishna Jewellery`, pass CI and the existing
+  production preflight, then complete the additive migration, proxy reload, and
+  controlled-mailbox proof.
 - `FW-MEDIA-002` tracks the accepted backup/recovery and usage-monitoring deferral.
   It does not block catalogue use, but approved source photographs must
   remain outside R2 until an isolated backup target and restore proof exist.
@@ -231,7 +234,7 @@ production deployment pending
   CA are in place, SSH access is verified, Docker is installed, and the owned domain
   returns liveness and PostgreSQL readiness `200` through Caddy-managed HTTPS;
   production email, external alerts, and Razorpay live-mode readiness remain.
-- Production release `93ba4273c976cd427d86a79a58454e2b7e58c55f` is healthy with
+- Production release `71f3e9cea5376cfb0a362ee13510a1162015649f` is healthy with
   migrations through `schemes.0010_manual_scheme_rates` and `catalog.0001_initial`
   applied, zero reported financial exceptions, successful live/ready checks, valid
   catalogue authorization, working R2 media, published reviewed products, and public
