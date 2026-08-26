@@ -214,7 +214,7 @@ deployment paused for the canonical business-name correction
   focused authentication and owner-flow regressions pass. The operator corrected the
   two known active login-email matches and changed production Site 1 to the owned domain
   on 2026-08-26. Production deployment is paused before migration because that candidate
-  inherited the misspelled display name `Jai Sri Krishna Jewelley`. The replacement must
+  inherited an incorrect display name. The replacement must
   consistently use the canonical `Jai Sri Krishna Jewellery`, pass CI and the existing
   production preflight, then complete the additive migration, proxy reload, and
   controlled-mailbox proof.
