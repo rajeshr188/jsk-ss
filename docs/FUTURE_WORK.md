@@ -166,7 +166,7 @@ here are not implemented behavior and do not relax the financial invariants in
 
 ## Customer onboarding
 
-- **FW-AUTH-001 (deployed 2026-08-26; CSRF policy hotfix pending):** Owner-created
+- **FW-AUTH-001 (completed in production 2026-08-26):** Owner-created
   customer profiles now begin with unusable passwords and receive one-time,
   digest-only, expiring password-setup invitations. Resend supersedes older links;
   activated users use password reset. Provider acceptance/failure is visible without
@@ -175,7 +175,9 @@ here are not implemented behavior and do not relax the financial invariants in
   the referrer policy, and are excluded from Caddy access logs. Login email uniqueness
   has a stop-before-migration preflight. The initial production policy used
   `no-referrer`, which produced opaque `Origin: null` password submissions in a real
-  browser; the reviewed hotfix changes only those responses to `strict-origin`.
+  browser. Production release `f9081c1a52a3ce3dc99e1d816cce9846a5b31f92`
+  corrected those responses to `strict-origin`; controlled invitation setup and
+  subsequent forgot-password reset both passed.
 - **FW-AUTH-002:** Before public signup, implement complete customer-profile creation,
   email/mobile verification, duplicate handling, consent capture, abuse controls,
   and an explicit awaiting-owner-approval state.
