@@ -1,4 +1,5 @@
 from datetime import timedelta
+import logging
 from unittest.mock import patch
 
 from allauth.account.models import EmailAddress
@@ -12,6 +13,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from accounts.models import CustomerInvitation
+from accounts.logging import SensitiveAuthPathFilter, redact_sensitive_auth_paths
 from accounts.services import issue_customer_invitation, send_customer_invitation
 
 
@@ -216,6 +218,44 @@ class AuthEmailConstraintTests(TestCase):
                 username="second@example.com",
                 email="customer@example.com",
             )
+
+
+class SensitiveAuthLoggingTests(TestCase):
+    def test_invitation_and_password_reset_tokens_are_redacted(self):
+        invitation_token = "raw-invitation-secret"
+        reset_token = "2-raw-password-reset-secret"
+        message = (
+            "Failure at /accounts/invitations/"
+            "8b5e3b5a-240d-49da-9446-b2d22ac534ce/"
+            f"{invitation_token}/ and /accounts/password/reset/key/{reset_token}/"
+        )
+
+        redacted = redact_sensitive_auth_paths(message)
+
+        self.assertNotIn(invitation_token, redacted)
+        self.assertNotIn(reset_token, redacted)
+        self.assertIn("/accounts/invitations/[REDACTED]/", redacted)
+        self.assertIn("/accounts/password/reset/key/[REDACTED]/", redacted)
+
+    def test_logging_filter_redacts_formatted_record_arguments(self):
+        raw_token = "raw-secret-in-log-argument"
+        record = logging.LogRecord(
+            name="django.request",
+            level=logging.ERROR,
+            pathname=__file__,
+            lineno=1,
+            msg="Internal Server Error: %s",
+            args=(
+                "/accounts/invitations/"
+                "8b5e3b5a-240d-49da-9446-b2d22ac534ce/"
+                f"{raw_token}/",
+            ),
+            exc_info=None,
+        )
+
+        self.assertTrue(SensitiveAuthPathFilter().filter(record))
+        self.assertNotIn(raw_token, record.getMessage())
+        self.assertIn("[REDACTED]", record.getMessage())
 
 
 class WagtailAdminAccessTests(TestCase):

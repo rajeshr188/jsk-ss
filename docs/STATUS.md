@@ -33,8 +33,8 @@ production deployment pending
   between login activation and financial enrolment. Public signup remains closed.
 - Direct untracked authentication links, non-cacheable/non-referrable token responses,
   Caddy token-path log exclusion, removal of the redundant Gunicorn full-path access
-  log, and case-insensitive login-email uniqueness with a stop-before-migration
-  integrity check.
+  log, Django error/warning path redaction, and case-insensitive login-email
+  uniqueness with a stop-before-migration integrity check.
 - Append-oriented contributions with pending/paid/paid-unallocated/failed states.
 - Fixed/variable amount validation and once-per-month/flexible frequency rules.
 - Debug-only mock payment adapter with verified, idempotent confirmation.

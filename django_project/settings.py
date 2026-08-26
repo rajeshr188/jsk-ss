@@ -366,6 +366,11 @@ if LOG_LEVEL not in {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}:
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
+    "filters": {
+        "redact_sensitive_auth_paths": {
+            "()": "accounts.logging.SensitiveAuthPathFilter",
+        }
+    },
     "formatters": {
         "standard": {
             "format": "{asctime} {levelname} {name} {message}",
@@ -376,6 +381,7 @@ LOGGING = {
         "console": {
             "class": "logging.StreamHandler",
             "formatter": "standard",
+            "filters": ["redact_sensitive_auth_paths"],
         }
     },
     "root": {"handlers": ["console"], "level": LOG_LEVEL},

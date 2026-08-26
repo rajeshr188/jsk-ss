@@ -12,7 +12,8 @@ uv run --env-file .env python manage.py makemigrations --check --dry-run
 Authentication regressions cover closed public signup, owner-only digest-backed
 customer invitations, bounded expiry and one-time acceptance, resend supersession,
 provider failure/retry, direct untracked email links, token-response privacy headers,
-case-insensitive login-email uniqueness, and login/enrolment separation.
+edge/access-log exclusion, Django warning/error token redaction, case-insensitive
+login-email uniqueness, and login/enrolment separation.
 
 Current regressions cover amount/frequency enforcement, failed-payment entitlement, confirmation/allocation idempotency, Razorpay order/API/HMAC boundaries, duplicate callbacks and webhooks, owner-only Scheme Rate publication, publication validation/warnings, GOLD/SILVER no-rate payment blocking with unaffected CASH orders, pre-order rate locking, durable verified-metal-payment recovery, exact metal calculation, historical-rate stability, paid-unallocated recovery from the original lock, production-shaped `schemes.0009` to `0010` history backfill and blocker behavior, customer isolation, owner liability reconciliation, current-exposure rounding, India-local activity periods, eligibility status and exact 30/60/90-day boundaries, versioned cash-bonus snapshots, projection-versus-earned boundaries, eligibility cutoff, half-up bonus rounding, principal/bonus redemption allocation, redemption idempotency and precision, partial/full settlement, over-redemption prevention, denomination separation, immutable audit/reversal history, exception classification, reversal liability restoration, stable receipt numbering, unallocated-document disclosure, statement source filtering, document/export access control, CSV denomination/formula safety, and database constraints.
 

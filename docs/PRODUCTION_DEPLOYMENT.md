@@ -1070,6 +1070,8 @@ and invitation-secret paths from access logs. Validate and recreate Caddy during
 release, then verify its effective configuration before inviting a customer. The
 candidate image also disables Gunicorn's redundant full-path access log; Caddy remains
 the authoritative privacy-reduced request log while Gunicorn retains error output.
+Django's console handler redacts invitation and password-reset secrets if a CSRF
+warning or application error includes either path.
 
 Authentication email identity must also be correct. In Django admin, update the
 `SITE_ID=1` Sites record to domain `jaishrikrishnajewellery.com` and display name
@@ -1087,7 +1089,8 @@ After rollout, use a controlled customer mailbox to verify all of the following:
 4. Provider acceptance is labelled as such and is not treated as proof of receipt.
 5. Caddy logs contain neither `/accounts/invitations/` nor
    `/accounts/password/reset/key/` request entries, and web-container logs contain no
-   Gunicorn access entries; do not print either URL while testing.
+   Gunicorn access entries or raw authentication tokens. A deliberately induced safe
+   warning may contain only `[REDACTED]`; do not print either real URL while testing.
 6. Password reset uses the owned site name/domain and remains a direct, untracked URL.
 
 If the candidate must be rolled back after this additive migration, the previous image
