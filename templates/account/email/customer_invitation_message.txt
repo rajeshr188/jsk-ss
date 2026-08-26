@@ -1,0 +1,9 @@
+Hello {{ customer_name }},
+
+Jai Sri Krishna Jewelley has created your customer profile. Use the secure link below to choose your password:
+
+{{ setup_url }}
+
+This invitation expires at {{ expires_at|date:"d M Y, g:i A T" }} and can be used only once. If you were not expecting it, do not open the link; contact the showroom at admin@jaishrikrishnajewellery.com or +91 94894 81436.
+
+A login does not itself create a savings agreement. The store must enrol you in a savings plan before contributions are available.

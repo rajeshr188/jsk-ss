@@ -52,7 +52,25 @@ graph TD
 
 Lithium's `CustomUser` and django-allauth remain authoritative. Superusers and `OWNER` users have owner access. Customer queries are always scoped through the authenticated user's one-to-one `Customer` record.
 
-Public customer signup is intentionally closed during the MVP. The owner creates a customer login and profile together, then explicitly enrols that customer into a scheme agreement. This prevents an allauth login from being mistaken for an active financial agreement.
+Public customer signup is intentionally closed during the MVP. The owner creates the
+customer login and profile transactionally with an unusable password. The application
+then emails a one-time, time-limited setup URL whose random secret is stored only as a
+SHA-256 digest. The customer chooses their own password; successful setup also records
+the allauth email address as verified. Owners can replace an unused invitation, which
+revokes every previous live invitation, but an activated login uses password reset.
+Invitation email-provider acceptance and login activation remain separate from the
+owner's explicit scheme enrolment. This prevents an allauth login from being mistaken
+for an active financial agreement.
+
+Authentication emails opt out of Postmark link/open tracking so password and invitation
+URLs remain direct first-party links. Django marks token-bearing responses `no-store`
+with a `no-referrer` policy, while the production Caddy profile excludes their paths
+from access logs. The web container emits application/error logs but no second
+Gunicorn access log, and a console logging filter redacts either sensitive path if a
+Django CSRF warning or application error references it. An internal error log cannot
+bypass the edge filter and retain the raw token.
+Nonblank `CustomUser.email` values are unique case-insensitively;
+the deployment preflight stops rather than guessing how to combine historical users.
 
 Wagtail authorization is independent of application roles. Dedicated Editorial and
 Catalogue groups scope page and media access to their respective content; neither an
@@ -62,7 +80,7 @@ remain Django-owned.
 
 ### Future public customer signup
 
-If public signup is introduced later, registration must create a complete customer profile transactionally and place it in an explicit not-yet-enrolled/awaiting-approval state. Email verification, duplicate email/mobile handling, terms and privacy consent, abuse controls, and clear status language are required. Owner approval must remain mandatory before a `SchemeAccount` is created or any payment is accepted. Prefer an email invitation/password-setup flow before open self-registration; do not merely reopen the default allauth signup form.
+If public signup is introduced later, registration must create a complete customer profile transactionally and place it in an explicit not-yet-enrolled/awaiting-approval state. Email verification, duplicate email/mobile handling, terms and privacy consent, abuse controls, and clear status language are required. Owner approval must remain mandatory before a `SchemeAccount` is created or any payment is accepted. Extend the established invitation boundary deliberately; do not merely reopen the default allauth signup form.
 
 ## Financial source of truth
 

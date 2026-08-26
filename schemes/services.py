@@ -10,6 +10,8 @@ from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 
+from accounts.services import issue_customer_invitation
+
 from .bonuses import CASH_BONUS_POLICY_VERSION
 from .models import (
     AuditEvent,
@@ -146,7 +148,7 @@ def add_calendar_months(value, months):
 
 
 @transaction.atomic
-def create_customer(*, full_name, email, mobile_number, address="", password):
+def create_customer(*, full_name, email, mobile_number, address="", password=None):
     user_model = get_user_model()
     normalized_email = user_model.objects.normalize_email(email).strip().lower()
     if user_model.objects.filter(email__iexact=normalized_email).exists():
@@ -160,7 +162,10 @@ def create_customer(*, full_name, email, mobile_number, address="", password):
         last_name=name_parts[1] if len(name_parts) > 1 else "",
         role=user_model.Role.CUSTOMER,
     )
-    user.set_password(password)
+    if password is None:
+        user.set_unusable_password()
+    else:
+        user.set_password(password)
     user.full_clean()
     user.save()
 
@@ -175,6 +180,24 @@ def create_customer(*, full_name, email, mobile_number, address="", password):
     customer.full_clean()
     customer.save()
     return customer
+
+
+@transaction.atomic
+def create_invited_customer(
+    *, full_name, email, mobile_number, invited_by, address=""
+):
+    customer = create_customer(
+        full_name=full_name,
+        email=email,
+        mobile_number=mobile_number,
+        address=address,
+        password=None,
+    )
+    invitation, raw_token = issue_customer_invitation(
+        user=customer.user,
+        created_by=invited_by,
+    )
+    return customer, invitation, raw_token
 
 
 @transaction.atomic

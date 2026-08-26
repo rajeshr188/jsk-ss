@@ -1,0 +1,19 @@
+{% extends '_base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Set up your login | Jai Sri Krishna Jewelley{% endblock %}
+
+{% block content %}
+<div class="auth-shell">
+  <div class="card auth-card">
+    <p class="page-eyebrow">Customer invitation</p>
+    <h1>Set up your login</h1>
+    <p class="text-secondary mb-4">Choose a strong password for {{ invitation.email }}. This invitation can be used only once.</p>
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {{ form|crispy }}
+      <button class="btn btn-jsk w-100" type="submit">Set password</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

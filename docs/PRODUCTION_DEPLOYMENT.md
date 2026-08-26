@@ -1038,6 +1038,65 @@ Stop if any output differs from the reviewed plan. A non-backward-compatible mig
 requires its own maintenance and recovery procedure; do not apply it while the old
 image serves traffic.
 
+#### Customer-invitation migration preflight (`accounts.0003`)
+
+Before applying `accounts.0003_customerinvitation_and_more`, run the candidate's
+read-only integrity command against production:
+
+```bash
+docker compose --env-file .env.production -f compose.production.yml \
+  run --rm --no-deps web python manage.py check_auth_email_integrity
+```
+
+Record `duplicate_groups=0`. Blank-email administrative users are reported but do not
+block the conditional constraint. If duplicates exist, stop. In a private terminal
+only, rerun with `--show-identifiers`, inspect each user's role, customer linkage,
+scheme accounts, and audit/financial history, and decide which distinct email belongs
+to each real person. Do not paste that personal-data output into shared logs, and do
+not automatically delete, merge, deactivate, or reassign accounts. Rerun the default
+command until it passes. The migration independently repeats this check immediately
+before adding the case-insensitive unique constraint.
+
+Set the bounded invitation lifetime in `.env.production` before candidate validation:
+
+```dotenv
+CUSTOMER_INVITATION_EXPIRY_HOURS=72
+```
+
+The schema addition is backward-compatible with the previous image, but the new owner
+workflow must not go live until the candidate migration succeeds and Caddy has loaded
+the candidate `deploy/Caddyfile`. That proxy configuration excludes password-reset
+and invitation-secret paths from access logs. Validate and recreate Caddy during the
+release, then verify its effective configuration before inviting a customer. The
+candidate image also disables Gunicorn's redundant full-path access log; Caddy remains
+the authoritative privacy-reduced request log while Gunicorn retains error output.
+Django's console handler redacts invitation and password-reset secrets if a CSRF
+warning or application error includes either path.
+
+Authentication email identity must also be correct. In Django admin, update the
+`SITE_ID=1` Sites record to domain `jaishrikrishnajewellery.com` and display name
+`Jai Sri Krishna Jewelley`; never leave `example.com`. In Postmark, keep click and open
+tracking disabled for the authentication stream. The application additionally sends
+per-message opt-out headers, but provider configuration remains defense in depth.
+
+After rollout, use a controlled customer mailbox to verify all of the following:
+
+1. Owner creation sends one direct `https://jaishrikrishnajewellery.com/accounts/invitations/...`
+   link and creates no scheme account.
+2. The customer sets a password once, can sign in, and remains unenrolled until the
+   owner creates a separate agreement.
+3. Resending before acceptance invalidates the earlier URL.
+4. Provider acceptance is labelled as such and is not treated as proof of receipt.
+5. Caddy logs contain neither `/accounts/invitations/` nor
+   `/accounts/password/reset/key/` request entries, and web-container logs contain no
+   Gunicorn access entries or raw authentication tokens. A deliberately induced safe
+   warning may contain only `[REDACTED]`; do not print either real URL while testing.
+6. Password reset uses the owned site name/domain and remains a direct, untracked URL.
+
+If the candidate must be rolled back after this additive migration, the previous image
+can run against the extended schema. Its old owner form would again ask for temporary
+passwords, so suspend customer creation until the corrected candidate is restored.
+
 Before applying `schemes.0010_manual_scheme_rates`, confirm the old architecture has
 no verified metal payment without an allocation and no open metal Razorpay order.
 This deliberately includes both `PAID` and `PAID_UNALLOCATED`: an interrupted legacy

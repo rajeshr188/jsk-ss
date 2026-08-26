@@ -16,6 +16,28 @@
   </dl>
 </div></div>
 
+<div class="card mb-4"><div class="card-body p-4">
+  <div class="d-flex flex-column flex-md-row justify-content-between gap-3">
+    <div>
+      <h2 class="h5">Customer login</h2>
+      {% if customer.user.has_usable_password %}
+        <p class="mb-0"><span class="badge text-bg-success">Active</span> The customer has completed password setup.</p>
+      {% elif latest_invitation %}
+        <p class="mb-1"><span class="badge text-bg-secondary">{{ latest_invitation.lifecycle_status }}</span></p>
+        <p class="small text-secondary mb-0">Created {{ latest_invitation.created_at }} · expires {{ latest_invitation.expires_at }}.</p>
+      {% else %}
+        <p class="mb-0"><span class="badge text-bg-warning">Setup required</span> No invitation has been issued.</p>
+      {% endif %}
+    </div>
+    {% if not customer.user.has_usable_password %}
+      <form method="post" action="{% url 'schemes:customer_invitation_resend' customer.pk %}" class="align-self-md-center">
+        {% csrf_token %}
+        <button class="btn btn-outline-dark" type="submit">Resend invitation</button>
+      </form>
+    {% endif %}
+  </div>
+</div></div>
+
 <div class="section-heading"><div><h2>Scheme accounts</h2><p>Agreement terms and current lifecycle status.</p></div></div>
 <div class="row g-3">
   {% for account in customer.scheme_accounts.all %}

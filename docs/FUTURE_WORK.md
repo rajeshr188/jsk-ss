@@ -32,9 +32,13 @@ here are not implemented behavior and do not relax the financial invariants in
   evidence for 5xx/readiness, failed webhooks, allocation exceptions, database
   capacity, certificate renewal, backup failure, escalation, and retention before
   marking this item complete.
-- **FW-PROD-003 — Delivery and rotation drill:** Verify real password-reset email
-  delivery and rehearse separate Django, database, email, Razorpay API, and
-  Razorpay webhook secret rotations without exposing credentials.
+- **FW-PROD-003 — Delivery verified; rotations remain:** Postmark approved the
+  account and a real password-reset message reached the controlled Gmail mailbox on
+  2026-08-26. The production Django Site identity was corrected from `example.com` to
+  the owned domain on 2026-08-26. Deploy and verify direct untracked authentication
+  links, then retain evidence. The owner explicitly deferred the SMTP token-rotation
+  rehearsal; Django, database, SMTP, Razorpay API, and webhook rotation drills
+  therefore remain open.
 - **FW-PROD-004 — Image-build confirmation (completed locally 2026-08-18):** The
   hardened image builds with production static assets and runs as the unprivileged
   `app` user. The same build is an independent CI gate on the next GitHub run.
@@ -162,8 +166,13 @@ here are not implemented behavior and do not relax the financial invariants in
 
 ## Customer onboarding
 
-- **FW-AUTH-001:** Prefer owner invitations and customer password setup before open
-  self-registration.
+- **FW-AUTH-001 (implemented locally 2026-08-26; deployment pending):** Owner-created
+  customer profiles now begin with unusable passwords and receive one-time,
+  digest-only, expiring password-setup invitations. Resend supersedes older links;
+  activated users use password reset. Provider acceptance/failure is visible without
+  storing provider error detail, Postmark tracking is disabled for authentication
+  mail, token-bearing responses are non-cacheable/non-referrable and excluded from
+  Caddy access logs, and login email uniqueness has a stop-before-migration preflight.
 - **FW-AUTH-002:** Before public signup, implement complete customer-profile creation,
   email/mobile verification, duplicate handling, consent capture, abuse controls,
   and an explicit awaiting-owner-approval state.
