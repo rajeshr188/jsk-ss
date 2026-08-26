@@ -41,7 +41,7 @@ from schemes.models import SchemePlan
 class PublicPageTests(SimpleTestCase):
     def test_home_is_branded(self):
         response = self.client.get(reverse("home"))
-        self.assertContains(response, "Jai Sri Krishna Jewelley")
+        self.assertContains(response, "Jai Sri Krishna Jewellery")
         self.assertContains(
             response, "Plan today. Choose the jewellery you love tomorrow."
         )
@@ -73,7 +73,7 @@ class PublicPageTests(SimpleTestCase):
 
     def test_about_page(self):
         response = self.client.get(reverse("about"))
-        self.assertContains(response, "About Jai Sri Krishna Jewelley")
+        self.assertContains(response, "About Jai Sri Krishna Jewellery")
         self.assertContains(response, "accumulated metal quantity may be applied")
 
     def test_our_story_credits_owner_and_developer(self):
@@ -287,7 +287,7 @@ class EditorialCmsTests(TestCase):
         about_response = self.client.get(reverse("about"))
         story_response = self.client.get(reverse("our_story"))
 
-        self.assertContains(about_response, "About Jai Sri Krishna Jewelley")
+        self.assertContains(about_response, "About Jai Sri Krishna Jewellery")
         self.assertContains(about_response, "accumulated metal quantity may be applied")
         self.assertContains(story_response, "Dilip Kumar")
         self.assertContains(story_response, "Rajesh Rathod H")
@@ -324,7 +324,7 @@ class EditorialCmsTests(TestCase):
         response = self.client.get(reverse("about"))
 
         self.assertNotContains(response, "Temporary CMS introduction")
-        self.assertContains(response, "About Jai Sri Krishna Jewelley")
+        self.assertContains(response, "About Jai Sri Krishna Jewellery")
 
     @override_settings(PUBLIC_EDITORIAL_PAGES_ENABLED=True)
     def test_live_story_uses_cms_content_but_remains_unlinked(self):

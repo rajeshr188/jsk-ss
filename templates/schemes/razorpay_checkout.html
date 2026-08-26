@@ -1,6 +1,6 @@
 {% extends '_base.html' %}
 
-{% block title %}Razorpay test checkout | Jai Sri Krishna Jewelley{% endblock %}
+{% block title %}Razorpay test checkout | Jai Sri Krishna Jewellery{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center"><div class="col-lg-6">
@@ -51,7 +51,7 @@
         key: "{{ razorpay_key_id|escapejs }}",
         amount: "{{ amount_subunits }}",
         currency: "INR",
-        name: "Jai Sri Krishna Jewelley",
+        name: "Jai Sri Krishna Jewellery",
         description: "Scheme contribution (test mode)",
         order_id: "{{ contribution.gateway_order_id|escapejs }}",
         prefill: {

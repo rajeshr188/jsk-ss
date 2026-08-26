@@ -1,5 +1,5 @@
 [Unit]
-Description=Jai Sri Krishna Jewelley financial exception heartbeat
+Description=Jai Sri Krishna Jewellery financial exception heartbeat
 Requires=docker.service
 After=docker.service network-online.target
 Wants=network-online.target

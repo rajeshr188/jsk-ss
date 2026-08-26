@@ -1,5 +1,5 @@
 [Unit]
-Description=Check Jai Sri Krishna Jewelley financial exceptions every five minutes
+Description=Check Jai Sri Krishna Jewellery financial exceptions every five minutes
 
 [Timer]
 OnBootSec=2min

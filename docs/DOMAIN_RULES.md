@@ -52,7 +52,7 @@ This is the canonical source for stable business rules.
   until its allocation is stored, then transitions to `PAID`. This recovery state
   covers allocation exceptions and process interruption; it is not a missing-rate
   workflow. Retry must reuse the contribution's original lock.
-- **RATE-001:** Only a manually published Jai Sri Krishna Jewelley `SchemeRate` may be used for a new gold or silver allocation.
+- **RATE-001:** Only a manually published Jai Sri Krishna Jewellery `SchemeRate` may be used for a new gold or silver allocation.
 - **RATE-002:** A metal contribution must lock its current applicable `SchemeRate` before mock payment initiation or Razorpay order creation.
 - **RATE-003:** Publishing a new `SchemeRate` never changes an already locked contribution.
 - **RATE-004:** Publishing a new `SchemeRate` never changes historical `MetalAllocation` quantity.

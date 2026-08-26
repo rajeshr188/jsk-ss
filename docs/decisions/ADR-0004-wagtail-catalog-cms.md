@@ -5,7 +5,7 @@
 
 ## Context
 
-Jai Sri Krishna Jewelley currently serves public information, savings-plan pages,
+Jai Sri Krishna Jewellery currently serves public information, savings-plan pages,
 customer accounts, and owner financial workflows with ordinary Django views and
 templates. A future public jewellery catalogue will require the owner to create,
 preview, revise, publish, unpublish, and organize product content and images without

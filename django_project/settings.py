@@ -250,7 +250,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # Wagtail is a bounded catalogue CMS. Existing public and financial routes remain
 # ordinary Django views until their own approved implementation phase.
-WAGTAIL_SITE_NAME = "Jai Sri Krishna Jewelley Catalogue"
+WAGTAIL_SITE_NAME = "Jai Sri Krishna Jewellery Catalogue"
 WAGTAILADMIN_BASE_URL = os.getenv(
     "WAGTAILADMIN_BASE_URL",
     "http://localhost:8000" if DEBUG else "https://jaishrikrishnajewellery.com",

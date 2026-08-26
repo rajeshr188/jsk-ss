@@ -1,7 +1,7 @@
 {% extends "_base.html" %}
 {% load wagtailcore_tags wagtailimages_tags %}
 
-{% block title %}{{ page.seo_title|default:page.title }} | Jai Sri Krishna Jewelley{% endblock %}
+{% block title %}{{ page.seo_title|default:page.title }} | Jai Sri Krishna Jewellery{% endblock %}
 {% block meta_description %}{{ page.search_description|default:page.short_description }}{% endblock %}
 {% block canonical_url %}<link rel="canonical" href="{{ page.full_url }}">{% endblock %}
 {% block social_meta %}
@@ -21,7 +21,7 @@
   "sku": "{{ page.product_code|escapejs }}",
   "category": "{{ page.category.name|escapejs }}",
   "url": "{{ page.full_url|escapejs }}",
-  "brand": {"@type": "Brand", "name": "Jai Sri Krishna Jewelley"}{% if primary_image_url %},
+  "brand": {"@type": "Brand", "name": "Jai Sri Krishna Jewellery"}{% if primary_image_url %},
   "image": "{{ primary_image_url|escapejs }}"{% endif %}
 }
 </script>

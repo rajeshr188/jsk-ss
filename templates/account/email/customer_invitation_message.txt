@@ -1,6 +1,6 @@
 Hello {{ customer_name }},
 
-Jai Sri Krishna Jewelley has created your customer profile. Use the secure link below to choose your password:
+Jai Sri Krishna Jewellery has created your customer profile. Use the secure link below to choose your password:
 
 {{ setup_url }}
 
