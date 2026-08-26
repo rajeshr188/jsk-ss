@@ -166,13 +166,16 @@ here are not implemented behavior and do not relax the financial invariants in
 
 ## Customer onboarding
 
-- **FW-AUTH-001 (implemented locally 2026-08-26; deployment pending):** Owner-created
+- **FW-AUTH-001 (deployed 2026-08-26; CSRF policy hotfix pending):** Owner-created
   customer profiles now begin with unusable passwords and receive one-time,
   digest-only, expiring password-setup invitations. Resend supersedes older links;
   activated users use password reset. Provider acceptance/failure is visible without
   storing provider error detail, Postmark tracking is disabled for authentication
-  mail, token-bearing responses are non-cacheable/non-referrable and excluded from
-  Caddy access logs, and login email uniqueness has a stop-before-migration preflight.
+  mail, token-bearing responses are non-cacheable, disclose only their origin through
+  the referrer policy, and are excluded from Caddy access logs. Login email uniqueness
+  has a stop-before-migration preflight. The initial production policy used
+  `no-referrer`, which produced opaque `Origin: null` password submissions in a real
+  browser; the reviewed hotfix changes only those responses to `strict-origin`.
 - **FW-AUTH-002:** Before public signup, implement complete customer-profile creation,
   email/mobile verification, duplicate handling, consent capture, abuse controls,
   and an explicit awaiting-owner-approval state.

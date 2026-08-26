@@ -2,8 +2,8 @@
 
 ## Current milestone
 
-Customer invitation onboarding (`FW-AUTH-001`) — merged to `main`; production
-deployment paused for the canonical business-name correction
+Customer invitation onboarding (`FW-AUTH-001`) — production CSRF/referrer-policy
+hotfix in progress
 
 ## Completed
 
@@ -31,7 +31,8 @@ deployment paused for the canonical business-name correction
 - Owner-only, one-time customer password-setup invitations with digest-only secrets,
   bounded expiry, safe resend/supersession, delivery state, and explicit separation
   between login activation and financial enrolment. Public signup remains closed.
-- Direct untracked authentication links, non-cacheable/non-referrable token responses,
+- Direct untracked authentication links, non-cacheable token responses that disclose
+  only their origin and not the secret-bearing path,
   Caddy token-path log exclusion, removal of the redundant Gunicorn full-path access
   log, Django error/warning path redaction, and case-insensitive login-email
   uniqueness with a stop-before-migration integrity check.
@@ -210,14 +211,14 @@ deployment paused for the canonical business-name correction
 
 ## In progress
 
-- `FW-AUTH-001` was merged to `main` in `4b970a3e28ac5f1a6ec19c977f0ee1365b50ef94`;
-  focused authentication and owner-flow regressions pass. The operator corrected the
-  two known active login-email matches and changed production Site 1 to the owned domain
-  on 2026-08-26. Production deployment is paused before migration because that candidate
-  inherited an incorrect display name. The replacement must
-  consistently use the canonical `Jai Sri Krishna Jewellery`, pass CI and the existing
-  production preflight, then complete the additive migration, proxy reload, and
-  controlled-mailbox proof.
+- `FW-AUTH-001` and `accounts.0003` reached production in release
+  `6fe771b99a0495442e1ea639c7eaf9d5e69acb12` on 2026-08-26 after zero auth-email
+  integrity and financial-exception gates. Controlled-browser proof exposed a
+  response-policy defect: `no-referrer` produced `Origin: null` on invitation and
+  password-reset submissions, which Django correctly rejected. A focused hotfix changes
+  only secret-bearing responses to `strict-origin`, preserving path confidentiality
+  while restoring same-origin CSRF validation. Review, merge, deploy, and controlled-
+  mailbox invitation/password-reset proof remain.
 - `FW-MEDIA-002` tracks the accepted backup/recovery and usage-monitoring deferral.
   It does not block catalogue use, but approved source photographs must
   remain outside R2 until an isolated backup target and restore proof exist.
@@ -373,11 +374,10 @@ deployment paused for the canonical business-name correction
 
 ## Next recommended step
 
-Review and merge `FW-AUTH-001`. Before its additive `accounts.0003` migration, run
-the candidate's documented auth-email integrity preflight and record
-`duplicate_groups=0`, confirming the operator's duplicate correction. Load the
-token-path Caddy log exclusion, deploy with a 72-hour invitation lifetime, then prove
-create/invite/accept/resend/password-reset behavior through a controlled mailbox.
+Review, merge, and deploy the `FW-AUTH-001` CSRF/referrer-policy hotfix with no schema
+change. Confirm token responses return `no-store` and `Referrer-Policy: strict-origin`,
+then prove create/invite/accept/resend/password-reset behavior through a controlled
+mailbox without exposing any token URL.
 
 Keep live keys disabled until legal/provider review and live-mode operating procedures
 are approved. Retain the owned

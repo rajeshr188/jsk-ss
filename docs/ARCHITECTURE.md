@@ -64,8 +64,9 @@ for an active financial agreement.
 
 Authentication emails opt out of Postmark link/open tracking so password and invitation
 URLs remain direct first-party links. Django marks token-bearing responses `no-store`
-with a `no-referrer` policy, while the production Caddy profile excludes their paths
-from access logs. The web container emits application/error logs but no second
+with a `strict-origin` policy: same-origin password submissions remain CSRF-verifiable,
+but subresources receive no secret-bearing URL path. The production Caddy profile
+excludes the token paths from access logs. The web container emits application/error logs but no second
 Gunicorn access log, and a console logging filter redacts either sensitive path if a
 Django CSRF warning or application error references it. An internal error log cannot
 bypass the edge filter and retain the raw token.
