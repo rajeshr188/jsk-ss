@@ -1,5 +1,8 @@
 from django.conf import settings
 from django.core.checks import Error, Tags, Warning, register
+from django.core.exceptions import ImproperlyConfigured
+
+from .payments import validate_razorpay_mode
 
 
 @register(Tags.security, deploy=True)
@@ -27,6 +30,7 @@ def production_configuration(app_configs, **kwargs):
         missing = [
             name
             for name in (
+                "RAZORPAY_MODE",
                 "RAZORPAY_KEY_ID",
                 "RAZORPAY_KEY_SECRET",
                 "RAZORPAY_WEBHOOK_SECRET",
@@ -41,14 +45,23 @@ def production_configuration(app_configs, **kwargs):
                     id="jsk.E006",
                 )
             )
-        elif not settings.RAZORPAY_KEY_ID.startswith("rzp_test_"):
-            issues.append(
-                Error(
-                    "This release accepts only Razorpay Test Mode credentials.",
-                    hint="Keep live mode disabled until its operational gates are complete.",
-                    id="jsk.E007",
+        else:
+            try:
+                validate_razorpay_mode(
+                    mode=settings.RAZORPAY_MODE,
+                    key_id=settings.RAZORPAY_KEY_ID,
                 )
-            )
+            except ImproperlyConfigured as error:
+                issues.append(
+                    Error(
+                        str(error),
+                        hint=(
+                            "Use RAZORPAY_MODE=test with rzp_test_ credentials or "
+                            "RAZORPAY_MODE=live with rzp_live_ credentials."
+                        ),
+                        id="jsk.E007",
+                    )
+                )
     elif settings.PAYMENT_GATEWAY:
         issues.append(
             Error(

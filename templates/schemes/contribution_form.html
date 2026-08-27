@@ -14,6 +14,8 @@
   {% else %}<div class="alert alert-warning" role="alert">
     {% if mock_payment_enabled %}
     Development mock payment only. No real payment will be collected.
+    {% elif razorpay_mode == 'live' %}
+    This is a live Razorpay payment. The displayed amount will be charged after you approve the payment in Razorpay Checkout.
     {% else %}
     Razorpay test mode only. This checkout simulates payment and does not move real money.
     {% endif %}
@@ -33,7 +35,7 @@
     {% csrf_token %}
     {{ form|crispy }}
     <button class="btn btn-jsk w-100" type="submit">
-      {% if mock_payment_enabled %}Complete mock payment{% else %}Continue to Razorpay test checkout{% endif %}
+      {% if mock_payment_enabled %}Complete mock payment{% elif razorpay_mode == 'live' %}Continue to secure payment{% else %}Continue to Razorpay test checkout{% endif %}
     </button>
   </form>
   {% endif %}

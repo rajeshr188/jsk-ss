@@ -91,11 +91,12 @@ class ContributionAdmin(admin.ModelAdmin):
         "frequency_rule_snapshot",
         "status",
         "payment_gateway",
+        "gateway_mode",
         "scheme_rate",
         "rate_locked_at",
         "created_at",
     )
-    list_filter = ("status", "payment_gateway", "contribution_period")
+    list_filter = ("status", "payment_gateway", "gateway_mode", "contribution_period")
     search_fields = (
         "gateway_reference",
         "scheme_account__scheme_number",
@@ -108,6 +109,7 @@ class ContributionAdmin(admin.ModelAdmin):
         "frequency_rule_snapshot",
         "status",
         "payment_gateway",
+        "gateway_mode",
         "gateway_order_id",
         "gateway_reference",
         "gateway_signature",
@@ -128,13 +130,14 @@ class ContributionAdmin(admin.ModelAdmin):
 class PaymentWebhookEventAdmin(admin.ModelAdmin):
     list_display = (
         "event_id",
+        "gateway_mode",
         "event_type",
         "status",
         "contribution",
         "received_at",
         "processed_at",
     )
-    list_filter = ("gateway", "event_type", "status")
+    list_filter = ("gateway", "gateway_mode", "event_type", "status")
     search_fields = (
         "event_id",
         "gateway_order_id",
@@ -143,6 +146,7 @@ class PaymentWebhookEventAdmin(admin.ModelAdmin):
     )
     readonly_fields = (
         "gateway",
+        "gateway_mode",
         "event_id",
         "event_type",
         "payload_sha256",

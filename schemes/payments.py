@@ -18,6 +18,22 @@ RAZORPAY_API_BASE_URL = "https://api.razorpay.com/v1"
 RAZORPAY_MIN_AMOUNT_SUBUNITS = 100
 RAZORPAY_RESPONSE_LIMIT = 64 * 1024
 RAZORPAY_ID_PATTERN = re.compile(r"^[A-Za-z0-9_]+$")
+RAZORPAY_KEY_PREFIXES = {
+    "test": "rzp_test_",
+    "live": "rzp_live_",
+}
+
+
+def validate_razorpay_mode(*, mode, key_id):
+    normalized_mode = str(mode or "").strip().lower()
+    if normalized_mode not in RAZORPAY_KEY_PREFIXES:
+        raise ImproperlyConfigured("RAZORPAY_MODE must be test or live.")
+    expected_prefix = RAZORPAY_KEY_PREFIXES[normalized_mode]
+    if not str(key_id or "").startswith(expected_prefix):
+        raise ImproperlyConfigured(
+            "RAZORPAY_KEY_ID must match the configured RAZORPAY_MODE."
+        )
+    return normalized_mode
 
 
 class PaymentGatewayError(Exception):
@@ -96,12 +112,15 @@ class RazorpayPaymentGateway(PaymentGateway):
     def __init__(
         self,
         *,
+        mode=None,
         key_id=None,
         key_secret=None,
         webhook_secret=None,
         timeout_seconds=None,
     ):
+        raw_mode = mode if mode is not None else settings.RAZORPAY_MODE
         self.key_id = key_id if key_id is not None else settings.RAZORPAY_KEY_ID
+        self.mode = validate_razorpay_mode(mode=raw_mode, key_id=self.key_id)
         self.key_secret = (
             key_secret if key_secret is not None else settings.RAZORPAY_KEY_SECRET
         )
@@ -121,10 +140,6 @@ class RazorpayPaymentGateway(PaymentGateway):
             raise ImproperlyConfigured(
                 "RAZORPAY_TIMEOUT_SECONDS must be a number between 0.1 and 30."
             ) from None
-        if not self.key_id.startswith("rzp_test_"):
-            raise ImproperlyConfigured(
-                "Milestone 6 accepts only a Razorpay test-mode RAZORPAY_KEY_ID."
-            )
         if not self.key_secret:
             raise ImproperlyConfigured("RAZORPAY_KEY_SECRET must be set.")
         if not self.webhook_secret:
@@ -220,7 +235,7 @@ class RazorpayPaymentGateway(PaymentGateway):
         except HTTPError as error:
             if error.code in {401, 403}:
                 raise PaymentGatewayAuthenticationError(
-                    "Razorpay authentication failed. Check the configured test credentials."
+                    "Razorpay authentication failed. Check the configured credentials and mode."
                 ) from None
             raise PaymentGatewayError(
                 f"Razorpay rejected the server request (HTTP {error.code})."

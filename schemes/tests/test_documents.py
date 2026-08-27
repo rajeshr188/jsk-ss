@@ -286,7 +286,8 @@ class OwnerDocumentExportTests(TestCase):
         self.assertEqual(rows[0][0], "receipt_number")
         self.assertEqual(rows[1][0], contribution_receipt_number(self.contribution))
         self.assertEqual(rows[1][6], "250.00")
-        self.assertEqual(rows[1][10:], ["", "", ""])
+        self.assertEqual(rows[0][8], "gateway_mode")
+        self.assertEqual(rows[1][11:], ["", "", ""])
         self.assertTrue(rows[1][3].startswith("'="))
 
     def test_redemption_csv_uses_separate_cash_and_metal_columns(self):

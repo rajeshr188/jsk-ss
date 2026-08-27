@@ -22,6 +22,7 @@ class ProductionConfigurationCheckTests(SimpleTestCase):
     @override_settings(
         DEBUG=False,
         PAYMENT_GATEWAY="razorpay",
+        RAZORPAY_MODE="test",
         RAZORPAY_KEY_ID="rzp_test_example",
         RAZORPAY_KEY_SECRET="not-a-real-secret",
         RAZORPAY_WEBHOOK_SECRET="not-a-real-webhook-secret",
@@ -38,6 +39,26 @@ class ProductionConfigurationCheckTests(SimpleTestCase):
     def test_production_configuration_can_pass(self):
         self.assertEqual(production_configuration(None), [])
 
+    @override_settings(
+        DEBUG=False,
+        PAYMENT_GATEWAY="razorpay",
+        RAZORPAY_MODE="live",
+        RAZORPAY_KEY_ID="rzp_live_example",
+        RAZORPAY_KEY_SECRET="not-a-real-secret",
+        RAZORPAY_WEBHOOK_SECRET="not-a-real-webhook-secret",
+        EMAIL_BACKEND="django.core.mail.backends.smtp.EmailBackend",
+        EMAIL_HOST="smtp.example.com",
+        ALLOWED_HOSTS=["savings.example.com"],
+        CSRF_TRUSTED_ORIGINS=["https://savings.example.com"],
+        MEDIA_STORAGE_BACKEND="r2",
+        R2_CUSTOM_DOMAIN="media.savings.example.com",
+        WAGTAILDOCS_SERVE_METHOD="serve_view",
+        APP_RELEASE="abc123",
+        DATABASES={"default": {"OPTIONS": {"sslmode": "require"}}},
+    )
+    def test_live_razorpay_configuration_can_pass(self):
+        self.assertEqual(production_configuration(None), [])
+
     @override_settings(DEBUG=True)
     def test_debug_is_rejected_for_production(self):
         self.assertIn("jsk.E015", self.issue_ids())
@@ -51,12 +72,23 @@ class ProductionConfigurationCheckTests(SimpleTestCase):
 
     @override_settings(
         PAYMENT_GATEWAY="razorpay",
+        RAZORPAY_MODE="",
         RAZORPAY_KEY_ID="",
         RAZORPAY_KEY_SECRET="",
         RAZORPAY_WEBHOOK_SECRET="",
     )
     def test_missing_payment_credentials_are_errors(self):
         self.assertIn("jsk.E006", self.issue_ids())
+
+    @override_settings(
+        PAYMENT_GATEWAY="razorpay",
+        RAZORPAY_MODE="live",
+        RAZORPAY_KEY_ID="rzp_test_wrong_mode",
+        RAZORPAY_KEY_SECRET="secret",
+        RAZORPAY_WEBHOOK_SECRET="webhook",
+    )
+    def test_payment_mode_and_key_prefix_must_match(self):
+        self.assertIn("jsk.E007", self.issue_ids())
 
     @override_settings(
         MEDIA_STORAGE_BACKEND="filesystem",

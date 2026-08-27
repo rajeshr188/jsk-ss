@@ -2,7 +2,8 @@
 
 ## Current milestone
 
-Customer invitation onboarding (`FW-AUTH-001`) — production acceptance complete
+Razorpay Live Mode readiness (`FW-PAY-001`) — implementation complete locally;
+controlled production activation pending
 
 ## Completed
 
@@ -61,6 +62,16 @@ Customer invitation onboarding (`FW-AUTH-001`) — production acceptance complet
 - Owner alerts, diagnostics, and an authorized idempotent allocation-retry action.
 - Future public-signup requirements documented under `AUTH-*` domain rules.
 - Razorpay test-mode order creation and customer Standard Checkout flow.
+- Explicit fail-closed Razorpay `test`/`live` configuration: the declared mode must
+  match the API key prefix, and missing, unknown, or mixed-mode settings are rejected.
+- Mode-stamped Razorpay contributions and webhook events with database constraints,
+  cross-mode callback/order/webhook isolation, historical Test backfill, mode-aware
+  event uniqueness, owner/admin visibility, and reconciliation-export coverage.
+- A no-secret `check_razorpay_live_readiness` activation gate that rejects pending
+  contributions from another mode, missing historical labels, failed Live webhooks,
+  and unsafe Live configuration before a web-service cutover.
+- Mode-accurate customer checkout wording that explicitly distinguishes simulated
+  Test payment from a real Live charge and never offers a cross-mode resume action.
 - Browser callback verification using the local order ID, HMAC, and a captured-payment server lookup.
 - Signed raw-body `payment.captured` webhooks with a unique event ledger and idempotent financial processing.
 - Unique Razorpay order/payment identifiers and one resumable pending order for once-per-month accounts.
@@ -228,7 +239,7 @@ Customer invitation onboarding (`FW-AUTH-001`) — production acceptance complet
   provisioned in one region. Database/Cloud Firewall access controls and the database
   CA are in place, SSH access is verified, Docker is installed, and the owned domain
   returns liveness and PostgreSQL readiness `200` through Caddy-managed HTTPS;
-  external alerts and Razorpay live-mode readiness remain.
+  external alert exercises and controlled Razorpay Live Mode activation remain.
 - Production release `f9081c1a52a3ce3dc99e1d816cce9846a5b31f92` is healthy with
   `schemes.0010_manual_scheme_rates`, `catalog.0001_initial`, `pages.0001_initial`,
   and `accounts.0003_customerinvitation_and_more`
@@ -241,8 +252,9 @@ Customer invitation onboarding (`FW-AUTH-001`) — production acceptance complet
 
 - Quote expiry is deferred: a pending contribution retains its locked Scheme Rate until
   it is paid or failed. Add expiry only with a reviewed payment-order lifecycle design.
-- Razorpay is verified only in Test Mode. Live keys remain rejected until production
-  payment, reconciliation, refund, dispute, monitoring, and secret-rotation procedures exist.
+- The code accepts mode-matched Razorpay Live keys, but production has not yet deployed
+  the supporting migration or completed Live webhook/capture configuration, readiness
+  preflight, controlled real contribution, reconciliation, and retained evidence.
 - Public prospect and policy pages market only gold/silver jewellery purchase plans.
   Production enforces that boundary for new enrolments and contributions while
   preserving the one empty historical CASH record. Qualified legal, accounting, and
@@ -256,8 +268,10 @@ Customer invitation onboarding (`FW-AUTH-001`) — production acceptance complet
   has not yet completed an evidenced isolated restoration/reconciliation drill.
 - The application records redemptions but does not execute payouts, move inventory,
   create invoices, or convert metal to cash.
-- Manual payment correction, voids, refunds/disputes, dual approval, broader payment
-  reconciliation, and automated alerts/retries remain.
+- Automated payment correction, voids, refunds/disputes, dual approval, provider
+  settlement import, and automated retries remain. The Live runbook permits only a
+  tightly bounded manual Dashboard refund for a captured payment that created no
+  local entitlement; any credited-payment refund or chargeback remains an incident.
 - Public policy pages require business/legal approval before they are treated as
   binding terms. The exact plan-specific 6+ month wastage/value-addition discount
   schedule is not modeled and no numeric partial discount is advertised.
@@ -270,7 +284,8 @@ Customer invitation onboarding (`FW-AUTH-001`) — production acceptance complet
   deferred until measured account volume requires it.
 - Plan-specific early-discontinuation pricing, payment-order expiry, eligibility
   reminders, open public self-registration, and partial-settlement policy are not yet
-  defined. Owner-invitation onboarding is implemented locally but not yet deployed.
+  defined. Owner-invitation onboarding is deployed; public self-registration remains
+  intentionally closed.
 - The production catalogue is active and its deployment, authorization, content,
   browser, and R2 smoke gates pass. There is still no isolated media backup/restore
   proof. Retain approved source photographs outside R2; production must not rely on
@@ -287,8 +302,13 @@ Customer invitation onboarding (`FW-AUTH-001`) — production acceptance complet
 - Wagtail 7.4.3 and Django 6.0.4 pass system checks, production-shaped deploy checks,
   static collection, and an applied-migration check. Wagtail, taggit, and catalogue
   migrations are applied to production PostgreSQL.
-- PostgreSQL 16 migrations applied successfully.
-- 186 tests pass, including the production metal-only boundary and CASH preflight,
+- Local PostgreSQL 16 migrations are applied through
+  `schemes.0011_razorpay_gateway_mode`; production remains on the applied migration
+  set recorded under **In progress** until this release is promoted.
+- 224 tests pass, including Razorpay Live/Test configuration and history migration,
+  cross-mode order/callback/webhook isolation, Live checkout disclosure, readiness
+  blocking, mode-aware reconciliation export, the production metal-only boundary
+  and CASH preflight,
   public catalogue search/category/collection filtering,
   bounded pagination, responsive renditions, canonical/Open Graph/JSON-LD metadata,
   accessible discovery and empty states, rollout-gated navigation, direct draft/live
@@ -312,8 +332,6 @@ Customer invitation onboarding (`FW-AUTH-001`) — production acceptance complet
   redemption precision, over-redemption protection,
   idempotency, partial/full closure, denomination separation, access control,
   PostgreSQL constraints, and all prior regressions.
-- Migrations through `schemes.0010_manual_scheme_rates` and `catalog.0001_initial`,
-  including their Wagtail/taggit dependencies, are applied to production.
 - Migration drift check reports no changes.
 - Django system check and migration drift check pass.
 - The rendered anonymous homepage passes Deque axe-core 4.13's WCAG AA
@@ -369,12 +387,10 @@ Customer invitation onboarding (`FW-AUTH-001`) — production acceptance complet
 
 ## Next recommended step
 
-Keep live keys disabled until legal/provider review and live-mode operating procedures
-are approved. Retain the owned
-DNS/TLS and release evidence and complete
-`FW-PROD-001` through `FW-PROD-003`: a recorded database restore/reconciliation drill,
-stable owned HTTPS plus alerts, and the deliberately deferred secret-rotation drills.
-Define Razorpay live-mode reconciliation, refund, and dispute operations before
-handling real customer funds. Follow the
-[Production and deployment guide](PRODUCTION_DEPLOYMENT.md) and retain evidence for
-each environment-specific gate.
+Deploy the supporting release first with `RAZORPAY_MODE=test`, review and apply
+`schemes.0011_razorpay_gateway_mode`, and prove the existing Test flow unchanged.
+Then use the [Production and deployment guide](PRODUCTION_DEPLOYMENT.md) to pause
+checkout, configure the separate Live webhook and automatic capture, run the Live
+readiness and financial-exception commands, activate mode-matched Live credentials,
+complete one legitimate controlled contribution, and retain reconciliation evidence.
+Do not expose Live credentials or bypass a pending cross-mode contribution blocker.

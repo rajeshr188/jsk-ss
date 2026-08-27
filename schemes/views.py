@@ -293,6 +293,7 @@ def contribution_export(request):
             "savings_mode",
             "amount_inr",
             "payment_gateway",
+            "gateway_mode",
             "payment_reference",
             "payment_status",
             "metal",
@@ -319,6 +320,7 @@ def contribution_export(request):
                 contribution.scheme_account.savings_mode,
                 f"{contribution.amount:.2f}",
                 _safe_csv_cell(contribution.payment_gateway),
+                contribution.gateway_mode,
                 _safe_csv_cell(contribution.gateway_reference),
                 contribution.status,
                 allocation.metal if allocation else "",
@@ -704,6 +706,9 @@ def my_scheme_detail(request, scheme_number):
             "redemptions": get_redemption_history(account),
             "mock_payment_enabled": mock_payment_is_enabled(),
             "payment_gateway_enabled": payment_gateway_is_configured(),
+            "razorpay_mode": (
+                get_payment_gateway().mode if razorpay_payment_is_enabled() else ""
+            ),
             "current_scheme_rate": current_scheme_rate,
             "cash_scheme_activity_enabled": cash_scheme_activity_is_enabled(),
         },
@@ -747,6 +752,9 @@ def pay_contribution(request, scheme_number):
                 "scheme_account": account,
                 "form": form,
                 "mock_payment_enabled": mock_payment_is_enabled(),
+                "razorpay_mode": (
+                    get_payment_gateway().mode if razorpay_payment_is_enabled() else ""
+                ),
                 "current_scheme_rate": None,
                 "rate_unavailable": True,
             },
@@ -808,6 +816,9 @@ def pay_contribution(request, scheme_number):
             "scheme_account": account,
             "form": form,
             "mock_payment_enabled": mock_payment_is_enabled(),
+            "razorpay_mode": (
+                get_payment_gateway().mode if razorpay_payment_is_enabled() else ""
+            ),
             "current_scheme_rate": current_scheme_rate,
         },
         status=response_status,
@@ -818,6 +829,7 @@ def pay_contribution(request, scheme_number):
 def razorpay_checkout(request, contribution_id):
     if not razorpay_payment_is_enabled():
         raise Http404
+    gateway = get_payment_gateway()
     contribution = get_object_or_404(
         Contribution.objects.select_related(
             "scheme_account",
@@ -830,6 +842,16 @@ def razorpay_checkout(request, contribution_id):
     )
     if not contribution.gateway_order_id:
         raise Http404
+    if contribution.gateway_mode != gateway.mode:
+        messages.warning(
+            request,
+            "This pending payment belongs to a different Razorpay mode and cannot "
+            "be resumed. Please contact the showroom.",
+        )
+        return redirect(
+            "schemes:my_scheme_detail",
+            scheme_number=contribution.scheme_account.scheme_number,
+        )
     if contribution.status in {
         Contribution.Status.PAID,
         Contribution.Status.PAID_UNALLOCATED,
@@ -850,7 +872,8 @@ def razorpay_checkout(request, contribution_id):
         "schemes/razorpay_checkout.html",
         {
             "contribution": contribution,
-            "razorpay_key_id": get_payment_gateway().key_id,
+            "razorpay_key_id": gateway.key_id,
+            "razorpay_mode": gateway.mode,
             "amount_subunits": int(contribution.amount * 100),
         },
     )
@@ -908,7 +931,7 @@ def razorpay_confirm(request, contribution_id):
                 "Payment verified, but metal allocation is pending owner retry.",
             )
         else:
-            messages.success(request, "Razorpay test payment verified successfully.")
+            messages.success(request, "Razorpay payment verified successfully.")
     return JsonResponse(
         {
             "success": True,
@@ -941,6 +964,7 @@ def razorpay_webhook(request):
     )
     try:
         event = process_razorpay_webhook(
+            gateway_mode=gateway.mode,
             event_id=event_id[:120],
             body=body,
             payload=payload,

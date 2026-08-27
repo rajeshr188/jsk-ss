@@ -82,9 +82,9 @@
           {% if contribution.status == 'PAID' or contribution.status == 'PAID_UNALLOCATED' %}
           <br><a href="{% url 'schemes:contribution_receipt' contribution.pk %}">Receipt</a>
           {% endif %}
-          {% if contribution.status == 'PENDING' and contribution.payment_gateway == 'razorpay' and contribution.gateway_order_id %}
+          {% if contribution.status == 'PENDING' and contribution.payment_gateway == 'razorpay' and contribution.gateway_order_id and contribution.gateway_mode == razorpay_mode %}
           {% if contribution.scheme_account.savings_mode != 'CASH' or cash_scheme_activity_enabled %}
-          <br><a href="{% url 'schemes:razorpay_checkout' contribution.pk %}">Resume test payment</a>
+          <br><a href="{% url 'schemes:razorpay_checkout' contribution.pk %}">Resume payment</a>
           {% endif %}
           {% endif %}
         </td>
@@ -114,9 +114,9 @@
     {% if contribution.status == 'PAID' or contribution.status == 'PAID_UNALLOCATED' %}
     <a class="btn btn-sm btn-outline-dark" href="{% url 'schemes:contribution_receipt' contribution.pk %}">View receipt</a>
     {% endif %}
-    {% if contribution.status == 'PENDING' and contribution.payment_gateway == 'razorpay' and contribution.gateway_order_id %}
+    {% if contribution.status == 'PENDING' and contribution.payment_gateway == 'razorpay' and contribution.gateway_order_id and contribution.gateway_mode == razorpay_mode %}
     {% if contribution.scheme_account.savings_mode != 'CASH' or cash_scheme_activity_enabled %}
-    <a class="btn btn-sm btn-jsk" href="{% url 'schemes:razorpay_checkout' contribution.pk %}">Resume test payment</a>
+    <a class="btn btn-sm btn-jsk" href="{% url 'schemes:razorpay_checkout' contribution.pk %}">Resume payment</a>
     {% endif %}
     {% endif %}
   </div></article>

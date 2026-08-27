@@ -17,6 +17,7 @@ from schemes.services import create_customer, enroll_customer, initiate_contribu
 PRODUCTION_PAYMENT_SETTINGS = {
     "DEBUG": False,
     "PAYMENT_GATEWAY": "razorpay",
+    "RAZORPAY_MODE": "test",
     "RAZORPAY_KEY_ID": "rzp_test_boundary",
     "RAZORPAY_KEY_SECRET": "test-only-secret",
     "RAZORPAY_WEBHOOK_SECRET": "test-only-webhook-secret",

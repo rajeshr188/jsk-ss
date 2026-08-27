@@ -9,7 +9,7 @@
 </div>
 <div class="table-responsive">
   <table class="table align-middle">
-    <thead><tr><th scope="col">Created</th><th scope="col">Customer</th><th scope="col">Scheme</th><th scope="col">Period</th><th scope="col">Amount</th><th scope="col">Entitlement</th><th scope="col">Status</th><th scope="col">Action</th></tr></thead>
+    <thead><tr><th scope="col">Created</th><th scope="col">Customer</th><th scope="col">Scheme</th><th scope="col">Period</th><th scope="col">Amount</th><th scope="col">Provider</th><th scope="col">Entitlement</th><th scope="col">Status</th><th scope="col">Action</th></tr></thead>
     <tbody>
       {% for contribution in contributions %}
       <tr>
@@ -18,6 +18,7 @@
         <td>{{ contribution.scheme_account.scheme_number }}</td>
         <td>{{ contribution.contribution_period|date:'F Y' }}</td>
         <td>₹{{ contribution.amount|floatformat:2 }}</td>
+        <td>{{ contribution.payment_gateway|title }}{% if contribution.gateway_mode %} · {{ contribution.get_gateway_mode_display }}{% endif %}</td>
         <td>{% if contribution.metal_allocation %}{{ contribution.metal_allocation.quantity|floatformat:6 }} g {{ contribution.metal_allocation.get_metal_display }}{% else %}—{% endif %}</td>
         <td>
           {% if contribution.status == 'PAID' %}<span class="badge text-bg-success">Paid</span>
@@ -40,7 +41,7 @@
           {% elif contribution.status != 'PAID' %}—{% endif %}
         </td>
       </tr>
-      {% empty %}<tr><td colspan="8" class="text-center text-muted py-4">No contributions yet.</td></tr>{% endfor %}
+      {% empty %}<tr><td colspan="9" class="text-center text-muted py-4">No contributions yet.</td></tr>{% endfor %}
     </tbody>
   </table>
 </div>
