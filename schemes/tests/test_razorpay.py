@@ -1,6 +1,7 @@
 import hashlib
 import hmac
 import json
+from io import StringIO
 from decimal import Decimal
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -8,6 +9,8 @@ from urllib.error import HTTPError
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ImproperlyConfigured, ValidationError
+from django.core.management import call_command
+from django.core.management.base import CommandError
 from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
@@ -42,6 +45,7 @@ from schemes.services import (
 RAZORPAY_SETTINGS = {
     "DEBUG": False,
     "PAYMENT_GATEWAY": "razorpay",
+    "RAZORPAY_MODE": "test",
     "RAZORPAY_KEY_ID": "rzp_test_public_key",
     "RAZORPAY_KEY_SECRET": "test-key-secret",
     "RAZORPAY_WEBHOOK_SECRET": "test-webhook-secret",
@@ -65,6 +69,7 @@ class FakeResponse:
 
 class FakeRazorpayGateway:
     name = "razorpay"
+    mode = "test"
 
     def __init__(self, *, verified=True):
         self.verified = verified
@@ -111,17 +116,42 @@ def make_account(*, email, mode=SchemeAccount.SavingsMode.CASH, frequency=None):
 
 
 class RazorpayGatewayTests(TestCase):
-    def test_live_key_is_rejected_during_test_mode_milestone(self):
+    def test_live_key_is_rejected_when_test_mode_is_configured(self):
         with self.assertRaises(ImproperlyConfigured):
             RazorpayPaymentGateway(
+                mode="test",
                 key_id="rzp_live_forbidden",
                 key_secret="secret",
                 webhook_secret="webhook",
                 timeout_seconds=2,
             )
 
+    def test_live_key_is_accepted_when_live_mode_is_configured(self):
+        gateway = RazorpayPaymentGateway(
+            mode="live",
+            key_id="rzp_live_example",
+            key_secret="secret",
+            webhook_secret="webhook",
+            timeout_seconds=2,
+        )
+
+        self.assertEqual(gateway.mode, "live")
+
+    def test_missing_or_unknown_mode_is_rejected(self):
+        for mode in ("", "production"):
+            with self.subTest(mode=mode):
+                with self.assertRaises(ImproperlyConfigured):
+                    RazorpayPaymentGateway(
+                        mode=mode,
+                        key_id="rzp_live_example",
+                        key_secret="secret",
+                        webhook_secret="webhook",
+                        timeout_seconds=2,
+                    )
+
     def test_create_order_uses_authenticated_fixed_https_api(self):
         gateway = RazorpayPaymentGateway(
+            mode="test",
             key_id="rzp_test_key",
             key_secret="secret",
             webhook_secret="webhook",
@@ -143,6 +173,7 @@ class RazorpayGatewayTests(TestCase):
 
     def test_create_order_rejects_less_than_one_rupee_without_network_call(self):
         gateway = RazorpayPaymentGateway(
+            mode="test",
             key_id="rzp_test_key",
             key_secret="secret",
             webhook_secret="webhook",
@@ -156,6 +187,7 @@ class RazorpayGatewayTests(TestCase):
 
     def test_provider_authentication_failure_is_safely_classified(self):
         gateway = RazorpayPaymentGateway(
+            mode="test",
             key_id="rzp_test_key",
             key_secret="secret",
             webhook_secret="webhook",
@@ -177,6 +209,7 @@ class RazorpayGatewayTests(TestCase):
 
     def test_callback_signature_and_captured_payment_are_both_verified(self):
         gateway = RazorpayPaymentGateway(
+            mode="test",
             key_id="rzp_test_key",
             key_secret="secret",
             webhook_secret="webhook",
@@ -206,6 +239,7 @@ class RazorpayGatewayTests(TestCase):
 
     def test_invalid_callback_signature_does_not_call_provider(self):
         gateway = RazorpayPaymentGateway(
+            mode="test",
             key_id="rzp_test_key",
             key_secret="secret",
             webhook_secret="webhook",
@@ -223,6 +257,7 @@ class RazorpayGatewayTests(TestCase):
 
     def test_webhook_signature_uses_unmodified_raw_body(self):
         gateway = RazorpayPaymentGateway(
+            mode="test",
             key_id="rzp_test_key",
             key_secret="secret",
             webhook_secret="webhook",
@@ -234,6 +269,51 @@ class RazorpayGatewayTests(TestCase):
         self.assertFalse(
             gateway.verify_webhook(body=body + b" ", signature=signature)
         )
+
+
+@override_settings(
+    DEBUG=False,
+    PAYMENT_GATEWAY="razorpay",
+    RAZORPAY_MODE="live",
+    RAZORPAY_KEY_ID="rzp_live_readiness",
+    RAZORPAY_KEY_SECRET="live-secret",
+    RAZORPAY_WEBHOOK_SECRET="live-webhook-secret",
+    APP_RELEASE="readiness-test",
+)
+class RazorpayLiveReadinessCommandTests(TestCase):
+    def test_live_configuration_with_no_cross_mode_orders_passes(self):
+        output = StringIO()
+
+        call_command("check_razorpay_live_readiness", stdout=output)
+
+        self.assertIn("status=ok", output.getvalue())
+
+    def test_open_test_order_blocks_live_activation(self):
+        _, account = make_account(
+            email="readiness-blocker@example.com",
+            mode=SchemeAccount.SavingsMode.GOLD,
+        )
+        SchemeRate.objects.create(
+            metal=SchemeRate.Metal.GOLD,
+            rate_per_gram=Decimal("12500.0000"),
+            purity=Decimal("0.9999"),
+            effective_from=timezone.now(),
+        )
+        contribution = initiate_contribution(
+            scheme_account=account,
+            amount=Decimal("5000.00"),
+            payment_gateway="razorpay",
+            gateway_mode="test",
+        )
+        contribution.gateway_order_id = "order_test_still_open"
+        contribution.save(update_fields=["gateway_order_id"])
+
+        with self.assertRaises(CommandError):
+            call_command(
+                "check_razorpay_live_readiness",
+                stdout=StringIO(),
+                stderr=StringIO(),
+            )
 
 
 @override_settings(DEBUG=True)
@@ -251,6 +331,29 @@ class RazorpayServiceTests(TestCase):
         self.assertEqual(first.pk, second.pk)
         self.assertEqual(gateway.order_calls, 1)
         self.assertEqual(Contribution.objects.count(), 1)
+
+    def test_pending_order_cannot_cross_provider_modes(self):
+        _, account = make_account(email="mode-boundary@example.com")
+        test_gateway = FakeRazorpayGateway()
+        initiate_razorpay_contribution(
+            scheme_account=account,
+            amount=Decimal("5000.00"),
+            gateway=test_gateway,
+        )
+        live_gateway = FakeRazorpayGateway()
+        live_gateway.mode = "live"
+
+        with self.assertRaisesMessage(
+            ValidationError, "different provider mode is already pending"
+        ):
+            initiate_razorpay_contribution(
+                scheme_account=account,
+                amount=Decimal("5000.00"),
+                gateway=live_gateway,
+            )
+
+        self.assertEqual(Contribution.objects.count(), 1)
+        self.assertEqual(live_gateway.order_calls, 0)
 
     def test_invalid_server_verification_creates_no_entitlement(self):
         _, account = make_account(email="invalid@example.com")
@@ -326,6 +429,7 @@ class RazorpayServiceTests(TestCase):
             scheme_account=account,
             amount=Decimal("5000.00"),
             payment_gateway="razorpay",
+            gateway_mode="test",
         )
         contribution.gateway_order_id = "order_webhook_gold"
         contribution.save(update_fields=["gateway_order_id"])
@@ -347,7 +451,10 @@ class RazorpayServiceTests(TestCase):
         body = json.dumps(payload, separators=(",", ":")).encode("utf-8")
         for _ in range(2):
             process_razorpay_webhook(
-                event_id="event_gold_once", body=body, payload=payload
+                gateway_mode="test",
+                event_id="event_gold_once",
+                body=body,
+                payload=payload,
             )
         contribution.refresh_from_db()
         self.assertEqual(contribution.status, Contribution.Status.PAID)
@@ -356,6 +463,47 @@ class RazorpayServiceTests(TestCase):
         self.assertEqual(
             contribution.metal_allocation.quantity, Decimal("0.400000")
         )
+
+    def test_webhook_cannot_confirm_an_order_from_another_mode(self):
+        _, account = make_account(email="webhook-mode-boundary@example.com")
+        contribution = initiate_contribution(
+            scheme_account=account,
+            amount=Decimal("5000.00"),
+            payment_gateway="razorpay",
+            gateway_mode="test",
+        )
+        contribution.gateway_order_id = "order_test_mode_only"
+        contribution.save(update_fields=["gateway_order_id"])
+        payload = {
+            "event": "payment.captured",
+            "payload": {
+                "payment": {
+                    "entity": {
+                        "id": "pay_live_wrong_mode",
+                        "order_id": "order_test_mode_only",
+                        "amount": 500000,
+                        "currency": "INR",
+                        "status": "captured",
+                        "captured": True,
+                    }
+                }
+            },
+        }
+        body = json.dumps(payload, separators=(",", ":")).encode("utf-8")
+
+        with self.assertRaises(ValidationError):
+            process_razorpay_webhook(
+                gateway_mode="live",
+                event_id="event_live_wrong_mode",
+                body=body,
+                payload=payload,
+            )
+
+        contribution.refresh_from_db()
+        self.assertEqual(contribution.status, Contribution.Status.PENDING)
+        event = PaymentWebhookEvent.objects.get()
+        self.assertEqual(event.gateway_mode, "live")
+        self.assertEqual(event.status, PaymentWebhookEvent.Status.FAILED)
 
     def test_no_metal_rate_prevents_gold_and_silver_razorpay_orders(self):
         for metal in (SchemeAccount.SavingsMode.GOLD, SchemeAccount.SavingsMode.SILVER):
@@ -410,6 +558,54 @@ class RazorpayViewTests(TestCase):
         self.assertContains(response, "Checkout was cancelled", html=False)
         self.assertEqual(Contribution.objects.get().gateway_order_id, "order_view")
 
+    @override_settings(
+        RAZORPAY_MODE="live",
+        RAZORPAY_KEY_ID="rzp_live_public_key",
+        RAZORPAY_KEY_SECRET="live-key-secret",
+        RAZORPAY_WEBHOOK_SECRET="live-webhook-secret",
+    )
+    def test_live_checkout_uses_live_copy_and_persists_mode(self):
+        order = PaymentOrder("order_live_view", 500000, "INR")
+        with patch(
+            "schemes.payments.RazorpayPaymentGateway.create_order", return_value=order
+        ):
+            response = self.client.post(
+                reverse("schemes:pay_contribution", args=[self.account.scheme_number]),
+                {"amount": "5000.00"},
+                follow=True,
+            )
+
+        self.assertContains(response, "Live payment:")
+        self.assertContains(response, "rzp_live_public_key")
+        self.assertNotContains(response, "no real money is collected")
+        contribution = Contribution.objects.get()
+        self.assertEqual(contribution.gateway_mode, "live")
+
+    @override_settings(
+        RAZORPAY_MODE="live",
+        RAZORPAY_KEY_ID="rzp_live_public_key",
+        RAZORPAY_KEY_SECRET="live-key-secret",
+        RAZORPAY_WEBHOOK_SECRET="live-webhook-secret",
+    )
+    def test_test_order_cannot_be_rendered_or_resumed_with_live_key(self):
+        contribution = initiate_contribution(
+            scheme_account=self.account,
+            amount=Decimal("5000.00"),
+            payment_gateway="razorpay",
+            gateway_mode="test",
+        )
+        contribution.gateway_order_id = "order_test_not_live"
+        contribution.save(update_fields=["gateway_order_id"])
+
+        response = self.client.get(
+            reverse("schemes:razorpay_checkout", args=[contribution.pk]),
+            follow=True,
+        )
+
+        self.assertContains(response, "different Razorpay mode")
+        self.assertNotContains(response, "rzp_live_public_key")
+        self.assertNotContains(response, "Resume payment")
+
     def test_order_authentication_failure_returns_401_and_no_entitlement(self):
         with patch(
             "schemes.payments.RazorpayPaymentGateway.create_order",
@@ -453,6 +649,7 @@ class RazorpayViewTests(TestCase):
             scheme_account=other_account,
             amount=Decimal("5000.00"),
             payment_gateway="razorpay",
+            gateway_mode="test",
         )
         contribution.gateway_order_id = "order_other"
         contribution.save(update_fields=["gateway_order_id"])
@@ -467,6 +664,7 @@ class RazorpayViewTests(TestCase):
             scheme_account=self.account,
             amount=Decimal("5000.00"),
             payment_gateway="razorpay",
+            gateway_mode="test",
         )
         contribution.gateway_order_id = "order_callback_view"
         contribution.save(update_fields=["gateway_order_id"])
@@ -495,6 +693,7 @@ class RazorpayViewTests(TestCase):
             scheme_account=self.account,
             amount=Decimal("5000.00"),
             payment_gateway="razorpay",
+            gateway_mode="test",
         )
         contribution.gateway_order_id = "order_missing_fields"
         contribution.save(update_fields=["gateway_order_id"])
@@ -513,6 +712,7 @@ class RazorpayViewTests(TestCase):
             scheme_account=self.account,
             amount=Decimal("5000.00"),
             payment_gateway="razorpay",
+            gateway_mode="test",
         )
         contribution.gateway_order_id = "order_bad_signature"
         contribution.save(update_fields=["gateway_order_id"])
@@ -549,6 +749,7 @@ class RazorpayViewTests(TestCase):
             scheme_account=self.account,
             amount=Decimal("5000.00"),
             payment_gateway="razorpay",
+            gateway_mode="test",
         )
         contribution.gateway_order_id = "order_signed_webhook"
         contribution.save(update_fields=["gateway_order_id"])

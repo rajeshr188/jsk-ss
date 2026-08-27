@@ -2,7 +2,7 @@
 
 This is the canonical production runbook for the Jai Sri Krishna Jewellery
 Savings Scheme. It covers the current Django 6, PostgreSQL, Gunicorn, WhiteNoise,
-Razorpay Test Mode, and manually published Scheme Rate build. Development setup remains in the
+explicit Razorpay Test/Live modes, and manually published Scheme Rate build. Development setup remains in the
 [README](../README.md); business invariants remain in [Domain rules](DOMAIN_RULES.md).
 
 ## Production-readiness boundary
@@ -10,11 +10,12 @@ Razorpay Test Mode, and manually published Scheme Rate build. Development setup 
 The repository is ready to be deployed to production-grade infrastructure, but it
 is **not yet approved to handle real customer funds**:
 
-- The deploy check accepts Razorpay Test Mode keys beginning with `rzp_test_` and
-  deliberately rejects live keys.
-- Live-mode payment reconciliation, refunds, disputes, incident handling, and
-  credential rotation must be approved and tested before the code is changed to
-  accept live keys.
+- The deploy check accepts `test` and `live` only when `RAZORPAY_MODE` agrees with
+  the `rzp_test_` or `rzp_live_` key prefix. Missing, unknown, and mixed-mode
+  configuration fails closed.
+- Code-level Live Mode support does not itself authorize financial go-live. Live
+  webhook, capture, reconciliation, refund, dispute, incident, alert, and credential-
+  rotation procedures must pass the activation gates below.
 - An owner must publish reviewed gold and silver Scheme Rates before metal
   contributions are enabled in an environment.
 - `FW-PROD-001` through `FW-PROD-003` in [Future work](FUTURE_WORK.md) require an
@@ -42,7 +43,7 @@ Django container(s): Gunicorn -> WSGI application
    v
 managed PostgreSQL with TLS, snapshots, PITR, and restricted network access
 
-External services: SMTP provider, Razorpay Test Mode webhook/API
+External services: SMTP provider, mode-isolated Razorpay webhook/API
 ```
 
 The application is stateless between requests except for PostgreSQL. Do not place
@@ -597,6 +598,7 @@ DEFAULT_FROM_EMAIL=Jai Sri Krishna Jewellery <noreply@example.com>
 SERVER_EMAIL=errors@example.com
 
 PAYMENT_GATEWAY=razorpay
+RAZORPAY_MODE=test
 RAZORPAY_KEY_ID=<rzp_test_key-id>
 RAZORPAY_KEY_SECRET=<test-key-secret>
 RAZORPAY_WEBHOOK_SECRET=<separate-webhook-secret>
@@ -650,6 +652,9 @@ Configuration rules:
 - Leave `PAYMENT_GATEWAY` empty to disable new contribution checkout. Never use the
   mock payment adapter outside debug mode. Metal contributions are independently
   unavailable until an owner has published the applicable Scheme Rate.
+- `RAZORPAY_MODE` is required when Razorpay is selected and accepts only `test` or
+  `live`. It must match the API key prefix. Change the mode, key ID, API key secret,
+  and separately generated mode-specific webhook secret as one controlled cutover.
 - Keep each Razorpay API secret distinct from the webhook secret. Do not log request
   signatures, secret values, full provider payloads, or database URLs.
 - `APP_RELEASE` must identify exactly one source/image build and must be identical in
@@ -1330,6 +1335,112 @@ The final gate requires:
 - An on-call operator and business reconciler for the deployment window.
 - A defined rollback image.
 
+## Razorpay Live Mode activation gate
+
+Live-key acceptance is deliberately mode-bound. Migration
+`schemes.0011_razorpay_gateway_mode` labels every historical Razorpay contribution
+and webhook as `test`, which is truthful because earlier releases rejected Live keys.
+New orders and events retain their mode, callback verification rejects a cross-mode
+contribution, and webhook event uniqueness includes the provider mode. This migration
+does not alter amounts, payment status, Scheme Rates, allocations, or liabilities.
+
+First deploy the supporting release while production still uses Test Mode:
+
+1. Add `RAZORPAY_MODE=test` beside the existing Test credentials.
+2. Record the image identity, financial baseline, and current database recovery point.
+3. Run the deploy check and review the `0011` migration plan.
+4. Apply the migration once, deploy the web service, and confirm Test checkout,
+   callback verification, signed webhook processing, financial exceptions, and CSV
+   export still pass. The export now includes `gateway_mode` for reconciliation.
+
+Do not activate Live Mode until all of these account-side controls are confirmed:
+
+- Razorpay has activated the merchant account and approved the owned website.
+- The owner generated Live API credentials and stored them only in the production
+  secret location. Test and Live credentials are never mixed.
+- In the Razorpay **Live Mode** dashboard, the stable webhook URL is
+  `https://jaishrikrishnajewellery.com/scheme/payments/razorpay/webhook/`, its secret
+  is distinct from the API key secret, `payment.captured` is enabled, and a monitored
+  failure-alert email is configured.
+- Payment Capture is configured to auto-capture. The application creates entitlement
+  only after Razorpay reports the exact local order, INR amount, and `captured` state.
+- Better Stack/Linode and the financial-exception heartbeat reach named responders.
+- A business owner is assigned to daily reconciliation and an incident owner can
+  disable checkout by clearing `PAYMENT_GATEWAY`.
+- The payment-error refund and dispute procedures below are accepted. General refunds
+  of already credited scheme contributions remain unsupported because the application
+  has no compensating payment-reversal workflow.
+
+Use a short controlled cutover with no customer checkout in progress:
+
+1. Temporarily clear `PAYMENT_GATEWAY`, validate Compose, and recreate `web`. Confirm
+   Pay actions disappear while reads, statements, owner views, live, and ready remain
+   healthy.
+2. Confirm Razorpay has no unresolved Test payment for a locally pending order. Do not
+   edit a pending contribution merely to pass this gate.
+3. In `.env.production`, atomically set:
+
+   ```dotenv
+   PAYMENT_GATEWAY=razorpay
+   RAZORPAY_MODE=live
+   RAZORPAY_KEY_ID=rzp_live_...
+   RAZORPAY_KEY_SECRET=<live-api-key-secret>
+   RAZORPAY_WEBHOOK_SECRET=<separate-live-webhook-secret>
+   ```
+
+4. Before changing the running service, exercise the candidate configuration without
+   printing credentials:
+
+   ```bash
+   docker compose --env-file .env.production -f compose.production.yml \
+     run --rm --no-deps web python manage.py check --deploy --fail-level ERROR
+
+   docker compose --env-file .env.production -f compose.production.yml \
+     run --rm --no-deps web python manage.py check_razorpay_live_readiness
+
+   docker compose --env-file .env.production -f compose.production.yml \
+     run --rm --no-deps web python manage.py check_financial_exceptions
+   ```
+
+   Readiness blocks unknown/mixed credentials, missing mode labels, failed Live
+   webhooks, and any pending contribution created in another mode (with or without a
+   provider order). If it blocks, restore Test
+   Mode and reconcile the named condition; never bypass the command or rewrite
+   provider references.
+5. Recreate `web`, wait for health, recreate Caddy so it resolves the replacement
+   upstream, and confirm live/ready return the expected release.
+6. Sign in with one controlled real customer account and complete one legitimate
+   minimum-value metal contribution. Confirm the UI explicitly says **Live payment**,
+   the Dashboard payment is captured, the local contribution has `gateway_mode=live`,
+   the signed Live webhook is processed once, exactly one metal allocation uses the
+   pre-payment Scheme Rate lock, and liabilities change by exactly that allocation.
+   Treat this as a real contribution; do not refund it merely to clean up a smoke test.
+7. Export contributions and reconcile mode, payment ID, order, amount, INR currency,
+   captured status, local status, allocation, and Dashboard settlement. Re-run the
+   financial-exception and readiness commands, inspect logs, and retain redacted
+   evidence.
+
+### Live reconciliation, payment-error refund, and dispute boundary
+
+- **Daily reconciliation:** compare Razorpay Live captured payments against the owner
+  contribution export using `gateway_mode`, payment reference, INR amount, and local
+  status. Investigate provider-only payments, local-only confirmations, amount/order
+  mismatches, failed webhooks, and `PAID_UNALLOCATED` records before redemption.
+- **Payment-error refunds:** the approved manual path is limited to captured duplicate
+  or otherwise erroneous payments that created **no** local contribution entitlement.
+  Verify this from the payment ID, order, amount, webhook ledger, contribution, and
+  allocation before an authorized owner initiates the refund in Razorpay Dashboard.
+  Record the refund ID, amount, reason, approver, timestamps, and final status in the
+  incident record. If an entitlement exists, do not refund through the Dashboard:
+  disable affected activity and escalate until an audited compensating workflow exists.
+- **Disputes:** monitor Razorpay Dashboard and its configured notification address,
+  review each item before its response deadline, preserve the agreement, payment,
+  acknowledgement, statement, Scheme Rate lock, allocation, and showroom evidence,
+  and accept or contest only through an authorized owner. A dispute or chargeback
+  against a locally credited contribution is a financial incident requiring checkout
+  suspension as appropriate and explicit liability reconciliation; never delete or
+  edit the contribution to imitate reversal.
+
 ## Staging rollout
 
 Staging should exercise production topology while using its own data and credentials.
@@ -1366,9 +1477,10 @@ use a reviewed migration-specific procedure.
 7. Run `python manage.py migrate --noinput` once as the release job.
 8. Deploy the approved image digest. Keep old instances until new readiness probes pass.
 9. Confirm the live and ready responses show the new `APP_RELEASE`.
-10. Execute the production-safe smoke test. Use Razorpay Test Mode only; do not create
-    or edit financial records merely to test an infrastructure release unless the
-    records are explicitly tagged, reconciled, and removed through an approved method.
+10. Execute the production-safe smoke test. Routine infrastructure releases must not
+    create a payment merely as a health probe. In Test Mode use controlled test data;
+    in Live Mode rely on non-mutating checks unless the business has approved a real,
+    fully reconciled contribution.
 11. Compare post-release counts, liabilities, and exceptions to the recorded baseline,
     accounting for any legitimate concurrent activity.
 12. Observe the release through the agreed stabilization window, then close the change
@@ -1540,9 +1652,10 @@ reconciliation of every event after the chosen recovery point.
    delete them to force a match.
 4. Reconcile Razorpay order, payment, amount, currency, captured status, event ID,
    and local contribution using authorized provider access.
-5. Escalate refunds, disputes, unmatched payments, or manual corrections: the current
-   application does not implement those operations.
-6. Re-enable checkout only after reconciliation and a signed Test Mode webhook test.
+5. Follow the bounded manual refund/dispute procedure above. The application does not
+   implement refund, chargeback, or payment-reversal mutations.
+6. Re-enable checkout only after reconciliation and a signed webhook test in the
+   same Razorpay mode as the environment.
 
 ### Scheme Rate or allocation incident
 
@@ -1590,16 +1703,20 @@ web application's secret unnecessarily.
 ### Razorpay API keys
 
 Use the provider's supported overlap/activation process, update both key ID and
-secret atomically, roll the application, and exercise a Test Mode order before
-revoking the old key. The current release does not authorize live-key rotation.
+secret atomically without changing `RAZORPAY_MODE`, roll the application, and verify
+authenticated provider access in the same mode before deactivating the old key. Use
+Test Mode for rehearsal; a Live rotation must not create an artificial customer
+payment merely as a credential probe.
 
 ### Razorpay webhook secret
 
 Webhook rotation must be coordinated because the provider and application must agree
-on one signing secret. Use a controlled change window: pause financial testing,
+on one signing secret. Use a controlled change window: pause financial activity,
 update the endpoint and application secret in the provider-supported order, deploy,
-send and verify a signed Test Mode event, check idempotency, then resume. Preserve
-failed deliveries for reconciliation; never accept unsigned events during the gap.
+send and verify a signed event in the environment's configured mode, check
+idempotency, then resume. Older provider retries may still use the former secret, so
+do not rotate while deliveries are outstanding. Preserve failed deliveries for
+reconciliation; never accept unsigned events during the gap.
 
 ## Routine operations
 
@@ -1664,3 +1781,7 @@ not a completed control.
 - [PostgreSQL `pg_restore`](https://www.postgresql.org/docs/current/app-pgrestore.html)
 - [Razorpay webhook best practices](https://razorpay.com/docs/webhooks/best-practices/)
 - [Razorpay webhook validation and testing](https://razorpay.com/docs/webhooks/validate-test/)
+- [Razorpay Test and Live modes](https://razorpay.com/docs/payments/dashboard/test-live-modes/)
+- [Razorpay payment capture settings](https://razorpay.com/docs/payments/payments/capture-settings/)
+- [Razorpay payment Dashboard actions](https://razorpay.com/docs/payments/payments/dashboard/)
+- [Razorpay dispute Dashboard actions](https://razorpay.com/docs/payments/disputes/dashboard/)

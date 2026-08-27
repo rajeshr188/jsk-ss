@@ -117,9 +117,15 @@ here are not implemented behavior and do not relax the financial invariants in
   no audited cancellation state. Decide with the customer/business owner whether a
   general no-liability cancellation workflow is required; never mark it redeemed,
   delete it, or rewrite its mode merely to remove it from an active-account list.
-- **FW-PAY-001:** Plan Razorpay live-mode onboarding. Live keys remain rejected until
-  production verification, reconciliation, refund, dispute, and incident procedures
-  are approved and tested.
+- **FW-PAY-001 — Razorpay Live Mode readiness (implemented locally 2026-08-27;
+  production activation pending):** Mode-matched Test and Live credentials now fail
+  closed, contributions and webhooks retain their provider mode, cross-mode resume/
+  confirmation is rejected, historical records migrate truthfully to Test, owner
+  exports expose mode, and a no-secret readiness command blocks unsafe cutover.
+  The canonical runbook defines Live webhook/capture setup, controlled activation,
+  reconciliation, bounded payment-error refunds, disputes, incidents, and rotation.
+  Deploy first in Test Mode, then complete the account-side Live webhook, capture,
+  alert, real-payment, reconciliation, and evidence gates before marking this complete.
 - **FW-PAY-002:** Add expiry/cancellation and reconciliation handling for abandoned
   Razorpay orders, including flexible-frequency attempts, while retaining a safe
   resume path and preserving provider references for audit.

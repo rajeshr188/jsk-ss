@@ -254,6 +254,11 @@ class SchemeAccount(models.Model):
         return f"{self.scheme_number} — {self.customer.full_name}"
 
 
+class GatewayMode(models.TextChoices):
+    TEST = "test", "Test"
+    LIVE = "live", "Live"
+
+
 class Contribution(models.Model):
     class Status(models.TextChoices):
         PENDING = "PENDING", "Pending"
@@ -275,6 +280,12 @@ class Contribution(models.Model):
     )
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
     payment_gateway = models.CharField(max_length=30)
+    gateway_mode = models.CharField(
+        max_length=10,
+        choices=GatewayMode.choices,
+        blank=True,
+        help_text="Razorpay environment used to create the provider order.",
+    )
     scheme_rate = models.ForeignKey(
         "SchemeRate",
         on_delete=models.PROTECT,
@@ -320,6 +331,19 @@ class Contribution(models.Model):
                 ),
                 name="paid_contribution_has_confirmation",
             ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(
+                        payment_gateway="razorpay",
+                        gateway_mode__in=[GatewayMode.TEST, GatewayMode.LIVE],
+                    )
+                    | (
+                        ~models.Q(payment_gateway="razorpay")
+                        & models.Q(gateway_mode="")
+                    )
+                ),
+                name="contribution_razorpay_mode_valid",
+            ),
             models.UniqueConstraint(
                 fields=["scheme_account", "contribution_period"],
                 condition=models.Q(
@@ -354,6 +378,12 @@ class PaymentWebhookEvent(models.Model):
         FAILED = "FAILED", "Failed"
 
     gateway = models.CharField(max_length=30)
+    gateway_mode = models.CharField(
+        max_length=10,
+        choices=GatewayMode.choices,
+        blank=True,
+        help_text="Provider environment that delivered the event.",
+    )
     event_id = models.CharField(max_length=120)
     event_type = models.CharField(max_length=100)
     payload_sha256 = models.CharField(max_length=64)
@@ -377,8 +407,18 @@ class PaymentWebhookEvent(models.Model):
         ordering = ["-received_at", "-pk"]
         constraints = [
             models.UniqueConstraint(
-                fields=["gateway", "event_id"],
+                fields=["gateway", "gateway_mode", "event_id"],
                 name="unique_gateway_webhook_event",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(
+                        gateway="razorpay",
+                        gateway_mode__in=[GatewayMode.TEST, GatewayMode.LIVE],
+                    )
+                    | (~models.Q(gateway="razorpay") & models.Q(gateway_mode=""))
+                ),
+                name="webhook_razorpay_mode_valid",
             ),
         ]
         indexes = [

@@ -65,6 +65,7 @@ jobs:
           R2_CUSTOM_DOMAIN: media.example.invalid
           DATABASE_URL: postgresql://jsk_ci:jsk_ci@127.0.0.1:5432/jsk_ci?sslmode=disable
           PAYMENT_GATEWAY: razorpay
+          RAZORPAY_MODE: test
           RAZORPAY_KEY_ID: rzp_test_ci_only
           RAZORPAY_KEY_SECRET: ci-only-not-a-real-secret
           RAZORPAY_WEBHOOK_SECRET: ci-only-not-a-real-webhook-secret

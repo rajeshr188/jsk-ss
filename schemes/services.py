@@ -17,6 +17,7 @@ from .models import (
     AuditEvent,
     Contribution,
     Customer,
+    GatewayMode,
     MetalAllocation,
     PaymentWebhookEvent,
     SchemeRate,
@@ -395,7 +396,12 @@ def _lock_current_scheme_rate(contribution):
 
 @transaction.atomic
 def initiate_contribution(
-    *, scheme_account, amount, payment_gateway, contribution_date=None
+    *,
+    scheme_account,
+    amount,
+    payment_gateway,
+    gateway_mode="",
+    contribution_date=None,
 ):
     locked_account = SchemeAccount.objects.select_for_update().get(pk=scheme_account.pk)
     normalized_amount, period = validate_contribution_allowed(
@@ -408,6 +414,7 @@ def initiate_contribution(
         frequency_rule_snapshot=locked_account.frequency_rule_snapshot,
         status=Contribution.Status.PENDING,
         payment_gateway=payment_gateway,
+        gateway_mode=gateway_mode,
     )
     _lock_current_scheme_rate(contribution)
     contribution.full_clean()
@@ -636,6 +643,8 @@ def initiate_razorpay_contribution(
     gateway = gateway or get_payment_gateway()
     if gateway.name != "razorpay":
         raise ImproperlyConfigured("The Razorpay payment gateway is not configured.")
+    if getattr(gateway, "mode", None) not in GatewayMode.values:
+        raise ImproperlyConfigured("The Razorpay payment mode is not configured.")
 
     normalized_amount, period = validate_contribution_allowed(
         scheme_account, amount, contribution_date
@@ -651,12 +660,18 @@ def initiate_razorpay_contribution(
         raise ValidationError(
             "A Razorpay payment is already pending for this contribution month."
         )
+    if contribution is not None and contribution.gateway_mode != gateway.mode:
+        raise ValidationError(
+            "A Razorpay payment from a different provider mode is already pending "
+            "for this contribution month. Reconcile it before starting another payment."
+        )
     if contribution is None:
         try:
             contribution = initiate_contribution(
                 scheme_account=scheme_account,
                 amount=normalized_amount,
                 payment_gateway=gateway.name,
+                gateway_mode=gateway.mode,
                 contribution_date=contribution_date,
             )
         except IntegrityError:
@@ -670,6 +685,12 @@ def initiate_razorpay_contribution(
             if contribution.amount != normalized_amount:
                 raise ValidationError(
                     "A Razorpay payment is already pending for this contribution month."
+                ) from None
+            if contribution.gateway_mode != gateway.mode:
+                raise ValidationError(
+                    "A Razorpay payment from a different provider mode is already "
+                    "pending for this contribution month. Reconcile it before "
+                    "starting another payment."
                 ) from None
 
     order_error = None
@@ -715,6 +736,10 @@ def confirm_razorpay_contribution(
     contribution = Contribution.objects.select_related("scheme_account").get(
         pk=contribution_id
     )
+    if contribution.gateway_mode != getattr(gateway, "mode", None):
+        raise ValidationError(
+            "The Razorpay payment mode does not match the initiated contribution."
+        )
     if not contribution.gateway_order_id or callback_order_id != contribution.gateway_order_id:
         raise ValidationError("The Razorpay order does not match this contribution.")
     if contribution.status in SUCCESSFUL_PAYMENT_STATUSES:
@@ -738,13 +763,16 @@ def confirm_razorpay_contribution(
     return _apply_contribution_entitlement(contribution)
 
 
-def process_razorpay_webhook(*, event_id, body, payload):
+def process_razorpay_webhook(*, gateway_mode, event_id, body, payload):
+    if gateway_mode not in GatewayMode.values:
+        raise ValidationError("The Razorpay webhook mode is invalid.")
     payload_hash = hashlib.sha256(body).hexdigest()
     event_type = payload.get("event") if isinstance(payload, dict) else None
     if not isinstance(event_type, str) or not event_type:
         raise ValidationError("Razorpay webhook event type is missing.")
     event, _ = PaymentWebhookEvent.objects.get_or_create(
         gateway="razorpay",
+        gateway_mode=gateway_mode,
         event_id=event_id,
         defaults={
             "event_type": event_type,
@@ -774,6 +802,7 @@ def process_razorpay_webhook(*, event_id, body, payload):
             raise ValidationError("Razorpay payment identifiers are missing.")
         contribution = Contribution.objects.select_related("scheme_account").get(
             payment_gateway="razorpay",
+            gateway_mode=gateway_mode,
             gateway_order_id=order_id,
         )
         if (

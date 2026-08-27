@@ -39,7 +39,7 @@ This is the canonical source for stable business rules.
 - **PAY-001 / FIN-001:** One successful payment benefits a customer at most once; server verification and idempotency are mandatory.
 - **PAY-002 / FIN-005:** Failed payments create no entitlement.
 - **PAY-003:** The mock gateway is available only with `DEBUG=True` and `PAYMENT_GATEWAY=mock`; it never represents a real transfer.
-- **PAY-004:** Milestone 6 permits only Razorpay test keys. Browser success is not entitlement until HMAC verification and a server-side captured-payment check match the locally stored order, amount, and INR currency.
+- **PAY-004:** Razorpay requires an explicit `test` or `live` mode whose key-ID prefix matches. Every order and webhook records that mode, and a reference from one mode may never be resumed, verified, or reconciled through the other. Browser success is not entitlement until HMAC verification and a server-side captured-payment check match the locally stored order, amount, and INR currency.
 - **PAY-005:** Only a signed `payment.captured` webhook may independently confirm a Razorpay contribution. Signature verification uses the untouched request body.
 - **PAY-006:** Razorpay order IDs, payment IDs, and webhook event IDs are unique at their respective database boundaries. Duplicate callbacks or webhook deliveries return the existing result and create no additional entitlement.
 - **PAY-007:** A once-per-month account may have at most one pending Razorpay contribution for a calendar period. Reopening the payment flow resumes the existing order.

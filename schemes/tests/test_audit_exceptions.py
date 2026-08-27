@@ -208,6 +208,7 @@ class AuditAndExceptionTests(TestCase):
         )
         PaymentWebhookEvent.objects.create(
             gateway="razorpay",
+            gateway_mode="test",
             event_id="evt-mismatch",
             event_type="payment.captured",
             payload_sha256="a" * 64,
@@ -218,6 +219,7 @@ class AuditAndExceptionTests(TestCase):
         )
         PaymentWebhookEvent.objects.create(
             gateway="razorpay",
+            gateway_mode="test",
             event_id="evt-failed",
             event_type="payment.captured",
             payload_sha256="b" * 64,

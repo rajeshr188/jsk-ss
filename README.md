@@ -59,9 +59,10 @@ Alternatively, set `DJANGO_SECRET_KEY` and run `docker compose up --build`; Comp
 | `EMAIL_USE_TLS`, `EMAIL_USE_SSL` | SMTP | Mutually exclusive SMTP transport modes |
 | `EMAIL_TIMEOUT` | no | SMTP timeout in seconds; defaults to `10`, maximum `60` |
 | `SERVER_EMAIL` | no | Sender for framework-generated error email |
-| `PAYMENT_GATEWAY` | contributions | `mock` in debug or `razorpay` for test-mode checkout |
-| `RAZORPAY_KEY_ID` | Razorpay | Test key ID beginning with `rzp_test_`; live keys are rejected |
-| `RAZORPAY_KEY_SECRET` | Razorpay | Test key secret; server-side only and never committed |
+| `PAYMENT_GATEWAY` | contributions | `mock` in debug or `razorpay` for Standard Checkout |
+| `RAZORPAY_MODE` | Razorpay | Required `test` or `live`; must match the key-ID prefix |
+| `RAZORPAY_KEY_ID` | Razorpay | `rzp_test_` or `rzp_live_` key matching `RAZORPAY_MODE` |
+| `RAZORPAY_KEY_SECRET` | Razorpay | Mode-matched API secret; server-side only and never committed |
 | `RAZORPAY_WEBHOOK_SECRET` | Razorpay | Secret configured separately for webhook signing |
 | `RAZORPAY_TIMEOUT_SECONDS` | no | Razorpay API timeout; defaults to `10`, maximum `30` |
 | `SECURE_SSL_REDIRECT` | no | Defaults on outside debug; set for the deployment's TLS topology |
@@ -128,12 +129,13 @@ Only an active owner may publish gold or silver Scheme Rates. Each publication c
 
 For a metal contribution, the current applicable Scheme Rate is locked to the pending contribution before mock payment initiation or Razorpay order creation. Payment confirmation and webhook processing calculate the allocation only from that lock, so a later publication cannot change an in-progress checkout or historical grams. If no applicable rate exists, no payment or Razorpay order is created. A verified metal payment is durably `PAID_UNALLOCATED` until its allocation is stored, then becomes `PAID`; this makes exceptions and process interruption recoverable without using the state for rate retrieval.
 
-## Razorpay test mode
+## Razorpay modes
 
 Generate test-mode API keys in the Razorpay Dashboard and configure a separate webhook secret in the ignored `.env`:
 
 ```dotenv
 PAYMENT_GATEWAY=razorpay
+RAZORPAY_MODE=test
 RAZORPAY_KEY_ID=rzp_test_replace_me
 RAZORPAY_KEY_SECRET=replace-me
 RAZORPAY_WEBHOOK_SECRET=replace-me-with-a-separate-secret
@@ -142,7 +144,12 @@ RAZORPAY_TIMEOUT_SECONDS=10
 
 Configure the test-mode webhook URL as `https://your-host.example/scheme/payments/razorpay/webhook/` and subscribe to `payment.captured`. The browser callback is verified with HMAC using the order ID stored locally, then the server fetches the payment and requires the same order, amount, INR currency, and captured status. Webhooks are verified against the untouched request body; duplicate `X-Razorpay-Event-Id` values are idempotent.
 
-Only test keys are accepted in this milestone. Razorpay test mode simulates transactions and does not move real money. See the official [server integration](https://razorpay.com/docs/payments/server-integration/python/integration-steps/), [webhook validation](https://razorpay.com/docs/webhooks/validate-test/), and [test/live mode](https://razorpay.com/docs/payments/dashboard/test-live-modes/) guides.
+Test mode simulates transactions and does not move real money. Live mode is accepted
+only when `RAZORPAY_MODE=live` and the key begins with `rzp_live_`; test/live
+mismatches fail closed. Each contribution and webhook records its provider mode so
+references cannot cross Razorpay environments. Before live activation, follow the
+production guide's readiness command, webhook, capture, reconciliation, refund,
+dispute, alerting, and controlled-smoke gates. See the official [server integration](https://razorpay.com/docs/payments/server-integration/python/integration-steps/), [webhook validation](https://razorpay.com/docs/webhooks/validate-test/), and [test/live mode](https://razorpay.com/docs/payments/dashboard/test-live-modes/) guides.
 
 ## Verification
 
