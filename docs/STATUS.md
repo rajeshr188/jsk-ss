@@ -2,8 +2,9 @@
 
 ## Current milestone
 
-Razorpay Live Mode readiness (`FW-PAY-001`) — implementation complete locally;
-controlled production activation pending
+Production activation gates — `FW-PROD-001` is complete; the owner has explicitly
+deferred paid external observability under `FW-PROD-002` for budget reasons and the
+`FW-PROD-003` secret-rotation rehearsals
 
 ## Completed
 
@@ -135,6 +136,12 @@ controlled production activation pending
   logs, Better Stack off-host retention and independent live/ready/5xx checks, Linode
   capacity/backup notifications, and an aggregate financial-exception command driven
   by a hardened five-minute systemd heartbeat timer.
+- `FW-PROD-001` completed on 2026-08-27 with an isolated Linode Managed PostgreSQL
+  newest-full-plus-incremental restore. The fork became ready in 15 minutes, retained
+  every migration through `schemes.0011`, exactly matched the five-customer,
+  six-account and denomination-specific liability baseline, passed authentication and
+  financial-exception checks, and left the original production release healthy. The
+  restored cluster and temporary environment/CA files were removed after verification.
 - Public About, Contact, Terms, Privacy, Cancellation and Refund, and showroom-only
   Shipping and Delivery pages expose consistent business identity and support details.
 - Public plans and INR pricing come from structured `SchemePlan` terms only when a
@@ -264,8 +271,6 @@ controlled production activation pending
 - Repository health checks, privacy-reduced edge access logs, and a financial-
   exception heartbeat now exist, but Better Stack/Linode must still be configured to
   retain logs and exercise uptime, 5xx, capacity, backup, TLS, and financial alerts.
-- Backup and rollback procedures are documented, but the provisioned managed cluster
-  has not yet completed an evidenced isolated restoration/reconciliation drill.
 - The application records redemptions but does not execute payouts, move inventory,
   create invoices, or convert metal to cash.
 - Automated payment correction, voids, refunds/disputes, dual approval, provider

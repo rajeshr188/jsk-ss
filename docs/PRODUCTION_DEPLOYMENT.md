@@ -18,9 +18,14 @@ is **not yet approved to handle real customer funds**:
   rotation procedures must pass the activation gates below.
 - An owner must publish reviewed gold and silver Scheme Rates before metal
   contributions are enabled in an environment.
-- `FW-PROD-001` through `FW-PROD-003` in [Future work](FUTURE_WORK.md) require an
-  evidenced restore drill, stable HTTPS and alerting, real email delivery, and
-  secret-rotation rehearsal.
+- `FW-PROD-001` is complete with the evidenced Linode restore drill recorded below.
+  `FW-PROD-002` and `FW-PROD-003` in [Future work](FUTURE_WORK.md) retain the stable
+  HTTPS/alerting activation and secret-rotation rehearsal requirements.
+
+The owner deferred paid external monitoring under `FW-PROD-002` on 2026-08-27 to
+preserve the operating budget. Existing bounded local logs, health endpoints,
+financial-exception checks, and provider consoles remain useful manual controls, but
+the deferral does not close the external alerting, retained-log, or escalation gate.
 
 Until those gates are closed, a deployment is a production-infrastructure or
 staging deployment using Razorpay Test Mode, not a financial go-live.
@@ -305,8 +310,9 @@ https://jaishrikrishnajewellery.com/scheme/payments/razorpay/webhook/
 Linode Managed Databases currently include daily backups retained for 14 days and
 support restoration to a forked cluster. Run the first drill before real funds:
 
-1. Select a specific recovery time in the database Backups tab and restore it as a
-   new cluster. This temporarily incurs charges for both clusters.
+1. Select either the newest full backup plus incremental changes or a specific
+   recovery time in the database Backups tab and restore it as a new cluster. Record
+   which option was exercised. This temporarily incurs charges for both clusters.
 2. Add only the isolated verification host to the restored cluster's access list and
    download its CA/connection details.
 3. Point a temporary application container at the fork with payment, rate, and email
@@ -318,6 +324,26 @@ support restoration to a forked cluster. Run the first drill before real funds:
 
 Linode's database backup does not replace portable encrypted `pg_dump` exports.
 Maintain both controls and test them independently.
+
+#### Completed restore evidence — 2026-08-27
+
+- Restore option: newest full backup plus incremental changes.
+- Restore initiated from the newest available state at 13:57 IST; the isolated fork
+  finished provisioning at 14:12 IST, for an observed 15-minute RTO.
+- The temporary application used the production image/release
+  `5fa726b2d76666abe7063f8b48125d6869566ecc`, a fork-specific endpoint and CA, and
+  disabled payment and email providers. No public service or migration was started.
+- The restored schema contained every migration through
+  `schemes.0011_razorpay_gateway_mode`.
+- Reconciliation exactly matched the recorded source baseline: five customers, six
+  scheme accounts, no pending Razorpay contribution, INR `0.00` cash principal, INR
+  `0.00` earned cash bonus, `0.299097` gold grams, and `0.000000` silver grams.
+- `check_auth_email_integrity` reported no duplicate groups or blank-email users;
+  `check_financial_exceptions` reported zero paid-unallocated contributions and zero
+  failed or mismatched webhooks.
+- The original production live/readiness endpoints continued returning `ok` with the
+  expected release. After evidence capture, the restored fork and its temporary
+  environment and CA certificate were removed; the production CA was retained.
 
 ### Linode monitoring boundary
 
