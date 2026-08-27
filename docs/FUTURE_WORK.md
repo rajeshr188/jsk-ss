@@ -19,10 +19,14 @@ here are not implemented behavior and do not relax the financial invariants in
 
 ## Production rollout
 
-- **FW-PROD-001 — Backup recovery proof (Linode procedure prepared):** Linode
-  Managed PostgreSQL provides daily retained backups and forked-cluster restoration;
-  complete and record the actual isolated restore with denomination-specific
-  liability reconciliation after the cluster exists.
+- **FW-PROD-001 — Backup recovery proof (completed 2026-08-27):** A Linode Managed
+  PostgreSQL newest-full-plus-incremental backup was restored into an isolated fork.
+  Provisioning from 13:57 to 14:12 IST demonstrated a 15-minute RTO. The fork retained
+  every migration through `schemes.0011` and exactly matched the recorded baseline:
+  five customers, six scheme accounts, no pending Razorpay contribution, zero cash
+  principal/earned bonus, `0.299097` gold grams, and zero silver grams. Authentication
+  integrity and financial-exception checks passed, the original release remained live
+  and ready, and the fork plus its temporary environment and CA were removed.
 - **FW-PROD-002 — Observability foundation implemented; activation remains:** Caddy
   serves the owned domain with automatic HTTPS, verified proxy trust, masked
   structured access logs, and release labels. The repository includes an aggregate
@@ -31,7 +35,9 @@ here are not implemented behavior and do not relax the financial invariants in
   capacity/backup events. Configure the two provider accounts and retain exercised
   evidence for 5xx/readiness, failed webhooks, allocation exceptions, database
   capacity, certificate renewal, backup failure, escalation, and retention before
-  marking this item complete.
+  marking this item complete. The owner explicitly deferred paid external monitoring
+  on 2026-08-27 to preserve the operating budget; this item remains open rather than
+  being treated as a passed production gate.
 - **FW-PROD-003 — Delivery verified; rotations remain:** Postmark approved the
   account and a real password-reset message reached the controlled Gmail mailbox on
   2026-08-26. The production Django Site identity was corrected from `example.com` to
@@ -290,11 +296,11 @@ and is not current work.
 | Checkpoint | Limitations or deferred scope recorded then | Current disposition |
 | --- | --- | --- |
 | Milestones 0–1 | No issue was identified inside the implemented foundation/enrolment slice. Contributions, providers, rates, allocations, liabilities, and redemption were deferred. | Resolved by Milestones 2–8. |
-| Milestone 2 | Real payment providers, rates, metal allocations, liability reporting, and redemption were deferred. | Allocations, liabilities, redemption, the external Razorpay test journey, and manual Scheme Rates are resolved. The production-operations baseline is complete; environment proof and live-mode readiness remain `FW-PROD-001`–`FW-PROD-003`, `FW-PAY-001`, and `FW-PAY-003`. |
+| Milestone 2 | Real payment providers, rates, metal allocations, liability reporting, and redemption were deferred. | Allocations, liabilities, redemption, the external Razorpay test journey, manual Scheme Rates, and backup recovery proof are resolved. Observability activation, rotation rehearsals, and remaining live operations remain `FW-PROD-002`–`FW-PROD-003`, `FW-PAY-001`, and `FW-PAY-003`. |
 | Milestone 3 | Real payment/rate providers, paid-unallocated retry handling, liability reporting, and redemption were deferred. | Manual allocation recovery, liabilities, redemption, external Razorpay Test Mode validation, and manual Scheme Rates are resolved. Unexpected-allocation automation remains `FW-AUDIT-004`. |
 | Milestone 4 / MVP Alpha | Real providers, paid-unallocated retry handling, and redemption remained deferred. | External test-mode payment, manual Scheme Rates, recovery, redemption, and the production-operations baseline are resolved. Deployment proof and automated recovery remain in the production and audit items above. |
 | Milestone 5 | GoldAPI had deterministic boundary tests but no private-key live smoke; applied rate had no premium/margin/tax/approval policy; cache was process-local; allocation retry and alerts were manual. Razorpay, redemption, bonus, and audit/corrections were deferred. | ADR-0003 superseded the API architecture with audited manual Scheme Rates locked before payment. Remaining work is tracked by `FW-RATE-002`, `FW-RATE-003`, `FW-AUDIT-004`, `FW-PAY-001`, `FW-BONUS-004`–`FW-BONUS-005`, and the Milestone 10 audit items. |
-| Milestone 6 | No external Razorpay transaction/webhook had been exercised; live keys were rejected pending live operations; abandoned monthly orders had no expiry/cancellation. Earlier Milestone 5 limitations remained. | The external Test Mode transaction, signed webhook, and production-operations baseline are resolved. Environment proof, live operations, stable HTTPS/webhook operations, abandoned-order handling, and carried-forward rate/recovery work remain `FW-PROD-001`–`FW-PROD-003`, `FW-PAY-001`–`FW-PAY-003`, and the related items above. |
+| Milestone 6 | No external Razorpay transaction/webhook had been exercised; live keys were rejected pending live operations; abandoned monthly orders had no expiry/cancellation. Earlier Milestone 5 limitations remained. | The external Test Mode transaction, signed webhook, production-operations baseline, and isolated recovery proof are resolved. Observability/rotation activation, live operations, stable webhook operations, abandoned-order handling, and carried-forward rate/recovery work remain `FW-PROD-002`–`FW-PROD-003`, `FW-PAY-001`–`FW-PAY-003`, and the related items above. |
 | Milestone 7 | Eligibility had no reminders and did not initiate/complete redemption. The later review also noted exact-calendar behavior with no business-day or grace-period policy. | Redemption execution was resolved by Milestone 8. Communication and calendar policy remain `FW-ELIG-001` and `FW-ELIG-002`. |
 | Milestone 8 | Redemption only recorded settlement; no payout, metal handover, POS, inventory, invoice validation, or metal-to-cash policy existed. Bonus, correction/reversal/approval, and configurable partial-settlement policies remained deferred. Receipts/statements were also deferred. | Initial bonus, audit/reversal, and MVP documents are resolved by Milestones 9–11. Remaining settlement, bonus, approval, and statutory-document work is tracked by the corresponding open items. |
 | Milestone 9 | The initial cash bonus has one plan-configured percentage, a minimum qualifying duration, a paid-principal eligibility cutoff, and principal-first redemption. It has no caps, tiers, approval/forfeiture/tax policy, future-contribution projection, or optimized aggregate read model. | Tracked by `FW-BONUS-004` and `FW-BONUS-005`; initial audit/reversal is resolved by Milestone 10 while dual approval remains `FW-AUDIT-002`. |
