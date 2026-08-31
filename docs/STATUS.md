@@ -2,9 +2,9 @@
 
 ## Current milestone
 
-Production activation gates — `FW-PROD-001` is complete; the owner has explicitly
-deferred paid external observability under `FW-PROD-002` for budget reasons and the
-`FW-PROD-003` secret-rotation rehearsals
+Razorpay Live acceptance is complete on production release `5fa726b`; routine Live
+reconciliation is active while the owner-accepted `FW-PROD-002` external-observability
+and `FW-PROD-003` secret-rotation deferrals remain open
 
 ## Completed
 
@@ -85,6 +85,13 @@ deferred paid external observability under `FW-PROD-002` for budget reasons and 
 - Customer redemption history, owner redemption ledger, and liability reconciliation after settlement.
 - External Razorpay Test Mode payment captured through Standard Checkout on a public
   HTTPS endpoint, with the signed `payment.captured` webhook processed exactly once.
+- Razorpay Live Mode acceptance completed on release `5fa726b` with two real captured
+  contributions (INR `150.00` and INR `200.00`), two processed signed
+  `payment.captured` webhooks, and exactly one immutable gold allocation per payment
+  (`0.008973` g and `0.012229` g). Two unused Live orders with no attempts or payments
+  were reconciled against Razorpay and retired through the contribution service. The
+  final state has zero pending Live contributions, `0.021202` g allocated from Live
+  payments, `0.329272` g total outstanding gold, and zero financial exceptions.
 - The external-payment account completed owner-recorded redemption and reconciled
   customer outstanding cash and owner cash principal from ₹100.00 to ₹0.00.
 - Owner-configurable cash bonus percentage and minimum qualifying duration with a
@@ -246,9 +253,9 @@ deferred paid external observability under `FW-PROD-002` for budget reasons and 
   provisioned in one region. Database/Cloud Firewall access controls and the database
   CA are in place, SSH access is verified, Docker is installed, and the owned domain
   returns liveness and PostgreSQL readiness `200` through Caddy-managed HTTPS;
-  external alert exercises and controlled Razorpay Live Mode activation remain.
-- Production release `f9081c1a52a3ce3dc99e1d816cce9846a5b31f92` is healthy with
-  `schemes.0010_manual_scheme_rates`, `catalog.0001_initial`, `pages.0001_initial`,
+  paid external alert exercises remain deferred.
+- Production release `5fa726b2d76666abe7063f8b48125d6869566ecc` is healthy with
+  `schemes.0011_razorpay_gateway_mode`, `catalog.0001_initial`, `pages.0001_initial`,
   and `accounts.0003_customerinvitation_and_more`
   applied, zero reported financial exceptions, successful live/ready checks, valid
   catalogue authorization, working R2 media, published reviewed products, and public
@@ -259,9 +266,6 @@ deferred paid external observability under `FW-PROD-002` for budget reasons and 
 
 - Quote expiry is deferred: a pending contribution retains its locked Scheme Rate until
   it is paid or failed. Add expiry only with a reviewed payment-order lifecycle design.
-- The code accepts mode-matched Razorpay Live keys, but production has not yet deployed
-  the supporting migration or completed Live webhook/capture configuration, readiness
-  preflight, controlled real contribution, reconciliation, and retained evidence.
 - Public prospect and policy pages market only gold/silver jewellery purchase plans.
   Production enforces that boundary for new enrolments and contributions while
   preserving the one empty historical CASH record. Qualified legal, accounting, and
@@ -307,9 +311,8 @@ deferred paid external observability under `FW-PROD-002` for budget reasons and 
 - Wagtail 7.4.3 and Django 6.0.4 pass system checks, production-shaped deploy checks,
   static collection, and an applied-migration check. Wagtail, taggit, and catalogue
   migrations are applied to production PostgreSQL.
-- Local PostgreSQL 16 migrations are applied through
-  `schemes.0011_razorpay_gateway_mode`; production remains on the applied migration
-  set recorded under **In progress** until this release is promoted.
+- Local and production PostgreSQL 16 migrations are applied through
+  `schemes.0011_razorpay_gateway_mode`.
 - 224 tests pass, including Razorpay Live/Test configuration and history migration,
   cross-mode order/callback/webhook isolation, Live checkout disclosure, readiness
   blocking, mode-aware reconciliation export, the production metal-only boundary
@@ -392,10 +395,8 @@ deferred paid external observability under `FW-PROD-002` for budget reasons and 
 
 ## Next recommended step
 
-Deploy the supporting release first with `RAZORPAY_MODE=test`, review and apply
-`schemes.0011_razorpay_gateway_mode`, and prove the existing Test flow unchanged.
-Then use the [Production and deployment guide](PRODUCTION_DEPLOYMENT.md) to pause
-checkout, configure the separate Live webhook and automatic capture, run the Live
-readiness and financial-exception commands, activate mode-matched Live credentials,
-complete one legitimate controlled contribution, and retain reconciliation evidence.
-Do not expose Live credentials or bypass a pending cross-mode contribution blocker.
+Operate the accepted Live flow with daily Razorpay-to-contribution reconciliation,
+manual health/financial-exception checks, and immediate checkout suspension for any
+provider/local mismatch. Prioritize `FW-PAY-002` abandoned-order lifecycle handling
+and `FW-PAY-003` webhook recovery; revisit the explicitly deferred external monitoring
+and secret-rotation exercises before expanding real-funds use.
