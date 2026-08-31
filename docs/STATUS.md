@@ -2,9 +2,9 @@
 
 ## Current milestone
 
-FW-PAY-002 abandoned Razorpay order handling is implemented on the feature branch
-after successful Live acceptance; production remains on release `5fa726b` until the
-reviewed migration and release are deployed. The owner-accepted `FW-PROD-002`
+FW-PAY-002 abandoned Razorpay order handling is deployed on production release
+`c3e8c46`. Migration `schemes.0012` and every post-release gate passed with no pending
+Razorpay candidate and no financial exception. The owner-accepted `FW-PROD-002`
 external-observability and `FW-PROD-003` secret-rotation deferrals remain open.
 
 ## Completed
@@ -261,8 +261,8 @@ external-observability and `FW-PROD-003` secret-rotation deferrals remain open.
   CA are in place, SSH access is verified, Docker is installed, and the owned domain
   returns liveness and PostgreSQL readiness `200` through Caddy-managed HTTPS;
   paid external alert exercises remain deferred.
-- Production release `5fa726b2d76666abe7063f8b48125d6869566ecc` is healthy with
-  `schemes.0011_razorpay_gateway_mode`, `catalog.0001_initial`, `pages.0001_initial`,
+- Production release `c3e8c4618c9ec160fcdf764b38d05de6b7e5df9e` is healthy with
+  `schemes.0012_abandoned_razorpay_orders`, `catalog.0001_initial`, `pages.0001_initial`,
   and `accounts.0003_customerinvitation_and_more`
   applied, zero reported financial exceptions, successful live/ready checks, valid
   catalogue authorization, working R2 media, published reviewed products, and public
@@ -271,8 +271,10 @@ external-observability and `FW-PROD-003` secret-rotation deferrals remain open.
 
 ## Known limitations
 
-- Quote expiry is deferred: a pending contribution retains its locked Scheme Rate until
-  it is paid or failed. Add expiry only with a reviewed payment-order lifecycle design.
+- Razorpay exposes no order-cancellation operation. A reconciled `ABANDONED`
+  contribution therefore retains its locked Scheme Rate and provider reference for
+  evidence; a replacement locks the then-current rate, while any late capture is a
+  financial exception requiring manual provider reconciliation and refund handling.
 - Public prospect and policy pages market only gold/silver jewellery purchase plans.
   Production enforces that boundary for new enrolments and contributions while
   preserving the one empty historical CASH record. Qualified legal, accounting, and
@@ -402,8 +404,7 @@ external-observability and `FW-PROD-003` secret-rotation deferrals remain open.
 
 ## Next recommended step
 
-Review, merge, and deploy the FW-PAY-002 release using the `schemes.0012` migration
-preflight, then exercise only the reconciliation dry run against Live orders before
-enabling any applied closure. Continue daily Razorpay-to-contribution reconciliation
-and prioritize `FW-PAY-003` webhook recovery; revisit the explicitly deferred external
-monitoring and secret-rotation exercises before expanding real-funds use.
+Continue daily Razorpay-to-contribution reconciliation and keep abandoned-order checks
+in dry-run mode unless an aged candidate is individually reviewed. Prioritize
+`FW-PAY-003` webhook recovery; revisit the explicitly deferred external monitoring and
+secret-rotation exercises before expanding real-funds use.
