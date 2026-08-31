@@ -44,6 +44,19 @@ This is the canonical source for stable business rules.
 - **PAY-006:** Razorpay order IDs, payment IDs, and webhook event IDs are unique at their respective database boundaries. Duplicate callbacks or webhook deliveries return the existing result and create no additional entitlement.
 - **PAY-007:** A once-per-month account may have at most one pending Razorpay contribution for a calendar period. Reopening the payment flow resumes the existing order.
 - **PAY-008:** Provider callbacks are matched to a customer-owned local contribution; the browser-supplied order ID is never trusted in place of the database value.
+- **PAY-009:** A Razorpay order becomes application-side `ABANDONED` only after it
+  exceeds the operator-selected age and a mode-matched provider inspection reports
+  `created`, zero attempts, zero payments, zero paid amount, and the full amount due.
+  Dry-run is the default. An applied decision retains the provider order and locked
+  Scheme Rate and appends an immutable audit event containing the provider snapshot.
+- **PAY-010:** Razorpay's Orders API does not cancel or invalidate an order. Therefore
+  `ABANDONED` never means provider-cancelled. The application stops offering that
+  checkout and may create a replacement attempt, but a later capture is rejected from
+  automatic entitlement and becomes a failed-webhook exception for immediate manual
+  provider reconciliation and refund handling.
+- **PAY-011:** Pending mode-matched orders remain resumable until paid, failed, or
+  reconciled as abandoned. Abandonment is evaluated per order for both monthly and
+  flexible-frequency accounts; closing one flexible attempt never changes another.
 - **METAL-001 / FIN-002:** A metal contribution creates at most one successful allocation.
 - **METAL-002 / FIN-003:** A Scheme Rate used by an allocation is immutable.
 - **METAL-003 / FIN-004:** Historical allocated grams never change when a newer Scheme Rate is published.

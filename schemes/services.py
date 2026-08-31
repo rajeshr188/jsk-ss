@@ -1,6 +1,7 @@
 import calendar
 import hashlib
 import secrets
+from dataclasses import dataclass
 from datetime import date
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 
@@ -26,7 +27,11 @@ from .models import (
     SchemeAccount,
     SchemePlan,
 )
-from .payments import PaymentGatewayError, get_payment_gateway
+from .payments import (
+    PaymentGatewayError,
+    PaymentOrderInspection,
+    get_payment_gateway,
+)
 from .selectors import (
     get_cash_bonus_summary,
     get_current_scheme_rate,
@@ -48,6 +53,14 @@ SCHEME_RATE_PURITY = {
 CASH_SCHEME_ACTIVITY_UNAVAILABLE = (
     "Cash savings are closed to new activity. Choose a gold or silver savings mode."
 )
+
+
+@dataclass(frozen=True)
+class RazorpayOrderReconciliationResult:
+    contribution: Contribution
+    inspection: PaymentOrderInspection
+    outcome: str
+    applied: bool
 
 
 def cash_scheme_activity_is_enabled():
@@ -450,6 +463,11 @@ def confirm_contribution(
         raise ValidationError("This contribution has already been confirmed.")
     if contribution.status == Contribution.Status.FAILED:
         raise ValidationError("A failed contribution cannot be confirmed.")
+    if contribution.status == Contribution.Status.ABANDONED:
+        raise ValidationError(
+            "An abandoned contribution cannot be confirmed automatically; "
+            "reconcile and refund any late provider payment."
+        )
     if not verified:
         raise ValidationError("Payment success was not verified server-side.")
     if contribution.payment_gateway != payment_gateway:
@@ -493,6 +511,123 @@ def fail_contribution(*, contribution_id, gateway_reference=None):
     contribution.full_clean()
     contribution.save(update_fields=["status", "gateway_reference", "paid_at"])
     return contribution
+
+
+def reconcile_abandoned_razorpay_contribution(
+    *,
+    contribution_id,
+    cutoff,
+    apply=False,
+    gateway=None,
+    performed_by=None,
+    reason="Reconciled an aged Razorpay order against the provider.",
+):
+    """Inspect and optionally close a clearly untouched Razorpay order.
+
+    Razorpay Orders cannot be cancelled through the Orders API. ABANDONED is
+    therefore an application-side state: the provider reference is retained and a
+    later captured webhook is deliberately rejected into the exception workflow.
+    """
+    gateway = gateway or get_payment_gateway()
+    if (
+        gateway.name != "razorpay"
+        or getattr(gateway, "mode", None) not in GatewayMode.values
+    ):
+        raise ImproperlyConfigured("A mode-specific Razorpay gateway is required.")
+    if performed_by is not None:
+        _validate_owner(performed_by)
+    normalized_reason = reason.strip()
+    if not normalized_reason:
+        raise ValidationError({"reason": "Enter a reconciliation reason."})
+    if timezone.is_naive(cutoff):
+        cutoff = timezone.make_aware(cutoff, timezone.get_current_timezone())
+
+    contribution = Contribution.objects.select_related("scheme_account").get(
+        pk=contribution_id
+    )
+    if contribution.status != Contribution.Status.PENDING:
+        raise ValidationError(
+            "Only a pending contribution can be reconciled as abandoned."
+        )
+    if contribution.payment_gateway != "razorpay" or not contribution.gateway_order_id:
+        raise ValidationError("The contribution has no Razorpay order to reconcile.")
+    if contribution.gateway_mode != gateway.mode:
+        raise ValidationError(
+            "The Razorpay payment mode does not match the initiated contribution."
+        )
+    if contribution.created_at > cutoff:
+        raise ValidationError(
+            "The Razorpay order is not old enough for abandonment review."
+        )
+
+    inspection = gateway.inspect_order(order_id=contribution.gateway_order_id)
+    expected_amount = int(contribution.amount * 100)
+    untouched = (
+        inspection.order_id == contribution.gateway_order_id
+        and inspection.status == "created"
+        and inspection.amount_subunits == expected_amount
+        and inspection.amount_paid_subunits == 0
+        and inspection.amount_due_subunits == expected_amount
+        and inspection.currency == "INR"
+        and inspection.attempts == 0
+        and inspection.payment_count == 0
+        and not inspection.payment_statuses
+    )
+    outcome = "ELIGIBLE_FOR_ABANDONMENT" if untouched else "REVIEW_REQUIRED"
+    if not apply:
+        return RazorpayOrderReconciliationResult(
+            contribution=contribution,
+            inspection=inspection,
+            outcome=outcome,
+            applied=False,
+        )
+
+    with transaction.atomic():
+        locked = (
+            Contribution.objects.select_for_update()
+            .select_related("scheme_account")
+            .get(pk=contribution.pk)
+        )
+        if (
+            locked.status != Contribution.Status.PENDING
+            or locked.gateway_order_id != contribution.gateway_order_id
+            or locked.gateway_mode != gateway.mode
+        ):
+            raise ValidationError(
+                "The contribution changed during reconciliation; inspect it again."
+            )
+        if untouched:
+            locked.status = Contribution.Status.ABANDONED
+            locked.full_clean()
+            locked.save(update_fields=["status"])
+
+        record_audit_event(
+            action=AuditEvent.Action.PAYMENT_ORDER_RECONCILIATION,
+            actor=performed_by,
+            reason=normalized_reason,
+            scheme_account=locked.scheme_account,
+            contribution=locked,
+            details={
+                "outcome": outcome,
+                "applied": untouched,
+                "gateway": "razorpay",
+                "gateway_mode": locked.gateway_mode,
+                "gateway_order_id": locked.gateway_order_id,
+                "provider_order_status": inspection.status,
+                "provider_attempts": inspection.attempts,
+                "provider_amount_subunits": inspection.amount_subunits,
+                "provider_amount_paid_subunits": inspection.amount_paid_subunits,
+                "provider_amount_due_subunits": inspection.amount_due_subunits,
+                "provider_payment_count": inspection.payment_count,
+                "provider_payment_statuses": list(inspection.payment_statuses),
+            },
+        )
+    return RazorpayOrderReconciliationResult(
+        contribution=locked,
+        inspection=inspection,
+        outcome=outcome,
+        applied=untouched,
+    )
 
 
 @transaction.atomic
@@ -746,6 +881,11 @@ def confirm_razorpay_contribution(
         if contribution.gateway_reference != payment_id:
             raise ValidationError("This contribution has already been confirmed.")
         return _apply_contribution_entitlement(contribution)
+    if contribution.status == Contribution.Status.ABANDONED:
+        raise ValidationError(
+            "An abandoned contribution cannot be confirmed automatically; "
+            "reconcile and refund any late provider payment."
+        )
 
     verified = gateway.verify_payment(
         order_id=contribution.gateway_order_id,
@@ -805,6 +945,9 @@ def process_razorpay_webhook(*, gateway_mode, event_id, body, payload):
             gateway_mode=gateway_mode,
             gateway_order_id=order_id,
         )
+        event.contribution = contribution
+        event.gateway_order_id = order_id
+        event.gateway_reference = payment_id
         if (
             payment.get("status") != "captured"
             or payment.get("captured") is not True
@@ -841,7 +984,16 @@ def process_razorpay_webhook(*, gateway_mode, event_id, body, payload):
         event.status = PaymentWebhookEvent.Status.FAILED
         event.error = str(error).strip()[:1000]
         event.processed_at = timezone.now()
-        event.save(update_fields=["status", "error", "processed_at"])
+        event.save(
+            update_fields=[
+                "status",
+                "contribution",
+                "gateway_order_id",
+                "gateway_reference",
+                "error",
+                "processed_at",
+            ]
+        )
         raise ValidationError(event.error) from None
 
 

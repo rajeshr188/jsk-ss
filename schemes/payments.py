@@ -64,6 +64,19 @@ class PaymentOrder:
     currency: str
 
 
+@dataclass(frozen=True)
+class PaymentOrderInspection:
+    order_id: str
+    status: str
+    amount_subunits: int
+    amount_paid_subunits: int
+    amount_due_subunits: int
+    currency: str
+    attempts: int
+    payment_count: int
+    payment_statuses: tuple[str, ...]
+
+
 class PaymentGateway(ABC):
     name: str
 
@@ -212,6 +225,60 @@ class RazorpayPaymentGateway(PaymentGateway):
             self.webhook_secret.encode("utf-8"), body, hashlib.sha256
         ).hexdigest()
         return hmac.compare_digest(expected_signature, signature)
+
+    def inspect_order(self, *, order_id):
+        if (
+            not isinstance(order_id, str)
+            or not order_id.startswith("order_")
+            or not RAZORPAY_ID_PATTERN.fullmatch(order_id)
+        ):
+            raise PaymentGatewayValidationError("The Razorpay order ID is invalid.")
+
+        order = self._request_json("GET", f"/orders/{order_id}")
+        payments = self._request_json("GET", f"/orders/{order_id}/payments")
+        items = payments.get("items")
+        payment_count = payments.get("count")
+        if (
+            not isinstance(items, list)
+            or not isinstance(payment_count, int)
+            or isinstance(payment_count, bool)
+            or payment_count < 0
+            or payment_count != len(items)
+        ):
+            raise PaymentGatewayError("Razorpay returned an invalid payment list.")
+        statuses = []
+        for payment in items:
+            if not isinstance(payment, dict) or not isinstance(
+                payment.get("status"), str
+            ):
+                raise PaymentGatewayError("Razorpay returned an invalid payment list.")
+            statuses.append(payment["status"])
+
+        integer_fields = ("amount", "amount_paid", "amount_due", "attempts")
+        if (
+            order.get("id") != order_id
+            or order.get("status") not in {"created", "attempted", "paid"}
+            or order.get("currency") != "INR"
+            or any(
+                not isinstance(order.get(field), int)
+                or isinstance(order.get(field), bool)
+                or order[field] < 0
+                for field in integer_fields
+            )
+        ):
+            raise PaymentGatewayError("Razorpay returned an invalid order response.")
+
+        return PaymentOrderInspection(
+            order_id=order_id,
+            status=order["status"],
+            amount_subunits=order["amount"],
+            amount_paid_subunits=order["amount_paid"],
+            amount_due_subunits=order["amount_due"],
+            currency=order["currency"],
+            attempts=order["attempts"],
+            payment_count=payment_count,
+            payment_statuses=tuple(statuses),
+        )
 
     def _request_json(self, method, path, payload=None):
         encoded_payload = None

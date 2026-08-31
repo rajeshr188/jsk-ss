@@ -98,6 +98,7 @@ class ContributionAdmin(admin.ModelAdmin):
     )
     list_filter = ("status", "payment_gateway", "gateway_mode", "contribution_period")
     search_fields = (
+        "gateway_order_id",
         "gateway_reference",
         "scheme_account__scheme_number",
         "scheme_account__customer__full_name",
