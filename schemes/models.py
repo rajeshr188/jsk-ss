@@ -265,6 +265,7 @@ class Contribution(models.Model):
         PAID = "PAID", "Paid"
         PAID_UNALLOCATED = "PAID_UNALLOCATED", "Paid — allocation pending"
         FAILED = "FAILED", "Failed"
+        ABANDONED = "ABANDONED", "Abandoned"
 
     scheme_account = models.ForeignKey(
         SchemeAccount,
@@ -327,7 +328,10 @@ class Contribution(models.Model):
                         paid_at__isnull=False,
                         gateway_reference__isnull=False,
                     )
-                    | models.Q(status__in=["PENDING", "FAILED"], paid_at__isnull=True)
+                    | models.Q(
+                        status__in=["PENDING", "FAILED", "ABANDONED"],
+                        paid_at__isnull=True,
+                    )
                 ),
                 name="paid_contribution_has_confirmation",
             ),
@@ -741,6 +745,10 @@ class AuditEvent(models.Model):
         REDEMPTION = "REDEMPTION", "Redemption"
         REVERSAL = "REVERSAL", "Reversal"
         ALLOCATION_RETRY = "ALLOCATION_RETRY", "Allocation retry"
+        PAYMENT_ORDER_RECONCILIATION = (
+            "PAYMENT_ORDER_RECONCILIATION",
+            "Payment order reconciliation",
+        )
 
     action = models.CharField(max_length=40, choices=Action.choices)
     actor = models.ForeignKey(

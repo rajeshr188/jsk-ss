@@ -107,7 +107,16 @@ Customer: login → My Schemes → account terms. Login routing is role-aware.
 
 Cash contribution (mock): customer account → Pay now → validate snapshotted amount/frequency rules → create pending contribution → verified mock result → idempotent confirmation → derived cash balance.
 
-Razorpay contribution (test): customer account → validate → lock current Scheme Rate when metal → pending contribution → server-created order → Standard Checkout → HMAC callback plus captured-payment API check and/or signed `payment.captured` webhook → idempotent confirmation → cash entitlement or one metal allocation from the lock. A once-per-month account resumes its single pending Razorpay order instead of creating parallel payable orders.
+Razorpay contribution: customer account → validate → lock current Scheme Rate when
+metal → mode-stamped pending contribution → server-created order → Standard Checkout →
+HMAC callback plus captured-payment API check and/or signed `payment.captured` webhook
+→ idempotent confirmation → one metal allocation from the lock. A once-per-month
+account resumes its single pending Razorpay order instead of creating parallel payable
+orders. An aged, provider-verified untouched order may be marked application-side
+`ABANDONED` by the explicit reconciliation command; its order ID, rate lock, and
+immutable provider snapshot remain for audit because Razorpay exposes no Orders API
+cancellation. A late capture is routed to the financial-exception workflow rather
+than silently creating entitlement.
 
 Metal contribution: owner publishes Scheme Rate → customer selects Pay now → current applicable rate is locked → payment starts and is verified → one immutable six-decimal allocation uses the lock → derived gold or silver gram balance. No published rate means no payment initiation.
 

@@ -133,9 +133,16 @@ here are not implemented behavior and do not relax the financial invariants in
   gold allocations total `0.021202` g. Two never-attempted Live orders were verified
   with Razorpay and retired through the service, leaving zero pending Live contributions
   and zero financial exceptions. The final evidence was reconciled on 2026-08-31.
-- **FW-PAY-002:** Add expiry/cancellation and reconciliation handling for abandoned
-  Razorpay orders, including flexible-frequency attempts, while retaining a safe
-  resume path and preserving provider references for audit.
+- **FW-PAY-002 — Abandoned Razorpay order lifecycle (completed 2026-08-31):** A
+  mode-matched provider inspection and dry-run-first management command now close
+  only aged orders that remain `created` with zero attempts, payments, and paid amount.
+  Applied orders use the explicit application-side `ABANDONED` state while retaining
+  their order ID and Scheme Rate lock plus an immutable reconciliation audit snapshot.
+  Pending orders remain resumable, monthly replacement attempts are released only
+  after reconciliation, flexible attempts are handled independently, and any late
+  capture becomes a failed-webhook exception for manual refund/recovery. Razorpay does
+  not expose order cancellation, so the runbook explicitly preserves that residual
+  late-payment boundary.
 - **FW-PAY-003:** The stable owned HTTPS endpoint has replaced development quick
   tunnels. Complete webhook-secret synchronization and rotation evidence, retry
   behavior, monitoring, and recovery for invalid or delayed webhook deliveries.
@@ -163,9 +170,10 @@ here are not implemented behavior and do not relax the financial invariants in
 - **FW-RATE-001 (completed by ADR-0003):** Owner-published Scheme Rates are the sole
   authoritative gold/silver conversion rates. Publication is append-only, audited,
   and protected by validation plus a 5% large-change confirmation.
-- **FW-RATE-002:** Decide whether abandoned pending payment orders need a Scheme Rate
-  lock expiry. The current simpler rule retains the original lock until payment or
-  failure; any expiry must coordinate with Razorpay order lifecycle and disclosure.
+- **FW-RATE-002 — Abandoned Scheme Rate locks (resolved by FW-PAY-002):** An abandoned
+  contribution retains its original immutable Scheme Rate lock for evidence. A
+  replacement contribution obtains the then-current rate before its new order is
+  created; historical locks are never deleted or rewritten.
 - **FW-RATE-003:** If external market data is later useful, add it only as
   owner-facing reference information. It must not become authoritative for customer
   allocation without a new ADR and explicit pricing/disclosure rules.

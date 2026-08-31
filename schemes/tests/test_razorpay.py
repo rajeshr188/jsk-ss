@@ -1,6 +1,7 @@
 import hashlib
 import hmac
 import json
+from datetime import timedelta
 from io import StringIO
 from decimal import Decimal
 from types import SimpleNamespace
@@ -16,6 +17,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from schemes.models import (
+    AuditEvent,
     Contribution,
     MetalAllocation,
     PaymentWebhookEvent,
@@ -28,6 +30,7 @@ from schemes.payments import (
     PaymentGatewayError,
     PaymentGatewayValidationError,
     PaymentOrder,
+    PaymentOrderInspection,
     RazorpayPaymentGateway,
 )
 from schemes.selectors import get_cash_balance, get_metal_balance
@@ -39,6 +42,7 @@ from schemes.services import (
     initiate_razorpay_contribution,
     process_razorpay_webhook,
     publish_scheme_rate,
+    reconcile_abandoned_razorpay_contribution,
 )
 
 
@@ -71,10 +75,12 @@ class FakeRazorpayGateway:
     name = "razorpay"
     mode = "test"
 
-    def __init__(self, *, verified=True):
+    def __init__(self, *, verified=True, inspection=None):
         self.verified = verified
+        self.inspection = inspection
         self.order_calls = 0
         self.verify_calls = 0
+        self.inspect_calls = 0
 
     def create_order(self, contribution):
         self.order_calls += 1
@@ -87,6 +93,20 @@ class FakeRazorpayGateway:
     def verify_payment(self, **_kwargs):
         self.verify_calls += 1
         return self.verified
+
+    def inspect_order(self, *, order_id):
+        self.inspect_calls += 1
+        return self.inspection or PaymentOrderInspection(
+            order_id=order_id,
+            status="created",
+            amount_subunits=500000,
+            amount_paid_subunits=0,
+            amount_due_subunits=500000,
+            currency="INR",
+            attempts=0,
+            payment_count=0,
+            payment_statuses=(),
+        )
 
 
 def make_account(*, email, mode=SchemeAccount.SavingsMode.CASH, frequency=None):
@@ -184,6 +204,48 @@ class RazorpayGatewayTests(TestCase):
             with self.assertRaises(PaymentGatewayValidationError):
                 gateway.create_order(contribution)
         urlopen_mock.assert_not_called()
+
+    def test_order_inspection_fetches_order_and_all_payment_attempts(self):
+        gateway = RazorpayPaymentGateway(
+            mode="test",
+            key_id="rzp_test_key",
+            key_secret="secret",
+            webhook_secret="webhook",
+            timeout_seconds=2,
+        )
+        responses = [
+            FakeResponse(
+                {
+                    "id": "order_inspect_1",
+                    "status": "attempted",
+                    "amount": 500000,
+                    "amount_paid": 0,
+                    "amount_due": 500000,
+                    "currency": "INR",
+                    "attempts": 2,
+                }
+            ),
+            FakeResponse(
+                {
+                    "entity": "collection",
+                    "count": 2,
+                    "items": [{"status": "failed"}, {"status": "created"}],
+                }
+            ),
+        ]
+        with patch("schemes.payments.urlopen", side_effect=responses) as urlopen_mock:
+            inspection = gateway.inspect_order(order_id="order_inspect_1")
+
+        self.assertEqual(inspection.status, "attempted")
+        self.assertEqual(inspection.attempts, 2)
+        self.assertEqual(inspection.payment_count, 2)
+        self.assertEqual(inspection.payment_statuses, ("failed", "created"))
+        self.assertEqual(urlopen_mock.call_count, 2)
+        self.assertTrue(
+            urlopen_mock.call_args_list[1].args[0].full_url.endswith(
+                "/orders/order_inspect_1/payments"
+            )
+        )
 
     def test_provider_authentication_failure_is_safely_classified(self):
         gateway = RazorpayPaymentGateway(
@@ -316,6 +378,66 @@ class RazorpayLiveReadinessCommandTests(TestCase):
             )
 
 
+@override_settings(**{**RAZORPAY_SETTINGS, "DEBUG": True})
+class RazorpayOrderReconciliationCommandTests(TestCase):
+    def test_command_is_dry_run_by_default_and_apply_closes_eligible_order(self):
+        _, account = make_account(email="command-abandoned@example.com")
+        contribution = initiate_contribution(
+            scheme_account=account,
+            amount=Decimal("5000.00"),
+            payment_gateway="razorpay",
+            gateway_mode="test",
+        )
+        contribution.gateway_order_id = "order_command_abandoned"
+        contribution.save(update_fields=["gateway_order_id"])
+        Contribution.objects.filter(pk=contribution.pk).update(
+            created_at=timezone.now() - timedelta(hours=48)
+        )
+        inspection = PaymentOrderInspection(
+            order_id=contribution.gateway_order_id,
+            status="created",
+            amount_subunits=500000,
+            amount_paid_subunits=0,
+            amount_due_subunits=500000,
+            currency="INR",
+            attempts=0,
+            payment_count=0,
+            payment_statuses=(),
+        )
+
+        with patch(
+            "schemes.payments.RazorpayPaymentGateway.inspect_order",
+            return_value=inspection,
+        ):
+            dry_output = StringIO()
+            call_command(
+                "reconcile_abandoned_razorpay_orders",
+                "--older-than-hours=24",
+                stdout=dry_output,
+            )
+            contribution.refresh_from_db()
+            self.assertEqual(contribution.status, Contribution.Status.PENDING)
+            self.assertIn("mode=dry-run", dry_output.getvalue())
+
+            apply_output = StringIO()
+            call_command(
+                "reconcile_abandoned_razorpay_orders",
+                "--older-than-hours=24",
+                "--apply",
+                stdout=apply_output,
+            )
+
+        contribution.refresh_from_db()
+        self.assertEqual(contribution.status, Contribution.Status.ABANDONED)
+        self.assertIn("abandoned=1", apply_output.getvalue())
+        self.assertEqual(
+            AuditEvent.objects.filter(
+                action=AuditEvent.Action.PAYMENT_ORDER_RECONCILIATION
+            ).count(),
+            1,
+        )
+
+
 @override_settings(DEBUG=True)
 class RazorpayServiceTests(TestCase):
     def test_monthly_pending_cash_order_is_reused_without_scheme_rate(self):
@@ -354,6 +476,197 @@ class RazorpayServiceTests(TestCase):
 
         self.assertEqual(Contribution.objects.count(), 1)
         self.assertEqual(live_gateway.order_calls, 0)
+
+    def test_aged_untouched_order_is_abandoned_with_immutable_audit(self):
+        _, account = make_account(email="abandoned@example.com")
+        gateway = FakeRazorpayGateway()
+        contribution = initiate_razorpay_contribution(
+            scheme_account=account, amount=Decimal("5000.00"), gateway=gateway
+        )
+        Contribution.objects.filter(pk=contribution.pk).update(
+            created_at=timezone.now() - timedelta(hours=48)
+        )
+
+        dry_run = reconcile_abandoned_razorpay_contribution(
+            contribution_id=contribution.pk,
+            cutoff=timezone.now() - timedelta(hours=24),
+            gateway=gateway,
+        )
+        contribution.refresh_from_db()
+        self.assertEqual(dry_run.outcome, "ELIGIBLE_FOR_ABANDONMENT")
+        self.assertFalse(dry_run.applied)
+        self.assertEqual(contribution.status, Contribution.Status.PENDING)
+        self.assertFalse(
+            AuditEvent.objects.filter(
+                action=AuditEvent.Action.PAYMENT_ORDER_RECONCILIATION
+            ).exists()
+        )
+
+        applied = reconcile_abandoned_razorpay_contribution(
+            contribution_id=contribution.pk,
+            cutoff=timezone.now() - timedelta(hours=24),
+            apply=True,
+            gateway=gateway,
+        )
+        contribution.refresh_from_db()
+        self.assertTrue(applied.applied)
+        self.assertEqual(contribution.status, Contribution.Status.ABANDONED)
+        self.assertEqual(contribution.gateway_order_id, f"order_test_{contribution.pk}")
+        event = AuditEvent.objects.get(
+            action=AuditEvent.Action.PAYMENT_ORDER_RECONCILIATION
+        )
+        self.assertEqual(
+            event.action, AuditEvent.Action.PAYMENT_ORDER_RECONCILIATION
+        )
+        self.assertEqual(event.details["provider_order_status"], "created")
+        self.assertEqual(event.details["provider_payment_count"], 0)
+
+    def test_attempted_order_requires_review_and_remains_pending(self):
+        _, account = make_account(email="attempted-review@example.com")
+        contribution = initiate_razorpay_contribution(
+            scheme_account=account,
+            amount=Decimal("5000.00"),
+            gateway=FakeRazorpayGateway(),
+        )
+        Contribution.objects.filter(pk=contribution.pk).update(
+            created_at=timezone.now() - timedelta(hours=48)
+        )
+        gateway = FakeRazorpayGateway(
+            inspection=PaymentOrderInspection(
+                order_id=contribution.gateway_order_id,
+                status="attempted",
+                amount_subunits=500000,
+                amount_paid_subunits=0,
+                amount_due_subunits=500000,
+                currency="INR",
+                attempts=1,
+                payment_count=1,
+                payment_statuses=("failed",),
+            )
+        )
+
+        result = reconcile_abandoned_razorpay_contribution(
+            contribution_id=contribution.pk,
+            cutoff=timezone.now() - timedelta(hours=24),
+            apply=True,
+            gateway=gateway,
+        )
+
+        contribution.refresh_from_db()
+        self.assertEqual(result.outcome, "REVIEW_REQUIRED")
+        self.assertFalse(result.applied)
+        self.assertEqual(contribution.status, Contribution.Status.PENDING)
+        self.assertEqual(
+            AuditEvent.objects.get(
+                action=AuditEvent.Action.PAYMENT_ORDER_RECONCILIATION
+            ).details["provider_payment_statuses"],
+            ["failed"],
+        )
+
+    def test_abandoned_monthly_order_releases_a_new_resumable_attempt(self):
+        _, account = make_account(email="replacement@example.com")
+        gateway = FakeRazorpayGateway()
+        first = initiate_razorpay_contribution(
+            scheme_account=account, amount=Decimal("5000.00"), gateway=gateway
+        )
+        Contribution.objects.filter(pk=first.pk).update(
+            created_at=timezone.now() - timedelta(hours=48)
+        )
+        reconcile_abandoned_razorpay_contribution(
+            contribution_id=first.pk,
+            cutoff=timezone.now() - timedelta(hours=24),
+            apply=True,
+            gateway=gateway,
+        )
+
+        replacement = initiate_razorpay_contribution(
+            scheme_account=account, amount=Decimal("5000.00"), gateway=gateway
+        )
+        resumed = initiate_razorpay_contribution(
+            scheme_account=account, amount=Decimal("5000.00"), gateway=gateway
+        )
+
+        self.assertNotEqual(first.pk, replacement.pk)
+        self.assertEqual(resumed.pk, replacement.pk)
+        self.assertEqual(gateway.order_calls, 2)
+
+    def test_flexible_orders_are_reconciled_independently(self):
+        _, account = make_account(
+            email="flexible-abandoned@example.com",
+            frequency=SchemePlan.FrequencyRule.FLEXIBLE,
+        )
+        gateway = FakeRazorpayGateway()
+        first = initiate_razorpay_contribution(
+            scheme_account=account, amount=Decimal("5000.00"), gateway=gateway
+        )
+        second = initiate_razorpay_contribution(
+            scheme_account=account, amount=Decimal("5000.00"), gateway=gateway
+        )
+        Contribution.objects.filter(pk=first.pk).update(
+            created_at=timezone.now() - timedelta(hours=48)
+        )
+
+        reconcile_abandoned_razorpay_contribution(
+            contribution_id=first.pk,
+            cutoff=timezone.now() - timedelta(hours=24),
+            apply=True,
+            gateway=gateway,
+        )
+
+        first.refresh_from_db()
+        second.refresh_from_db()
+        self.assertEqual(first.status, Contribution.Status.ABANDONED)
+        self.assertEqual(second.status, Contribution.Status.PENDING)
+        self.assertNotEqual(first.gateway_order_id, second.gateway_order_id)
+
+    def test_late_capture_for_abandoned_order_becomes_webhook_exception(self):
+        _, account = make_account(email="late-capture@example.com")
+        gateway = FakeRazorpayGateway()
+        contribution = initiate_razorpay_contribution(
+            scheme_account=account, amount=Decimal("5000.00"), gateway=gateway
+        )
+        Contribution.objects.filter(pk=contribution.pk).update(
+            created_at=timezone.now() - timedelta(hours=48)
+        )
+        reconcile_abandoned_razorpay_contribution(
+            contribution_id=contribution.pk,
+            cutoff=timezone.now() - timedelta(hours=24),
+            apply=True,
+            gateway=gateway,
+        )
+        payload = {
+            "event": "payment.captured",
+            "payload": {
+                "payment": {
+                    "entity": {
+                        "id": "pay_late_capture",
+                        "order_id": contribution.gateway_order_id,
+                        "amount": 500000,
+                        "currency": "INR",
+                        "status": "captured",
+                        "captured": True,
+                    }
+                }
+            },
+        }
+        body = json.dumps(payload, separators=(",", ":")).encode("utf-8")
+
+        with self.assertRaisesMessage(ValidationError, "abandoned contribution"):
+            process_razorpay_webhook(
+                gateway_mode="test",
+                event_id="event_late_capture",
+                body=body,
+                payload=payload,
+            )
+
+        contribution.refresh_from_db()
+        self.assertEqual(contribution.status, Contribution.Status.ABANDONED)
+        event = PaymentWebhookEvent.objects.get()
+        self.assertEqual(event.status, "FAILED")
+        self.assertEqual(event.contribution, contribution)
+        self.assertEqual(event.gateway_order_id, contribution.gateway_order_id)
+        self.assertEqual(event.gateway_reference, "pay_late_capture")
+        self.assertEqual(get_cash_balance(account), Decimal("0.00"))
 
     def test_invalid_server_verification_creates_no_entitlement(self):
         _, account = make_account(email="invalid@example.com")

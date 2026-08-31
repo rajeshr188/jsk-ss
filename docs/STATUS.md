@@ -2,9 +2,10 @@
 
 ## Current milestone
 
-Razorpay Live acceptance is complete on production release `5fa726b`; routine Live
-reconciliation is active while the owner-accepted `FW-PROD-002` external-observability
-and `FW-PROD-003` secret-rotation deferrals remain open
+FW-PAY-002 abandoned Razorpay order handling is implemented on the feature branch
+after successful Live acceptance; production remains on release `5fa726b` until the
+reviewed migration and release are deployed. The owner-accepted `FW-PROD-002`
+external-observability and `FW-PROD-003` secret-rotation deferrals remain open.
 
 ## Completed
 
@@ -76,6 +77,12 @@ and `FW-PROD-003` secret-rotation deferrals remain open
 - Browser callback verification using the local order ID, HMAC, and a captured-payment server lookup.
 - Signed raw-body `payment.captured` webhooks with a unique event ledger and idempotent financial processing.
 - Unique Razorpay order/payment identifiers and one resumable pending order for once-per-month accounts.
+- Dry-run-first reconciliation for aged Razorpay orders, with mode-matched provider
+  inspection, an explicit application-side `ABANDONED` status, retained order/rate
+  references, immutable provider evidence, independent flexible-attempt handling,
+  monthly replacement/resume behavior, and late-capture escalation through the
+  financial-exception workflow. Razorpay provider orders are never described as
+  cancelled because its Orders API exposes no cancellation operation.
 - Shared callback/webhook confirmation services that create at most one cash or metal benefit.
 - India-local, date-derived active/not-yet-eligible, redemption-eligible, and redeemed display states.
 - Owner dashboard counts for eligible now and exclusive 1–30, 31–60, and 61–90-day forecast windows.
@@ -395,8 +402,8 @@ and `FW-PROD-003` secret-rotation deferrals remain open
 
 ## Next recommended step
 
-Operate the accepted Live flow with daily Razorpay-to-contribution reconciliation,
-manual health/financial-exception checks, and immediate checkout suspension for any
-provider/local mismatch. Prioritize `FW-PAY-002` abandoned-order lifecycle handling
-and `FW-PAY-003` webhook recovery; revisit the explicitly deferred external monitoring
-and secret-rotation exercises before expanding real-funds use.
+Review, merge, and deploy the FW-PAY-002 release using the `schemes.0012` migration
+preflight, then exercise only the reconciliation dry run against Live orders before
+enabling any applied closure. Continue daily Razorpay-to-contribution reconciliation
+and prioritize `FW-PAY-003` webhook recovery; revisit the explicitly deferred external
+monitoring and secret-rotation exercises before expanding real-funds use.

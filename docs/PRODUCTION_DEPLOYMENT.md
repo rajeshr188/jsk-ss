@@ -1471,6 +1471,56 @@ Use a short controlled cutover with no customer checkout in progress:
 - Paid external monitoring and rotation rehearsals remain explicitly deferred under
   `FW-PROD-002` and `FW-PROD-003`; webhook recovery remains `FW-PAY-003`.
 
+### Abandoned Razorpay order deployment and operation (`FW-PAY-002`)
+
+The release introduces `schemes.0012_abandoned_razorpay_orders`. Its approved plan
+adds the `ABANDONED` contribution choice, expands the paid-confirmation constraint to
+permit that unpaid terminal state, and adds the payment-order reconciliation audit
+action. It does not delete, rewrite, or backfill a contribution.
+
+After the normal recovery-point, candidate-image, baseline, migration-plan, migration,
+health, readiness, and financial-exception gates, inspect aged orders from the running
+web container. Dry-run is deliberately the default and makes provider reads without
+changing the database:
+
+```bash
+docker compose --env-file .env.production -f compose.production.yml \
+  exec -T web python manage.py reconcile_abandoned_razorpay_orders \
+  --older-than-hours=24
+```
+
+Review every line against Razorpay Dashboard. `ELIGIBLE_FOR_ABANDONMENT` requires all
+of the following from the mode-matched API credentials: order status `created`, zero
+attempts, zero associated payments, zero amount paid, the expected INR amount, and the
+full amount still due. `REVIEW_REQUIRED` remains pending and must not be overridden.
+Provider/API errors make the command fail and leave the affected contribution open.
+
+Only after review, apply the same bounded selection:
+
+```bash
+docker compose --env-file .env.production -f compose.production.yml \
+  exec -T web python manage.py reconcile_abandoned_razorpay_orders \
+  --older-than-hours=24 --apply
+
+docker compose --env-file .env.production -f compose.production.yml \
+  exec -T web python manage.py check_financial_exceptions
+```
+
+The apply pass re-reads Razorpay, marks only eligible local contributions
+`ABANDONED`, and appends an immutable audit event containing the provider snapshot.
+It retains the Razorpay order ID and locked Scheme Rate. The customer no longer sees
+a resume link for that contribution; a once-per-month account may start a replacement
+order, while flexible attempts remain independent.
+
+Razorpay's Orders API has no order-cancellation operation: application-side
+`ABANDONED` does **not** make the remote order unpayable. Run this process during an
+observed window. If a late signed capture arrives, the application intentionally
+creates a failed-webhook financial exception rather than silently issuing entitlement.
+Suspend the affected checkout, reconcile the order/payment/amount and any replacement
+contribution, and follow the approved no-entitlement payment-error refund procedure.
+Never delete the old contribution, provider order, reconciliation audit event, or
+failed webhook.
+
 ### Live reconciliation, payment-error refund, and dispute boundary
 
 - **Daily reconciliation:** compare Razorpay Live captured payments against the owner
@@ -1806,6 +1856,8 @@ owner-deferred controls complete:
 - [ ] `FW-PROD-001` through `FW-PROD-003` are marked complete with evidence.
 - [x] `FW-PAY-001` Live payment, capture, signed-webhook, allocation, and reconciliation
       acceptance is complete with the evidence above.
+- [x] `FW-PAY-002` dry-run-first abandoned-order reconciliation is implemented with
+      immutable provider snapshots and late-capture exception handling.
 - [ ] Before expanding real-funds use, complete `FW-PAY-003` webhook recovery and the
       remaining refund/dispute, monitoring, and rotation controls, or retain explicit
       owner acceptance of their documented risk with manual compensating checks.
@@ -1836,6 +1888,8 @@ not a completed control.
 - [Razorpay webhook best practices](https://razorpay.com/docs/webhooks/best-practices/)
 - [Razorpay webhook validation and testing](https://razorpay.com/docs/webhooks/validate-test/)
 - [Razorpay Test and Live modes](https://razorpay.com/docs/payments/dashboard/test-live-modes/)
+- [Razorpay Orders APIs](https://razorpay.com/docs/api/orders/)
+- [Razorpay order payment inspection](https://razorpay.com/docs/api/orders/fetch-payments/)
 - [Razorpay payment capture settings](https://razorpay.com/docs/payments/payments/capture-settings/)
 - [Razorpay payment Dashboard actions](https://razorpay.com/docs/payments/payments/dashboard/)
 - [Razorpay dispute Dashboard actions](https://razorpay.com/docs/payments/disputes/dashboard/)
