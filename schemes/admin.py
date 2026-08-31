@@ -12,6 +12,7 @@ from .models import (
     RedemptionReversal,
     SchemeAccount,
     SchemePlan,
+    WebhookProcessingAttempt,
 )
 
 
@@ -155,9 +156,47 @@ class PaymentWebhookEventAdmin(admin.ModelAdmin):
         "contribution",
         "gateway_order_id",
         "gateway_reference",
+        "failure_code",
         "error",
         "received_at",
         "processed_at",
+    )
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(WebhookProcessingAttempt)
+class WebhookProcessingAttemptAdmin(admin.ModelAdmin):
+    list_display = (
+        "webhook_event",
+        "source",
+        "outcome",
+        "actor_label",
+        "created_at",
+    )
+    list_filter = ("source", "outcome", "created_at")
+    search_fields = (
+        "webhook_event__event_id",
+        "webhook_event__gateway_order_id",
+        "webhook_event__gateway_reference",
+        "actor_label",
+        "reason",
+    )
+    readonly_fields = (
+        "webhook_event",
+        "source",
+        "outcome",
+        "actor",
+        "actor_label",
+        "reason",
+        "error_code",
+        "detail",
+        "provider_snapshot",
+        "created_at",
     )
 
     def has_add_permission(self, request):

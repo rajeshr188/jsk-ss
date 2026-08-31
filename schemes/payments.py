@@ -77,6 +77,16 @@ class PaymentOrderInspection:
     payment_statuses: tuple[str, ...]
 
 
+@dataclass(frozen=True)
+class PaymentInspection:
+    payment_id: str
+    order_id: str
+    amount_subunits: int
+    currency: str
+    status: str
+    captured: bool
+
+
 class PaymentGateway(ABC):
     name: str
 
@@ -278,6 +288,43 @@ class RazorpayPaymentGateway(PaymentGateway):
             attempts=order["attempts"],
             payment_count=payment_count,
             payment_statuses=tuple(statuses),
+        )
+
+    def inspect_payment(self, *, payment_id):
+        if (
+            not isinstance(payment_id, str)
+            or not payment_id.startswith("pay_")
+            or not RAZORPAY_ID_PATTERN.fullmatch(payment_id)
+        ):
+            raise PaymentGatewayValidationError("The Razorpay payment ID is invalid.")
+
+        payment = self._request_json("GET", f"/payments/{payment_id}")
+        order_id = payment.get("order_id")
+        amount = payment.get("amount")
+        currency = payment.get("currency")
+        status = payment.get("status")
+        captured = payment.get("captured")
+        if (
+            payment.get("id") != payment_id
+            or not isinstance(order_id, str)
+            or not order_id.startswith("order_")
+            or not RAZORPAY_ID_PATTERN.fullmatch(order_id)
+            or not isinstance(amount, int)
+            or isinstance(amount, bool)
+            or amount < 0
+            or not isinstance(currency, str)
+            or not isinstance(status, str)
+            or not status
+            or not isinstance(captured, bool)
+        ):
+            raise PaymentGatewayError("Razorpay returned an invalid payment response.")
+        return PaymentInspection(
+            payment_id=payment_id,
+            order_id=order_id,
+            amount_subunits=amount,
+            currency=currency,
+            status=status,
+            captured=captured,
         )
 
     def _request_json(self, method, path, payload=None):

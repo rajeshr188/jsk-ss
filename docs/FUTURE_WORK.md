@@ -146,9 +146,27 @@ here are not implemented behavior and do not relax the financial invariants in
   the 2026-08-30 12:00 PM IST recovery point recorded; Live/Ready, financial
   exceptions, Live readiness, and the provider reconciliation dry run all passed
   with zero candidates.
-- **FW-PAY-003:** The stable owned HTTPS endpoint has replaced development quick
-  tunnels. Complete webhook-secret synchronization and rotation evidence, retry
-  behavior, monitoring, and recovery for invalid or delayed webhook deliveries.
+- **FW-PAY-003 — Razorpay webhook recovery (in progress):** The stable owned HTTPS
+  endpoint has replaced development quick tunnels and
+  [ADR-0006](decisions/ADR-0006-razorpay-webhook-recovery.md) defines the recovery
+  boundary. Progress is tracked here:
+  - [x] Classify untrusted/conflicting requests as `400`, durably reviewed signed
+    events as `200`, and transient processing failures as retryable `503` responses.
+  - [x] Add append-only provider-delivery/owner-recovery attempt evidence without
+    storing full webhook payloads or secrets.
+  - [x] Add owner-only dry-run/apply recovery using a fresh, mode-matched provider
+    payment read and exact ID/order/amount/currency/captured-state comparison.
+  - [x] Reuse idempotent confirmation and original locked-rate allocation; keep
+    abandoned, failed, unknown, and mismatched cases blocked for manual handling.
+  - [ ] Exercise one controlled review/dry-run/apply case in an isolated Test-mode
+    environment, deploy migration `schemes.0014`, replay one already-processed Live
+    event to prove idempotency, and record production evidence.
+  - [ ] Add external alerting and an operational threshold for stale `RECEIVED` and
+    unresolved `REVIEW_REQUIRED` events under the deferred `FW-PROD-002` boundary.
+  - [ ] Design and rehearse synchronized webhook-secret rotation, including a bounded
+    overlap or coordinated cutover, under deferred `FW-PROD-003`.
+  Automatic refunds, background workers, and a manual entitlement override remain
+  outside this item.
 - **FW-PAY-004 — Payment operations circuit breaker (completed 2026-08-31):**
   [ADR-0005](decisions/ADR-0005-payment-operations-circuit-breaker.md) defines a
   domain-specific, audited control for new payment exposure; django-waffle is not a

@@ -49,7 +49,10 @@ class Command(BaseCommand):
         failed_live_webhooks = PaymentWebhookEvent.objects.filter(
             gateway="razorpay",
             gateway_mode="live",
-            status=PaymentWebhookEvent.Status.FAILED,
+            status__in=[
+                PaymentWebhookEvent.Status.FAILED,
+                PaymentWebhookEvent.Status.REVIEW_REQUIRED,
+            ],
         ).count()
         blockers = {
             "configuration_error": bool(configuration_error),

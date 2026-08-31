@@ -1,6 +1,7 @@
 import csv
 import hashlib
 import json
+import logging
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -27,11 +28,14 @@ from .forms import (
     SchemeRatePublishForm,
     SchemePlanChangeForm,
     SchemePlanForm,
+    WebhookRecoveryForm,
 )
 from .models import (
     Contribution,
     Customer,
     PaymentOperationsControl,
+    PaymentWebhookEvent,
+    WebhookProcessingAttempt,
     Redemption,
     SchemeAccount,
     SchemePlan,
@@ -85,8 +89,13 @@ from .services import (
     record_scheme_plan_change,
     reverse_redemption,
     retry_metal_allocation,
+    reconcile_razorpay_webhook,
     update_payment_operations_control,
+    WebhookTransientProcessingError,
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 @login_required
@@ -288,6 +297,78 @@ def exception_queue(request):
         request,
         "schemes/exception_queue.html",
         {"exceptions": get_owner_exception_queue()},
+    )
+
+
+@owner_required
+def webhook_recovery(request, event_id):
+    event = get_object_or_404(
+        PaymentWebhookEvent.objects.select_related(
+            "contribution",
+            "contribution__scheme_account",
+            "contribution__scheme_account__customer",
+        ).prefetch_related("processing_attempts"),
+        pk=event_id,
+        gateway="razorpay",
+        event_type="payment.captured",
+    )
+    form = WebhookRecoveryForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        apply = form.cleaned_data["action"] == WebhookRecoveryForm.Action.APPLY
+        try:
+            result = reconcile_razorpay_webhook(
+                webhook_event_id=event.pk,
+                apply=apply,
+                performed_by=request.user,
+                reason=form.cleaned_data["reason"],
+            )
+        except (ImproperlyConfigured, PaymentGatewayError, ValidationError) as error:
+            form.add_error(None, str(error))
+        else:
+            if result.applied and result.outcome == "ELIGIBLE_FOR_RECOVERY":
+                messages.success(
+                    request,
+                    "The captured payment was recovered and entitlement was applied "
+                    "idempotently.",
+                )
+            elif result.applied:
+                messages.success(
+                    request,
+                    "The already-confirmed contribution was reconciled without "
+                    "creating another entitlement.",
+                )
+            elif result.outcome == "ELIGIBLE_FOR_RECOVERY":
+                messages.success(
+                    request,
+                    "Provider check passed. Review the evidence, then use Apply "
+                    "verified recovery.",
+                )
+            elif result.outcome == "ALREADY_PROCESSED":
+                messages.info(
+                    request,
+                    "The provider payment already matches the confirmed contribution.",
+                )
+            else:
+                messages.warning(
+                    request,
+                    "Automatic recovery remains blocked. Follow the manual "
+                    "reconciliation/refund runbook.",
+                )
+            return redirect("schemes:webhook_recovery", event_id=event.pk)
+    return render(
+        request,
+        "schemes/webhook_recovery.html",
+        {
+            "event": event,
+            "form": form,
+            "can_apply_recovery": event.processing_attempts.filter(
+                source=WebhookProcessingAttempt.Source.OWNER_RECOVERY,
+                outcome__in=[
+                    WebhookProcessingAttempt.Outcome.ELIGIBLE_FOR_RECOVERY,
+                    WebhookProcessingAttempt.Outcome.ALREADY_PROCESSED,
+                ],
+            ).exists(),
+        },
     )
 
 
@@ -1063,6 +1144,16 @@ def razorpay_webhook(request):
             event_id=event_id[:120],
             body=body,
             payload=payload,
+        )
+    except WebhookTransientProcessingError:
+        logger.error(
+            "Transient Razorpay webhook processing failure for event_id=%s mode=%s.",
+            event_id,
+            gateway.mode,
+        )
+        return JsonResponse(
+            {"detail": "Webhook processing is temporarily unavailable."},
+            status=503,
         )
     except ValidationError as error:
         return JsonResponse({"detail": str(error)}, status=400)

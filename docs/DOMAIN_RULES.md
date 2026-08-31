@@ -70,6 +70,21 @@ This is the canonical source for stable business rules.
   verification and never rejects a captured payment merely because the schedule or an
   owner pause is now closed. Any in-flight capture is confirmed idempotently and its
   entitlement uses the contribution's original locked Scheme Rate.
+- **PAY-015:** An invalid or conflicting webhook request returns `400`. A signed event
+  that is durably processed, ignored, or classified for owner review returns `200`;
+  review acceptance never creates entitlement. A signed event interrupted by a
+  transient application failure remains retryable and returns `503` without exposing
+  internal exception details.
+- **PAY-016:** Webhook processing and recovery attempts are append-only evidence. They
+  retain a source, outcome, actor label, mandatory reason, bounded safe detail, and
+  compact provider identifiers/state, but never credentials, signatures, customer
+  contact data, or a full webhook body.
+- **PAY-017:** Owner webhook recovery is dry-run first and mode-matched. Automatic
+  application requires a fresh provider read whose payment ID, order ID, INR amount,
+  currency, captured status, and local contribution all match exactly. It must use
+  the existing idempotent confirmation and original locked-rate allocation services.
+  Abandoned or failed contributions and any mismatch remain manual refund/
+  reconciliation cases with no override in the recovery UI.
 - **METAL-001 / FIN-002:** A metal contribution creates at most one successful allocation.
 - **METAL-002 / FIN-003:** A Scheme Rate used by an allocation is immutable.
 - **METAL-003 / FIN-004:** Historical allocated grams never change when a newer Scheme Rate is published.
@@ -149,6 +164,10 @@ authorize new production CASH enrolments or contributions under `SCH-007`.
   not rewrite or delete earlier operations-control audit events.
 - **EXC-001:** The owner exception queue derives unresolved paid-unallocated/failed-allocation contributions and failed or mismatched webhook reconciliation from their authoritative source records.
 - **EXC-002:** Resolving an allocation exception uses the existing idempotent retry service. A queue display or acknowledgement must never itself create entitlement.
+- **EXC-003:** A signed permanent webhook mismatch is an explicit
+  `REVIEW_REQUIRED` exception. Owner inspection does not mutate entitlement; an
+  applied recovery requires exact provider evidence, a mandatory reason, and an
+  immutable `WEBHOOK_RECOVERY` audit event.
 
 ## Owner liability reporting
 

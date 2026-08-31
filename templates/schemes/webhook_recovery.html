@@ -1,0 +1,77 @@
+{% extends '_base.html' %}
+
+{% block title %}Webhook recovery | Jai Sri Krishna Jewellery{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <p class="page-eyebrow">Financial exception</p>
+    <h1>Razorpay webhook recovery</h1>
+    <p class="page-subtitle">Compare the signed event with current provider state before applying any entitlement.</p>
+  </div>
+  <div class="page-actions"><a class="btn btn-outline-dark" href="{% url 'schemes:exception_queue' %}">Back to exception queue</a></div>
+</div>
+
+<div class="alert alert-warning" role="alert">
+  This workflow never repairs an abandoned, failed, unknown, cross-mode, or mismatched payment automatically. Use the documented manual refund process when provider and local records do not match exactly.
+</div>
+
+<div class="card form-card mb-4">
+  <div class="card-body p-4">
+    <h2 class="h4">Event evidence</h2>
+    <dl class="row mb-0">
+      <dt class="col-sm-4">Received</dt><dd class="col-sm-8">{{ event.received_at|date:'d M Y, g:i A' }}</dd>
+      <dt class="col-sm-4">Mode</dt><dd class="col-sm-8">{{ event.gateway_mode|upper }}</dd>
+      <dt class="col-sm-4">Status</dt><dd class="col-sm-8">{{ event.get_status_display }}</dd>
+      <dt class="col-sm-4">Event ID</dt><dd class="col-sm-8 text-break"><code>{{ event.event_id }}</code></dd>
+      <dt class="col-sm-4">Order ID</dt><dd class="col-sm-8 text-break"><code>{{ event.gateway_order_id|default:'Unavailable' }}</code></dd>
+      <dt class="col-sm-4">Payment ID</dt><dd class="col-sm-8 text-break"><code>{{ event.gateway_reference|default:'Unavailable' }}</code></dd>
+      <dt class="col-sm-4">Failure category</dt><dd class="col-sm-8">{{ event.failure_code|default:'Not classified' }}</dd>
+      <dt class="col-sm-4">Detail</dt><dd class="col-sm-8">{{ event.error|default:'No unresolved detail.' }}</dd>
+      <dt class="col-sm-4">Customer / scheme</dt>
+      <dd class="col-sm-8">{% if event.contribution %}{{ event.contribution.scheme_account.customer.full_name }} · {{ event.contribution.scheme_account.scheme_number }}{% else %}Unmatched{% endif %}</dd>
+    </dl>
+  </div>
+</div>
+
+<form method="post" class="card form-card mb-4" novalidate>
+  <div class="card-body p-4">
+    {% csrf_token %}
+    {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+    <label class="form-label" for="{{ form.reason.id_for_label }}">{{ form.reason.label }}</label>
+    {{ form.reason }}
+    {% if form.reason.errors %}<div class="invalid-feedback d-block">{{ form.reason.errors }}</div>{% endif %}
+    <div class="form-text mb-3">{{ form.reason.help_text }}</div>
+    {% if form.action.errors %}<div class="alert alert-danger">{{ form.action.errors }}</div>{% endif %}
+    <div class="d-flex flex-wrap gap-2">
+      <button class="btn btn-outline-dark" type="submit" name="action" value="INSPECT">Check provider</button>
+      <button class="btn btn-danger" type="submit" name="action" value="APPLY"{% if not can_apply_recovery %} disabled aria-disabled="true"{% endif %}>Apply verified recovery</button>
+    </div>
+    {% if not can_apply_recovery %}<p class="form-text mb-0 mt-2">Run Check provider and review a safe result before Apply is enabled.</p>{% endif %}
+  </div>
+</form>
+
+<div class="card form-card">
+  <div class="card-body p-4">
+    <h2 class="h4">Processing attempts</h2>
+    <div class="table-responsive">
+      <table class="table align-middle mb-0">
+        <thead><tr><th scope="col">Time</th><th scope="col">Source</th><th scope="col">Outcome</th><th scope="col">Actor</th><th scope="col">Reason / detail</th></tr></thead>
+        <tbody>
+        {% for attempt in event.processing_attempts.all %}
+          <tr>
+            <td>{{ attempt.created_at|date:'d M Y, g:i A' }}</td>
+            <td>{{ attempt.get_source_display }}</td>
+            <td>{{ attempt.get_outcome_display }}</td>
+            <td>{{ attempt.actor_label }}</td>
+            <td>{{ attempt.reason }}{% if attempt.detail %}<br><small class="text-muted">{{ attempt.detail }}</small>{% endif %}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="5" class="text-center text-muted py-4">No processing attempts were recorded.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

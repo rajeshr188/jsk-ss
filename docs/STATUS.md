@@ -2,14 +2,13 @@
 
 ## Current milestone
 
-`FW-PAY-004` payment operations circuit breaker is complete in production release
-`e027b9ae1550c314584c551eb3da31d5529ea544` under ADR-0005. Migration
-`schemes.0013`, manual Pause-All/customer-closure/audited-resume, current-day Gold and
-Silver Scheme Rate review, weekly schedule activation, and the exact closing/reopening
-boundary all passed production acceptance without a payment or financial exception.
-`FW-PAY-003` webhook recovery can now resume, while the owner-accepted
-`FW-PROD-002` external-observability and `FW-PROD-003` secret-rotation deferrals remain
-open.
+`FW-PAY-003` webhook recovery is implemented and verified locally on
+`agent/razorpay-webhook-recovery` under ADR-0006. Additive migration `schemes.0014`,
+append-only processing attempts, permanent-versus-transient HTTP classification, and
+owner-only provider-backed dry-run/apply recovery pass all 254 tests. Production is
+unchanged and remains on release `e027b9ae1550c314584c551eb3da31d5529ea544` with
+the accepted FW-PAY-004 schedule. The production rollout, controlled Test-mode
+recovery exercise, external alerting, and secret-rotation rehearsal remain open.
 
 ## Completed
 
@@ -80,6 +79,11 @@ open.
   Test payment from a real Live charge and never offers a cross-mode resume action.
 - Browser callback verification using the local order ID, HMAC, and a captured-payment server lookup.
 - Signed raw-body `payment.captured` webhooks with a unique event ledger and idempotent financial processing.
+- Razorpay webhook recovery under ADR-0006: signed permanent mismatches become
+  durable owner-review exceptions with HTTP 200, transient failures return a
+  sanitized retryable 503, each delivery/recovery appends bounded evidence, and an
+  owner can dry-run then apply only an exact mode-matched provider payment through
+  the existing idempotent confirmation and locked-rate allocation services.
 - Unique Razorpay order/payment identifiers and one resumable pending order for once-per-month accounts.
 - Dry-run-first reconciliation for aged Razorpay orders, with mode-matched provider
   inspection, an explicit application-side `ABANDONED` status, retained order/rate
@@ -331,7 +335,10 @@ open.
   migrations are applied to production PostgreSQL.
 - Local and production PostgreSQL 16 migrations are applied through
   `schemes.0013_payment_operations_control`.
-- 244 tests pass, including payment-operations schedule/manual/kill-switch precedence,
+- 254 tests pass, including Razorpay webhook response classification, append-only
+  processing-attempt evidence, provider-backed owner dry-run/apply recovery,
+  mismatch/abandoned safeguards, recovery authorization and idempotency,
+  payment-operations schedule/manual/kill-switch precedence,
   owner authorization and immutable before/after audit, blocked new order/Checkout
   behavior, uninterrupted callback/webhook confirmation and locked-rate allocation,
   the no-secret deployment check, Razorpay Live/Test configuration and history migration,
@@ -416,6 +423,8 @@ open.
 
 ## Next recommended step
 
-Resume `FW-PAY-003` by auditing the existing signed-webhook failure, retry, monitoring,
-and recovery paths before selecting the smallest implementation increment. Continue
-daily Razorpay reconciliation and retain the active FW-PAY-004 schedule/audit evidence.
+Review and commit `agent/razorpay-webhook-recovery`, open and merge its PR, then follow
+the documented `schemes.0014` rollout. Exercise the full review/dry-run/apply path in
+an isolated Razorpay Test-mode environment; production acceptance should replay only
+an already-processed Live event and prove no duplicate entitlement. Continue daily
+Razorpay reconciliation and retain the active FW-PAY-004 schedule/audit evidence.

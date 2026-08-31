@@ -22,6 +22,11 @@ urlpatterns = [
     path("owner/audit/", views.audit_log, name="audit_log"),
     path("owner/exceptions/", views.exception_queue, name="exception_queue"),
     path(
+        "owner/exceptions/webhooks/<int:event_id>/recovery/",
+        views.webhook_recovery,
+        name="webhook_recovery",
+    ),
+    path(
         "owner/exports/contributions.csv",
         views.contribution_export,
         name="contribution_export",
