@@ -4,7 +4,14 @@ from decimal import Decimal
 from django import forms
 from django.contrib.auth import get_user_model
 
-from .models import Redemption, SchemeAccount, SchemePlan, SchemeRate
+from .models import (
+    PaymentOperationsControl,
+    PaymentScheduleWindow,
+    Redemption,
+    SchemeAccount,
+    SchemePlan,
+    SchemeRate,
+)
 from .services import cash_scheme_activity_is_enabled, validate_contribution_allowed
 
 
@@ -133,6 +140,129 @@ class ContributionForm(forms.Form):
         amount = self.cleaned_data["amount"]
         validated_amount, _ = validate_contribution_allowed(self.scheme_account, amount)
         return validated_amount
+
+
+class PaymentOperationsForm(forms.Form):
+    schedule_enabled = forms.BooleanField(
+        required=False,
+        label="Use the weekly payment schedule",
+        help_text=(
+            "When disabled, the weekly hours do not restrict payments; manual and "
+            "environment pauses still apply."
+        ),
+    )
+    require_current_day_rate = forms.BooleanField(
+        required=False,
+        label="Require a Scheme Rate published today before scheduled opening",
+    )
+    global_pause = forms.BooleanField(
+        required=False,
+        label="Pause all new online contributions",
+    )
+    gold_pause = forms.BooleanField(
+        required=False,
+        label="Pause new gold contributions",
+    )
+    silver_pause = forms.BooleanField(
+        required=False,
+        label="Pause new silver contributions",
+    )
+    customer_message = forms.CharField(
+        required=False,
+        max_length=240,
+        label="Optional customer message",
+        help_text="Shown instead of the standard temporary-closure explanation.",
+    )
+    audit_reason = forms.CharField(
+        label="Reason for change",
+        widget=forms.Textarea(attrs={"rows": 2}),
+        help_text="Recorded with your identity and the before/after policy.",
+    )
+
+    def __init__(self, *args, control: PaymentOperationsControl, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.control = control
+        for name in (
+            "schedule_enabled",
+            "require_current_day_rate",
+            "global_pause",
+            "gold_pause",
+            "silver_pause",
+        ):
+            self.fields[name].widget.attrs["class"] = "form-check-input"
+        self.fields["customer_message"].widget.attrs["class"] = "form-control"
+        self.fields["audit_reason"].widget.attrs["class"] = "form-control"
+        windows = {window.weekday: window for window in control.schedule_windows.all()}
+        if not self.is_bound:
+            for name in (
+                "schedule_enabled",
+                "require_current_day_rate",
+                "global_pause",
+                "gold_pause",
+                "silver_pause",
+                "customer_message",
+            ):
+                self.initial[name] = getattr(control, name)
+        self.schedule_rows = []
+        for weekday, label in PaymentScheduleWindow.Weekday.choices:
+            window = windows[weekday]
+            enabled_name = f"day_{weekday}_enabled"
+            opens_name = f"day_{weekday}_opens_at"
+            closes_name = f"day_{weekday}_closes_at"
+            self.fields[enabled_name] = forms.BooleanField(
+                required=False,
+                label=f"{label} enabled",
+                initial=window.enabled,
+                widget=forms.CheckboxInput(attrs={"class": "form-check-input"}),
+            )
+            self.fields[opens_name] = forms.TimeField(
+                label=f"{label} opens",
+                initial=window.opens_at,
+                input_formats=["%H:%M"],
+                widget=forms.TimeInput(
+                    format="%H:%M",
+                    attrs={"type": "time", "class": "form-control"},
+                ),
+            )
+            self.fields[closes_name] = forms.TimeField(
+                label=f"{label} closes",
+                initial=window.closes_at,
+                input_formats=["%H:%M"],
+                widget=forms.TimeInput(
+                    format="%H:%M",
+                    attrs={"type": "time", "class": "form-control"},
+                ),
+            )
+            self.schedule_rows.append(
+                {
+                    "label": label,
+                    "enabled": self[enabled_name],
+                    "opens_at": self[opens_name],
+                    "closes_at": self[closes_name],
+                }
+            )
+
+    def clean(self):
+        cleaned = super().clean()
+        for weekday, label in PaymentScheduleWindow.Weekday.choices:
+            opens_at = cleaned.get(f"day_{weekday}_opens_at")
+            closes_at = cleaned.get(f"day_{weekday}_closes_at")
+            if opens_at is not None and closes_at is not None and opens_at >= closes_at:
+                self.add_error(
+                    f"day_{weekday}_closes_at",
+                    f"{label} closing time must be after its opening time.",
+                )
+        return cleaned
+
+    def schedule_values(self):
+        return {
+            weekday: {
+                "enabled": self.cleaned_data[f"day_{weekday}_enabled"],
+                "opens_at": self.cleaned_data[f"day_{weekday}_opens_at"],
+                "closes_at": self.cleaned_data[f"day_{weekday}_closes_at"],
+            }
+            for weekday, _label in PaymentScheduleWindow.Weekday.choices
+        }
 
 
 class SchemeRatePublishForm(forms.Form):

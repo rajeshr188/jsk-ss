@@ -679,9 +679,12 @@ Configuration rules:
   Enable subdomains and preload only after every affected hostname is permanently
   HTTPS-capable and the domain owner accepts the long-lived consequences.
 - `EMAIL_USE_TLS` and `EMAIL_USE_SSL` are mutually exclusive.
-- Leave `PAYMENT_GATEWAY` empty to disable new contribution checkout. Never use the
-  mock payment adapter outside debug mode. Metal contributions are independently
-  unavailable until an owner has published the applicable Scheme Rate.
+- Keep `PAYMENT_GATEWAY=razorpay` while pausing new payments so callbacks and signed
+  webhooks remain available. Use the audited owner Payment Operations page for normal
+  or volatility closure, or `PAYMENT_INITIATION_KILL_SWITCH=True` as the environment
+  fail-safe. Never use the mock payment adapter outside debug mode. Metal
+  contributions are independently unavailable until an owner has published the
+  applicable Scheme Rate.
 - `RAZORPAY_MODE` is required when Razorpay is selected and accepts only `test` or
   `live`. It must match the API key prefix. Change the mode, key ID, API key secret,
   and separately generated mode-specific webhook secret as one controlled cutover.
@@ -1396,22 +1399,24 @@ Do not activate Live Mode until all of these account-side controls are confirmed
   only after Razorpay reports the exact local order, INR amount, and `captured` state.
 - Better Stack/Linode and the financial-exception heartbeat reach named responders.
 - A business owner is assigned to daily reconciliation and an incident owner can
-  disable checkout by clearing `PAYMENT_GATEWAY`.
+  pause new Checkout exposure without disabling Razorpay callback/webhook handling.
 - The payment-error refund and dispute procedures below are accepted. General refunds
   of already credited scheme contributions remain unsupported because the application
   has no compensating payment-reversal workflow.
 
 Use a short controlled cutover with no customer checkout in progress:
 
-1. Temporarily clear `PAYMENT_GATEWAY`, validate Compose, and recreate `web`. Confirm
-   Pay actions disappear while reads, statements, owner views, live, and ready remain
-   healthy.
+1. Set `PAYMENT_INITIATION_KILL_SWITCH=True`, validate Compose, and recreate `web`.
+   Keep `PAYMENT_GATEWAY=razorpay` and all mode-matched credentials configured.
+   Confirm Pay/Resume actions disappear while callbacks, webhooks, reads, statements,
+   owner views, live, and ready remain healthy.
 2. Confirm Razorpay has no unresolved Test payment for a locally pending order. Do not
    edit a pending contribution merely to pass this gate.
 3. In `.env.production`, atomically set:
 
    ```dotenv
    PAYMENT_GATEWAY=razorpay
+   PAYMENT_INITIATION_KILL_SWITCH=True
    RAZORPAY_MODE=live
    RAZORPAY_KEY_ID=rzp_live_...
    RAZORPAY_KEY_SECRET=<live-api-key-secret>
@@ -1437,8 +1442,9 @@ Use a short controlled cutover with no customer checkout in progress:
    provider order). If it blocks, restore Test
    Mode and reconcile the named condition; never bypass the command or rewrite
    provider references.
-5. Recreate `web`, wait for health, recreate Caddy so it resolves the replacement
-   upstream, and confirm live/ready return the expected release.
+5. After every gate passes, set `PAYMENT_INITIATION_KILL_SWITCH=False`, validate
+   Compose, recreate `web`, wait for health, recreate Caddy so it resolves the
+   replacement upstream, and confirm live/ready return the expected release.
 6. Sign in with one controlled real customer account and complete one legitimate
    minimum-value metal contribution. Confirm the UI explicitly says **Live payment**,
    the Dashboard payment is captured, the local contribution has `gateway_mode=live`,
@@ -1471,6 +1477,64 @@ Use a short controlled cutover with no customer checkout in progress:
   `0.329272` g total outstanding gold, and a clean financial-exception check.
 - Paid external monitoring and rotation rehearsals remain explicitly deferred under
   `FW-PROD-002` and `FW-PROD-003`; webhook recovery remains `FW-PAY-003`.
+
+### Payment operations circuit-breaker deployment (`FW-PAY-004`)
+
+Migration `schemes.0013_payment_operations_control` adds one singleton control and
+seven weekly schedule rows. It seeds Monday–Saturday 09:00–21:00 and Sunday
+09:00–13:00 in the configured `Asia/Kolkata` timezone, but leaves the schedule
+disabled. Applying the migration therefore does not close an otherwise available
+production Checkout. It does not modify any contribution, provider reference, locked
+Scheme Rate, allocation, webhook event, redemption, or liability.
+
+Before deployment, retain a current recovery point and the usual financial baseline.
+Then run the candidate gates:
+
+```bash
+docker compose --env-file .env.production -f compose.production.yml \
+  run --rm --no-deps web python manage.py migrate --plan
+
+docker compose --env-file .env.production -f compose.production.yml \
+  run --rm --no-deps web python manage.py check --deploy --fail-level ERROR
+
+docker compose --env-file .env.production -f compose.production.yml \
+  run --rm --no-deps web python manage.py check_financial_exceptions
+```
+
+The migration plan must show only `schemes.0013`. Apply it once, confirm it appears as
+`[X]`, then deploy the healthy candidate. After cutover run:
+
+```bash
+docker compose --env-file .env.production -f compose.production.yml \
+  exec -T web python manage.py check_payment_operations
+
+docker compose --env-file .env.production -f compose.production.yml \
+  exec -T web python manage.py check_financial_exceptions
+```
+
+The first check must report `status=ok`, seven valid weekdays, the expected release,
+and `schedule_enabled=false` on first deployment. Sign in as an owner and open
+**Operations → Payment operations**. Review all seven windows and leave the schedule
+disabled until a controlled test period is agreed.
+
+For activation, first publish/review the current Gold and Silver Scheme Rates. Enable
+the schedule with a mandatory reason. Verify during open hours that Pay is visible,
+then use a short controlled manual Gold/Silver or Pause-All test to prove Pay/Resume
+disappear while live/readiness and the webhook endpoint remain available. Clear the
+manual pause with a second reason. Test the exact closing boundary separately without
+creating a real contribution merely for the smoke.
+
+For an owner-driven volatility pause, use the same page; no container recreation is
+required. For an application-control incident, set this in `.env.production`:
+
+```dotenv
+PAYMENT_INITIATION_KILL_SWITCH=True
+```
+
+Validate Compose and recreate only `web`. Do not clear `PAYMENT_GATEWAY`, remove
+Razorpay credentials, disable Caddy, or disable the Razorpay webhook. After the
+incident, review provider/local pending orders and publish current rates before
+setting the variable back to `False` and recreating `web` again.
 
 ### Abandoned Razorpay order deployment and operation (`FW-PAY-002`)
 
@@ -1764,8 +1828,10 @@ reconciliation of every event after the chosen recovery point.
 
 ### Payment or webhook incident
 
-1. Prevent new checkout order creation by deploying configuration with
-   `PAYMENT_GATEWAY` empty if necessary; do not use a hidden bypass.
+1. Prevent new checkout order creation through the audited Payment Operations page.
+   If that path is unavailable, set `PAYMENT_INITIATION_KILL_SWITCH=True`, validate
+   Compose, and recreate only `web`. Keep `PAYMENT_GATEWAY=razorpay` and the webhook
+   secret configured.
 2. Keep the webhook endpoint and provider retry evidence available when safe.
 3. Preserve all local contributions and `PaymentWebhookEvent` records. Do not edit or
    delete them to force a match.

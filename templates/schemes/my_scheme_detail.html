@@ -16,7 +16,7 @@
   {% if payment_gateway_enabled and scheme_account.effective_status != 'REDEEMED' %}
     {% if scheme_account.savings_mode == 'CASH' and cash_scheme_activity_enabled %}
     <a class="btn btn-jsk" href="{% url 'schemes:pay_contribution' scheme_account.scheme_number %}">Pay now</a>
-    {% elif current_scheme_rate %}
+    {% elif current_scheme_rate and payment_availability.allowed %}
     <a class="btn btn-jsk" href="{% url 'schemes:pay_contribution' scheme_account.scheme_number %}">Pay now</a>
     {% endif %}
   {% endif %}
@@ -33,6 +33,14 @@
 {% else %}
 <div class="alert alert-info" role="alert">
   Redemption eligibility begins on {{ scheme_account.eligible_from|date:'d M Y' }}.
+</div>
+{% endif %}
+
+{% if payment_availability and not payment_availability.allowed and scheme_account.effective_status != 'REDEEMED' %}
+<div class="alert alert-warning" role="status">
+  {{ payment_availability.message }}
+  {% if payment_availability.next_opening %} Expected next opening: {{ payment_availability.next_opening|date:"D, d M Y, g:i A" }}.{% endif %}
+  Your existing recorded entitlement is unaffected.
 </div>
 {% endif %}
 
@@ -83,8 +91,9 @@
           <br><a href="{% url 'schemes:contribution_receipt' contribution.pk %}">Receipt</a>
           {% endif %}
           {% if contribution.status == 'PENDING' and contribution.payment_gateway == 'razorpay' and contribution.gateway_order_id and contribution.gateway_mode == razorpay_mode %}
-          {% if contribution.scheme_account.savings_mode != 'CASH' or cash_scheme_activity_enabled %}
+          {% if contribution.scheme_account.savings_mode != 'CASH' or cash_scheme_activity_enabled %}{% if not payment_availability or payment_availability.allowed %}
           <br><a href="{% url 'schemes:razorpay_checkout' contribution.pk %}">Resume payment</a>
+          {% endif %}
           {% endif %}
           {% endif %}
         </td>
@@ -115,8 +124,9 @@
     <a class="btn btn-sm btn-outline-dark" href="{% url 'schemes:contribution_receipt' contribution.pk %}">View receipt</a>
     {% endif %}
     {% if contribution.status == 'PENDING' and contribution.payment_gateway == 'razorpay' and contribution.gateway_order_id and contribution.gateway_mode == razorpay_mode %}
-    {% if contribution.scheme_account.savings_mode != 'CASH' or cash_scheme_activity_enabled %}
+    {% if contribution.scheme_account.savings_mode != 'CASH' or cash_scheme_activity_enabled %}{% if not payment_availability or payment_availability.allowed %}
     <a class="btn btn-sm btn-jsk" href="{% url 'schemes:razorpay_checkout' contribution.pk %}">Resume payment</a>
+    {% endif %}
     {% endif %}
     {% endif %}
   </div></article>

@@ -11,6 +11,12 @@
   <div class="alert alert-danger" role="alert">
     This legacy cash scheme is retained for historical reference. New cash contributions are unavailable. Contact the showroom if you need assistance.
   </div>
+  {% elif payment_unavailable %}
+  <div class="alert alert-warning" role="status">
+    {{ payment_unavailable.message }}
+    {% if payment_unavailable.next_opening %} Expected next opening: {{ payment_unavailable.next_opening|date:"D, d M Y, g:i A" }}.{% endif %}
+    No new payment order has been created.
+  </div>
   {% else %}<div class="alert alert-warning" role="alert">
     {% if mock_payment_enabled %}
     Development mock payment only. No real payment will be collected.

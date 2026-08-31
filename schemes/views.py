@@ -21,6 +21,7 @@ from .forms import (
     ContributionForm,
     CustomerCreateForm,
     EnrolmentForm,
+    PaymentOperationsForm,
     RedemptionForm,
     RedemptionReversalForm,
     SchemeRatePublishForm,
@@ -30,11 +31,13 @@ from .forms import (
 from .models import (
     Contribution,
     Customer,
+    PaymentOperationsControl,
     Redemption,
     SchemeAccount,
     SchemePlan,
     SchemeRate,
 )
+from .operations import get_payment_availability
 from .payments import (
     PaymentGatewayAuthenticationError,
     PaymentGatewayError,
@@ -61,6 +64,7 @@ from .selectors import (
     get_owner_customers,
     get_owner_liability_summary,
     get_owner_exception_queue,
+    get_pending_payment_exposure,
     get_owner_redemptions,
     get_redemption_eligibility_summary,
     get_redemption_history,
@@ -81,6 +85,7 @@ from .services import (
     record_scheme_plan_change,
     reverse_redemption,
     retry_metal_allocation,
+    update_payment_operations_control,
 )
 
 
@@ -121,8 +126,58 @@ def owner_dashboard(request):
         "exception_count": len(exceptions),
         "eligibility": get_redemption_eligibility_summary(),
         "liabilities": get_owner_liability_summary(),
+        "payment_availability": {
+            metal: get_payment_availability(metal=metal)
+            for metal in (SchemeRate.Metal.GOLD, SchemeRate.Metal.SILVER)
+        },
     }
     return render(request, "schemes/owner_dashboard.html", context)
+
+
+@owner_required
+def payment_operations(request):
+    control = PaymentOperationsControl.objects.prefetch_related(
+        "schedule_windows", "updated_by"
+    ).get(pk=PaymentOperationsControl.SINGLETON_PK)
+    form = PaymentOperationsForm(request.POST or None, control=control)
+    if request.method == "POST" and form.is_valid():
+        try:
+            update_payment_operations_control(
+                actor=request.user,
+                reason=form.cleaned_data["audit_reason"],
+                schedule_enabled=form.cleaned_data["schedule_enabled"],
+                require_current_day_rate=form.cleaned_data[
+                    "require_current_day_rate"
+                ],
+                global_pause=form.cleaned_data["global_pause"],
+                gold_pause=form.cleaned_data["gold_pause"],
+                silver_pause=form.cleaned_data["silver_pause"],
+                customer_message=form.cleaned_data["customer_message"],
+                schedule=form.schedule_values(),
+            )
+        except ValidationError as error:
+            for message in error.messages:
+                form.add_error(None, message)
+        else:
+            messages.success(request, "Payment operations policy updated.")
+            return redirect("schemes:payment_operations")
+    return render(
+        request,
+        "schemes/payment_operations.html",
+        {
+            "control": control,
+            "form": form,
+            "availability": {
+                metal: get_payment_availability(metal=metal)
+                for metal in (SchemeRate.Metal.GOLD, SchemeRate.Metal.SILVER)
+            },
+            "pending_exposure": get_pending_payment_exposure(),
+            "environment_kill_switch": (
+                get_payment_availability(metal=SchemeRate.Metal.GOLD).code
+                == "ENVIRONMENT_KILL_SWITCH"
+            ),
+        },
+    )
 
 
 @owner_required
@@ -694,6 +749,12 @@ def my_scheme_detail(request, scheme_number):
         if account.savings_mode != SchemeAccount.SavingsMode.CASH
         else None
     )
+    payment_availability = (
+        get_payment_availability(metal=account.savings_mode)
+        if account.savings_mode
+        in {SchemeAccount.SavingsMode.GOLD, SchemeAccount.SavingsMode.SILVER}
+        else None
+    )
     return render(
         request,
         "schemes/my_scheme_detail.html",
@@ -711,6 +772,7 @@ def my_scheme_detail(request, scheme_number):
             ),
             "current_scheme_rate": current_scheme_rate,
             "cash_scheme_activity_enabled": cash_scheme_activity_is_enabled(),
+            "payment_availability": payment_availability,
         },
     )
 
@@ -744,6 +806,24 @@ def pay_contribution(request, scheme_number):
 
     response_status = 200
     form = ContributionForm(request.POST or None, scheme_account=account)
+    payment_availability = (
+        get_payment_availability(metal=account.savings_mode)
+        if account.savings_mode
+        in {SchemeAccount.SavingsMode.GOLD, SchemeAccount.SavingsMode.SILVER}
+        else None
+    )
+    if payment_availability is not None and not payment_availability.allowed:
+        return render(
+            request,
+            "schemes/contribution_form.html",
+            {
+                "scheme_account": account,
+                "form": form,
+                "current_scheme_rate": current_scheme_rate,
+                "payment_unavailable": payment_availability,
+            },
+            status=503,
+        )
     if current_scheme_rate is None and account.savings_mode != SchemeAccount.SavingsMode.CASH:
         return render(
             request,
@@ -863,6 +943,21 @@ def razorpay_checkout(request, contribution_id):
         )
     if contribution.status == Contribution.Status.FAILED:
         messages.error(request, "This payment attempt is no longer active.")
+        return redirect(
+            "schemes:my_scheme_detail",
+            scheme_number=contribution.scheme_account.scheme_number,
+        )
+    if contribution.status != Contribution.Status.PENDING:
+        messages.error(request, "This payment attempt is no longer active.")
+        return redirect(
+            "schemes:my_scheme_detail",
+            scheme_number=contribution.scheme_account.scheme_number,
+        )
+    availability = get_payment_availability(
+        metal=contribution.scheme_account.savings_mode
+    )
+    if not availability.allowed:
+        messages.warning(request, availability.message)
         return redirect(
             "schemes:my_scheme_detail",
             scheme_number=contribution.scheme_account.scheme_number,
