@@ -93,7 +93,22 @@ Cash bonus is derived from immutable paid contributions and the versioned policy
 
 `MockPaymentGateway` remains available only when `DEBUG=True` and `PAYMENT_GATEWAY=mock`. `RazorpayPaymentGateway` supports explicit, fail-closed `test` and `live` modes: the configured mode must match the API key prefix, and contributions plus webhook events retain that mode for provider-reference isolation and audit. It creates orders through a fixed authenticated HTTPS API, verifies checkout HMAC signatures using the local order ID, fetches the payment server-side, and accepts only a captured payment matching the local amount and INR currency.
 
-Razorpay webhooks are a CSRF-exempt provider endpoint protected by HMAC over the untouched request body. Only `payment.captured` changes financial state. `PaymentWebhookEvent` records a payload hash and provider event ID behind a database uniqueness constraint; duplicate or out-of-order deliveries therefore re-enter the same idempotent confirmation/allocation services without creating additional entitlement. Full webhook payloads are not retained.
+Razorpay webhooks are a CSRF-exempt provider endpoint protected by HMAC over the
+untouched request body. Only `payment.captured` changes financial state.
+`PaymentWebhookEvent` records a payload hash and provider event ID behind a database
+uniqueness constraint; duplicate or out-of-order deliveries therefore re-enter the
+same idempotent confirmation/allocation services without creating additional
+entitlement. Signed permanent mismatches are durably accepted into
+`REVIEW_REQUIRED` with HTTP `200`; transient processing failures remain `RECEIVED`
+and return `503` for provider retry. Append-only `WebhookProcessingAttempt` records
+preserve each delivery/recovery outcome without storing full webhook payloads.
+
+Under [ADR-0006](decisions/ADR-0006-razorpay-webhook-recovery.md), an owner can inspect
+a captured-payment exception against the mode-matched Razorpay Payments API before
+applying recovery. Exact payment/order/INR amount/captured-state matching is mandatory.
+An eligible recovery reuses the existing idempotent confirmation and original
+locked-rate allocation services and appends an immutable audit event. Abandoned,
+failed, unknown, or mismatched payments remain manual reconciliation/refund work.
 
 `SchemeRate` is the only authoritative conversion rate for gold and silver. An active owner publishes append-only, timestamped gold or silver records through a service-layer mutation and audited owner UI. Current means the latest rate for that metal whose `effective_from` is applicable. There is no mutable active flag and no external rate provider in the allocation path.
 
@@ -144,6 +159,6 @@ Eligibility: India-local current date plus each agreement's `eligible_from` snap
 
 Redemption: owner eligibility review → denomination-specific outstanding balance → allowed settlement and precision validation → account row lock → idempotency check → immutable completed redemption → derived customer/owner balances. Cash settlement stores principal and earned-bonus components. Partial redemption leaves the account eligible and open; exact final redemption stores `REDEEMED`. Jewellery purchase records a required external invoice/reference and settlement notes without creating inventory or invoicing subsystems.
 
-Audit and exceptions: sensitive owner action → mandatory reason → transactional domain mutation → immutable `AuditEvent` with actor label, timestamp, target, and compact details. An erroneous redemption is corrected by an immutable one-to-one `RedemptionReversal`; selectors exclude reversed settlements and restore the original entitlement while both records remain visible. The owner exception queue is a read model over current `PAID_UNALLOCATED` contributions and failed `PaymentWebhookEvent` records, not a second financial ledger.
+Audit and exceptions: sensitive owner action → mandatory reason → transactional domain mutation → immutable `AuditEvent` with actor label, timestamp, target, and compact details. An erroneous redemption is corrected by an immutable one-to-one `RedemptionReversal`; selectors exclude reversed settlements and restore the original entitlement while both records remain visible. The owner exception queue is a read model over current `PAID_UNALLOCATED` contributions and failed/review-required `PaymentWebhookEvent` records, not a second financial ledger. Captured-payment exceptions link to an owner-only provider inspection and recovery page; dry runs append evidence but do not create entitlement.
 
 Documents: authenticated customer/owner → authorized scheme or verified contribution → selector-built statement/receipt → print-oriented HTML. Receipt references are deterministic from the paid year and immutable contribution ID; no receipt table or PDF subsystem is introduced. Owner CSV exports read the same source records and keep INR, gold grams, and silver grams in separate fields.

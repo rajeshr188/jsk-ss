@@ -380,6 +380,7 @@ class PaymentWebhookEvent(models.Model):
         PROCESSED = "PROCESSED", "Processed"
         IGNORED = "IGNORED", "Ignored"
         FAILED = "FAILED", "Failed"
+        REVIEW_REQUIRED = "REVIEW_REQUIRED", "Review required"
 
     gateway = models.CharField(max_length=30)
     gateway_mode = models.CharField(
@@ -403,6 +404,7 @@ class PaymentWebhookEvent(models.Model):
     )
     gateway_order_id = models.CharField(max_length=120, blank=True)
     gateway_reference = models.CharField(max_length=120, blank=True)
+    failure_code = models.CharField(max_length=60, blank=True)
     error = models.TextField(blank=True)
     received_at = models.DateTimeField(auto_now_add=True)
     processed_at = models.DateTimeField(null=True, blank=True)
@@ -434,6 +436,72 @@ class PaymentWebhookEvent(models.Model):
 
     def __str__(self):
         return f"{self.gateway} — {self.event_type} — {self.status}"
+
+
+class WebhookProcessingAttempt(models.Model):
+    class Source(models.TextChoices):
+        PROVIDER_DELIVERY = "PROVIDER_DELIVERY", "Provider delivery"
+        OWNER_RECOVERY = "OWNER_RECOVERY", "Owner recovery"
+
+    class Outcome(models.TextChoices):
+        PROCESSED = "PROCESSED", "Processed"
+        IGNORED = "IGNORED", "Ignored"
+        ALREADY_FINAL = "ALREADY_FINAL", "Already final"
+        REVIEW_REQUIRED = "REVIEW_REQUIRED", "Review required"
+        TRANSIENT_FAILURE = "TRANSIENT_FAILURE", "Transient failure"
+        ELIGIBLE_FOR_RECOVERY = (
+            "ELIGIBLE_FOR_RECOVERY",
+            "Eligible for recovery",
+        )
+        ALREADY_PROCESSED = "ALREADY_PROCESSED", "Already processed"
+
+    webhook_event = models.ForeignKey(
+        PaymentWebhookEvent,
+        on_delete=models.PROTECT,
+        related_name="processing_attempts",
+    )
+    source = models.CharField(max_length=30, choices=Source.choices)
+    outcome = models.CharField(max_length=30, choices=Outcome.choices)
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name="webhook_processing_attempts",
+        null=True,
+        blank=True,
+    )
+    actor_label = models.CharField(max_length=254)
+    reason = models.TextField()
+    error_code = models.CharField(max_length=60, blank=True)
+    detail = models.TextField(blank=True)
+    provider_snapshot = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at", "-pk"]
+        constraints = [
+            models.CheckConstraint(
+                condition=~models.Q(actor_label=""),
+                name="webhook_attempt_actor_required",
+            ),
+            models.CheckConstraint(
+                condition=~models.Q(reason=""),
+                name="webhook_attempt_reason_required",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=["webhook_event", "created_at"],
+                name="webhook_attempt_event_idx",
+            ),
+        ]
+
+    def save(self, *args, **kwargs):
+        if self.pk and type(self).objects.filter(pk=self.pk).exists():
+            raise ValidationError("Webhook processing attempts are immutable.")
+        return super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.webhook_event.event_id} — {self.get_outcome_display()}"
 
 
 class SchemeRate(models.Model):
@@ -838,6 +906,7 @@ class AuditEvent(models.Model):
             "PAYMENT_OPERATIONS_CHANGE",
             "Payment operations change",
         )
+        WEBHOOK_RECOVERY = "WEBHOOK_RECOVERY", "Webhook recovery"
 
     action = models.CharField(max_length=40, choices=Action.choices)
     actor = models.ForeignKey(

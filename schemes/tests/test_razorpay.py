@@ -16,6 +16,7 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
+from schemes.forms import WebhookRecoveryForm
 from schemes.models import (
     AuditEvent,
     Contribution,
@@ -24,11 +25,13 @@ from schemes.models import (
     SchemeAccount,
     SchemePlan,
     SchemeRate,
+    WebhookProcessingAttempt,
 )
 from schemes.payments import (
     PaymentGatewayAuthenticationError,
     PaymentGatewayError,
     PaymentGatewayValidationError,
+    PaymentInspection,
     PaymentOrder,
     PaymentOrderInspection,
     RazorpayPaymentGateway,
@@ -43,6 +46,8 @@ from schemes.services import (
     process_razorpay_webhook,
     publish_scheme_rate,
     reconcile_abandoned_razorpay_contribution,
+    reconcile_razorpay_webhook,
+    WebhookTransientProcessingError,
 )
 
 
@@ -75,12 +80,14 @@ class FakeRazorpayGateway:
     name = "razorpay"
     mode = "test"
 
-    def __init__(self, *, verified=True, inspection=None):
+    def __init__(self, *, verified=True, inspection=None, payment_inspection=None):
         self.verified = verified
         self.inspection = inspection
+        self.payment_inspection = payment_inspection
         self.order_calls = 0
         self.verify_calls = 0
         self.inspect_calls = 0
+        self.payment_inspect_calls = 0
 
     def create_order(self, contribution):
         self.order_calls += 1
@@ -107,6 +114,12 @@ class FakeRazorpayGateway:
             payment_count=0,
             payment_statuses=(),
         )
+
+    def inspect_payment(self, *, payment_id):
+        self.payment_inspect_calls += 1
+        if self.payment_inspection is None:
+            raise AssertionError("Configure payment_inspection for this test.")
+        return self.payment_inspection
 
 
 def make_account(*, email, mode=SchemeAccount.SavingsMode.CASH, frequency=None):
@@ -268,6 +281,44 @@ class RazorpayGatewayTests(TestCase):
                 gateway.create_order(contribution)
         self.assertNotIn("secret", str(raised.exception))
         self.assertEqual(raised.exception.status_code, 401)
+
+    def test_payment_inspection_fetches_bounded_provider_state(self):
+        gateway = RazorpayPaymentGateway(
+            mode="test",
+            key_id="rzp_test_key",
+            key_secret="secret",
+            webhook_secret="webhook",
+            timeout_seconds=2,
+        )
+        response = FakeResponse(
+            {
+                "id": "pay_inspect_1",
+                "order_id": "order_inspect_1",
+                "amount": 500000,
+                "currency": "INR",
+                "status": "captured",
+                "captured": True,
+            }
+        )
+        with patch("schemes.payments.urlopen", return_value=response) as urlopen_mock:
+            inspection = gateway.inspect_payment(payment_id="pay_inspect_1")
+
+        self.assertEqual(
+            inspection,
+            PaymentInspection(
+                payment_id="pay_inspect_1",
+                order_id="order_inspect_1",
+                amount_subunits=500000,
+                currency="INR",
+                status="captured",
+                captured=True,
+            ),
+        )
+        self.assertTrue(
+            urlopen_mock.call_args.args[0].full_url.endswith(
+                "/payments/pay_inspect_1"
+            )
+        )
 
     def test_callback_signature_and_captured_payment_are_both_verified(self):
         gateway = RazorpayPaymentGateway(
@@ -651,18 +702,19 @@ class RazorpayServiceTests(TestCase):
         }
         body = json.dumps(payload, separators=(",", ":")).encode("utf-8")
 
-        with self.assertRaisesMessage(ValidationError, "abandoned contribution"):
-            process_razorpay_webhook(
-                gateway_mode="test",
-                event_id="event_late_capture",
-                body=body,
-                payload=payload,
-            )
+        result = process_razorpay_webhook(
+            gateway_mode="test",
+            event_id="event_late_capture",
+            body=body,
+            payload=payload,
+        )
 
         contribution.refresh_from_db()
         self.assertEqual(contribution.status, Contribution.Status.ABANDONED)
         event = PaymentWebhookEvent.objects.get()
-        self.assertEqual(event.status, "FAILED")
+        self.assertEqual(event.status, PaymentWebhookEvent.Status.REVIEW_REQUIRED)
+        self.assertEqual(event.failure_code, "LATE_CAPTURE_ABANDONED")
+        self.assertEqual(result, event)
         self.assertEqual(event.contribution, contribution)
         self.assertEqual(event.gateway_order_id, contribution.gateway_order_id)
         self.assertEqual(event.gateway_reference, "pay_late_capture")
@@ -804,19 +856,23 @@ class RazorpayServiceTests(TestCase):
         }
         body = json.dumps(payload, separators=(",", ":")).encode("utf-8")
 
-        with self.assertRaises(ValidationError):
-            process_razorpay_webhook(
-                gateway_mode="live",
-                event_id="event_live_wrong_mode",
-                body=body,
-                payload=payload,
-            )
+        result = process_razorpay_webhook(
+            gateway_mode="live",
+            event_id="event_live_wrong_mode",
+            body=body,
+            payload=payload,
+        )
 
         contribution.refresh_from_db()
         self.assertEqual(contribution.status, Contribution.Status.PENDING)
         event = PaymentWebhookEvent.objects.get()
         self.assertEqual(event.gateway_mode, "live")
-        self.assertEqual(event.status, PaymentWebhookEvent.Status.FAILED)
+        self.assertEqual(event.status, PaymentWebhookEvent.Status.REVIEW_REQUIRED)
+        self.assertEqual(
+            event.failure_code,
+            "CONTRIBUTION_NOT_FOUND_OR_MODE_MISMATCH",
+        )
+        self.assertEqual(result, event)
 
     def test_no_metal_rate_prevents_gold_and_silver_razorpay_orders(self):
         for metal in (SchemeAccount.SavingsMode.GOLD, SchemeAccount.SavingsMode.SILVER):
@@ -838,6 +894,270 @@ class RazorpayServiceTests(TestCase):
                 self.assertFalse(
                     Contribution.objects.filter(scheme_account=account).exists()
                 )
+
+
+@override_settings(**RAZORPAY_SETTINGS)
+class RazorpayWebhookRecoveryTests(TestCase):
+    def setUp(self):
+        self.owner = get_user_model().objects.create_user(
+            username="webhook-recovery-owner@example.com",
+            email="webhook-recovery-owner@example.com",
+            password="owner-password-strong",
+            role=get_user_model().Role.OWNER,
+        )
+        publish_scheme_rate(
+            metal=SchemeRate.Metal.GOLD,
+            rate_per_gram=Decimal("12500.0000"),
+            published_by=self.owner,
+        )
+        self.customer, self.account = make_account(
+            email="webhook-recovery@example.com",
+            mode=SchemeAccount.SavingsMode.GOLD,
+        )
+        self.contribution = initiate_contribution(
+            scheme_account=self.account,
+            amount=Decimal("5000.00"),
+            payment_gateway="razorpay",
+            gateway_mode="test",
+        )
+        self.contribution.gateway_order_id = "order_webhook_recovery"
+        self.contribution.save(update_fields=["gateway_order_id"])
+
+    def create_review_event(self):
+        payload = {
+            "event": "payment.captured",
+            "payload": {
+                "payment": {
+                    "entity": {
+                        "id": "pay_webhook_recovery",
+                        "order_id": self.contribution.gateway_order_id,
+                        "amount": 499999,
+                        "currency": "INR",
+                        "status": "captured",
+                        "captured": True,
+                    }
+                }
+            },
+        }
+        body = json.dumps(payload, separators=(",", ":")).encode("utf-8")
+        return process_razorpay_webhook(
+            gateway_mode="test",
+            event_id="event_webhook_recovery",
+            body=body,
+            payload=payload,
+        )
+
+    def recovery_gateway(self, **overrides):
+        values = {
+            "payment_id": "pay_webhook_recovery",
+            "order_id": self.contribution.gateway_order_id,
+            "amount_subunits": 500000,
+            "currency": "INR",
+            "status": "captured",
+            "captured": True,
+        }
+        values.update(overrides)
+        return FakeRazorpayGateway(payment_inspection=PaymentInspection(**values))
+
+    def test_review_event_retains_provider_ids_and_append_only_attempt(self):
+        event = self.create_review_event()
+
+        self.assertEqual(event.status, PaymentWebhookEvent.Status.REVIEW_REQUIRED)
+        self.assertEqual(event.gateway_order_id, "order_webhook_recovery")
+        self.assertEqual(event.gateway_reference, "pay_webhook_recovery")
+        attempt = event.processing_attempts.get()
+        self.assertEqual(
+            attempt.outcome,
+            WebhookProcessingAttempt.Outcome.REVIEW_REQUIRED,
+        )
+        attempt.detail = "Changed"
+        with self.assertRaisesMessage(ValidationError, "immutable"):
+            attempt.save()
+
+    def test_transient_delivery_returns_retryable_error_then_recovers_once(self):
+        payload = {
+            "event": "payment.captured",
+            "payload": {
+                "payment": {
+                    "entity": {
+                        "id": "pay_transient_recovery",
+                        "order_id": self.contribution.gateway_order_id,
+                        "amount": 500000,
+                        "currency": "INR",
+                        "status": "captured",
+                        "captured": True,
+                    }
+                }
+            },
+        }
+        body = json.dumps(payload, separators=(",", ":")).encode("utf-8")
+        with patch(
+            "schemes.services._apply_contribution_entitlement",
+            side_effect=RuntimeError("temporary failure that must not be exposed"),
+        ):
+            with self.assertRaises(WebhookTransientProcessingError):
+                process_razorpay_webhook(
+                    gateway_mode="test",
+                    event_id="event_transient_recovery",
+                    body=body,
+                    payload=payload,
+                )
+
+        event = PaymentWebhookEvent.objects.get(event_id="event_transient_recovery")
+        self.assertEqual(event.status, PaymentWebhookEvent.Status.RECEIVED)
+        self.assertEqual(event.failure_code, "TRANSIENT_PROCESSING_FAILURE")
+        self.assertNotIn("temporary failure", event.error)
+        self.assertEqual(
+            event.processing_attempts.get().outcome,
+            WebhookProcessingAttempt.Outcome.TRANSIENT_FAILURE,
+        )
+
+        process_razorpay_webhook(
+            gateway_mode="test",
+            event_id="event_transient_recovery",
+            body=body,
+            payload=payload,
+        )
+        self.contribution.refresh_from_db()
+        event.refresh_from_db()
+        self.assertEqual(event.status, PaymentWebhookEvent.Status.PROCESSED)
+        self.assertEqual(self.contribution.status, Contribution.Status.PAID)
+        self.assertEqual(MetalAllocation.objects.filter(contribution=self.contribution).count(), 1)
+        self.assertEqual(event.processing_attempts.count(), 2)
+
+    def test_owner_dry_run_then_apply_uses_provider_state_once(self):
+        event = self.create_review_event()
+        gateway = self.recovery_gateway()
+
+        dry_run = reconcile_razorpay_webhook(
+            webhook_event_id=event.pk,
+            apply=False,
+            gateway=gateway,
+            performed_by=self.owner,
+            reason="Check the captured provider payment before recovery.",
+        )
+        self.contribution.refresh_from_db()
+        event.refresh_from_db()
+        self.assertEqual(dry_run.outcome, "ELIGIBLE_FOR_RECOVERY")
+        self.assertFalse(dry_run.applied)
+        self.assertEqual(self.contribution.status, Contribution.Status.PENDING)
+        self.assertEqual(event.status, PaymentWebhookEvent.Status.REVIEW_REQUIRED)
+        self.assertFalse(
+            AuditEvent.objects.filter(action=AuditEvent.Action.WEBHOOK_RECOVERY).exists()
+        )
+
+        applied = reconcile_razorpay_webhook(
+            webhook_event_id=event.pk,
+            apply=True,
+            gateway=gateway,
+            performed_by=self.owner,
+            reason="Apply the exact captured payment after provider review.",
+        )
+        self.contribution.refresh_from_db()
+        event.refresh_from_db()
+        self.assertTrue(applied.applied)
+        self.assertEqual(applied.outcome, "ELIGIBLE_FOR_RECOVERY")
+        self.assertEqual(self.contribution.status, Contribution.Status.PAID)
+        self.assertEqual(event.status, PaymentWebhookEvent.Status.PROCESSED)
+        self.assertEqual(MetalAllocation.objects.filter(contribution=self.contribution).count(), 1)
+        audit = AuditEvent.objects.get(action=AuditEvent.Action.WEBHOOK_RECOVERY)
+        self.assertEqual(audit.actor, self.owner)
+        self.assertEqual(audit.contribution, self.contribution)
+        self.assertEqual(audit.details["provider"]["amount_subunits"], 500000)
+        self.assertEqual(gateway.payment_inspect_calls, 2)
+
+    def test_mismatched_provider_state_never_applies_entitlement(self):
+        event = self.create_review_event()
+        result = reconcile_razorpay_webhook(
+            webhook_event_id=event.pk,
+            apply=False,
+            gateway=self.recovery_gateway(amount_subunits=400000),
+            performed_by=self.owner,
+            reason="Investigate the provider amount mismatch.",
+        )
+
+        self.contribution.refresh_from_db()
+        event.refresh_from_db()
+        self.assertEqual(result.outcome, "MANUAL_REVIEW_REQUIRED")
+        self.assertFalse(result.applied)
+        self.assertEqual(self.contribution.status, Contribution.Status.PENDING)
+        self.assertEqual(event.status, PaymentWebhookEvent.Status.REVIEW_REQUIRED)
+        self.assertFalse(MetalAllocation.objects.exists())
+        self.assertFalse(
+            AuditEvent.objects.filter(action=AuditEvent.Action.WEBHOOK_RECOVERY).exists()
+        )
+        with self.assertRaisesMessage(ValidationError, "Check provider state"):
+            reconcile_razorpay_webhook(
+                webhook_event_id=event.pk,
+                apply=True,
+                gateway=self.recovery_gateway(amount_subunits=400000),
+                performed_by=self.owner,
+                reason="Do not apply the provider amount mismatch.",
+            )
+
+    def test_apply_requires_a_prior_safe_provider_inspection(self):
+        event = self.create_review_event()
+
+        with self.assertRaisesMessage(ValidationError, "Check provider state"):
+            reconcile_razorpay_webhook(
+                webhook_event_id=event.pk,
+                apply=True,
+                gateway=self.recovery_gateway(),
+                performed_by=self.owner,
+                reason="Attempt recovery without the required inspection.",
+            )
+
+        self.contribution.refresh_from_db()
+        self.assertEqual(self.contribution.status, Contribution.Status.PENDING)
+        self.assertFalse(MetalAllocation.objects.exists())
+
+    def test_non_owner_cannot_reconcile_webhook(self):
+        event = self.create_review_event()
+        with self.assertRaisesMessage(ValidationError, "active owner"):
+            reconcile_razorpay_webhook(
+                webhook_event_id=event.pk,
+                apply=False,
+                gateway=self.recovery_gateway(),
+                performed_by=self.customer.user,
+                reason="Unauthorized recovery attempt.",
+            )
+
+    def test_recovery_page_is_owner_only_and_posts_provider_check(self):
+        event = self.create_review_event()
+        self.client.force_login(self.customer.user)
+        denied = self.client.get(
+            reverse("schemes:webhook_recovery", args=[event.pk])
+        )
+        self.assertEqual(denied.status_code, 403)
+
+        self.client.force_login(self.owner)
+        response = self.client.get(
+            reverse("schemes:webhook_recovery", args=[event.pk])
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Apply verified recovery")
+        with patch(
+            "schemes.services.get_payment_gateway",
+            return_value=self.recovery_gateway(),
+        ):
+            response = self.client.post(
+                reverse("schemes:webhook_recovery", args=[event.pk]),
+                {
+                    "action": WebhookRecoveryForm.Action.INSPECT,
+                    "reason": "Owner provider comparison before recovery.",
+                },
+            )
+        self.assertRedirects(
+            response,
+            reverse("schemes:webhook_recovery", args=[event.pk]),
+        )
+        self.assertTrue(
+            event.processing_attempts.filter(
+                source=WebhookProcessingAttempt.Source.OWNER_RECOVERY,
+                outcome=WebhookProcessingAttempt.Outcome.ELIGIBLE_FOR_RECOVERY,
+                actor=self.owner,
+            ).exists()
+        )
 
 
 @override_settings(**RAZORPAY_SETTINGS)
@@ -1097,3 +1417,111 @@ class RazorpayViewTests(TestCase):
         contribution.refresh_from_db()
         self.assertEqual(contribution.status, Contribution.Status.PAID)
         self.assertEqual(get_metal_balance(self.account), Decimal("0.400000"))
+
+    def test_signed_permanent_mismatch_returns_200_and_enters_review(self):
+        contribution = initiate_contribution(
+            scheme_account=self.account,
+            amount=Decimal("5000.00"),
+            payment_gateway="razorpay",
+            gateway_mode="test",
+        )
+        contribution.gateway_order_id = "order_permanent_mismatch"
+        contribution.save(update_fields=["gateway_order_id"])
+        payload = {
+            "event": "payment.captured",
+            "payload": {
+                "payment": {
+                    "entity": {
+                        "id": "pay_permanent_mismatch",
+                        "order_id": "order_permanent_mismatch",
+                        "amount": 499999,
+                        "currency": "INR",
+                        "status": "captured",
+                        "captured": True,
+                    }
+                }
+            },
+        }
+        body = json.dumps(payload, separators=(",", ":")).encode("utf-8")
+        signature = hmac.new(
+            b"test-webhook-secret", body, hashlib.sha256
+        ).hexdigest()
+
+        response = self.client.post(
+            reverse("schemes:razorpay_webhook"),
+            data=body,
+            content_type="application/json",
+            HTTP_X_RAZORPAY_SIGNATURE=signature,
+            HTTP_X_RAZORPAY_EVENT_ID="event_permanent_mismatch",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {"status": "review_required"})
+        contribution.refresh_from_db()
+        event = PaymentWebhookEvent.objects.get(
+            event_id="event_permanent_mismatch"
+        )
+        self.assertEqual(contribution.status, Contribution.Status.PENDING)
+        self.assertEqual(event.status, PaymentWebhookEvent.Status.REVIEW_REQUIRED)
+        self.assertEqual(event.failure_code, "PAYMENT_DETAILS_MISMATCH")
+        self.assertEqual(
+            event.processing_attempts.get().outcome,
+            WebhookProcessingAttempt.Outcome.REVIEW_REQUIRED,
+        )
+
+    def test_signed_transient_failure_returns_503_for_provider_retry(self):
+        contribution = initiate_contribution(
+            scheme_account=self.account,
+            amount=Decimal("5000.00"),
+            payment_gateway="razorpay",
+            gateway_mode="test",
+        )
+        contribution.gateway_order_id = "order_transient_failure"
+        contribution.save(update_fields=["gateway_order_id"])
+        payload = {
+            "event": "payment.captured",
+            "payload": {
+                "payment": {
+                    "entity": {
+                        "id": "pay_transient_failure",
+                        "order_id": "order_transient_failure",
+                        "amount": 500000,
+                        "currency": "INR",
+                        "status": "captured",
+                        "captured": True,
+                    }
+                }
+            },
+        }
+        body = json.dumps(payload, separators=(",", ":")).encode("utf-8")
+        signature = hmac.new(
+            b"test-webhook-secret", body, hashlib.sha256
+        ).hexdigest()
+
+        with patch(
+            "schemes.services._apply_contribution_entitlement",
+            side_effect=RuntimeError("private transient detail"),
+        ):
+            response = self.client.post(
+                reverse("schemes:razorpay_webhook"),
+                data=body,
+                content_type="application/json",
+                HTTP_X_RAZORPAY_SIGNATURE=signature,
+                HTTP_X_RAZORPAY_EVENT_ID="event_transient_failure",
+            )
+
+        self.assertEqual(response.status_code, 503)
+        self.assertNotContains(
+            response,
+            "private transient detail",
+            status_code=503,
+        )
+        contribution.refresh_from_db()
+        event = PaymentWebhookEvent.objects.get(event_id="event_transient_failure")
+        self.assertEqual(contribution.status, Contribution.Status.PAID_UNALLOCATED)
+        self.assertEqual(event.status, PaymentWebhookEvent.Status.RECEIVED)
+        self.assertEqual(event.failure_code, "TRANSIENT_PROCESSING_FAILURE")
+        self.assertEqual(
+            event.processing_attempts.get().outcome,
+            WebhookProcessingAttempt.Outcome.TRANSIENT_FAILURE,
+        )

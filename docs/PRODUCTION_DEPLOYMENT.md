@@ -1627,6 +1627,58 @@ failed webhook.
   aged candidate, zero review requirement, zero abandonment, and zero error. No
   contribution or provider order was changed by that check.
 
+### Razorpay webhook recovery deployment (`FW-PAY-003`)
+
+[ADR-0006](decisions/ADR-0006-razorpay-webhook-recovery.md) introduces additive
+migration `schemes.0014_paymentwebhookevent_failure_code_and_more`. It adds a safe
+failure code, the `REVIEW_REQUIRED` webhook state, append-only processing attempts,
+and a webhook-recovery audit action. It does not backfill, delete, confirm, allocate,
+or otherwise mutate an existing financial record. The previous application image is
+schema-compatible with these additions, so the normal rollback image remains usable.
+
+Before migration, record the recovery point, rollback image/release, candidate image
+identity, financial baseline, and these checks from the candidate image:
+
+```bash
+docker compose --env-file .env.production -f compose.production.yml \
+  run --rm --no-deps web python manage.py check --deploy --fail-level ERROR
+
+docker compose --env-file .env.production -f compose.production.yml \
+  run --rm --no-deps web python manage.py migrate --plan
+
+docker compose --env-file .env.production -f compose.production.yml \
+  exec -T web python manage.py check_financial_exceptions
+
+docker compose --env-file .env.production -f compose.production.yml \
+  exec -T web python manage.py check_razorpay_live_readiness
+```
+
+The reviewed migration plan must contain only `schemes.0014`. Apply it once, verify
+that every migration through `0014` is marked `[X]`, recreate `web`, then verify the
+expected release through Live/Ready and rerun both financial checks. Do not change
+Razorpay mode or credentials as part of this release.
+
+The owner exception queue now links failed or review-required captured-payment events
+to **Review recovery**. Always use **Inspect provider state** first and record a
+specific incident/reconciliation reason. **Apply verified recovery** performs a fresh
+provider read and remains blocked unless payment ID, order ID, INR amount, captured
+state, mode, and local contribution all match. It cannot override abandoned, failed,
+unknown, or mismatched records. Those remain in the manual refund/reconciliation
+boundary below.
+
+Prove the complete review/dry-run/apply path first in an isolated Razorpay Test-mode
+environment. In production, use Razorpay Dashboard's individual-event retry only for
+an already-processed Live `payment.captured` event; expect HTTP `200`, no additional
+allocation, and an `ALREADY_FINAL` processing attempt. Do not manufacture a Live
+mismatch or pay real funds merely to create a recovery exception. Compare contribution,
+allocation, webhook, attempt, audit, and financial-exception counts before and after.
+
+The response contract is deliberate: unauthenticated/malformed/conflicting requests
+return `400`; signed permanent mismatches are durably accepted as `REVIEW_REQUIRED`
+with `200`; transient application failures return `503` for provider retry. Never
+paste signatures, API credentials, full webhook bodies, or customer details into
+deployment evidence.
+
 ### Live reconciliation, payment-error refund, and dispute boundary
 
 - **Daily reconciliation:** compare Razorpay Live captured payments against the owner

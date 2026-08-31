@@ -397,6 +397,27 @@ class AuditReasonForm(forms.Form):
     )
 
 
+class WebhookRecoveryForm(forms.Form):
+    class Action:
+        INSPECT = "INSPECT"
+        APPLY = "APPLY"
+
+    action = forms.ChoiceField(
+        choices=[
+            (Action.INSPECT, "Check provider"),
+            (Action.APPLY, "Apply verified recovery"),
+        ]
+    )
+    reason = forms.CharField(
+        label="Reason for recovery check",
+        widget=forms.Textarea(attrs={"rows": 3, "class": "form-control"}),
+        help_text=(
+            "Recorded with your identity and the provider comparison. Checking does "
+            "not create entitlement; Apply still requires an exact captured-payment match."
+        ),
+    )
+
+
 class RedemptionReversalForm(AuditReasonForm):
     reason = forms.CharField(
         label="Reason for reversal",

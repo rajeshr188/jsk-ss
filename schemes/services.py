@@ -23,6 +23,7 @@ from .models import (
     PaymentOperationsControl,
     PaymentScheduleWindow,
     PaymentWebhookEvent,
+    WebhookProcessingAttempt,
     SchemeRate,
     Redemption,
     RedemptionReversal,
@@ -32,6 +33,7 @@ from .models import (
 from .operations import get_payment_availability, payment_operations_snapshot
 from .payments import (
     PaymentGatewayError,
+    PaymentInspection,
     PaymentOrderInspection,
     get_payment_gateway,
 )
@@ -64,6 +66,26 @@ class RazorpayOrderReconciliationResult:
     inspection: PaymentOrderInspection
     outcome: str
     applied: bool
+
+
+@dataclass(frozen=True)
+class RazorpayWebhookRecoveryResult:
+    webhook_event: PaymentWebhookEvent
+    contribution: Contribution | None
+    inspection: PaymentInspection | None
+    outcome: str
+    applied: bool
+
+
+class WebhookTransientProcessingError(Exception):
+    """A signed delivery could not be durably consumed and should be retried."""
+
+
+class _WebhookReviewRequired(Exception):
+    def __init__(self, code, detail):
+        self.code = code
+        self.detail = detail
+        super().__init__(detail)
 
 
 def cash_scheme_activity_is_enabled():
@@ -995,6 +1017,78 @@ def confirm_razorpay_contribution(
     return _apply_contribution_entitlement(contribution)
 
 
+def _record_webhook_attempt(
+    *,
+    event,
+    source,
+    outcome,
+    reason,
+    actor=None,
+    error_code="",
+    detail="",
+    provider_snapshot=None,
+):
+    normalized_reason = reason.strip()
+    if not normalized_reason:
+        raise ValidationError({"reason": "Enter a webhook processing reason."})
+    actor_label = (
+        _actor_label(actor)
+        if actor is not None
+        else f"Razorpay {event.gateway_mode} webhook"
+    )
+    attempt = WebhookProcessingAttempt(
+        webhook_event=event,
+        source=source,
+        outcome=outcome,
+        actor=actor,
+        actor_label=actor_label,
+        reason=normalized_reason,
+        error_code=error_code,
+        detail=detail.strip()[:1000],
+        provider_snapshot=provider_snapshot or {},
+    )
+    attempt.full_clean()
+    attempt.save()
+    return attempt
+
+
+def _payment_inspection_snapshot(inspection):
+    if inspection is None:
+        return {}
+    return {
+        "payment_id": inspection.payment_id,
+        "order_id": inspection.order_id,
+        "amount_subunits": inspection.amount_subunits,
+        "currency": inspection.currency,
+        "status": inspection.status,
+        "captured": inspection.captured,
+    }
+
+
+def _extract_webhook_payment(payload):
+    payment = payload.get("payload", {}).get("payment", {}).get("entity", {})
+    if not isinstance(payment, dict):
+        raise _WebhookReviewRequired(
+            "PAYMENT_ENTITY_MISSING",
+            "Razorpay webhook payment details are missing.",
+        )
+    payment_id = payment.get("id")
+    order_id = payment.get("order_id")
+    if (
+        not isinstance(payment_id, str)
+        or not payment_id.startswith("pay_")
+        or len(payment_id) > 120
+        or not isinstance(order_id, str)
+        or not order_id.startswith("order_")
+        or len(order_id) > 120
+    ):
+        raise _WebhookReviewRequired(
+            "PAYMENT_IDENTIFIERS_MISSING",
+            "Razorpay webhook payment identifiers are missing or invalid.",
+        )
+    return payment, payment_id, order_id
+
+
 def process_razorpay_webhook(*, gateway_mode, event_id, body, payload):
     if gateway_mode not in GatewayMode.values:
         raise ValidationError("The Razorpay webhook mode is invalid.")
@@ -1016,77 +1110,396 @@ def process_razorpay_webhook(*, gateway_mode, event_id, body, payload):
     if event.status in {
         PaymentWebhookEvent.Status.PROCESSED,
         PaymentWebhookEvent.Status.IGNORED,
+        PaymentWebhookEvent.Status.REVIEW_REQUIRED,
     }:
+        _record_webhook_attempt(
+            event=event,
+            source=WebhookProcessingAttempt.Source.PROVIDER_DELIVERY,
+            outcome=WebhookProcessingAttempt.Outcome.ALREADY_FINAL,
+            reason="Received a duplicate delivery for a final webhook event.",
+        )
         return event
 
     try:
         if event_type != "payment.captured":
-            event.status = PaymentWebhookEvent.Status.IGNORED
-            event.processed_at = timezone.now()
-            event.error = ""
-            event.save(update_fields=["status", "processed_at", "error"])
+            with transaction.atomic():
+                event.status = PaymentWebhookEvent.Status.IGNORED
+                event.processed_at = timezone.now()
+                event.failure_code = ""
+                event.error = ""
+                event.save(
+                    update_fields=[
+                        "status",
+                        "processed_at",
+                        "failure_code",
+                        "error",
+                    ]
+                )
+                _record_webhook_attempt(
+                    event=event,
+                    source=WebhookProcessingAttempt.Source.PROVIDER_DELIVERY,
+                    outcome=WebhookProcessingAttempt.Outcome.IGNORED,
+                    reason=f"Ignored unsupported Razorpay event type {event_type}.",
+                )
             return event
 
-        payment = payload.get("payload", {}).get("payment", {}).get("entity", {})
-        payment_id = payment.get("id")
-        order_id = payment.get("order_id")
-        if not isinstance(payment_id, str) or not isinstance(order_id, str):
-            raise ValidationError("Razorpay payment identifiers are missing.")
-        contribution = Contribution.objects.select_related("scheme_account").get(
-            payment_gateway="razorpay",
-            gateway_mode=gateway_mode,
-            gateway_order_id=order_id,
-        )
-        event.contribution = contribution
+        payment, payment_id, order_id = _extract_webhook_payment(payload)
         event.gateway_order_id = order_id
         event.gateway_reference = payment_id
+        event.save(update_fields=["gateway_order_id", "gateway_reference"])
+        try:
+            contribution = Contribution.objects.select_related("scheme_account").get(
+                payment_gateway="razorpay",
+                gateway_mode=gateway_mode,
+                gateway_order_id=order_id,
+            )
+        except Contribution.DoesNotExist:
+            raise _WebhookReviewRequired(
+                "CONTRIBUTION_NOT_FOUND_OR_MODE_MISMATCH",
+                "No mode-matched local contribution exists for this Razorpay order.",
+            ) from None
+        event.contribution = contribution
+        event.save(update_fields=["contribution"])
         if (
             payment.get("status") != "captured"
             or payment.get("captured") is not True
             or payment.get("currency") != "INR"
             or payment.get("amount") != int(contribution.amount * 100)
         ):
-            raise ValidationError("Razorpay webhook payment details do not match.")
+            raise _WebhookReviewRequired(
+                "PAYMENT_DETAILS_MISMATCH",
+                "Razorpay webhook payment details do not match the local contribution.",
+            )
+        if contribution.status == Contribution.Status.ABANDONED:
+            raise _WebhookReviewRequired(
+                "LATE_CAPTURE_ABANDONED",
+                "An abandoned contribution received a late captured payment; "
+                "reconcile and refund it manually.",
+            )
 
-        contribution = confirm_contribution(
-            contribution_id=contribution.pk,
-            payment_gateway="razorpay",
-            gateway_reference=payment_id,
-            verified=True,
-        )
-        contribution = _apply_contribution_entitlement(contribution)
-        event.status = PaymentWebhookEvent.Status.PROCESSED
-        event.contribution = contribution
-        event.gateway_order_id = order_id
-        event.gateway_reference = payment_id
-        event.error = ""
-        event.processed_at = timezone.now()
-        event.save(
-            update_fields=[
-                "status",
-                "contribution",
-                "gateway_order_id",
-                "gateway_reference",
-                "error",
-                "processed_at",
-            ]
-        )
+        try:
+            contribution = confirm_contribution(
+                contribution_id=contribution.pk,
+                payment_gateway="razorpay",
+                gateway_reference=payment_id,
+                verified=True,
+            )
+            contribution = _apply_contribution_entitlement(contribution)
+        except ValidationError as error:
+            raise _WebhookReviewRequired(
+                "CONTRIBUTION_CONFIRMATION_REJECTED",
+                str(error).strip(),
+            ) from None
+
+        with transaction.atomic():
+            event.status = PaymentWebhookEvent.Status.PROCESSED
+            event.contribution = contribution
+            event.failure_code = ""
+            event.error = ""
+            event.processed_at = timezone.now()
+            event.save(
+                update_fields=[
+                    "status",
+                    "contribution",
+                    "failure_code",
+                    "error",
+                    "processed_at",
+                ]
+            )
+            _record_webhook_attempt(
+                event=event,
+                source=WebhookProcessingAttempt.Source.PROVIDER_DELIVERY,
+                outcome=WebhookProcessingAttempt.Outcome.PROCESSED,
+                reason="Processed a signed captured-payment webhook.",
+            )
         return event
-    except (Contribution.DoesNotExist, ValidationError) as error:
-        event.status = PaymentWebhookEvent.Status.FAILED
-        event.error = str(error).strip()[:1000]
-        event.processed_at = timezone.now()
-        event.save(
+    except _WebhookReviewRequired as error:
+        with transaction.atomic():
+            event.status = PaymentWebhookEvent.Status.REVIEW_REQUIRED
+            event.failure_code = error.code
+            event.error = error.detail[:1000]
+            event.processed_at = timezone.now()
+            event.save(
+                update_fields=[
+                    "status",
+                    "contribution",
+                    "gateway_order_id",
+                    "gateway_reference",
+                    "failure_code",
+                    "error",
+                    "processed_at",
+                ]
+            )
+            _record_webhook_attempt(
+                event=event,
+                source=WebhookProcessingAttempt.Source.PROVIDER_DELIVERY,
+                outcome=WebhookProcessingAttempt.Outcome.REVIEW_REQUIRED,
+                reason="Accepted a signed webhook into owner reconciliation.",
+                error_code=error.code,
+                detail=error.detail,
+            )
+        return event
+    except Exception as error:
+        safe_detail = "A transient application failure interrupted webhook processing."
+        try:
+            with transaction.atomic():
+                event.status = PaymentWebhookEvent.Status.RECEIVED
+                event.failure_code = "TRANSIENT_PROCESSING_FAILURE"
+                event.error = safe_detail
+                event.processed_at = None
+                event.save(
+                    update_fields=[
+                        "status",
+                        "contribution",
+                        "gateway_order_id",
+                        "gateway_reference",
+                        "failure_code",
+                        "error",
+                        "processed_at",
+                    ]
+                )
+                _record_webhook_attempt(
+                    event=event,
+                    source=WebhookProcessingAttempt.Source.PROVIDER_DELIVERY,
+                    outcome=WebhookProcessingAttempt.Outcome.TRANSIENT_FAILURE,
+                    reason="Deferred a signed webhook for provider retry.",
+                    error_code="TRANSIENT_PROCESSING_FAILURE",
+                    detail=safe_detail,
+                )
+        except Exception:
+            pass
+        raise WebhookTransientProcessingError(safe_detail) from error
+
+
+def _classify_webhook_recovery(*, event, contribution, inspection):
+    if contribution is None:
+        return (
+            "MANUAL_REVIEW_REQUIRED",
+            "No mode-matched local contribution exists for this Razorpay order.",
+        )
+    expected_amount = int(contribution.amount * 100)
+    if (
+        inspection.payment_id != event.gateway_reference
+        or inspection.order_id != event.gateway_order_id
+        or inspection.amount_subunits != expected_amount
+        or inspection.currency != "INR"
+        or inspection.status != "captured"
+        or inspection.captured is not True
+    ):
+        return (
+            "MANUAL_REVIEW_REQUIRED",
+            "The provider payment does not exactly match a captured local contribution.",
+        )
+    if contribution.status == Contribution.Status.ABANDONED:
+        return (
+            "MANUAL_REVIEW_REQUIRED",
+            "The provider captured an abandoned contribution; use the manual refund workflow.",
+        )
+    if contribution.status == Contribution.Status.FAILED:
+        return (
+            "MANUAL_REVIEW_REQUIRED",
+            "A failed local contribution cannot receive automatic entitlement.",
+        )
+    if contribution.status == Contribution.Status.PENDING:
+        return ("ELIGIBLE_FOR_RECOVERY", "The captured payment is eligible for recovery.")
+    if contribution.status in SUCCESSFUL_PAYMENT_STATUSES:
+        if contribution.gateway_reference == inspection.payment_id:
+            return ("ALREADY_PROCESSED", "The contribution is already confirmed.")
+        return (
+            "MANUAL_REVIEW_REQUIRED",
+            "The contribution was confirmed with a different provider payment.",
+        )
+    return ("MANUAL_REVIEW_REQUIRED", "The contribution status requires manual review.")
+
+
+def reconcile_razorpay_webhook(
+    *,
+    webhook_event_id,
+    apply=False,
+    gateway=None,
+    performed_by,
+    reason,
+):
+    _validate_owner(performed_by)
+    normalized_reason = reason.strip()
+    if not normalized_reason:
+        raise ValidationError({"reason": "Enter a webhook recovery reason."})
+    gateway = gateway or get_payment_gateway()
+    if (
+        gateway.name != "razorpay"
+        or getattr(gateway, "mode", None) not in GatewayMode.values
+    ):
+        raise ImproperlyConfigured("A mode-specific Razorpay gateway is required.")
+
+    event = PaymentWebhookEvent.objects.select_related(
+        "contribution",
+        "contribution__scheme_account",
+    ).get(pk=webhook_event_id, gateway="razorpay")
+    if event.gateway_mode != gateway.mode:
+        raise ValidationError(
+            "The Razorpay gateway mode does not match this webhook event."
+        )
+    if event.event_type != "payment.captured":
+        raise ValidationError("Only captured-payment webhooks can be reconciled.")
+    if apply and not event.processing_attempts.filter(
+        source=WebhookProcessingAttempt.Source.OWNER_RECOVERY,
+        outcome__in=[
+            WebhookProcessingAttempt.Outcome.ELIGIBLE_FOR_RECOVERY,
+            WebhookProcessingAttempt.Outcome.ALREADY_PROCESSED,
+        ],
+    ).exists():
+        raise ValidationError(
+            "Check provider state and review a safe result before applying recovery."
+        )
+    if not event.gateway_order_id or not event.gateway_reference:
+        _record_webhook_attempt(
+            event=event,
+            source=WebhookProcessingAttempt.Source.OWNER_RECOVERY,
+            outcome=WebhookProcessingAttempt.Outcome.REVIEW_REQUIRED,
+            actor=performed_by,
+            reason=normalized_reason,
+            error_code="PROVIDER_IDENTIFIERS_UNAVAILABLE",
+            detail="The webhook does not retain both provider identifiers.",
+        )
+        return RazorpayWebhookRecoveryResult(
+            webhook_event=event,
+            contribution=event.contribution,
+            inspection=None,
+            outcome="MANUAL_REVIEW_REQUIRED",
+            applied=False,
+        )
+
+    try:
+        inspection = gateway.inspect_payment(payment_id=event.gateway_reference)
+    except PaymentGatewayError as error:
+        _record_webhook_attempt(
+            event=event,
+            source=WebhookProcessingAttempt.Source.OWNER_RECOVERY,
+            outcome=WebhookProcessingAttempt.Outcome.TRANSIENT_FAILURE,
+            actor=performed_by,
+            reason=normalized_reason,
+            error_code="PROVIDER_INSPECTION_FAILED",
+            detail=str(error),
+        )
+        raise
+
+    contribution = (
+        Contribution.objects.select_related("scheme_account")
+        .filter(
+            payment_gateway="razorpay",
+            gateway_mode=event.gateway_mode,
+            gateway_order_id=event.gateway_order_id,
+        )
+        .first()
+    )
+    outcome, detail = _classify_webhook_recovery(
+        event=event,
+        contribution=contribution,
+        inspection=inspection,
+    )
+    snapshot = _payment_inspection_snapshot(inspection)
+    attempt_outcome = {
+        "ELIGIBLE_FOR_RECOVERY": WebhookProcessingAttempt.Outcome.ELIGIBLE_FOR_RECOVERY,
+        "ALREADY_PROCESSED": WebhookProcessingAttempt.Outcome.ALREADY_PROCESSED,
+        "MANUAL_REVIEW_REQUIRED": WebhookProcessingAttempt.Outcome.REVIEW_REQUIRED,
+    }[outcome]
+    if not apply or outcome == "MANUAL_REVIEW_REQUIRED":
+        _record_webhook_attempt(
+            event=event,
+            source=WebhookProcessingAttempt.Source.OWNER_RECOVERY,
+            outcome=attempt_outcome,
+            actor=performed_by,
+            reason=normalized_reason,
+            error_code=("" if outcome != "MANUAL_REVIEW_REQUIRED" else event.failure_code),
+            detail=detail,
+            provider_snapshot=snapshot,
+        )
+        return RazorpayWebhookRecoveryResult(
+            webhook_event=event,
+            contribution=contribution,
+            inspection=inspection,
+            outcome=outcome,
+            applied=False,
+        )
+
+    with transaction.atomic():
+        locked_event = PaymentWebhookEvent.objects.select_for_update().get(pk=event.pk)
+        locked_contribution = (
+            Contribution.objects.select_for_update()
+            .select_related("scheme_account")
+            .get(pk=contribution.pk)
+        )
+        locked_outcome, locked_detail = _classify_webhook_recovery(
+            event=locked_event,
+            contribution=locked_contribution,
+            inspection=inspection,
+        )
+        if locked_outcome not in {"ELIGIBLE_FOR_RECOVERY", "ALREADY_PROCESSED"}:
+            raise ValidationError(
+                "The webhook or contribution changed during recovery; inspect it again."
+            )
+        if locked_outcome == "ELIGIBLE_FOR_RECOVERY":
+            locked_contribution = confirm_contribution(
+                contribution_id=locked_contribution.pk,
+                payment_gateway="razorpay",
+                gateway_reference=inspection.payment_id,
+                verified=True,
+            )
+            locked_contribution = _apply_contribution_entitlement(locked_contribution)
+        elif locked_contribution.status == Contribution.Status.PAID_UNALLOCATED:
+            locked_contribution = _apply_contribution_entitlement(locked_contribution)
+
+        locked_event.status = PaymentWebhookEvent.Status.PROCESSED
+        locked_event.contribution = locked_contribution
+        locked_event.failure_code = ""
+        locked_event.error = ""
+        locked_event.processed_at = timezone.now()
+        locked_event.save(
             update_fields=[
                 "status",
                 "contribution",
-                "gateway_order_id",
-                "gateway_reference",
+                "failure_code",
                 "error",
                 "processed_at",
             ]
         )
-        raise ValidationError(event.error) from None
+        _record_webhook_attempt(
+            event=locked_event,
+            source=WebhookProcessingAttempt.Source.OWNER_RECOVERY,
+            outcome=(
+                WebhookProcessingAttempt.Outcome.PROCESSED
+                if locked_outcome == "ELIGIBLE_FOR_RECOVERY"
+                else WebhookProcessingAttempt.Outcome.ALREADY_PROCESSED
+            ),
+            actor=performed_by,
+            reason=normalized_reason,
+            detail=locked_detail,
+            provider_snapshot=snapshot,
+        )
+        record_audit_event(
+            action=AuditEvent.Action.WEBHOOK_RECOVERY,
+            actor=performed_by,
+            reason=normalized_reason,
+            scheme_account=locked_contribution.scheme_account,
+            contribution=locked_contribution,
+            details={
+                "webhook_event_id": locked_event.pk,
+                "gateway": locked_event.gateway,
+                "gateway_mode": locked_event.gateway_mode,
+                "gateway_event_id": locked_event.event_id,
+                "gateway_order_id": locked_event.gateway_order_id,
+                "gateway_reference": locked_event.gateway_reference,
+                "outcome": locked_outcome,
+                "provider": snapshot,
+            },
+        )
+    return RazorpayWebhookRecoveryResult(
+        webhook_event=locked_event,
+        contribution=locked_contribution,
+        inspection=inspection,
+        outcome=locked_outcome,
+        applied=True,
+    )
 
 
 def process_mock_contribution(*, scheme_account, amount, contribution_date=None):

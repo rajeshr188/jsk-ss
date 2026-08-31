@@ -404,20 +404,30 @@ def get_owner_exception_queue():
         )
 
     failed_webhooks = PaymentWebhookEvent.objects.filter(
-        status=PaymentWebhookEvent.Status.FAILED
+        status__in=[
+            PaymentWebhookEvent.Status.FAILED,
+            PaymentWebhookEvent.Status.REVIEW_REQUIRED,
+        ]
     ).select_related(
         "contribution",
         "contribution__scheme_account",
         "contribution__scheme_account__customer",
     )
     for event in failed_webhooks:
-        is_mismatch = "match" in event.error.lower()
+        is_mismatch = (
+            "MISMATCH" in event.failure_code.upper()
+            or "match" in event.error.lower()
+        )
         items.append(
             OwnerExceptionItem(
                 category=(
                     "Payment mismatch / manual correction required"
                     if is_mismatch
-                    else "Failed webhook reconciliation"
+                    else (
+                        "Webhook review required"
+                        if event.status == PaymentWebhookEvent.Status.REVIEW_REQUIRED
+                        else "Failed webhook reconciliation"
+                    )
                 ),
                 detected_at=event.processed_at or event.received_at,
                 detail=event.error or "Webhook processing failed.",
@@ -429,10 +439,19 @@ def get_owner_exception_queue():
 
 def get_financial_exception_counts():
     webhook_counts = PaymentWebhookEvent.objects.filter(
-        status=PaymentWebhookEvent.Status.FAILED
+        status__in=[
+            PaymentWebhookEvent.Status.FAILED,
+            PaymentWebhookEvent.Status.REVIEW_REQUIRED,
+        ]
     ).aggregate(
         failed=Count("pk"),
-        mismatched=Count("pk", filter=Q(error__icontains="match")),
+        mismatched=Count(
+            "pk",
+            filter=(
+                Q(failure_code__icontains="MISMATCH")
+                | Q(error__icontains="match")
+            ),
+        ),
     )
     return FinancialExceptionCounts(
         paid_unallocated=Contribution.objects.filter(

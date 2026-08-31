@@ -15,7 +15,7 @@
         <td>{% if item.scheme_account %}{{ item.scheme_account.customer.full_name }}<br><small>{{ item.scheme_account.scheme_number }}</small>{% else %}Unmatched{% endif %}</td>
         <td>{% if item.contribution %}{{ item.contribution.gateway_reference|default:item.contribution.gateway_order_id|default:'—' }}{% else %}{{ item.webhook_event.gateway_reference|default:item.webhook_event.gateway_order_id|default:item.webhook_event.event_id }}{% endif %}</td>
         <td>{{ item.detail }}</td>
-        <td>{% if item.contribution %}<a class="btn btn-sm btn-outline-dark" href="{% url 'schemes:contribution_list' %}">Review / retry</a>{% else %}<span class="text-muted">Manual reconciliation required</span>{% endif %}</td>
+        <td>{% if item.webhook_event %}<a class="btn btn-sm btn-outline-dark" href="{% url 'schemes:webhook_recovery' item.webhook_event.pk %}">Review recovery</a>{% elif item.contribution %}<a class="btn btn-sm btn-outline-dark" href="{% url 'schemes:contribution_list' %}">Review / retry</a>{% else %}<span class="text-muted">Manual reconciliation required</span>{% endif %}</td>
       </tr>
       {% empty %}<tr><td colspan="6" class="text-center text-muted py-4">No unresolved exceptions.</td></tr>{% endfor %}
     </tbody>
