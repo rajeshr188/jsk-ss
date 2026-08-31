@@ -2,10 +2,15 @@
 
 ## Current milestone
 
-FW-PAY-002 abandoned Razorpay order handling is deployed on production release
-`c3e8c46`. Migration `schemes.0012` and every post-release gate passed with no pending
-Razorpay candidate and no financial exception. The owner-accepted `FW-PROD-002`
-external-observability and `FW-PROD-003` secret-rotation deferrals remain open.
+`FW-PAY-004` payment operations circuit breaker is implemented locally on
+`agent/payment-operations-control` under ADR-0005. Migration `schemes.0013` is applied
+locally with its reviewed weekly schedule safely default-off; manual global/per-metal
+pauses, scheduled closure, current-day rate review, the deployment kill switch,
+owner/customer surfaces, immutable audit evidence, and a no-secret validation command
+pass the complete 244-test suite. Review/merge and production rollout/activation remain.
+`FW-PAY-003` webhook recovery is explicitly held, and the owner-accepted
+`FW-PROD-002` external-observability and `FW-PROD-003` secret-rotation deferrals remain
+open.
 
 ## Completed
 
@@ -245,6 +250,12 @@ external-observability and `FW-PROD-003` secret-rotation deferrals remain open.
 
 ## In progress
 
+- `FW-PAY-004` has completed its ADR, schema, service enforcement, owner/customer UI,
+  audit, management-check, documentation, and local verification phases. Production
+  must deploy `schemes.0013` with `schedule_enabled=false`, verify the seeded hours,
+  and then exercise one controlled owner pause/resume before enabling the weekly
+  schedule. Holiday exceptions, multiple daily windows, expiring force-open, and a
+  separate allocation-integrity hold are deferred beyond this phase.
 - `FW-MEDIA-002` tracks the accepted backup/recovery and usage-monitoring deferral.
   It does not block catalogue use, but approved source photographs must
   remain outside R2 until an isolated backup target and restore proof exist.
@@ -320,9 +331,13 @@ external-observability and `FW-PROD-003` secret-rotation deferrals remain open.
 - Wagtail 7.4.3 and Django 6.0.4 pass system checks, production-shaped deploy checks,
   static collection, and an applied-migration check. Wagtail, taggit, and catalogue
   migrations are applied to production PostgreSQL.
-- Local and production PostgreSQL 16 migrations are applied through
-  `schemes.0011_razorpay_gateway_mode`.
-- 224 tests pass, including Razorpay Live/Test configuration and history migration,
+- Local PostgreSQL 16 migrations are applied through
+  `schemes.0013_payment_operations_control`; production remains through
+  `schemes.0012_abandoned_razorpay_orders` pending the reviewed rollout.
+- 244 tests pass, including payment-operations schedule/manual/kill-switch precedence,
+  owner authorization and immutable before/after audit, blocked new order/Checkout
+  behavior, uninterrupted callback/webhook confirmation and locked-rate allocation,
+  the no-secret deployment check, Razorpay Live/Test configuration and history migration,
   cross-mode order/callback/webhook isolation, Live checkout disclosure, readiness
   blocking, mode-aware reconciliation export, the production metal-only boundary
   and CASH preflight,
@@ -404,7 +419,9 @@ external-observability and `FW-PROD-003` secret-rotation deferrals remain open.
 
 ## Next recommended step
 
-Continue daily Razorpay-to-contribution reconciliation and keep abandoned-order checks
-in dry-run mode unless an aged candidate is individually reviewed. Prioritize
-`FW-PAY-003` webhook recovery; revisit the explicitly deferred external monitoring and
-secret-rotation exercises before expanding real-funds use.
+Review and merge `agent/payment-operations-control`, then deploy `schemes.0013` with
+the weekly schedule still disabled. Verify `check_payment_operations`, financial
+exceptions, live/readiness, and current provider reconciliation before exercising a
+controlled owner pause/resume. Activate the reviewed weekly schedule only after both
+current metal rates are published. Continue daily Razorpay reconciliation; keep
+`FW-PAY-003` held until this higher-priority control is stabilized.

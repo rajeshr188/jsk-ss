@@ -20,6 +20,8 @@ from .models import (
     Customer,
     GatewayMode,
     MetalAllocation,
+    PaymentOperationsControl,
+    PaymentScheduleWindow,
     PaymentWebhookEvent,
     SchemeRate,
     Redemption,
@@ -27,6 +29,7 @@ from .models import (
     SchemeAccount,
     SchemePlan,
 )
+from .operations import get_payment_availability, payment_operations_snapshot
 from .payments import (
     PaymentGatewayError,
     PaymentOrderInspection,
@@ -96,6 +99,85 @@ def record_audit_event(*, action, reason, actor=None, **targets):
     event.full_clean()
     event.save()
     return event
+
+
+def ensure_payment_initiation_allowed(*, metal, at=None, lock=False):
+    if metal not in {SchemeRate.Metal.GOLD, SchemeRate.Metal.SILVER}:
+        return
+    availability = get_payment_availability(metal=metal, at=at, lock=lock)
+    if not availability.allowed:
+        raise ValidationError(availability.message)
+
+
+@transaction.atomic
+def update_payment_operations_control(
+    *,
+    actor,
+    reason,
+    schedule_enabled,
+    require_current_day_rate,
+    global_pause,
+    gold_pause,
+    silver_pause,
+    customer_message,
+    schedule,
+):
+    _validate_owner(actor)
+    normalized_reason = reason.strip()
+    if not normalized_reason:
+        raise ValidationError({"reason": "Enter a reason for this change."})
+    expected_weekdays = set(PaymentScheduleWindow.Weekday.values)
+    if set(schedule) != expected_weekdays:
+        raise ValidationError("Provide exactly one payment window for each weekday.")
+
+    control = (
+        PaymentOperationsControl.objects.select_for_update()
+        .prefetch_related("schedule_windows")
+        .get(pk=PaymentOperationsControl.SINGLETON_PK)
+    )
+    before = payment_operations_snapshot(control)
+    control.schedule_enabled = schedule_enabled
+    control.require_current_day_rate = require_current_day_rate
+    control.global_pause = global_pause
+    control.gold_pause = gold_pause
+    control.silver_pause = silver_pause
+    control.customer_message = customer_message.strip()
+    control.updated_by = actor
+    control.full_clean()
+    control.save()
+
+    existing = {
+        window.weekday: window
+        for window in PaymentScheduleWindow.objects.select_for_update().filter(
+            control=control
+        )
+    }
+    if set(existing) != expected_weekdays:
+        raise ValidationError(
+            "The stored payment schedule must contain exactly one window for each "
+            "weekday."
+        )
+    for weekday, values in schedule.items():
+        window = existing[weekday]
+        window.enabled = values["enabled"]
+        window.opens_at = values["opens_at"]
+        window.closes_at = values["closes_at"]
+        window.full_clean()
+        window.save(update_fields=["enabled", "opens_at", "closes_at"])
+
+    control = PaymentOperationsControl.objects.prefetch_related(
+        "schedule_windows"
+    ).get(pk=control.pk)
+    after = payment_operations_snapshot(control)
+    if before == after:
+        raise ValidationError("Change at least one payment operations setting.")
+    record_audit_event(
+        action=AuditEvent.Action.PAYMENT_OPERATIONS_CHANGE,
+        actor=actor,
+        reason=normalized_reason,
+        details={"before": before, "after": after},
+    )
+    return control
 
 
 @transaction.atomic
@@ -417,6 +499,10 @@ def initiate_contribution(
     contribution_date=None,
 ):
     locked_account = SchemeAccount.objects.select_for_update().get(pk=scheme_account.pk)
+    ensure_payment_initiation_allowed(
+        metal=locked_account.savings_mode,
+        lock=True,
+    )
     normalized_amount, period = validate_contribution_allowed(
         locked_account, amount, contribution_date
     )
@@ -781,6 +867,8 @@ def initiate_razorpay_contribution(
     if getattr(gateway, "mode", None) not in GatewayMode.values:
         raise ImproperlyConfigured("The Razorpay payment mode is not configured.")
 
+    ensure_payment_initiation_allowed(metal=scheme_account.savings_mode)
+
     normalized_amount, period = validate_contribution_allowed(
         scheme_account, amount, contribution_date
     )
@@ -834,6 +922,10 @@ def initiate_razorpay_contribution(
             Contribution.objects.select_for_update()
             .select_related("scheme_account")
             .get(pk=contribution.pk)
+        )
+        ensure_payment_initiation_allowed(
+            metal=contribution.scheme_account.savings_mode,
+            lock=True,
         )
         if not contribution.scheme_rate_id:
             _lock_current_scheme_rate(contribution)

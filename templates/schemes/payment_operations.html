@@ -1,0 +1,104 @@
+{% extends '_base.html' %}
+
+{% block title %}Payment operations | Jai Sri Krishna Jewellery{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <p class="page-eyebrow">Financial control</p>
+    <h1>Payment operations</h1>
+    <p class="page-subtitle">Control new online payment exposure without interrupting captured-payment reconciliation.</p>
+  </div>
+  <div class="page-actions">
+    <a class="btn btn-outline-dark" href="{% url 'schemes:scheme_rates' %}">Scheme rates</a>
+    <a class="btn btn-outline-dark" href="{% url 'schemes:audit_log' %}">Audit log</a>
+  </div>
+</div>
+
+{% if environment_kill_switch %}
+<div class="alert alert-danger" role="alert">
+  <strong>The environment emergency kill switch is active.</strong>
+  Database controls cannot reopen payments until <code>PAYMENT_INITIATION_KILL_SWITCH</code> is disabled and the web service is recreated.
+</div>
+{% endif %}
+
+<div class="row g-3 mb-4">
+  <div class="col-md-6">
+    <div class="card stat-card stat-card--gold h-100"><div class="card-body">
+      <div class="stat-label">Gold payments</div>
+      <div class="stat-value">{% if availability.GOLD.allowed %}Open{% else %}Paused{% endif %}</div>
+      <div class="stat-meta">{{ availability.GOLD.message }}</div>
+      {% if availability.GOLD.next_opening %}<div class="small mt-2">Next scheduled opening: {{ availability.GOLD.next_opening|date:"D, d M Y, g:i A" }}</div>{% endif %}
+      <hr>
+      <div class="small">Pending locked orders: {{ pending_exposure.GOLD.count }} · ₹{{ pending_exposure.GOLD.amount|floatformat:2 }}</div>
+    </div></div>
+  </div>
+  <div class="col-md-6">
+    <div class="card stat-card stat-card--silver h-100"><div class="card-body">
+      <div class="stat-label">Silver payments</div>
+      <div class="stat-value">{% if availability.SILVER.allowed %}Open{% else %}Paused{% endif %}</div>
+      <div class="stat-meta">{{ availability.SILVER.message }}</div>
+      {% if availability.SILVER.next_opening %}<div class="small mt-2">Next scheduled opening: {{ availability.SILVER.next_opening|date:"D, d M Y, g:i A" }}</div>{% endif %}
+      <hr>
+      <div class="small">Pending locked orders: {{ pending_exposure.SILVER.count }} · ₹{{ pending_exposure.SILVER.amount|floatformat:2 }}</div>
+    </div></div>
+  </div>
+</div>
+
+<div class="alert alert-info" role="note">
+  These controls stop new order creation and prevent customers from reopening Checkout. Razorpay callbacks and signed webhooks continue, and captured payments are allocated using their original locked Scheme Rate.
+</div>
+
+<form method="post" class="card form-card" novalidate>
+  <div class="card-body p-4">
+    {% csrf_token %}
+    {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+
+    <fieldset>
+      <legend class="h4">Immediate controls</legend>
+      <div class="form-check mb-2">{{ form.global_pause }} <label class="form-check-label" for="{{ form.global_pause.id_for_label }}">{{ form.global_pause.label }}</label></div>
+      <div class="form-check mb-2">{{ form.gold_pause }} <label class="form-check-label" for="{{ form.gold_pause.id_for_label }}">{{ form.gold_pause.label }}</label></div>
+      <div class="form-check mb-3">{{ form.silver_pause }} <label class="form-check-label" for="{{ form.silver_pause.id_for_label }}">{{ form.silver_pause.label }}</label></div>
+      <label class="form-label" for="{{ form.customer_message.id_for_label }}">{{ form.customer_message.label }}</label>
+      {{ form.customer_message }}
+      {% if form.customer_message.errors %}<div class="invalid-feedback d-block">{{ form.customer_message.errors }}</div>{% endif %}
+      <div class="form-text">{{ form.customer_message.help_text }}</div>
+    </fieldset>
+
+    <fieldset class="mt-4">
+      <legend class="h4">Recurring business hours</legend>
+      <div class="form-check mb-2">{{ form.schedule_enabled }} <label class="form-check-label" for="{{ form.schedule_enabled.id_for_label }}">{{ form.schedule_enabled.label }}</label></div>
+      <div class="form-text mb-3">{{ form.schedule_enabled.help_text }}</div>
+      <div class="form-check mb-3">{{ form.require_current_day_rate }} <label class="form-check-label" for="{{ form.require_current_day_rate.id_for_label }}">{{ form.require_current_day_rate.label }}</label></div>
+
+      <div class="table-responsive">
+        <table class="table align-middle">
+          <thead><tr><th scope="col">Day</th><th scope="col">Open</th><th scope="col">Opening</th><th scope="col">Closing</th></tr></thead>
+          <tbody>
+          {% for row in form.schedule_rows %}
+            <tr>
+              <th scope="row">{{ row.label }}</th>
+              <td><div class="form-check">{{ row.enabled }} <label class="visually-hidden" for="{{ row.enabled.id_for_label }}">{{ row.enabled.label }}</label></div></td>
+              <td>{{ row.opens_at }}{% if row.opens_at.errors %}<div class="invalid-feedback d-block">{{ row.opens_at.errors }}</div>{% endif %}</td>
+              <td>{{ row.closes_at }}{% if row.closes_at.errors %}<div class="invalid-feedback d-block">{{ row.closes_at.errors }}</div>{% endif %}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </fieldset>
+
+    <div class="mt-4">
+      <label class="form-label" for="{{ form.audit_reason.id_for_label }}">{{ form.audit_reason.label }}</label>
+      {{ form.audit_reason }}
+      {% if form.audit_reason.errors %}<div class="invalid-feedback d-block">{{ form.audit_reason.errors }}</div>{% endif %}
+      <div class="form-text">{{ form.audit_reason.help_text }}</div>
+    </div>
+    <button class="btn btn-jsk mt-3" type="submit">Save payment operations policy</button>
+  </div>
+</form>
+
+{% if control.updated_at %}
+<p class="small text-muted mt-3">Last changed {{ control.updated_at|date:"d M Y, g:i A" }}{% if control.updated_by %} by {{ control.updated_by.email }}{% endif %}.</p>
+{% endif %}
+{% endblock %}

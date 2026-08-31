@@ -166,6 +166,7 @@ DATABASES["default"]["CONN_MAX_AGE"] = env_int(
 DATABASES["default"]["CONN_HEALTH_CHECKS"] = not DEBUG
 
 PAYMENT_GATEWAY = os.getenv("PAYMENT_GATEWAY", "").strip().lower()
+PAYMENT_INITIATION_KILL_SWITCH = env_bool("PAYMENT_INITIATION_KILL_SWITCH")
 RAZORPAY_MODE = os.getenv("RAZORPAY_MODE", "").strip().lower()
 RAZORPAY_KEY_ID = os.getenv("RAZORPAY_KEY_ID", "").strip()
 RAZORPAY_KEY_SECRET = os.getenv("RAZORPAY_KEY_SECRET", "").strip()

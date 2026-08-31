@@ -488,6 +488,91 @@ class SchemeRate(models.Model):
         return f"{self.get_metal_display()} scheme rate at ₹{self.rate_per_gram}/g"
 
 
+class PaymentOperationsControl(models.Model):
+    """Single-business control plane for creating new payment exposure."""
+
+    SINGLETON_PK = 1
+
+    id = models.PositiveSmallIntegerField(
+        primary_key=True,
+        default=SINGLETON_PK,
+        editable=False,
+    )
+    schedule_enabled = models.BooleanField(default=False)
+    require_current_day_rate = models.BooleanField(default=True)
+    global_pause = models.BooleanField(default=False)
+    gold_pause = models.BooleanField(default=False)
+    silver_pause = models.BooleanField(default=False)
+    customer_message = models.CharField(max_length=240, blank=True)
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name="payment_operations_changes",
+        null=True,
+        blank=True,
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def clean(self):
+        super().clean()
+        if self.pk not in {None, self.SINGLETON_PK}:
+            raise ValidationError("Only one payment operations control is permitted.")
+
+    def save(self, *args, **kwargs):
+        self.pk = self.SINGLETON_PK
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("The payment operations control cannot be deleted.")
+
+    def __str__(self):
+        return "Payment operations control"
+
+
+class PaymentScheduleWindow(models.Model):
+    class Weekday(models.IntegerChoices):
+        MONDAY = 0, "Monday"
+        TUESDAY = 1, "Tuesday"
+        WEDNESDAY = 2, "Wednesday"
+        THURSDAY = 3, "Thursday"
+        FRIDAY = 4, "Friday"
+        SATURDAY = 5, "Saturday"
+        SUNDAY = 6, "Sunday"
+
+    control = models.ForeignKey(
+        PaymentOperationsControl,
+        on_delete=models.PROTECT,
+        related_name="schedule_windows",
+    )
+    weekday = models.PositiveSmallIntegerField(choices=Weekday.choices)
+    enabled = models.BooleanField(default=True)
+    opens_at = models.TimeField()
+    closes_at = models.TimeField()
+
+    class Meta:
+        ordering = ["weekday"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["control", "weekday"],
+                name="payment_schedule_one_window_per_day",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(weekday__gte=0, weekday__lte=6),
+                name="payment_schedule_valid_weekday",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(opens_at__lt=models.F("closes_at")),
+                name="payment_schedule_positive_window",
+            ),
+        ]
+
+    def __str__(self):
+        return (
+            f"{self.get_weekday_display()} "
+            f"{self.opens_at:%H:%M}-{self.closes_at:%H:%M}"
+        )
+
+
 class MetalAllocation(models.Model):
     contribution = models.OneToOneField(
         Contribution,
@@ -748,6 +833,10 @@ class AuditEvent(models.Model):
         PAYMENT_ORDER_RECONCILIATION = (
             "PAYMENT_ORDER_RECONCILIATION",
             "Payment order reconciliation",
+        )
+        PAYMENT_OPERATIONS_CHANGE = (
+            "PAYMENT_OPERATIONS_CHANGE",
+            "Payment operations change",
         )
 
     action = models.CharField(max_length=40, choices=Action.choices)

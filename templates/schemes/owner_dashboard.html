@@ -10,11 +10,20 @@
     <p class="page-subtitle">Current customer obligations, payment activity, and upcoming redemption work.</p>
   </div>
   <div class="page-actions">
+    <a class="btn btn-outline-dark" href="{% url 'schemes:payment_operations' %}">Payment operations</a>
     <a class="btn btn-outline-dark" href="{% url 'schemes:scheme_rates' %}">Scheme rates</a>
     <a class="btn btn-outline-dark" href="{% url 'schemes:plan_list' %}">Scheme plans</a>
     <a class="btn btn-jsk" href="{% url 'schemes:customer_add' %}">Add customer</a>
   </div>
 </div>
+
+{% if not payment_availability.GOLD.allowed or not payment_availability.SILVER.allowed %}
+<div class="alert alert-warning mt-3 mb-0" role="status">
+  <strong>New online contributions are restricted.</strong>
+  Gold: {{ payment_availability.GOLD.message }} Silver: {{ payment_availability.SILVER.message }}
+  <a class="alert-link" href="{% url 'schemes:payment_operations' %}">Review payment operations</a>
+</div>
+{% endif %}
 
 <div class="row g-3">
   <div class="col-6 col-lg-3"><div class="card stat-card h-100"><div class="card-body"><div class="stat-label">Customers</div><div class="stat-value">{{ activity.customer_count }}</div><div class="stat-meta">Registered profiles</div></div></div></div>

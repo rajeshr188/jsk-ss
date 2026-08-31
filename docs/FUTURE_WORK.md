@@ -149,6 +149,26 @@ here are not implemented behavior and do not relax the financial invariants in
 - **FW-PAY-003:** The stable owned HTTPS endpoint has replaced development quick
   tunnels. Complete webhook-secret synchronization and rotation evidence, retry
   behavior, monitoring, and recovery for invalid or delayed webhook deliveries.
+- **FW-PAY-004 — Payment operations circuit breaker (implementation in progress):**
+  [ADR-0005](decisions/ADR-0005-payment-operations-circuit-breaker.md) defines a
+  domain-specific, audited control for new payment exposure; django-waffle is not a
+  financial authorization dependency. Progress is tracked here:
+  - [x] Record scheduled/manual closure, in-flight capture, locked-rate allocation,
+    audit, and emergency-override rules.
+  - [x] Add the default-off singleton control and reviewed Monday–Saturday
+    09:00–21:00 / Sunday 09:00–13:00 Asia/Kolkata schedule through migration
+    `schemes.0013`.
+  - [x] Enforce global/per-metal/scheduled/current-day-rate gates before local and
+    provider order creation and Checkout resumption.
+  - [x] Add an owner-only Bootstrap control surface, customer closure guidance,
+    pending-order exposure, and immutable before/after audit events.
+  - [x] Prove that pauses block new orders but do not block callbacks, captured
+    webhooks, or allocation from the original locked Scheme Rate.
+  - [ ] Review the seeded hours and current-day-rate requirement with the owner,
+    deploy the migration with the schedule still disabled, then activate and test one
+    controlled closure/reopening in production.
+  Holiday exceptions, multiple windows per day, expiring force-open overrides, and a
+  separate allocation-integrity hold remain outside this first phase.
 - **FW-SETTLE-001:** Integrate actual payout, metal handover, or point-of-sale
   confirmation if the business later requires the application to execute rather
   than merely record settlement.

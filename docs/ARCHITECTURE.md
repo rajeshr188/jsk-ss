@@ -34,6 +34,8 @@ graph TD
   U -->|actor| E[AuditEvent]
   E -->|references| A
   E -->|references| D
+  O[PaymentOperationsControl] -->|one-to-many| H[PaymentScheduleWindow]
+  U -->|last updates| O
 ```
 
 `SchemeAccount` snapshots plan terms during enrolment so later plan edits do not change existing agreements. Cash agreements also snapshot the bonus policy version, percentage, and minimum qualifying duration.
@@ -97,6 +99,15 @@ Razorpay webhooks are a CSRF-exempt provider endpoint protected by HMAC over the
 
 A metal contribution selects and stores its `SchemeRate` and `rate_locked_at` before mock payment initiation or Razorpay order creation. A missing current rate blocks the contribution before any payable order exists. Payment confirmation and metal allocation use separate transactions: verified metal payment is first durably `PAID_UNALLOCATED`, and allocation changes it to `PAID` only after creating at most one immutable `MetalAllocation` from the stored lock. Exceptions or process interruption therefore remain visible and retryable, while a later publication cannot affect the allocation. Owner retry reuses the original locked rate and never obtains a replacement quote.
 
+New payment exposure is additionally governed by the domain-specific control accepted
+in [ADR-0005](decisions/ADR-0005-payment-operations-circuit-breaker.md). A default-off
+Asia/Kolkata weekly schedule, global/per-metal manual pauses, optional current-day
+Scheme Rate review, and an environment emergency kill switch produce one effective
+availability decision. Initiation checks it while row-locking the singleton before a
+provider order is returned or created. Customer Pay/Resume visibility uses the same
+decision. Callback/webhook verification, captured-payment confirmation, and allocation
+from the immutable rate lock deliberately bypass this new-payment gate.
+
 ## Current request flows
 
 Cash bonus: plan percentage/minimum duration → versioned enrolment snapshot → projected amount before eligibility → earned amount from principal paid by the eligibility cutoff → customer and owner breakdowns. Post-eligibility contributions add principal but do not alter the matured bonus base. Cash redemption allocates principal first and earned bonus second.
@@ -119,6 +130,13 @@ cancellation. A late capture is routed to the financial-exception workflow rathe
 than silently creating entitlement.
 
 Metal contribution: owner publishes Scheme Rate → customer selects Pay now → current applicable rate is locked → payment starts and is verified → one immutable six-decimal allocation uses the lock → derived gold or silver gram balance. No published rate means no payment initiation.
+
+Payment operations: environment fail-safe, audited global/per-metal pause, optional
+India-local business-hours window, and optional current-day rate review combine to
+allow or reject new contribution/order creation and Checkout resumption. A late
+in-flight callback or signed captured webhook bypasses this new-exposure gate and
+completes idempotent locked-rate allocation. Routine closing hours never suspend
+financial reconciliation.
 
 Owner liability dashboard: paid cash contributions → outstanding INR principal plus earned bonus, with projected bonus exposure shown separately; paid metal allocations → separate gold/silver grams → current published Scheme Rates → separate indicative INR exposures. Projected bonus and Scheme Rates used for display do not alter historical records. Activity counters use successful payment timestamps in the India-local calendar day and month.
 

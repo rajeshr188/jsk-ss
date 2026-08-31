@@ -57,6 +57,19 @@ This is the canonical source for stable business rules.
 - **PAY-011:** Pending mode-matched orders remain resumable until paid, failed, or
   reconciled as abandoned. Abandonment is evaluated per order for both monthly and
   flexible-frequency accounts; closing one flexible attempt never changes another.
+- **PAY-012:** New Gold or Silver payment exposure is allowed only when the
+  environment emergency kill switch, audited global/per-metal manual controls, and
+  optional Asia/Kolkata weekly schedule all permit it. The same decision blocks both
+  local contribution/provider-order creation and customer Checkout resumption.
+- **PAY-013:** The weekly payment schedule uses half-open local intervals: opening is
+  inclusive and closing is exclusive. Its migration is default-off, and an owner must
+  explicitly activate the reviewed hours. When current-day rate review is required,
+  a metal remains closed until its current Scheme Rate was published on that India-
+  local date.
+- **PAY-014:** A new-payment pause never disables Razorpay callback or signed-webhook
+  verification and never rejects a captured payment merely because the schedule or an
+  owner pause is now closed. Any in-flight capture is confirmed idempotently and its
+  entitlement uses the contribution's original locked Scheme Rate.
 - **METAL-001 / FIN-002:** A metal contribution creates at most one successful allocation.
 - **METAL-002 / FIN-003:** A Scheme Rate used by an allocation is immutable.
 - **METAL-003 / FIN-004:** Historical allocated grams never change when a newer Scheme Rate is published.
@@ -131,6 +144,9 @@ authorize new production CASH enrolments or contributions under `SCH-007`.
 - **AUD-002:** System-service actions may retain a stable system actor label when no authenticated user initiated them. Owner UI actions always reference the authenticated owner as actor.
 - **AUD-003:** Audited plan changes affect only future enrolments; existing agreement snapshots remain unchanged.
 - **AUD-004:** Manual payment correction must not be enabled until explicit accounting and approval rules exist. Scheme Rate publication is a supported append-only workflow, not a historical-rate override.
+- **AUD-005:** Every owner change to the payment operations schedule or manual pause
+  state requires a reason and appends the complete before/after policy. UI changes may
+  not rewrite or delete earlier operations-control audit events.
 - **EXC-001:** The owner exception queue derives unresolved paid-unallocated/failed-allocation contributions and failed or mismatched webhook reconciliation from their authoritative source records.
 - **EXC-002:** Resolving an allocation exception uses the existing idempotent retry service. A queue display or acknowledgement must never itself create entitlement.
 

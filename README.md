@@ -60,6 +60,7 @@ Alternatively, set `DJANGO_SECRET_KEY` and run `docker compose up --build`; Comp
 | `EMAIL_TIMEOUT` | no | SMTP timeout in seconds; defaults to `10`, maximum `60` |
 | `SERVER_EMAIL` | no | Sender for framework-generated error email |
 | `PAYMENT_GATEWAY` | contributions | `mock` in debug or `razorpay` for Standard Checkout |
+| `PAYMENT_INITIATION_KILL_SWITCH` | no | Emergency fail-safe that blocks new orders and Checkout resumption without disabling callbacks or webhooks; defaults to `False` |
 | `RAZORPAY_MODE` | Razorpay | Required `test` or `live`; must match the key-ID prefix |
 | `RAZORPAY_KEY_ID` | Razorpay | `rzp_test_` or `rzp_live_` key matching `RAZORPAY_MODE` |
 | `RAZORPAY_KEY_SECRET` | Razorpay | Mode-matched API secret; server-side only and never committed |
@@ -128,6 +129,22 @@ Documents are generated on demand from source records and are acknowledgements, 
 Only an active owner may publish gold or silver Scheme Rates. Each publication creates a new immutable timestamped record with the established fineness; it never edits an earlier publication. The owner screen shows current rates, recent history, and the difference from the previous rate. Changes greater than 5% require an additional confirmation.
 
 For a metal contribution, the current applicable Scheme Rate is locked to the pending contribution before mock payment initiation or Razorpay order creation. Payment confirmation and webhook processing calculate the allocation only from that lock, so a later publication cannot change an in-progress checkout or historical grams. If no applicable rate exists, no payment or Razorpay order is created. A verified metal payment is durably `PAID_UNALLOCATED` until its allocation is stored, then becomes `PAID`; this makes exceptions and process interruption recoverable without using the state for rate retrieval.
+
+## Payment operations control
+
+Owners manage recurring business hours and immediate Pause All/Gold/Silver controls
+from **Operations → Payment operations**. The seeded Asia/Kolkata schedule is
+Monday–Saturday 09:00–21:00 and Sunday 09:00–13:00, but remains disabled until an
+owner reviews and activates it. Scheduled opening may additionally require a Scheme
+Rate published on the current India-local date. Every owner change requires a reason
+and retains the complete before/after policy in the immutable audit log.
+
+These controls block only new contribution/order creation and Checkout resumption.
+Razorpay callbacks, signed webhooks, captured-payment confirmation, and allocation at
+the original locked Scheme Rate continue. `PAYMENT_INITIATION_KILL_SWITCH=True` is a
+deployment-level emergency override; keep `PAYMENT_GATEWAY=razorpay` configured so
+provider reconciliation remains available. Validate the deployed control with
+`python manage.py check_payment_operations`.
 
 ## Razorpay modes
 

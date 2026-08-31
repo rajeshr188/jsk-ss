@@ -327,6 +327,38 @@ def get_owner_contributions():
     )
 
 
+def get_pending_payment_exposure():
+    rows = (
+        Contribution.objects.filter(
+            status=Contribution.Status.PENDING,
+            payment_gateway="razorpay",
+            gateway_order_id__isnull=False,
+            scheme_account__savings_mode__in=[
+                SchemeAccount.SavingsMode.GOLD,
+                SchemeAccount.SavingsMode.SILVER,
+            ],
+        )
+        .values("scheme_account__savings_mode")
+        .annotate(count=Count("pk"), amount=Sum("amount"))
+    )
+    exposure = {
+        SchemeAccount.SavingsMode.GOLD: {
+            "count": 0,
+            "amount": Decimal("0.00"),
+        },
+        SchemeAccount.SavingsMode.SILVER: {
+            "count": 0,
+            "amount": Decimal("0.00"),
+        },
+    }
+    for row in rows:
+        exposure[row["scheme_account__savings_mode"]] = {
+            "count": row["count"],
+            "amount": row["amount"] or Decimal("0.00"),
+        }
+    return exposure
+
+
 def get_owner_redemptions():
     return Redemption.objects.select_related(
         "scheme_account",
