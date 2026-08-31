@@ -7,9 +7,10 @@ explicit Razorpay Test/Live modes, and manually published Scheme Rate build. Dev
 
 ## Production-readiness boundary
 
-Production release `5fa726b` accepted controlled real Razorpay payments on 2026-08-27
-and completed final reconciliation on 2026-08-31. This proves the Live payment path,
-but the deployment is **not fully production-gate complete**:
+Production release `c3e8c46` runs the Live Razorpay path accepted on `5fa726b` and the
+deployed FW-PAY-002 abandoned-order lifecycle. This proves the Live payment path and
+its conservative stale-order boundary, but the deployment is **not fully
+production-gate complete**:
 
 - The deploy check accepts `test` and `live` only when `RAZORPAY_MODE` agrees with
   the `rzp_test_` or `rzp_live_` key prefix. Missing, unknown, and mixed-mode
@@ -1520,6 +1521,23 @@ Suspend the affected checkout, reconcile the order/payment/amount and any replac
 contribution, and follow the approved no-entitlement payment-error refund procedure.
 Never delete the old contribution, provider order, reconciliation audit event, or
 failed webhook.
+
+#### Completed production rollout evidence — 2026-08-31
+
+- Recovery point: 2026-08-30 12:00 PM IST. Rollback image/release:
+  `jsk-savings:5fa726b2d76666abe7063f8b48125d6869566ecc`.
+- Production image/release: `jsk-savings:c3e8c4618c9ec160fcdf764b38d05de6b7e5df9e` /
+  `c3e8c4618c9ec160fcdf764b38d05de6b7e5df9e`; locally built candidate image ID
+  `sha256:d94f1063b5e362e2da2d4934d722623a60a7412efb606f462fb331f4f36343df`.
+- The reviewed plan contained only `schemes.0012_abandoned_razorpay_orders`; it applied
+  successfully and every scheme migration through `0012` is recorded as applied.
+- Reported Live/Ready checks returned the expected release. The running gateway
+  remained Razorpay Live; Live readiness and financial exceptions returned `ok` with
+  no missing modes, cross-mode pending order, failed webhook, paid-unallocated record,
+  or mismatch.
+- The first production reconciliation remained a dry run and reported zero pending or
+  aged candidate, zero review requirement, zero abandonment, and zero error. No
+  contribution or provider order was changed by that check.
 
 ### Live reconciliation, payment-error refund, and dispute boundary
 
