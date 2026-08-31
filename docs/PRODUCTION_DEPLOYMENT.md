@@ -1679,6 +1679,45 @@ with `200`; transient application failures return `503` for provider retry. Neve
 paste signatures, API credentials, full webhook bodies, or customer details into
 deployment evidence.
 
+#### Production rollout evidence — 2026-08-31
+
+- Recovery point: 2026-08-31 11:30 AM IST. A preflight timestamp audit found zero
+  customer, scheme-account, contribution, allocation, webhook, Scheme Rate, audit,
+  redemption, or payment-control writes after that point. The one pending Gold
+  contribution was created at 10:53 AM IST and was therefore included.
+- Rollback image/release:
+  `jsk-savings:e027b9ae1550c314584c551eb3da31d5529ea544` /
+  `e027b9ae1550c314584c551eb3da31d5529ea544`, image ID
+  `sha256:a9e021ceed8b9d08d64b42fc71a3af0cd6c95facdc8f81d4fb90ed1d8623e558`.
+- Candidate image/release:
+  `jsk-savings:69eecf9cdebb4f660ae4ed898476e18a6fe32905` /
+  `69eecf9cdebb4f660ae4ed898476e18a6fe32905`, image ID
+  `sha256:0f64b88ffb9657562d99f18ef333b7c8557d13cadf2acebde457855bd1a25578`.
+- GitHub PR #27 was mergeable and all branch-push/PR Django and container checks
+  passed before merge. The candidate deploy check had no errors; the existing
+  HSTS include-subdomains/preload settings produced only `W005`/`W021` warnings.
+- The reviewed plan contained only `schemes.0014`; it applied successfully, every
+  schemes migration through `0014` is `[X]`, and the final plan reports no pending
+  migration.
+- Web became healthy before Caddy validation/recreation. External Live and Ready
+  returned `200` with the expected release; HTTP redirected to HTTPS and `www`
+  redirected once to the canonical apex. The authenticated owner exception route is
+  present and redirects anonymous requests to login.
+- Pre- and post-release liabilities matched: six customers, seven scheme accounts,
+  INR `0.00` cash principal, INR `0.00` earned cash bonus, `0.329272` g Gold, and
+  `0.000000` g Silver. The new attempt ledger began at zero.
+- Financial exceptions and Razorpay Live readiness returned `status=ok` with no
+  paid-unallocated, failed/mismatched webhook, missing/cross-mode, or failed-Live
+  record. The abandoned-order dry run had zero candidates/errors. Payment operations
+  remained unchanged: kill switch false, schedule disabled, Gold/Silver open, one
+  pending Gold order, and no pending Silver order.
+- Bounded web/Caddy logs showed normal Gunicorn startup, valid TLS service, and the
+  successful health requests; no application, database, or certificate error appeared.
+  Caddy's informational HTTP/3 receive-buffer message remains a host-tuning concern,
+  not a failed deployment gate.
+- No artificial Live mismatch or payment was created. The isolated Test-mode recovery
+  exercise and an already-processed Live event replay remain explicit acceptance items.
+
 ### Live reconciliation, payment-error refund, and dispute boundary
 
 - **Daily reconciliation:** compare Razorpay Live captured payments against the owner

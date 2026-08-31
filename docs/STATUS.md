@@ -2,13 +2,15 @@
 
 ## Current milestone
 
-`FW-PAY-003` webhook recovery is implemented and verified locally on
-`agent/razorpay-webhook-recovery` under ADR-0006. Additive migration `schemes.0014`,
-append-only processing attempts, permanent-versus-transient HTTP classification, and
-owner-only provider-backed dry-run/apply recovery pass all 254 tests. Production is
-unchanged and remains on release `e027b9ae1550c314584c551eb3da31d5529ea544` with
-the accepted FW-PAY-004 schedule. The production rollout, controlled Test-mode
-recovery exercise, external alerting, and secret-rotation rehearsal remain open.
+`FW-PAY-003` webhook recovery is deployed in production release
+`69eecf9cdebb4f660ae4ed898476e18a6fe32905` under ADR-0006. Additive migration
+`schemes.0014`, append-only processing attempts, permanent-versus-transient HTTP
+classification, and owner-only provider-backed dry-run/apply recovery pass all 254
+tests and the production health, financial, Razorpay, migration, and route gates.
+The isolated Test-mode recovery exercise, already-processed Live event replay,
+external alerting, and secret-rotation rehearsal remain open. Production payment
+operations remain schedule-disabled with both metals open; this rollout did not
+change that owner-controlled policy.
 
 ## Completed
 
@@ -423,8 +425,8 @@ recovery exercise, external alerting, and secret-rotation rehearsal remain open.
 
 ## Next recommended step
 
-Review and commit `agent/razorpay-webhook-recovery`, open and merge its PR, then follow
-the documented `schemes.0014` rollout. Exercise the full review/dry-run/apply path in
-an isolated Razorpay Test-mode environment; production acceptance should replay only
-an already-processed Live event and prove no duplicate entitlement. Continue daily
-Razorpay reconciliation and retain the active FW-PAY-004 schedule/audit evidence.
+Exercise the full review/dry-run/apply path in an isolated Razorpay Test-mode
+environment. Then use Razorpay Dashboard to replay one already-processed Live capture
+event and prove it creates an `ALREADY_FINAL` attempt with no duplicate entitlement.
+Continue daily Razorpay reconciliation; external stale-event alerting and synchronized
+webhook-secret rotation remain deferred production work.

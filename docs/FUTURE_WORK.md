@@ -158,9 +158,13 @@ here are not implemented behavior and do not relax the financial invariants in
     payment read and exact ID/order/amount/currency/captured-state comparison.
   - [x] Reuse idempotent confirmation and original locked-rate allocation; keep
     abandoned, failed, unknown, and mismatched cases blocked for manual handling.
+  - [x] Deploy migration `schemes.0014` in production release `69eecf9` and record
+    recovery-point, image, migration, health, financial, Razorpay, operations-control,
+    reconciliation, liability, route, and bounded-log evidence.
   - [ ] Exercise one controlled review/dry-run/apply case in an isolated Test-mode
-    environment, deploy migration `schemes.0014`, replay one already-processed Live
-    event to prove idempotency, and record production evidence.
+    environment.
+  - [ ] Replay one already-processed Live capture event through Razorpay Dashboard and
+    prove an `ALREADY_FINAL` attempt is appended with no duplicate entitlement.
   - [ ] Add external alerting and an operational threshold for stale `RECEIVED` and
     unresolved `REVIEW_REQUIRED` events under the deferred `FW-PROD-002` boundary.
   - [ ] Design and rehearse synchronized webhook-secret rotation, including a bounded
