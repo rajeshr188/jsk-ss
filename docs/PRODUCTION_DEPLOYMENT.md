@@ -1536,7 +1536,7 @@ Razorpay credentials, disable Caddy, or disable the Razorpay webhook. After the
 incident, review provider/local pending orders and publish current rates before
 setting the variable back to `False` and recreating `web` again.
 
-#### Completed default-off rollout evidence — 2026-08-31
+#### Completed rollout and schedule-activation evidence — 2026-08-31
 
 - Managed PostgreSQL recovery point: 2026-08-31 11:00 AM IST. Rollback image/release:
   `jsk-savings:c3e8c4618c9ec160fcdf764b38d05de6b7e5df9e`.
@@ -1556,8 +1556,9 @@ setting the variable back to `False` and recreating `web` again.
   unavailable while the owner restriction warning remained visible; no Checkout or
   provider order was created. A second audited change restored both metals to `OPEN`,
   and the financial-exception check remained clean.
-- The weekly schedule intentionally remains disabled. Activate it only after both
-  current-day metal rates are reviewed, then retain separate exact-boundary evidence.
+- After current-day Gold and Silver Scheme Rates were published and reviewed, the
+  owner enabled the weekly schedule with an audit reason. Its exact closing and
+  reopening boundary worked as expected; the schedule remains enabled in production.
 
 ### Abandoned Razorpay order deployment and operation (`FW-PAY-002`)
 

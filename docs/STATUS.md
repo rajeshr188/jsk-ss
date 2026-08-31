@@ -2,13 +2,12 @@
 
 ## Current milestone
 
-`FW-PAY-004` payment operations circuit breaker is deployed in production release
+`FW-PAY-004` payment operations circuit breaker is complete in production release
 `e027b9ae1550c314584c551eb3da31d5529ea544` under ADR-0005. Migration
-`schemes.0013` is applied with its reviewed weekly schedule safely default-off. The
-production manual Pause-All/customer-closure/audited-resume exercise passed without
-creating a payment or financial exception. Weekly schedule activation and its exact
-boundary test remain until current-day Gold and Silver Scheme Rates are published.
-`FW-PAY-003` webhook recovery is explicitly held, and the owner-accepted
+`schemes.0013`, manual Pause-All/customer-closure/audited-resume, current-day Gold and
+Silver Scheme Rate review, weekly schedule activation, and the exact closing/reopening
+boundary all passed production acceptance without a payment or financial exception.
+`FW-PAY-003` webhook recovery can now resume, while the owner-accepted
 `FW-PROD-002` external-observability and `FW-PROD-003` secret-rotation deferrals remain
 open.
 
@@ -247,18 +246,14 @@ open.
   action, and returns `403` from its direct contribution route. Post-release live and
   ready checks returned `200`; the CASH boundary and financial-exception checks both
   reported `status=ok` with zero CASH exposure and zero exceptions.
-- `FW-PAY-004` completed its default-off production rollout and controlled manual
-  pause/resume acceptance on 2026-08-31 in release
+- `FW-PAY-004` completed production rollout and acceptance on 2026-08-31 in release
   `e027b9ae1550c314584c551eb3da31d5529ea544`. Production retains the reviewed
-  seven-day Asia/Kolkata schedule, but it remains disabled pending current-day Gold
-  and Silver Scheme Rates and a scheduled boundary exercise.
+  seven-day Asia/Kolkata schedule. Current-day Gold and Silver Scheme Rates were
+  published, the schedule was enabled with an audit reason, and its exact closing and
+  reopening boundary worked as expected after the manual pause/resume exercise.
 
 ## In progress
 
-- `FW-PAY-004` weekly schedule activation remains pending. Publish and review both
-  current-day metal rates, activate the reviewed hours with an audit reason, and test
-  the exact closing/reopening boundary. Holiday exceptions, multiple daily windows,
-  expiring force-open, and a separate allocation-integrity hold remain deferred.
 - `FW-MEDIA-002` tracks the accepted backup/recovery and usage-monitoring deferral.
   It does not block catalogue use, but approved source photographs must
   remain outside R2 until an isolated backup target and restore proof exist.
@@ -421,7 +416,6 @@ open.
 
 ## Next recommended step
 
-Publish and review current-day Gold and Silver Scheme Rates, then activate the reviewed
-weekly payment schedule with an audit reason and verify its exact closing/reopening
-boundary without creating a real contribution merely for the smoke. Continue daily
-Razorpay reconciliation; keep `FW-PAY-003` held until this control is stabilized.
+Resume `FW-PAY-003` by auditing the existing signed-webhook failure, retry, monitoring,
+and recovery paths before selecting the smallest implementation increment. Continue
+daily Razorpay reconciliation and retain the active FW-PAY-004 schedule/audit evidence.
