@@ -1536,6 +1536,29 @@ Razorpay credentials, disable Caddy, or disable the Razorpay webhook. After the
 incident, review provider/local pending orders and publish current rates before
 setting the variable back to `False` and recreating `web` again.
 
+#### Completed default-off rollout evidence — 2026-08-31
+
+- Managed PostgreSQL recovery point: 2026-08-31 11:00 AM IST. Rollback image/release:
+  `jsk-savings:c3e8c4618c9ec160fcdf764b38d05de6b7e5df9e`.
+- Production image/release: `jsk-savings:e027b9ae1550c314584c551eb3da31d5529ea544` /
+  `e027b9ae1550c314584c551eb3da31d5529ea544`; locally built image ID
+  `sha256:a9e021ceed8b9d08d64b42fc71a3af0cd6c95facdc8f81d4fb90ed1d8623e558`.
+- The reviewed migration plan contained only
+  `schemes.0013_payment_operations_control`; it applied successfully. The baseline
+  was seven customers, seven scheme accounts, zero pending Razorpay contributions,
+  zero INR principal/earned bonus, `0.329272` g gold, and zero silver.
+- Live/readiness returned the expected release. Payment operations reported
+  `status=ok`, `kill_switch=false`, `schedule_enabled=false`, both metals `OPEN`, and
+  zero pending exposure. Razorpay Live readiness and financial exceptions both
+  reported `status=ok` with no missing/cross-mode records, failed webhooks,
+  paid-unallocated records, or mismatches.
+- The owner exercised audited Pause All with a customer-safe notice. Customer Pay was
+  unavailable while the owner restriction warning remained visible; no Checkout or
+  provider order was created. A second audited change restored both metals to `OPEN`,
+  and the financial-exception check remained clean.
+- The weekly schedule intentionally remains disabled. Activate it only after both
+  current-day metal rates are reviewed, then retain separate exact-boundary evidence.
+
 ### Abandoned Razorpay order deployment and operation (`FW-PAY-002`)
 
 The release introduces `schemes.0012_abandoned_razorpay_orders`. Its approved plan

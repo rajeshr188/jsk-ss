@@ -2,12 +2,12 @@
 
 ## Current milestone
 
-`FW-PAY-004` payment operations circuit breaker is implemented locally on
-`agent/payment-operations-control` under ADR-0005. Migration `schemes.0013` is applied
-locally with its reviewed weekly schedule safely default-off; manual global/per-metal
-pauses, scheduled closure, current-day rate review, the deployment kill switch,
-owner/customer surfaces, immutable audit evidence, and a no-secret validation command
-pass the complete 244-test suite. Review/merge and production rollout/activation remain.
+`FW-PAY-004` payment operations circuit breaker is deployed in production release
+`e027b9ae1550c314584c551eb3da31d5529ea544` under ADR-0005. Migration
+`schemes.0013` is applied with its reviewed weekly schedule safely default-off. The
+production manual Pause-All/customer-closure/audited-resume exercise passed without
+creating a payment or financial exception. Weekly schedule activation and its exact
+boundary test remain until current-day Gold and Silver Scheme Rates are published.
 `FW-PAY-003` webhook recovery is explicitly held, and the owner-accepted
 `FW-PROD-002` external-observability and `FW-PROD-003` secret-rotation deferrals remain
 open.
@@ -247,15 +247,18 @@ open.
   action, and returns `403` from its direct contribution route. Post-release live and
   ready checks returned `200`; the CASH boundary and financial-exception checks both
   reported `status=ok` with zero CASH exposure and zero exceptions.
+- `FW-PAY-004` completed its default-off production rollout and controlled manual
+  pause/resume acceptance on 2026-08-31 in release
+  `e027b9ae1550c314584c551eb3da31d5529ea544`. Production retains the reviewed
+  seven-day Asia/Kolkata schedule, but it remains disabled pending current-day Gold
+  and Silver Scheme Rates and a scheduled boundary exercise.
 
 ## In progress
 
-- `FW-PAY-004` has completed its ADR, schema, service enforcement, owner/customer UI,
-  audit, management-check, documentation, and local verification phases. Production
-  must deploy `schemes.0013` with `schedule_enabled=false`, verify the seeded hours,
-  and then exercise one controlled owner pause/resume before enabling the weekly
-  schedule. Holiday exceptions, multiple daily windows, expiring force-open, and a
-  separate allocation-integrity hold are deferred beyond this phase.
+- `FW-PAY-004` weekly schedule activation remains pending. Publish and review both
+  current-day metal rates, activate the reviewed hours with an audit reason, and test
+  the exact closing/reopening boundary. Holiday exceptions, multiple daily windows,
+  expiring force-open, and a separate allocation-integrity hold remain deferred.
 - `FW-MEDIA-002` tracks the accepted backup/recovery and usage-monitoring deferral.
   It does not block catalogue use, but approved source photographs must
   remain outside R2 until an isolated backup target and restore proof exist.
@@ -272,13 +275,13 @@ open.
   CA are in place, SSH access is verified, Docker is installed, and the owned domain
   returns liveness and PostgreSQL readiness `200` through Caddy-managed HTTPS;
   paid external alert exercises remain deferred.
-- Production release `c3e8c4618c9ec160fcdf764b38d05de6b7e5df9e` is healthy with
-  `schemes.0012_abandoned_razorpay_orders`, `catalog.0001_initial`, `pages.0001_initial`,
+- Production release `e027b9ae1550c314584c551eb3da31d5529ea544` is healthy with
+  `schemes.0013_payment_operations_control`, `catalog.0001_initial`, `pages.0001_initial`,
   and `accounts.0003_customerinvitation_and_more`
   applied, zero reported financial exceptions, successful live/ready checks, valid
   catalogue authorization, working R2 media, published reviewed products, and public
   Jewellery links in the primary and footer navigation. Its production metal-only
-  boundary passed the post-release CASH preflight and manual owner/customer smoke.
+  boundary and payment-operations manual pause/resume both passed owner/customer smoke.
 
 ## Known limitations
 
@@ -331,9 +334,8 @@ open.
 - Wagtail 7.4.3 and Django 6.0.4 pass system checks, production-shaped deploy checks,
   static collection, and an applied-migration check. Wagtail, taggit, and catalogue
   migrations are applied to production PostgreSQL.
-- Local PostgreSQL 16 migrations are applied through
-  `schemes.0013_payment_operations_control`; production remains through
-  `schemes.0012_abandoned_razorpay_orders` pending the reviewed rollout.
+- Local and production PostgreSQL 16 migrations are applied through
+  `schemes.0013_payment_operations_control`.
 - 244 tests pass, including payment-operations schedule/manual/kill-switch precedence,
   owner authorization and immutable before/after audit, blocked new order/Checkout
   behavior, uninterrupted callback/webhook confirmation and locked-rate allocation,
@@ -419,9 +421,7 @@ open.
 
 ## Next recommended step
 
-Review and merge `agent/payment-operations-control`, then deploy `schemes.0013` with
-the weekly schedule still disabled. Verify `check_payment_operations`, financial
-exceptions, live/readiness, and current provider reconciliation before exercising a
-controlled owner pause/resume. Activate the reviewed weekly schedule only after both
-current metal rates are published. Continue daily Razorpay reconciliation; keep
-`FW-PAY-003` held until this higher-priority control is stabilized.
+Publish and review current-day Gold and Silver Scheme Rates, then activate the reviewed
+weekly payment schedule with an audit reason and verify its exact closing/reopening
+boundary without creating a real contribution merely for the smoke. Continue daily
+Razorpay reconciliation; keep `FW-PAY-003` held until this control is stabilized.
