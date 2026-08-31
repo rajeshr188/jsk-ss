@@ -7,15 +7,16 @@ explicit Razorpay Test/Live modes, and manually published Scheme Rate build. Dev
 
 ## Production-readiness boundary
 
-The repository is ready to be deployed to production-grade infrastructure, but it
-is **not yet approved to handle real customer funds**:
+Production release `5fa726b` accepted controlled real Razorpay payments on 2026-08-27
+and completed final reconciliation on 2026-08-31. This proves the Live payment path,
+but the deployment is **not fully production-gate complete**:
 
 - The deploy check accepts `test` and `live` only when `RAZORPAY_MODE` agrees with
   the `rzp_test_` or `rzp_live_` key prefix. Missing, unknown, and mixed-mode
   configuration fails closed.
-- Code-level Live Mode support does not itself authorize financial go-live. Live
-  webhook, capture, reconciliation, refund, dispute, incident, alert, and credential-
-  rotation procedures must pass the activation gates below.
+- `FW-PAY-001` Live payment, capture, signed-webhook, allocation, and reconciliation
+  acceptance is complete. Refund, dispute, incident, alert, webhook-recovery, and
+  credential-rotation controls remain governed by the open items below.
 - An owner must publish reviewed gold and silver Scheme Rates before metal
   contributions are enabled in an environment.
 - `FW-PROD-001` is complete with the evidenced Linode restore drill recorded below.
@@ -27,8 +28,10 @@ preserve the operating budget. Existing bounded local logs, health endpoints,
 financial-exception checks, and provider consoles remain useful manual controls, but
 the deferral does not close the external alerting, retained-log, or escalation gate.
 
-Until those gates are closed, a deployment is a production-infrastructure or
-staging deployment using Razorpay Test Mode, not a financial go-live.
+The owner explicitly accepted the remaining operational risk when enabling Live
+checkout. Do not interpret that decision as closure of `FW-PROD-002`, `FW-PROD-003`,
+or `FW-PAY-003`; use the manual controls in this guide and suspend checkout on any
+unreconciled provider/local mismatch.
 
 ## Recommended topology
 
@@ -1446,6 +1449,28 @@ Use a short controlled cutover with no customer checkout in progress:
    financial-exception and readiness commands, inspect logs, and retain redacted
    evidence.
 
+#### Completed Live acceptance evidence — 2026-08-31
+
+- Production image/release: `5fa726b2d76666abe7063f8b48125d6869566ecc`;
+  `schemes.0011_razorpay_gateway_mode` was already applied.
+- Live readiness passed with no pending contribution from another mode, missing mode
+  stamp, or failed Live webhook. Financial exceptions reported zero paid-unallocated,
+  failed-webhook, and mismatched-webhook records.
+- Two real Live contributions were captured for INR `150.00` and INR `200.00`.
+  Their signed `payment.captured` events were each processed once; the corresponding
+  `payment.authorized` events were safely retained as ignored.
+- Each captured contribution created exactly one immutable gold allocation using its
+  pre-payment Scheme Rate lock: `0.008973` g and `0.012229` g, totalling `0.021202` g.
+- Two additional Live orders were still in Razorpay `created` state with zero attempts,
+  zero payments, and their full amounts due. After provider verification, their local
+  pending contributions were retired through `fail_contribution`; no provider or
+  financial record was deleted.
+- Final reconciliation: zero pending Live contributions, two paid and two safely failed
+  Live contributions, two processed capture webhooks, `0.021202` g Live gold allocation,
+  `0.329272` g total outstanding gold, and a clean financial-exception check.
+- Paid external monitoring and rotation rehearsals remain explicitly deferred under
+  `FW-PROD-002` and `FW-PROD-003`; webhook recovery remains `FW-PAY-003`.
+
 ### Live reconciliation, payment-error refund, and dispute boundary
 
 - **Daily reconciliation:** compare Razorpay Live captured payments against the owner
@@ -1761,7 +1786,8 @@ then promote the resulting immutable digest through the normal release process.
 
 ## Go-live sign-off
 
-Real customer use remains blocked until every applicable item is evidenced:
+The target full-production checklist remains below. Live acceptance does not mark
+owner-deferred controls complete:
 
 - [ ] The exact image passed CI, scanning, staging, and production deploy checks.
 - [ ] Production uses `DJANGO_DEBUG=False`, explicit hosts/origins, HTTPS, secure
@@ -1778,9 +1804,11 @@ Real customer use remains blocked until every applicable item is evidenced:
 - [ ] Owner/customer access, documents, exports, audit, exceptions, and rollback have
       been smoke-tested.
 - [ ] `FW-PROD-001` through `FW-PROD-003` are marked complete with evidence.
-- [ ] Before real funds, `FW-PAY-001` and `FW-PAY-003` are complete and the code,
-      tests, operations, refund/dispute process, and reconciliation controls have been
-      explicitly changed and approved for Razorpay Live Mode.
+- [x] `FW-PAY-001` Live payment, capture, signed-webhook, allocation, and reconciliation
+      acceptance is complete with the evidence above.
+- [ ] Before expanding real-funds use, complete `FW-PAY-003` webhook recovery and the
+      remaining refund/dispute, monitoring, and rotation controls, or retain explicit
+      owner acceptance of their documented risk with manual compensating checks.
 
 Record sign-off date, approvers, source commit, image digest, database recovery point,
 test evidence, exceptions, and next review date. A checked box without evidence is
