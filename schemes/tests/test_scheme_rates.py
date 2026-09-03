@@ -10,6 +10,7 @@ from django.utils import timezone
 from schemes.models import AuditEvent, SchemeRate
 from schemes.selectors import get_current_scheme_rate
 from schemes.services import publish_scheme_rate
+from schemes.tests.grade_helpers import metal_grade_for
 
 
 class SchemeRatePublicationTests(TestCase):
@@ -36,13 +37,13 @@ class SchemeRatePublicationTests(TestCase):
 
     def test_owner_can_publish_gold_and_silver_rates_with_fixed_purity(self):
         gold = publish_scheme_rate(
-            metal=SchemeRate.Metal.GOLD,
+            metal_grade=metal_grade_for(SchemeRate.Metal.GOLD),
             rate_per_gram=Decimal("12500.0000"),
             published_by=self.owner,
             notes="Morning rate",
         )
         silver = publish_scheme_rate(
-            metal=SchemeRate.Metal.SILVER,
+            metal_grade=metal_grade_for(SchemeRate.Metal.SILVER),
             rate_per_gram=Decimal("150.0000"),
             published_by=self.owner,
         )
@@ -62,7 +63,7 @@ class SchemeRatePublicationTests(TestCase):
             with self.subTest(role=user.role):
                 with self.assertRaisesMessage(ValidationError, "active owner"):
                     publish_scheme_rate(
-                        metal=SchemeRate.Metal.GOLD,
+                        metal_grade=metal_grade_for(SchemeRate.Metal.GOLD),
                         rate_per_gram=Decimal("12500.0000"),
                         published_by=user,
                     )
@@ -73,44 +74,49 @@ class SchemeRatePublicationTests(TestCase):
             with self.subTest(invalid=invalid):
                 with self.assertRaises(ValidationError):
                     publish_scheme_rate(
-                        metal=SchemeRate.Metal.GOLD,
+                        metal_grade=metal_grade_for(SchemeRate.Metal.GOLD),
                         rate_per_gram=invalid,
                         published_by=self.owner,
                     )
 
     def test_new_publication_does_not_mutate_old_publication(self):
         old = publish_scheme_rate(
-            metal=SchemeRate.Metal.GOLD,
+            metal_grade=metal_grade_for(SchemeRate.Metal.GOLD),
             rate_per_gram=Decimal("12500.0000"),
             published_by=self.owner,
         )
         new = publish_scheme_rate(
-            metal=SchemeRate.Metal.GOLD,
+            metal_grade=metal_grade_for(SchemeRate.Metal.GOLD),
             rate_per_gram=Decimal("12600.0000"),
             published_by=self.owner,
         )
         old.refresh_from_db()
         self.assertNotEqual(old.pk, new.pk)
         self.assertEqual(old.rate_per_gram, Decimal("12500.0000"))
-        self.assertEqual(get_current_scheme_rate(SchemeRate.Metal.GOLD), new)
+        self.assertEqual(
+            get_current_scheme_rate(metal_grade_for(SchemeRate.Metal.GOLD)), new
+        )
 
     def test_latest_applicable_rate_ignores_future_publication(self):
         current = publish_scheme_rate(
-            metal=SchemeRate.Metal.GOLD,
+            metal_grade=metal_grade_for(SchemeRate.Metal.GOLD),
             rate_per_gram=Decimal("12500.0000"),
             published_by=self.owner,
         )
         publish_scheme_rate(
-            metal=SchemeRate.Metal.GOLD,
+            metal_grade=metal_grade_for(SchemeRate.Metal.GOLD),
             rate_per_gram=Decimal("13000.0000"),
             published_by=self.owner,
             effective_from=timezone.now() + timedelta(hours=1),
         )
-        self.assertEqual(get_current_scheme_rate(SchemeRate.Metal.GOLD), current)
+        self.assertEqual(
+            get_current_scheme_rate(metal_grade_for(SchemeRate.Metal.GOLD)), current
+        )
 
     def test_owner_page_publishes_and_requires_large_change_confirmation(self):
+        gold_grade = metal_grade_for(SchemeRate.Metal.GOLD)
         publish_scheme_rate(
-            metal=SchemeRate.Metal.GOLD,
+            metal_grade=gold_grade,
             rate_per_gram=Decimal("10000.0000"),
             published_by=self.owner,
         )
@@ -119,7 +125,11 @@ class SchemeRatePublicationTests(TestCase):
 
         response = self.client.post(
             url,
-            {"metal": "GOLD", "rate_per_gram": "11000.0000", "notes": ""},
+            {
+                "metal_grade": gold_grade.pk,
+                "rate_per_gram": "11000.0000",
+                "notes": "",
+            },
         )
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "exceeds 5%")
@@ -128,7 +138,7 @@ class SchemeRatePublicationTests(TestCase):
         response = self.client.post(
             url,
             {
-                "metal": "GOLD",
+                "metal_grade": gold_grade.pk,
                 "rate_per_gram": "11000.0000",
                 "notes": "Confirmed correction",
                 "confirm_large_change": "on",
@@ -137,6 +147,32 @@ class SchemeRatePublicationTests(TestCase):
         )
         self.assertContains(response, "Published 24K Gold Scheme Rate")
         self.assertEqual(SchemeRate.objects.count(), 2)
+
+    def test_22k_and_24k_gold_rates_are_independent(self):
+        gold_22k = metal_grade_for(
+            SchemeRate.Metal.GOLD,
+            code="GOLD_22K_916",
+        )
+        gold_24k = metal_grade_for(
+            SchemeRate.Metal.GOLD,
+            code="GOLD_24K_9999",
+        )
+
+        rate_22k = publish_scheme_rate(
+            metal_grade=gold_22k,
+            rate_per_gram=Decimal("11500.0000"),
+            published_by=self.owner,
+        )
+        rate_24k = publish_scheme_rate(
+            metal_grade=gold_24k,
+            rate_per_gram=Decimal("12500.0000"),
+            published_by=self.owner,
+        )
+
+        self.assertEqual(rate_22k.purity, Decimal("0.916000"))
+        self.assertEqual(rate_24k.purity, Decimal("0.999900"))
+        self.assertEqual(get_current_scheme_rate(gold_22k), rate_22k)
+        self.assertEqual(get_current_scheme_rate(gold_24k), rate_24k)
 
     def test_customer_and_staff_cannot_open_owner_rate_page(self):
         for user in (self.customer, self.staff):

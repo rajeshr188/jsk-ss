@@ -9,7 +9,7 @@
   <div class="page-header"><div><p class="page-eyebrow">Financial settlement</p><h1>Record redemption</h1><p class="page-subtitle">{{ scheme_account.customer.full_name }} · {{ scheme_account.scheme_number }}</p></div></div>
 
   <div class="card stat-card {% if scheme_account.savings_mode == 'CASH' %}stat-card--cash{% elif scheme_account.savings_mode == 'GOLD' %}stat-card--gold{% else %}stat-card--silver{% endif %} mb-3"><div class="card-body p-4">
-    <div class="stat-label">Outstanding {{ scheme_account.get_savings_mode_display|lower }} entitlement</div>
+    <div class="stat-label">Outstanding {{ scheme_account.entitlement_name|lower }} entitlement</div>
     {% if scheme_account.savings_mode == 'CASH' %}
     <div class="stat-value">₹{{ outstanding|floatformat:2 }}</div>
     <dl class="row small mt-3 mb-0">

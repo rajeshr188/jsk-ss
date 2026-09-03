@@ -19,7 +19,7 @@
         <td>{{ contribution.contribution_period|date:'F Y' }}</td>
         <td>₹{{ contribution.amount|floatformat:2 }}</td>
         <td>{{ contribution.payment_gateway|title }}{% if contribution.gateway_mode %} · {{ contribution.get_gateway_mode_display }}{% endif %}</td>
-        <td>{% if contribution.metal_allocation %}{{ contribution.metal_allocation.quantity|floatformat:6 }} g {{ contribution.metal_allocation.get_metal_display }}{% else %}—{% endif %}</td>
+        <td>{% if contribution.metal_allocation %}{{ contribution.metal_allocation.quantity|floatformat:3 }} g {{ contribution.metal_allocation.metal_grade.display_name }}{% else %}—{% endif %}</td>
         <td>
           {% if contribution.status == 'PAID' %}<span class="badge text-bg-success">Paid</span>
           {% elif contribution.status == 'PAID_UNALLOCATED' %}<span class="badge text-bg-warning">Paid — allocation pending</span>

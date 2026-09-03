@@ -10,6 +10,7 @@ from django.urls import reverse
 
 from schemes.models import Customer, SchemeAccount, SchemePlan
 from schemes.services import create_customer, enroll_customer
+from schemes.tests.grade_helpers import enrolment_grade_kwargs, grade_for_mode
 from accounts.models import CustomerInvitation
 
 
@@ -57,11 +58,12 @@ class OwnerFlowTests(TestCase):
         self.assertEqual(customer.scheme_accounts.count(), 0)
 
         plan = make_plan()
+        grade = grade_for_mode(plan, SchemeAccount.SavingsMode.GOLD)
         response = self.client.post(
             reverse("schemes:customer_enroll", args=[customer.pk]),
             {
                 "plan": plan.pk,
-                "savings_mode": SchemeAccount.SavingsMode.GOLD,
+                "metal_grade": grade.pk,
                 "start_date": "2026-08-01",
                 "agreed_months": 12,
                 "audit_reason": "Customer requested enrolment at the store.",
@@ -184,13 +186,13 @@ class CustomerIsolationTests(TestCase):
         account_a = enroll_customer(
             customer=customer_a,
             plan=plan,
-            savings_mode=SchemeAccount.SavingsMode.GOLD,
+            **enrolment_grade_kwargs(plan, SchemeAccount.SavingsMode.GOLD),
             start_date=date(2026, 8, 1),
         )
         account_b = enroll_customer(
             customer=customer_b,
             plan=plan,
-            savings_mode=SchemeAccount.SavingsMode.SILVER,
+            **enrolment_grade_kwargs(plan, SchemeAccount.SavingsMode.SILVER),
             start_date=date(2026, 8, 1),
         )
 

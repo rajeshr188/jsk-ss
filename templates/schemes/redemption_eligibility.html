@@ -28,7 +28,7 @@
           <td>{{ account.eligible_from|date:'d M Y' }}</td>
           <td>{{ account.scheme_number }}</td>
           <td><a href="{% url 'schemes:customer_detail' account.customer.pk %}">{{ account.customer.full_name }}</a></td>
-          <td>{{ account.get_savings_mode_display }}</td>
+          <td>{{ account.entitlement_name }}</td>
           <td><span class="badge text-bg-secondary">{{ account.effective_status_label }}</span></td>
           <td>
             {% if account.effective_status == 'REDEMPTION_ELIGIBLE' and account.outstanding_entitlement > 0 %}

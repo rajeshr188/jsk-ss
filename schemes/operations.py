@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from django.conf import settings
 from django.utils import timezone
 
-from .models import PaymentOperationsControl, PaymentScheduleWindow, SchemeRate
+from .models import MetalGrade, PaymentOperationsControl, PaymentScheduleWindow
 from .selectors import get_current_scheme_rate
 
 
@@ -56,8 +56,8 @@ def _next_scheduled_opening(*, windows, local_now):
     return None
 
 
-def get_payment_availability(*, metal, at=None, lock=False):
-    if metal not in {SchemeRate.Metal.GOLD, SchemeRate.Metal.SILVER}:
+def get_payment_availability(*, metal_grade, at=None, lock=False):
+    if metal_grade is None or metal_grade.metal not in MetalGrade.Metal.values:
         return _blocked(
             code="UNSUPPORTED_SAVINGS_MODE",
             default_message="Online contributions are unavailable for this savings mode.",
@@ -88,13 +88,14 @@ def get_payment_availability(*, metal, at=None, lock=False):
             default_message="Online contributions are temporarily paused.",
             control=control,
         )
-    if metal == SchemeRate.Metal.GOLD and control.gold_pause:
+    metal = metal_grade.metal
+    if metal == MetalGrade.Metal.GOLD and control.gold_pause:
         return _blocked(
             code="MANUAL_METAL_PAUSE",
             default_message="Gold contributions are temporarily paused.",
             control=control,
         )
-    if metal == SchemeRate.Metal.SILVER and control.silver_pause:
+    if metal == MetalGrade.Metal.SILVER and control.silver_pause:
         return _blocked(
             code="MANUAL_METAL_PAUSE",
             default_message="Silver contributions are temporarily paused.",
@@ -130,7 +131,7 @@ def get_payment_availability(*, metal, at=None, lock=False):
                 ),
             )
 
-    scheme_rate = get_current_scheme_rate(metal, at=current_time)
+    scheme_rate = get_current_scheme_rate(metal_grade, at=current_time)
     if scheme_rate is None:
         return _blocked(
             code="RATE_UNAVAILABLE",

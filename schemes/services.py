@@ -20,6 +20,7 @@ from .models import (
     Customer,
     GatewayMode,
     MetalAllocation,
+    MetalGrade,
     PaymentOperationsControl,
     PaymentScheduleWindow,
     PaymentWebhookEvent,
@@ -29,6 +30,7 @@ from .models import (
     RedemptionReversal,
     SchemeAccount,
     SchemePlan,
+    SchemePlanOffering,
 )
 from .operations import get_payment_availability, payment_operations_snapshot
 from .payments import (
@@ -51,10 +53,6 @@ SUCCESSFUL_PAYMENT_STATUSES = (
     Contribution.Status.PAID_UNALLOCATED,
 )
 EXPECTED_ALLOCATION_ERRORS = (ValidationError,)
-SCHEME_RATE_PURITY = {
-    SchemeRate.Metal.GOLD: Decimal("0.9999"),
-    SchemeRate.Metal.SILVER: Decimal("0.9990"),
-}
 CASH_SCHEME_ACTIVITY_UNAVAILABLE = (
     "Cash savings are closed to new activity. Choose a gold or silver savings mode."
 )
@@ -123,10 +121,14 @@ def record_audit_event(*, action, reason, actor=None, **targets):
     return event
 
 
-def ensure_payment_initiation_allowed(*, metal, at=None, lock=False):
-    if metal not in {SchemeRate.Metal.GOLD, SchemeRate.Metal.SILVER}:
+def ensure_payment_initiation_allowed(*, metal_grade, at=None, lock=False):
+    if metal_grade is None:
         return
-    availability = get_payment_availability(metal=metal, at=at, lock=lock)
+    availability = get_payment_availability(
+        metal_grade=metal_grade,
+        at=at,
+        lock=lock,
+    )
     if not availability.allowed:
         raise ValidationError(availability.message)
 
@@ -204,11 +206,11 @@ def update_payment_operations_control(
 
 @transaction.atomic
 def publish_scheme_rate(
-    *, metal, rate_per_gram, published_by, notes="", effective_from=None
+    *, metal_grade, rate_per_gram, published_by, notes="", effective_from=None
 ):
     _validate_owner(published_by)
-    if metal not in SCHEME_RATE_PURITY:
-        raise ValidationError({"metal": "Select gold or silver."})
+    if metal_grade is None or not metal_grade.pk:
+        raise ValidationError({"metal_grade": "Select a metal grade."})
     try:
         normalized_rate = Decimal(str(rate_per_gram))
     except (InvalidOperation, TypeError, ValueError):
@@ -224,9 +226,10 @@ def publish_scheme_rate(
             effective_from, timezone.get_current_timezone()
         )
     scheme_rate = SchemeRate(
-        metal=metal,
+        metal=metal_grade.metal,
+        metal_grade=metal_grade,
         rate_per_gram=normalized_rate,
-        purity=SCHEME_RATE_PURITY[metal],
+        purity=metal_grade.fineness,
         effective_from=effective_from,
         published_by=published_by,
         notes=notes.strip(),
@@ -236,10 +239,11 @@ def publish_scheme_rate(
     record_audit_event(
         action=AuditEvent.Action.SCHEME_RATE_PUBLICATION,
         actor=published_by,
-        reason=f"Published a new {metal.lower()} Scheme Rate.",
+        reason=f"Published a new {metal_grade.display_name} Scheme Rate.",
         scheme_rate=scheme_rate,
         details={
-            "metal": metal,
+            "metal": metal_grade.metal,
+            "metal_grade": metal_grade.code,
             "rate_per_gram": str(scheme_rate.rate_per_gram),
             "purity": str(scheme_rate.purity),
             "effective_from": scheme_rate.effective_from.isoformat(),
@@ -323,12 +327,19 @@ def enroll_customer(
     *,
     customer,
     plan,
-    savings_mode,
+    metal_grade=None,
+    savings_mode=None,
     start_date=None,
     agreed_months=None,
     performed_by=None,
     reason="Customer enrolled through service.",
 ):
+    if metal_grade is not None:
+        savings_mode = metal_grade.metal
+    elif savings_mode != SchemeAccount.SavingsMode.CASH:
+        raise ValidationError(
+            {"metal_grade": "Select the exact metal grade for this enrolment."}
+        )
     if (
         savings_mode == SchemeAccount.SavingsMode.CASH
         and not cash_scheme_activity_is_enabled()
@@ -337,6 +348,14 @@ def enroll_customer(
     plan.full_clean()
     if not plan.active:
         raise ValidationError({"plan": "Only active plans can accept new enrolments."})
+    if metal_grade is not None and not SchemePlanOffering.objects.filter(
+        plan=plan,
+        metal_grade=metal_grade,
+        active=True,
+    ).exists():
+        raise ValidationError(
+            {"metal_grade": "This metal grade is not offered by the selected plan."}
+        )
     start_date = start_date or timezone.localdate()
     agreed_months = agreed_months or plan.default_months
     if agreed_months < plan.minimum_months:
@@ -352,6 +371,7 @@ def enroll_customer(
         agreed_months=agreed_months,
         eligible_from=add_calendar_months(start_date, agreed_months),
         savings_mode=savings_mode,
+        metal_grade=metal_grade,
         amount_rule_snapshot=plan.amount_rule,
         frequency_rule_snapshot=plan.frequency_rule,
         fixed_amount_snapshot=plan.fixed_contribution_amount,
@@ -375,6 +395,7 @@ def enroll_customer(
         details={
             "scheme_number": account.scheme_number,
             "savings_mode": account.savings_mode,
+            "metal_grade": account.metal_grade.code if account.metal_grade_id else None,
             "agreed_months": account.agreed_months,
             "eligible_from": account.eligible_from.isoformat(),
         },
@@ -494,14 +515,14 @@ def validate_contribution_confirmation_allowed(contribution):
 
 
 def _lock_current_scheme_rate(contribution):
-    metal = contribution.scheme_account.savings_mode
-    if metal not in {SchemeRate.Metal.GOLD, SchemeRate.Metal.SILVER}:
+    metal_grade = contribution.scheme_account.metal_grade
+    if metal_grade is None:
         return contribution
     if contribution.scheme_rate_id:
         return contribution
-    scheme_rate = get_current_scheme_rate(metal)
+    scheme_rate = get_current_scheme_rate(metal_grade)
     if scheme_rate is None:
-        metal_name = contribution.scheme_account.get_savings_mode_display().split()[0]
+        metal_name = metal_grade.display_name
         raise ValidationError(
             f"{metal_name} contributions are temporarily unavailable because the "
             "current Scheme Rate has not been published."
@@ -522,7 +543,7 @@ def initiate_contribution(
 ):
     locked_account = SchemeAccount.objects.select_for_update().get(pk=scheme_account.pk)
     ensure_payment_initiation_allowed(
-        metal=locked_account.savings_mode,
+        metal_grade=locked_account.metal_grade,
         lock=True,
     )
     normalized_amount, period = validate_contribution_allowed(
@@ -759,14 +780,14 @@ def allocate_metal(*, contribution):
     if locked_contribution.status not in SUCCESSFUL_PAYMENT_STATUSES:
         raise ValidationError("Only a paid contribution can receive a metal allocation.")
 
-    metal = locked_contribution.scheme_account.savings_mode
-    if metal not in {SchemeRate.Metal.GOLD, SchemeRate.Metal.SILVER}:
+    metal_grade = locked_contribution.scheme_account.metal_grade
+    if metal_grade is None:
         raise ValidationError("Cash contributions do not receive a metal allocation.")
     scheme_rate = locked_contribution.scheme_rate
     if scheme_rate is None:
         raise ValidationError("This paid contribution has no locked Scheme Rate.")
-    if scheme_rate.metal != metal:
-        raise ValidationError("The locked Scheme Rate metal does not match the scheme.")
+    if scheme_rate.metal_grade_id != metal_grade.pk:
+        raise ValidationError("The locked Scheme Rate grade does not match the scheme.")
     if scheme_rate.rate_per_gram <= 0:
         raise ValidationError("The locked Scheme Rate must be greater than zero.")
 
@@ -778,7 +799,8 @@ def allocate_metal(*, contribution):
     allocation = MetalAllocation(
         contribution=locked_contribution,
         scheme_rate=scheme_rate,
-        metal=metal,
+        metal=metal_grade.metal,
+        metal_grade=metal_grade,
         quantity=quantity,
     )
     allocation.full_clean()
@@ -889,7 +911,7 @@ def initiate_razorpay_contribution(
     if getattr(gateway, "mode", None) not in GatewayMode.values:
         raise ImproperlyConfigured("The Razorpay payment mode is not configured.")
 
-    ensure_payment_initiation_allowed(metal=scheme_account.savings_mode)
+    ensure_payment_initiation_allowed(metal_grade=scheme_account.metal_grade)
 
     normalized_amount, period = validate_contribution_allowed(
         scheme_account, amount, contribution_date
@@ -946,7 +968,7 @@ def initiate_razorpay_contribution(
             .get(pk=contribution.pk)
         )
         ensure_payment_initiation_allowed(
-            metal=contribution.scheme_account.savings_mode,
+            metal_grade=contribution.scheme_account.metal_grade,
             lock=True,
         )
         if not contribution.scheme_rate_id:
@@ -1582,9 +1604,11 @@ def complete_redemption(
         "cash_bonus_amount": None,
         "gold_quantity": None,
         "silver_quantity": None,
+        "metal_grade": account.metal_grade,
     }
     if account.savings_mode == SchemeAccount.SavingsMode.CASH:
         values["cash_amount"] = normalized_amount
+        values["metal_grade"] = None
     elif account.savings_mode == SchemeAccount.SavingsMode.GOLD:
         values["gold_quantity"] = normalized_amount
     else:
@@ -1598,6 +1622,9 @@ def complete_redemption(
             and existing.cash_amount == values["cash_amount"]
             and existing.gold_quantity == values["gold_quantity"]
             and existing.silver_quantity == values["silver_quantity"]
+            and existing.metal_grade_id == (
+                values["metal_grade"].pk if values["metal_grade"] else None
+            )
             and existing.external_reference == external_reference
             and existing.notes == notes
         ):
@@ -1710,10 +1737,11 @@ def reverse_redemption(*, redemption, processed_by, reason):
 
 
 @transaction.atomic
-def record_scheme_plan_change(*, plan, actor, reason, before):
+def record_scheme_plan_change(*, plan, actor, reason, before, after_overrides=None):
     _validate_owner(actor)
+    after_overrides = after_overrides or {}
     after = {
-        key: str(getattr(plan, key))
+        key: str(after_overrides[key] if key in after_overrides else getattr(plan, key))
         for key in before
     }
     changed = {

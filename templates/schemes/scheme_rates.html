@@ -14,43 +14,30 @@
 </div>
 
 <div class="row g-3 mb-5">
-  <div class="col-md-6">
-    <div class="card stat-card stat-card--gold h-100"><div class="card-body p-4">
-      <div class="stat-label">Current Gold Scheme Rate</div>
-      {% if current_rates.GOLD %}
-      <div class="stat-value">₹{{ current_rates.GOLD.rate_per_gram|floatformat:4 }}/g</div>
+  {% for item in grade_rates %}
+  <div class="col-md-6 col-xl-4">
+    <div class="card stat-card {% if item.grade.metal == 'GOLD' %}stat-card--gold{% else %}stat-card--silver{% endif %} h-100"><div class="card-body p-4">
+      <div class="stat-label">Current {{ item.grade.display_name }} Scheme Rate</div>
+      {% if item.current_rate %}
+      <div class="stat-value">₹{{ item.current_rate.rate_per_gram|floatformat:4 }}/g</div>
       <div class="small text-muted mt-2">
-        Effective {{ current_rates.GOLD.effective_from|date:"d M Y, h:i A" }} ·
-        published by {{ current_rates.GOLD.published_by|default:"historical import" }}
+        Effective {{ item.current_rate.effective_from|date:"d M Y, h:i A" }} ·
+        published by {{ item.current_rate.published_by|default:"historical import" }}
       </div>
       {% else %}
-      <div class="alert alert-warning mt-3 mb-0">No Gold Scheme Rate has been published.</div>
+      <div class="alert alert-warning mt-3 mb-0">No {{ item.grade.display_name }} Scheme Rate has been published.</div>
       {% endif %}
-      <a class="btn btn-sm btn-outline-dark mt-3" href="?metal=GOLD#publish-rate">Publish new gold rate</a>
+      <a class="btn btn-sm btn-outline-dark mt-3" href="?grade={{ item.grade.code }}#publish-rate">Publish new {{ item.grade.display_name }} rate</a>
     </div></div>
   </div>
-  <div class="col-md-6">
-    <div class="card stat-card stat-card--silver h-100"><div class="card-body p-4">
-      <div class="stat-label">Current Silver Scheme Rate</div>
-      {% if current_rates.SILVER %}
-      <div class="stat-value">₹{{ current_rates.SILVER.rate_per_gram|floatformat:4 }}/g</div>
-      <div class="small text-muted mt-2">
-        Effective {{ current_rates.SILVER.effective_from|date:"d M Y, h:i A" }} ·
-        published by {{ current_rates.SILVER.published_by|default:"historical import" }}
-      </div>
-      {% else %}
-      <div class="alert alert-warning mt-3 mb-0">No Silver Scheme Rate has been published.</div>
-      {% endif %}
-      <a class="btn btn-sm btn-outline-dark mt-3" href="?metal=SILVER#publish-rate">Publish new silver rate</a>
-    </div></div>
-  </div>
+  {% endfor %}
 </div>
 
 <div class="row g-4" id="publish-rate">
   <div class="col-lg-5">
     <h2 class="h3">Publish a new Scheme Rate</h2>
     <p class="text-muted">Publication creates a new immutable record. It never edits an earlier rate.</p>
-    <form method="post" class="card form-card" novalidate data-gold-rate="{% if current_rates.GOLD %}{{ current_rates.GOLD.rate_per_gram }}{% endif %}" data-silver-rate="{% if current_rates.SILVER %}{{ current_rates.SILVER.rate_per_gram }}{% endif %}">
+    <form method="post" class="card form-card" novalidate data-rate-publication>
       {% csrf_token %}
       {{ form|crispy }}
       <div class="card shadow-none mb-3" id="rate-comparison"><div class="card-body small">
@@ -77,9 +64,9 @@
           {% for rate in rate_history %}
           <tr>
             <td>{{ rate.effective_from|date:"d M Y, h:i A" }}</td>
-            <td>{{ rate.get_metal_display }}</td>
+            <td>{{ rate.metal_grade.display_name }}</td>
             <td>₹{{ rate.rate_per_gram|floatformat:4 }}/g</td>
-            <td>{{ rate.purity }}</td>
+            <td>{{ rate.purity|floatformat:-4 }}</td>
             <td>{{ rate.published_by|default:"Historical import" }}</td>
             <td>{{ rate.notes|default:"—" }}</td>
           </tr>
@@ -95,12 +82,14 @@
 
 {% block javascript %}
 {{ block.super }}
+{{ current_rate_values|json_script:"current-grade-rates" }}
 <script>
   (() => {
-    const form = document.querySelector("form[data-gold-rate]");
+    const form = document.querySelector("form[data-rate-publication]");
     if (!form) return;
-    const metal = document.getElementById("id_metal");
+    const grade = document.getElementById("id_metal_grade");
     const newRate = document.getElementById("id_rate_per_gram");
+    const currentRates = JSON.parse(document.getElementById("current-grade-rates").textContent);
     const warning = document.getElementById("large-change-warning");
     const output = {
       current: document.getElementById("comparison-current"),
@@ -109,7 +98,7 @@
       percentage: document.getElementById("comparison-percentage")
     };
     const refresh = () => {
-      const currentText = metal.value === "GOLD" ? form.dataset.goldRate : form.dataset.silverRate;
+      const currentText = currentRates[grade.value];
       const current = Number(currentText);
       const next = Number(newRate.value);
       output.current.textContent = Number.isFinite(current) ? `₹${current.toFixed(4)}/g` : "Not published";
@@ -126,7 +115,7 @@
       output.percentage.textContent = `${percentage > 0 ? "+" : ""}${percentage.toFixed(2)}%`;
       warning.classList.toggle("d-none", Math.abs(percentage) <= 5);
     };
-    metal.addEventListener("change", refresh);
+    grade.addEventListener("change", refresh);
     newRate.addEventListener("input", refresh);
     refresh();
   })();

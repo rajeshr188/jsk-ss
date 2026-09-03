@@ -31,6 +31,60 @@ class Customer(models.Model):
         return f"{self.customer_number} — {self.full_name}"
 
 
+class MetalGrade(models.Model):
+    class Metal(models.TextChoices):
+        GOLD = "GOLD", "Gold"
+        SILVER = "SILVER", "Silver"
+
+    GOLD_22K_916 = "GOLD_22K_916"
+    GOLD_24K_9999 = "GOLD_24K_9999"
+    SILVER_999 = "SILVER_999"
+
+    code = models.CharField(max_length=30, unique=True)
+    metal = models.CharField(max_length=10, choices=Metal.choices)
+    display_name = models.CharField(max_length=80)
+    fineness = models.DecimalField(max_digits=7, decimal_places=6)
+    display_order = models.PositiveSmallIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["display_order", "code"]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(metal__in=["GOLD", "SILVER"]),
+                name="metal_grade_valid_metal",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(
+                    fineness__gt=Decimal("0"),
+                    fineness__lte=Decimal("1"),
+                ),
+                name="metal_grade_valid_fineness",
+            ),
+        ]
+
+    def clean(self):
+        super().clean()
+        if not self.pk:
+            return
+        stored = type(self).objects.filter(pk=self.pk).first()
+        if stored is None:
+            return
+        immutable_fields = ("code", "metal", "display_name", "fineness")
+        if any(getattr(stored, field) != getattr(self, field) for field in immutable_fields):
+            raise ValidationError("Financial metal-grade definitions are immutable.")
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Financial metal-grade definitions cannot be deleted.")
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.display_name
+
+
 class SchemePlan(models.Model):
     class AmountRule(models.TextChoices):
         FIXED = "FIXED", "Fixed"
@@ -161,6 +215,34 @@ class SchemePlan(models.Model):
         return f"{self.name} ({self.code})"
 
 
+class SchemePlanOffering(models.Model):
+    plan = models.ForeignKey(
+        SchemePlan,
+        on_delete=models.PROTECT,
+        related_name="metal_offerings",
+    )
+    metal_grade = models.ForeignKey(
+        MetalGrade,
+        on_delete=models.PROTECT,
+        related_name="plan_offerings",
+    )
+    active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["plan__name", "metal_grade__display_order", "metal_grade__code"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["plan", "metal_grade"],
+                name="plan_offering_unique_grade",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.plan.name} — {self.metal_grade.display_name}"
+
+
 class SchemeAccount(models.Model):
     class SavingsMode(models.TextChoices):
         CASH = "CASH", "Cash Savings"
@@ -179,6 +261,13 @@ class SchemeAccount(models.Model):
     agreed_months = models.PositiveSmallIntegerField(validators=[MinValueValidator(12)])
     eligible_from = models.DateField()
     savings_mode = models.CharField(max_length=10, choices=SavingsMode.choices)
+    metal_grade = models.ForeignKey(
+        MetalGrade,
+        on_delete=models.PROTECT,
+        related_name="scheme_accounts",
+        null=True,
+        blank=True,
+    )
     status = models.CharField(max_length=24, choices=Status.choices, default=Status.ACTIVE)
     amount_rule_snapshot = models.CharField(max_length=10, choices=SchemePlan.AmountRule.choices)
     frequency_rule_snapshot = models.CharField(
@@ -234,7 +323,56 @@ class SchemeAccount(models.Model):
                 condition=models.Q(cash_bonus_minimum_months_snapshot__gte=12),
                 name="account_cash_bonus_months_gte_12",
             ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(savings_mode="CASH", metal_grade__isnull=True)
+                    | models.Q(
+                        savings_mode__in=["GOLD", "SILVER"],
+                        metal_grade__isnull=False,
+                    )
+                ),
+                name="account_metal_grade_required",
+            ),
         ]
+
+    def clean(self):
+        super().clean()
+        errors = {}
+        if self.savings_mode == self.SavingsMode.CASH:
+            if self.metal_grade_id is not None:
+                errors["metal_grade"] = "Cash accounts cannot have a metal grade."
+        elif self.savings_mode in {self.SavingsMode.GOLD, self.SavingsMode.SILVER}:
+            if self.metal_grade_id is None:
+                errors["metal_grade"] = "Metal accounts require an exact metal grade."
+            elif self.metal_grade.metal != self.savings_mode:
+                errors["metal_grade"] = "The metal grade must match the savings mode."
+        if self.pk:
+            stored = type(self).objects.filter(pk=self.pk).only("metal_grade_id").first()
+            if stored is not None and stored.metal_grade_id != self.metal_grade_id:
+                errors["metal_grade"] = "An enrolled account's metal grade is immutable."
+        if errors:
+            raise ValidationError(errors)
+
+    def save(self, *args, **kwargs):
+        update_fields = kwargs.get("update_fields")
+        protected_fields_are_written = update_fields is None or bool(
+            {"savings_mode", "metal_grade"}.intersection(update_fields)
+        )
+        if self.pk and protected_fields_are_written:
+            stored = (
+                type(self)
+                .objects.filter(pk=self.pk)
+                .only("savings_mode", "metal_grade_id")
+                .first()
+            )
+            if stored is not None and (
+                stored.savings_mode != self.savings_mode
+                or stored.metal_grade_id != self.metal_grade_id
+            ):
+                raise ValidationError(
+                    "An enrolled account's savings mode and metal grade are immutable."
+                )
+        return super().save(*args, **kwargs)
 
     @property
     def effective_status(self):
@@ -249,6 +387,12 @@ class SchemeAccount(models.Model):
         if self.effective_status == self.Status.ACTIVE:
             return "Active — not yet eligible"
         return self.Status(self.effective_status).label
+
+    @property
+    def entitlement_name(self):
+        if self.metal_grade_id:
+            return self.metal_grade.display_name
+        return self.get_savings_mode_display()
 
     def __str__(self):
         return f"{self.scheme_number} — {self.customer.full_name}"
@@ -506,12 +650,17 @@ class WebhookProcessingAttempt(models.Model):
 
 class SchemeRate(models.Model):
     class Metal(models.TextChoices):
-        GOLD = "GOLD", "24K Gold"
+        GOLD = "GOLD", "Gold"
         SILVER = "SILVER", "Silver"
 
     metal = models.CharField(max_length=10, choices=Metal.choices)
+    metal_grade = models.ForeignKey(
+        MetalGrade,
+        on_delete=models.PROTECT,
+        related_name="scheme_rates",
+    )
     rate_per_gram = models.DecimalField(max_digits=14, decimal_places=4)
-    purity = models.DecimalField(max_digits=6, decimal_places=4)
+    purity = models.DecimalField(max_digits=7, decimal_places=6)
     effective_from = models.DateTimeField(default=timezone.now)
     published_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -542,10 +691,21 @@ class SchemeRate(models.Model):
         ]
         indexes = [
             models.Index(
-                fields=["metal", "effective_from"],
-                name="scheme_rate_metal_time_idx",
+                fields=["metal_grade", "effective_from"],
+                name="scheme_rate_grade_time_idx",
             ),
         ]
+
+    def clean(self):
+        super().clean()
+        errors = {}
+        if self.metal_grade_id:
+            if self.metal != self.metal_grade.metal:
+                errors["metal"] = "The rate metal must match its metal grade."
+            if self.purity != self.metal_grade.fineness:
+                errors["purity"] = "The rate purity must match its metal grade."
+        if errors:
+            raise ValidationError(errors)
 
     def save(self, *args, **kwargs):
         if self.pk and type(self).objects.filter(pk=self.pk).exists():
@@ -553,7 +713,7 @@ class SchemeRate(models.Model):
         return super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.get_metal_display()} scheme rate at ₹{self.rate_per_gram}/g"
+        return f"{self.metal_grade.display_name} scheme rate at ₹{self.rate_per_gram}/g"
 
 
 class PaymentOperationsControl(models.Model):
@@ -653,6 +813,11 @@ class MetalAllocation(models.Model):
         related_name="metal_allocations",
     )
     metal = models.CharField(max_length=10, choices=SchemeRate.Metal.choices)
+    metal_grade = models.ForeignKey(
+        MetalGrade,
+        on_delete=models.PROTECT,
+        related_name="metal_allocations",
+    )
     quantity = models.DecimalField(max_digits=18, decimal_places=6)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -669,13 +834,27 @@ class MetalAllocation(models.Model):
             ),
         ]
 
+    def clean(self):
+        super().clean()
+        errors = {}
+        if self.metal_grade_id and self.metal != self.metal_grade.metal:
+            errors["metal"] = "The allocation metal must match its metal grade."
+        if self.scheme_rate_id and self.metal_grade_id:
+            if self.scheme_rate.metal_grade_id != self.metal_grade_id:
+                errors["scheme_rate"] = "The allocation grade must match its locked rate."
+        if self.contribution_id and self.metal_grade_id:
+            if self.contribution.scheme_account.metal_grade_id != self.metal_grade_id:
+                errors["metal_grade"] = "The allocation grade must match the scheme account."
+        if errors:
+            raise ValidationError(errors)
+
     def save(self, *args, **kwargs):
         if self.pk and type(self).objects.filter(pk=self.pk).exists():
             raise ValidationError("Historical metal allocations are immutable.")
         return super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.quantity} g {self.get_metal_display()}"
+        return f"{self.quantity} g {self.metal_grade.display_name}"
 
 
 class Redemption(models.Model):
@@ -709,6 +888,13 @@ class Redemption(models.Model):
     )
     silver_quantity = models.DecimalField(
         max_digits=18, decimal_places=6, null=True, blank=True
+    )
+    metal_grade = models.ForeignKey(
+        MetalGrade,
+        on_delete=models.PROTECT,
+        related_name="redemptions",
+        null=True,
+        blank=True,
     )
     external_reference = models.CharField(max_length=120, blank=True)
     notes = models.TextField(blank=True)
@@ -767,6 +953,13 @@ class Redemption(models.Model):
                 ),
                 name="redemption_cash_components_match_total",
             ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(cash_amount__isnull=False, metal_grade__isnull=True)
+                    | models.Q(cash_amount__isnull=True, metal_grade__isnull=False)
+                ),
+                name="redemption_metal_grade_required",
+            ),
         ]
         indexes = [
             models.Index(
@@ -782,6 +975,8 @@ class Redemption(models.Model):
         mode = self.scheme_account.savings_mode
         errors = {}
         if mode == SchemeAccount.SavingsMode.CASH:
+            if self.metal_grade_id is not None:
+                errors["metal_grade"] = "Cash redemptions cannot have a metal grade."
             if self.cash_amount is None:
                 errors["cash_amount"] = "Cash schemes must redeem a cash entitlement."
             elif (
@@ -798,6 +993,8 @@ class Redemption(models.Model):
             if self.settlement_type == self.SettlementType.METAL:
                 errors["settlement_type"] = "Cash schemes cannot use metal settlement."
         elif mode == SchemeAccount.SavingsMode.GOLD:
+            if self.metal_grade_id != self.scheme_account.metal_grade_id:
+                errors["metal_grade"] = "Redemption grade must match the scheme account."
             if self.gold_quantity is None:
                 errors["gold_quantity"] = "Gold schemes must redeem a gold entitlement."
             if self.settlement_type == self.SettlementType.CASH:
@@ -810,6 +1007,8 @@ class Redemption(models.Model):
             ):
                 errors["cash_amount"] = "Metal redemptions cannot contain cash components."
         elif mode == SchemeAccount.SavingsMode.SILVER:
+            if self.metal_grade_id != self.scheme_account.metal_grade_id:
+                errors["metal_grade"] = "Redemption grade must match the scheme account."
             if self.silver_quantity is None:
                 errors["silver_quantity"] = "Silver schemes must redeem a silver entitlement."
             if self.settlement_type == self.SettlementType.CASH:
@@ -844,9 +1043,7 @@ class Redemption(models.Model):
     def entitlement_unit(self):
         if self.cash_amount is not None:
             return "INR"
-        if self.gold_quantity is not None:
-            return "g gold"
-        return "g silver"
+        return f"g {self.metal_grade.display_name}"
 
     def __str__(self):
         return f"{self.redemption_number} — {self.scheme_account.scheme_number}"

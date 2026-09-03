@@ -9,6 +9,7 @@ from django.test import TransactionTestCase
 class RazorpayModeMigrationTests(TransactionTestCase):
     migrate_from = ("schemes", "0010_manual_scheme_rates")
     migrate_to = ("schemes", "0011_razorpay_gateway_mode")
+    restore_to = ("schemes", "0016_graded_rate_precision_labels")
     accounts_target = ("accounts", "0002_customuser_role")
 
     def setUp(self):
@@ -19,7 +20,7 @@ class RazorpayModeMigrationTests(TransactionTestCase):
         self.old_apps = executor.loader.project_state(targets).apps
 
     def tearDown(self):
-        MigrationExecutor(connection).migrate([self.migrate_to, self.accounts_target])
+        MigrationExecutor(connection).migrate([self.restore_to, self.accounts_target])
         super().tearDown()
 
     def test_existing_razorpay_records_are_truthfully_backfilled_as_test_mode(self):

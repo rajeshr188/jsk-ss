@@ -34,7 +34,8 @@ from pages.permissions import (
     EDITORIAL_WORKFLOW,
     editorial_permission_configuration_errors,
 )
-from schemes.models import SchemePlan
+from schemes.models import MetalGrade, SchemePlan, SchemePlanOffering
+from schemes.tests.grade_helpers import metal_grade_for
 
 
 @override_settings(PUBLIC_CATALOGUE_ENABLED=False)
@@ -145,7 +146,16 @@ class PublicPricingPageTests(TestCase):
             "active": active,
             "publicly_listed": publicly_listed,
         }
-        return SchemePlan.objects.create(**values)
+        plan = SchemePlan.objects.create(**values)
+        SchemePlanOffering.objects.create(
+            plan=plan,
+            metal_grade=metal_grade_for(
+                MetalGrade.Metal.GOLD,
+                code=MetalGrade.GOLD_22K_916,
+            ),
+            active=True,
+        )
+        return plan
 
     def test_only_active_explicitly_published_plans_are_public(self):
         published = self.make_plan(code="PUBLIC", publicly_listed=True)

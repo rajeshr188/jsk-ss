@@ -17,10 +17,12 @@
   </div>
 </div>
 
-{% if not payment_availability.GOLD.allowed or not payment_availability.SILVER.allowed %}
+{% if payments_restricted %}
 <div class="alert alert-warning mt-3 mb-0" role="status">
   <strong>New online contributions are restricted.</strong>
-  Gold: {{ payment_availability.GOLD.message }} Silver: {{ payment_availability.SILVER.message }}
+  {% for item in payment_availability.values %}{% if not item.availability.allowed %}
+  {{ item.grade.display_name }}: {{ item.availability.message }}
+  {% endif %}{% endfor %}
   <a class="alert-link" href="{% url 'schemes:payment_operations' %}">Review payment operations</a>
 </div>
 {% endif %}
@@ -83,40 +85,25 @@
       </div>
     </div>
   </div>
+  {% for liability in liabilities.metal_grades %}
   <div class="col-12 col-lg-4">
-    <div class="card stat-card stat-card--gold h-100">
+    <div class="card stat-card {% if liability.metal_grade.metal == 'GOLD' %}stat-card--gold{% else %}stat-card--silver{% endif %} h-100">
       <div class="card-body">
-        <div class="stat-label">Gold obligation</div>
-        <div class="stat-value">{{ liabilities.gold.quantity|floatformat:6 }} g</div>
-        {% if liabilities.gold.scheme_rate is not None %}
+        <div class="stat-label">{{ liability.metal_grade.display_name }} obligation</div>
+        <div class="stat-value">{{ liability.quantity|floatformat:3 }} g</div>
+        {% if liability.scheme_rate is not None %}
         <dl class="row small mt-3 mb-0">
-          <dt class="col-6">Current Scheme Rate</dt><dd class="col-6 text-end">₹{{ liabilities.gold.scheme_rate|floatformat:4 }}/g</dd>
-          <dt class="col-6">Indicative exposure</dt><dd class="col-6 text-end fw-semibold">₹{{ liabilities.gold.indicative_exposure|floatformat:2 }}</dd>
+          <dt class="col-6">Current Scheme Rate</dt><dd class="col-6 text-end">₹{{ liability.scheme_rate|floatformat:4 }}/g</dd>
+          <dt class="col-6">Indicative exposure</dt><dd class="col-6 text-end fw-semibold">₹{{ liability.indicative_exposure|floatformat:2 }}</dd>
         </dl>
-        <div class="small text-muted mt-2">Published {{ liabilities.gold.rate_published_at|date:"d M Y, h:i A" }}</div>
+        <div class="small text-muted mt-2">Published {{ liability.rate_published_at|date:"d M Y, h:i A" }}</div>
         {% else %}
         <div class="alert alert-warning small mt-3 mb-0">Scheme Rate unavailable. Gram liability remains authoritative.</div>
         {% endif %}
       </div>
     </div>
   </div>
-  <div class="col-12 col-lg-4">
-    <div class="card stat-card stat-card--silver h-100">
-      <div class="card-body">
-        <div class="stat-label">Silver obligation</div>
-        <div class="stat-value">{{ liabilities.silver.quantity|floatformat:6 }} g</div>
-        {% if liabilities.silver.scheme_rate is not None %}
-        <dl class="row small mt-3 mb-0">
-          <dt class="col-6">Current Scheme Rate</dt><dd class="col-6 text-end">₹{{ liabilities.silver.scheme_rate|floatformat:4 }}/g</dd>
-          <dt class="col-6">Indicative exposure</dt><dd class="col-6 text-end fw-semibold">₹{{ liabilities.silver.indicative_exposure|floatformat:2 }}</dd>
-        </dl>
-        <div class="small text-muted mt-2">Published {{ liabilities.silver.rate_published_at|date:"d M Y, h:i A" }}</div>
-        {% else %}
-        <div class="alert alert-warning small mt-3 mb-0">Scheme Rate unavailable. Gram liability remains authoritative.</div>
-        {% endif %}
-      </div>
-    </div>
-  </div>
+  {% endfor %}
 </div>
 
 <p class="small text-muted mt-3 mb-0">Metal exposure is indicative at the current published Scheme Rate. Historical allocations remain unchanged, and metal exposure is not added to cash principal.</p>

@@ -34,7 +34,7 @@
   </div>
   {% if rate_unavailable %}
   <div class="alert alert-danger" role="alert">
-    {{ scheme_account.get_savings_mode_display|cut:" Savings" }} contributions are temporarily unavailable because the current Scheme Rate has not been published.
+    {{ scheme_account.entitlement_name }} contributions are temporarily unavailable because the current Scheme Rate has not been published.
   </div>
   {% else %}
   <form method="post" class="card form-card" novalidate>

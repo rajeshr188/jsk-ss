@@ -1718,6 +1718,91 @@ deployment evidence.
 - No artificial Live mismatch or payment was created. The isolated Test-mode recovery
   exercise and an already-processed Live event replay remain explicit acceptance items.
 
+### Grade-specific Scheme Rate deployment (`schemes.0015` and `0016`)
+
+[ADR-0007](decisions/ADR-0007-grade-specific-metal-rates.md) introduces exact
+`MetalGrade` contracts. This is a controlled-cutover migration, not a normal rolling
+deployment. After `0015`, the old image cannot create a new metal allocation because
+it does not populate the required grade field. Do not run old and candidate web
+containers concurrently across this migration, and do not use the old image as a
+write-capable rollback after the schema changes.
+
+Before the maintenance window, use **Payment operations** to enable the audited
+global pause and confirm no customer can create or resume Checkout. Reconcile or
+retire every pending Razorpay order. Record the candidate/rollback image identities,
+an immediately current managed PostgreSQL recovery point, the exact financial
+baseline, and the owner/operator names. Then run from the candidate image against
+the still-old schema:
+
+```bash
+docker compose --env-file .env.production -f compose.production.yml \
+  run --rm --no-deps web python manage.py check --deploy --fail-level ERROR
+
+docker compose --env-file .env.production -f compose.production.yml \
+  run --rm --no-deps web python manage.py check_graded_metal_rates
+
+docker compose --env-file .env.production -f compose.production.yml \
+  run --rm --no-deps web python manage.py migrate --plan
+
+docker compose --env-file .env.production -f compose.production.yml \
+  exec -T web python manage.py check_financial_exceptions
+
+docker compose --env-file .env.production -f compose.production.yml \
+  exec -T web python manage.py check_razorpay_live_readiness
+```
+
+The grade preflight must report `status=ready` with zero paid-unallocated metal
+payments, open Razorpay orders, allocation-contract mismatches, and
+redemption-contract mismatches. The reviewed migration plan must contain only
+`schemes.0015_graded_metal_rates` and
+`schemes.0016_graded_rate_precision_labels`. Stop if either condition differs.
+
+Keep the audited global pause enabled. Stop public traffic and the old application,
+apply the migrations once with the candidate, and verify the new grade mappings
+before reopening the stack:
+
+```bash
+docker compose --env-file .env.production -f compose.production.yml stop caddy web
+
+docker compose --env-file .env.production -f compose.production.yml \
+  run --rm --no-deps web python manage.py migrate --noinput
+
+docker compose --env-file .env.production -f compose.production.yml \
+  run --rm --no-deps web python manage.py check_graded_metal_rates
+
+docker compose --env-file .env.production -f compose.production.yml \
+  run --rm --no-deps web python manage.py showmigrations schemes
+
+docker compose --env-file .env.production -f compose.production.yml \
+  up -d --force-recreate --no-deps web
+```
+
+Wait for `web` to be healthy, validate/recreate Caddy using the standard procedure,
+and require external Live/Ready responses to identify the candidate release. Rerun
+the grade, financial-exception, Razorpay-live-readiness, payment-operations, and
+financial-baseline checks. Verify in the owner UI that:
+
+- every historical Gold account, locked rate, allocation, and redemption is labelled
+  **24K Gold** with unchanged INR and six-decimal source quantities;
+- every historical Silver record is labelled **999 Silver** and is unchanged;
+- existing plans offer **22K Gold** and **999 Silver** for new enrolment, while legacy
+  **24K Gold** is disabled unless the owner deliberately enables it;
+- 22K, 24K, and 999 Silver have independent rate cards and liabilities; and
+- customer pages show three-decimal grams while owner settlement/export paths retain
+  exact six-decimal values.
+
+Publish and review a `GOLD_22K_916` Scheme Rate before accepting a 22K payment. Keep
+the global pause until the owner confirms the rate, plan offerings, a controlled
+enrolment, and a non-chargeable/approved payment smoke path. Unpausing must be a
+separate audited owner action.
+
+If migration or candidate verification fails, keep traffic and payments stopped.
+Prefer fixing and rolling forward with a compatible candidate. Restoring the recorded
+database and old image is safe only if the operator proves no payment, webhook,
+allocation, redemption, rate, enrolment, or other financial write occurred after the
+recovery point; otherwise reconcile every later event before any restore. Never
+reverse these migrations casually or relabel 24K history as 22K.
+
 ### Live reconciliation, payment-error refund, and dispute boundary
 
 - **Daily reconciliation:** compare Razorpay Live captured payments against the owner

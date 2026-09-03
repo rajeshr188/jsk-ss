@@ -15,7 +15,7 @@
   {% for account in scheme_accounts %}
   <div class="col-12 col-xl-6"><article class="card stat-card {% if account.savings_mode == 'CASH' %}stat-card--cash{% elif account.savings_mode == 'GOLD' %}stat-card--gold{% else %}stat-card--silver{% endif %} h-100"><div class="card-body p-4">
     <div class="d-flex flex-wrap justify-content-between gap-3 mb-4">
-      <div><p class="page-eyebrow mb-1">{{ account.plan.name }}</p><h2 class="h3 mb-1">{{ account.get_savings_mode_display }}</h2><div class="text-secondary">{{ account.scheme_number }}</div></div>
+      <div><p class="page-eyebrow mb-1">{{ account.plan.name }}</p><h2 class="h3 mb-1">{{ account.entitlement_name }}</h2><div class="text-secondary">{{ account.scheme_number }}</div></div>
       <span class="badge text-bg-secondary align-self-start">{{ account.effective_status_label }}</span>
     </div>
     <dl class="row mb-0 border-top pt-3">
@@ -29,10 +29,10 @@
       <dt class="col-sm-5">Projected bonus</dt><dd class="col-sm-7">₹{{ account.cash_bonus.projected_bonus|floatformat:2 }}</dd>
       <dt class="col-sm-5">Redeemable amount</dt><dd class="col-sm-7 fw-semibold">₹{{ account.cash_bonus.redeemable_amount|floatformat:2 }}</dd>
       {% elif account.savings_mode == 'GOLD' %}
-      <dt class="col-sm-5">Gold accumulated</dt><dd class="col-sm-7 fw-semibold">{{ account.metal_balance|floatformat:6 }} g</dd>
+      <dt class="col-sm-5">{{ account.entitlement_name }} accumulated</dt><dd class="col-sm-7 fw-semibold">{{ account.metal_balance|floatformat:3 }} g</dd>
       <dt class="col-sm-5">Current Scheme Rate</dt><dd class="col-sm-7">{% if account.current_scheme_rate %}₹{{ account.current_scheme_rate.rate_per_gram|floatformat:4 }}/g{% else %}Not published{% endif %}</dd>
       {% elif account.savings_mode == 'SILVER' %}
-      <dt class="col-sm-5">Silver accumulated</dt><dd class="col-sm-7 fw-semibold">{{ account.metal_balance|floatformat:6 }} g</dd>
+      <dt class="col-sm-5">{{ account.entitlement_name }} accumulated</dt><dd class="col-sm-7 fw-semibold">{{ account.metal_balance|floatformat:3 }} g</dd>
       <dt class="col-sm-5">Current Scheme Rate</dt><dd class="col-sm-7">{% if account.current_scheme_rate %}₹{{ account.current_scheme_rate.rate_per_gram|floatformat:4 }}/g{% else %}Not published{% endif %}</dd>
       {% endif %}
     </dl>

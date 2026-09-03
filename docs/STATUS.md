@@ -2,15 +2,16 @@
 
 ## Current milestone
 
-`FW-PAY-003` webhook recovery is deployed in production release
-`69eecf9cdebb4f660ae4ed898476e18a6fe32905` under ADR-0006. Additive migration
-`schemes.0014`, append-only processing attempts, permanent-versus-transient HTTP
-classification, and owner-only provider-backed dry-run/apply recovery pass all 254
-tests and the production health, financial, Razorpay, migration, and route gates.
-The isolated Test-mode recovery exercise, already-processed Live event replay,
-external alerting, and secret-rotation rehearsal remain open. Production payment
-operations remain schedule-disabled with both metals open; this rollout did not
-change that owner-controlled policy.
+Grade-specific metal contracts and rates are implemented locally on
+`agent/graded-metal-rates` under ADR-0007. The additive `schemes.0015`/`0016`
+migration preserves existing Gold history as `GOLD_24K_9999`, preserves Silver as
+`SILVER_999`, adds `GOLD_22K_916` for new enrolments, and never converts historical
+quantities. Rates, locks, allocations, redemptions, liabilities, payment controls,
+and customer records now remain separated by exact grade. Customer-facing gram
+values use three decimals; source records, calculations, owner settlement entry,
+integrity checks, and exports retain six decimals. Production remains on release
+`69eecf9cdebb4f660ae4ed898476e18a6fe32905` through `schemes.0014` until this
+branch is reviewed, merged, and deployed with the documented controlled cutover.
 
 ## Completed
 
@@ -50,8 +51,13 @@ change that owner-controlled policy.
 - Fixed/variable amount validation and once-per-month/flexible frequency rules.
 - Debug-only mock payment adapter with verified, idempotent confirmation.
 - Customer cash balance/history and owner contribution visibility.
-- Owner-published, append-only gold/silver Scheme Rates with fixed established purity,
+- Owner-published, append-only, exact-grade Scheme Rates with immutable fineness,
   effective timestamps, optional notes, publication identity, and immutable audit records.
+- Immutable reference grades `GOLD_22K_916`, `GOLD_24K_9999`, and `SILVER_999`,
+  plan-to-grade offerings, exact-grade enrolment contracts, and no cross-grade rate
+  derivation or fallback.
+- Additive legacy-history mapping from generic Gold to `GOLD_24K_9999` and generic
+  Silver to `SILVER_999`, with no rewriting or conversion of stored grams.
 - Current-rate selection from the database with a 5% large-change confirmation safeguard.
 - Scheme Rate locking before mock payment or Razorpay order creation; no rate means no
   metal payment/order, while cash contributions remain available.
@@ -260,6 +266,10 @@ change that owner-controlled policy.
 
 ## In progress
 
+- Grade-specific metal rates await review, merge, and the controlled production
+  rollout documented for `schemes.0015`/`0016`. Before reopening Gold payments after
+  that cutover, the owner must publish a current `GOLD_22K_916` Scheme Rate; 24K and
+  Silver rate histories remain independent and are never used as fallbacks.
 - `FW-MEDIA-002` tracks the accepted backup/recovery and usage-monitoring deferral.
   It does not block catalogue use, but approved source photographs must
   remain outside R2 until an isolated backup target and restore proof exist.
@@ -286,6 +296,13 @@ change that owner-controlled policy.
 
 ## Known limitations
 
+- The application intentionally does not derive one grade's Scheme Rate from another.
+  Every offered grade needs its own owner-published current rate; that fail-closed
+  behavior can temporarily block contributions for only the missing grade.
+- Three-decimal customer gram values are rounded display values, not a reduction in
+  accounting precision. Exact settlement entry and all authoritative quantities
+  remain six-decimal; customer wording must not imply the displayed value is the
+  complete source record.
 - Razorpay exposes no order-cancellation operation. A reconciled `ABANDONED`
   contribution therefore retains its locked Scheme Rate and provider reference for
   evidence; a replacement locks the then-current rate, while any late capture is a
@@ -335,9 +352,12 @@ change that owner-controlled policy.
 - Wagtail 7.4.3 and Django 6.0.4 pass system checks, production-shaped deploy checks,
   static collection, and an applied-migration check. Wagtail, taggit, and catalogue
   migrations are applied to production PostgreSQL.
-- Local and production PostgreSQL 16 migrations are applied through
-  `schemes.0013_payment_operations_control`.
-- 254 tests pass, including Razorpay webhook response classification, append-only
+- Local PostgreSQL 16 migrations are applied through
+  `schemes.0016_graded_rate_precision_labels`; production remains through
+  `schemes.0014_webhook_processing_attempt` pending the controlled grade rollout.
+- 262 tests pass, including exact 22K/24K rate separation, six-decimal allocation,
+  immutable enrolment grade, legacy old-schema preflight, history mapping, default
+  plan offerings, Razorpay webhook response classification, append-only
   processing-attempt evidence, provider-backed owner dry-run/apply recovery,
   mismatch/abandoned safeguards, recovery authorization and idempotency,
   payment-operations schedule/manual/kill-switch precedence,
@@ -425,8 +445,9 @@ change that owner-controlled policy.
 
 ## Next recommended step
 
-Exercise the full review/dry-run/apply path in an isolated Razorpay Test-mode
-environment. Then use Razorpay Dashboard to replay one already-processed Live capture
-event and prove it creates an `ALREADY_FINAL` attempt with no duplicate entitlement.
-Continue daily Razorpay reconciliation; external stale-event alerting and synchronized
-webhook-secret rotation remain deferred production work.
+Complete the full regression and review this branch. After merge, deploy with the
+documented `schemes.0015`/`0016` controlled cutover: pause payments, prove zero
+pending orders, capture a current recovery point and financial baseline, run the
+old-schema grade preflight, migrate once with the candidate image, run the migrated
+integrity gate, publish a current `GOLD_22K_916` Scheme Rate, and only then reopen
+Gold payments. Verify legacy 24K balances and new 22K enrolment separately.

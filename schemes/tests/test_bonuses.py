@@ -18,6 +18,7 @@ from schemes.selectors import (
     get_owner_liability_summary,
 )
 from schemes.services import complete_redemption, create_customer, enroll_customer
+from schemes.tests.grade_helpers import enrolment_grade_kwargs
 
 
 def paid_at(value):
@@ -71,7 +72,7 @@ class CashBonusTests(TestCase):
         account = enroll_customer(
             customer=self.customer,
             plan=self.plan,
-            savings_mode=mode,
+            **enrolment_grade_kwargs(self.plan, mode),
             start_date=date(2025, 1, 1),
             agreed_months=agreed_months,
         )

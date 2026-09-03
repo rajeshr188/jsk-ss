@@ -12,8 +12,17 @@
 - Keep the Razorpay payment provider behind its explicit boundary. Metal allocation has no external rate-provider boundary: it uses only immutable database-backed `SchemeRate` records.
 - Razorpay secrets remain server-side. Verify browser callbacks against the locally stored order, verify captured payment details through the server API, and validate webhooks against the unmodified request body before parsing.
 - Webhook handlers must use the provider event ID for idempotency and route entitlement changes through the same contribution services as browser callbacks.
-- Publish Scheme Rates only through `publish_scheme_rate`; owner authorization, positive `Decimal` validation, fixed metal fineness, publication metadata, and audit recording belong in that service.
-- A gold/silver contribution must lock the current applicable Scheme Rate before any payment or Razorpay order is created. Allocation must use only that lock. Never query a current rate after payment confirmation to calculate historical entitlement.
+- Publish Scheme Rates only through `publish_scheme_rate`; owner authorization,
+  positive `Decimal` validation, immutable grade fineness, publication metadata, and
+  audit recording belong in that service. Never derive one grade's customer rate
+  from another grade without a later approved architecture decision.
+- A metal contribution must lock the current Scheme Rate for its exact immutable
+  account grade before any payment or Razorpay order is created. Allocation must use
+  only that grade-matched lock. Never query a current rate after payment confirmation
+  to calculate historical entitlement.
+- Keep metal quantity storage, calculations, owner settlement entry, and exports at
+  six decimal places. Customer-facing templates may render three decimals, but must
+  never write the rounded display value back to a financial record.
 - A verified metal payment is durably `PAID_UNALLOCATED` until allocation succeeds.
   The state covers allocation exceptions and process interruption. Owner retry must
   call the idempotent allocation service and reuse the original locked Scheme Rate

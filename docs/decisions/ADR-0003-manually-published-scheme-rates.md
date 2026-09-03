@@ -17,10 +17,12 @@ applied migrations and the production database must not be reset.
 ## Decision
 
 Gold and silver allocations use only append-only `SchemeRate` records manually
-published by an active owner. A publication stores metal, established fineness,
-positive INR rate per gram, effective timestamp, publisher, publication timestamp,
-and optional notes, and creates an immutable audit event. Current means the latest
-applicable publication for that metal; there is no mutable active flag.
+published by an active owner. Under
+[ADR-0007](ADR-0007-grade-specific-metal-rates.md), a publication belongs to one
+exact metal grade and stores its base metal, fineness, positive INR rate per gram,
+effective timestamp, publisher, publication timestamp, and optional notes, and
+creates an immutable audit event. Current means the latest applicable publication
+for that grade; there is no mutable active flag or cross-grade fallback.
 
 The current `SchemeRate` is locked to a pending metal contribution before mock
 payment initiation or Razorpay order creation. Payment confirmation and webhook
@@ -44,7 +46,7 @@ cannot change an existing checkout or historical grams. Manual-entry risk is
 mitigated with positive `Decimal` validation, fixed fineness, an owner-only audited
 service, a current/new/difference display, and additional confirmation above 5%.
 
-Owners must publish and review gold and silver rates operationally. Metal checkout
+Owners must publish and review each offered grade operationally. Metal checkout
 is unavailable if a rate has not been published. A pending contribution currently
 retains its lock without expiry; coordinated Scheme Rate/Razorpay order expiry is
 deferred because it would add lifecycle complexity.

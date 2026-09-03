@@ -15,6 +15,7 @@
 - [x] Milestone 10 — Audit and exceptions
 - [x] Milestone 11 — Receipts and statements
 - [x] Post-MVP simplification — Manually published Scheme Rates locked before payment
+- [x] Post-MVP modularity — Exact-grade metal contracts, rates, allocations, and redemptions
 
 Milestones are vertical increments. Each must leave migrations, tests, system checks, user flows, and canonical documentation coherent before the next begins.
 

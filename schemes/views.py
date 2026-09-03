@@ -33,6 +33,7 @@ from .forms import (
 from .models import (
     Contribution,
     Customer,
+    MetalGrade,
     PaymentOperationsControl,
     PaymentWebhookEvent,
     WebhookProcessingAttempt,
@@ -130,15 +131,23 @@ def _local_iso(value):
 def owner_dashboard(request):
     activity = get_owner_activity_summary()
     exceptions = get_owner_exception_queue()
+    payment_availability = {
+        grade.code: {
+            "grade": grade,
+            "availability": get_payment_availability(metal_grade=grade),
+        }
+        for grade in MetalGrade.objects.all()
+    }
     context = {
         "activity": activity,
         "exception_count": len(exceptions),
         "eligibility": get_redemption_eligibility_summary(),
         "liabilities": get_owner_liability_summary(),
-        "payment_availability": {
-            metal: get_payment_availability(metal=metal)
-            for metal in (SchemeRate.Metal.GOLD, SchemeRate.Metal.SILVER)
-        },
+        "payment_availability": payment_availability,
+        "payments_restricted": any(
+            not item["availability"].allowed
+            for item in payment_availability.values()
+        ),
     }
     return render(request, "schemes/owner_dashboard.html", context)
 
@@ -170,19 +179,29 @@ def payment_operations(request):
         else:
             messages.success(request, "Payment operations policy updated.")
             return redirect("schemes:payment_operations")
+    grade_availability = {
+        grade.code: get_payment_availability(metal_grade=grade)
+        for grade in MetalGrade.objects.all()
+    }
+    pending_exposure = get_pending_payment_exposure()
     return render(
         request,
         "schemes/payment_operations.html",
         {
             "control": control,
             "form": form,
-            "availability": {
-                metal: get_payment_availability(metal=metal)
-                for metal in (SchemeRate.Metal.GOLD, SchemeRate.Metal.SILVER)
-            },
-            "pending_exposure": get_pending_payment_exposure(),
+            "operations_rows": [
+                {
+                    "grade": grade,
+                    "availability": grade_availability[grade.code],
+                    "exposure": pending_exposure[grade.code],
+                }
+                for grade in MetalGrade.objects.all()
+            ],
             "environment_kill_switch": (
-                get_payment_availability(metal=SchemeRate.Metal.GOLD).code
+                get_payment_availability(
+                    metal_grade=MetalGrade.objects.get(code=MetalGrade.GOLD_22K_916)
+                ).code
                 == "ENVIRONMENT_KILL_SWITCH"
             ),
         },
@@ -192,26 +211,32 @@ def payment_operations(request):
 @owner_required
 def scheme_rates(request):
     current_rates = get_current_scheme_rates()
-    selected_metal = request.POST.get("metal") or request.GET.get(
-        "metal", SchemeRate.Metal.GOLD
-    )
-    if selected_metal not in SchemeRate.Metal.values:
-        selected_metal = SchemeRate.Metal.GOLD
+    metal_grades = list(MetalGrade.objects.all())
+    if request.method == "POST":
+        selected_grade = MetalGrade.objects.filter(
+            pk=request.POST.get("metal_grade")
+        ).first()
+    else:
+        selected_grade = MetalGrade.objects.filter(
+            code=request.GET.get("grade", MetalGrade.GOLD_22K_916)
+        ).first()
+    if selected_grade is None:
+        selected_grade = MetalGrade.objects.get(code=MetalGrade.GOLD_22K_916)
     form = SchemeRatePublishForm(
         request.POST or None,
         current_rates=current_rates,
-        initial={"metal": selected_metal},
+        initial={"metal_grade": selected_grade},
     )
     if request.method == "POST" and form.is_valid():
         scheme_rate = publish_scheme_rate(
-            metal=form.cleaned_data["metal"],
+            metal_grade=form.cleaned_data["metal_grade"],
             rate_per_gram=form.cleaned_data["rate_per_gram"],
             notes=form.cleaned_data["notes"],
             published_by=request.user,
         )
         messages.success(
             request,
-            f"Published {scheme_rate.get_metal_display()} Scheme Rate at "
+            f"Published {scheme_rate.metal_grade.display_name} Scheme Rate at "
             f"₹{scheme_rate.rate_per_gram:.4f}/g.",
         )
         return redirect("schemes:scheme_rates")
@@ -222,7 +247,16 @@ def scheme_rates(request):
             "current_rates": current_rates,
             "rate_history": get_scheme_rate_history(),
             "form": form,
-            "selected_metal": selected_metal,
+            "grade_rates": [
+                {"grade": grade, "current_rate": current_rates.get(grade.code)}
+                for grade in metal_grades
+            ],
+            "current_rate_values": {
+                str(rate.metal_grade_id): str(rate.rate_per_gram)
+                for rate in current_rates.values()
+                if rate is not None
+            },
+            "selected_grade": selected_grade,
         },
     )
 
@@ -737,7 +771,7 @@ def customer_enroll(request, customer_id):
             account = enroll_customer(
                 customer=customer,
                 plan=form.cleaned_data["plan"],
-                savings_mode=form.cleaned_data["savings_mode"],
+                metal_grade=form.cleaned_data["metal_grade"],
                 start_date=form.cleaned_data["start_date"],
                 agreed_months=form.cleaned_data["agreed_months"],
                 performed_by=request.user,
@@ -766,7 +800,9 @@ def plan_list(request):
 def plan_add(request):
     form = SchemePlanForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
-        plan = form.save()
+        with transaction.atomic():
+            plan = form.save()
+            form.save_offerings()
         messages.success(request, f"Plan {plan.name} created.")
         return redirect("schemes:plan_list")
     return render(request, "schemes/plan_form.html", {"form": form})
@@ -780,13 +816,26 @@ def plan_edit(request, plan_id):
         tracked_fields = SchemePlanChangeForm.Meta.fields
         stored_plan = SchemePlan.objects.get(pk=plan.pk)
         before = {field: getattr(stored_plan, field) for field in tracked_fields}
+        before["metal_grades"] = tuple(
+            stored_plan.metal_offerings.filter(active=True)
+            .order_by("metal_grade__code")
+            .values_list("metal_grade__code", flat=True)
+        )
         with transaction.atomic():
             plan = form.save()
+            form.save_offerings()
             event = record_scheme_plan_change(
                 plan=plan,
                 actor=request.user,
                 reason=form.cleaned_data["audit_reason"],
                 before=before,
+                after_overrides={
+                    "metal_grades": tuple(
+                        plan.metal_offerings.filter(active=True)
+                        .order_by("metal_grade__code")
+                        .values_list("metal_grade__code", flat=True)
+                    )
+                },
             )
         if event is None:
             messages.info(request, "No plan values changed.")
@@ -807,7 +856,7 @@ def my_schemes(request):
         if account.savings_mode == SchemeAccount.SavingsMode.CASH:
             account.cash_bonus = get_cash_bonus_summary(account)
         else:
-            account.current_scheme_rate = get_current_scheme_rate(account.savings_mode)
+            account.current_scheme_rate = get_current_scheme_rate(account.metal_grade)
     return render(
         request,
         "schemes/my_schemes.html",
@@ -826,12 +875,12 @@ def my_scheme_detail(request, scheme_number):
     if account is None:
         raise Http404
     current_scheme_rate = (
-        get_current_scheme_rate(account.savings_mode)
+        get_current_scheme_rate(account.metal_grade)
         if account.savings_mode != SchemeAccount.SavingsMode.CASH
         else None
     )
     payment_availability = (
-        get_payment_availability(metal=account.savings_mode)
+        get_payment_availability(metal_grade=account.metal_grade)
         if account.savings_mode
         in {SchemeAccount.SavingsMode.GOLD, SchemeAccount.SavingsMode.SILVER}
         else None
@@ -879,7 +928,7 @@ def pay_contribution(request, scheme_number):
             status=403,
         )
     current_scheme_rate = (
-        get_current_scheme_rate(account.savings_mode)
+        get_current_scheme_rate(account.metal_grade)
         if account.savings_mode
         in {SchemeAccount.SavingsMode.GOLD, SchemeAccount.SavingsMode.SILVER}
         else None
@@ -888,7 +937,7 @@ def pay_contribution(request, scheme_number):
     response_status = 200
     form = ContributionForm(request.POST or None, scheme_account=account)
     payment_availability = (
-        get_payment_availability(metal=account.savings_mode)
+        get_payment_availability(metal_grade=account.metal_grade)
         if account.savings_mode
         in {SchemeAccount.SavingsMode.GOLD, SchemeAccount.SavingsMode.SILVER}
         else None
@@ -957,8 +1006,8 @@ def pay_contribution(request, scheme_number):
                 else:
                     allocation = contribution.metal_allocation
                     message = (
-                        f"Mock payment successful. {allocation.quantity} g "
-                        f"{allocation.get_metal_display()} was allocated."
+                        f"Mock payment successful. {allocation.quantity:.3f} g "
+                        f"{allocation.metal_grade.display_name} was allocated."
                     )
                 messages.success(request, message)
             elif contribution.status == Contribution.Status.PAID_UNALLOCATED:
@@ -1035,7 +1084,7 @@ def razorpay_checkout(request, contribution_id):
             scheme_number=contribution.scheme_account.scheme_number,
         )
     availability = get_payment_availability(
-        metal=contribution.scheme_account.savings_mode
+        metal_grade=contribution.scheme_account.metal_grade
     )
     if not availability.allowed:
         messages.warning(request, availability.message)
@@ -1196,7 +1245,8 @@ def retry_contribution_allocation(request, contribution_id):
     else:
         messages.success(
             request,
-            f"Allocated {allocation.quantity} g {allocation.get_metal_display()} "
+            f"Allocated {allocation.quantity:.6f} g "
+            f"{allocation.metal_grade.display_name} "
             f"for {contribution.scheme_account.customer.full_name}.",
         )
     return redirect("schemes:contribution_list")

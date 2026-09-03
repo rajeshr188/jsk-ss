@@ -17,6 +17,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from schemes.forms import WebhookRecoveryForm
+from schemes.tests.grade_helpers import enrolment_grade_kwargs, metal_grade_for
 from schemes.models import (
     AuditEvent,
     Contribution,
@@ -142,7 +143,7 @@ def make_account(*, email, mode=SchemeAccount.SavingsMode.CASH, frequency=None):
     account = enroll_customer(
         customer=customer,
         plan=plan,
-        savings_mode=mode,
+        **enrolment_grade_kwargs(plan, mode),
         start_date=timezone.localdate(),
     )
     return customer, account
@@ -407,9 +408,10 @@ class RazorpayLiveReadinessCommandTests(TestCase):
             mode=SchemeAccount.SavingsMode.GOLD,
         )
         SchemeRate.objects.create(
+            metal_grade=account.metal_grade,
             metal=SchemeRate.Metal.GOLD,
             rate_per_gram=Decimal("12500.0000"),
-            purity=Decimal("0.9999"),
+            purity=account.metal_grade.fineness,
             effective_from=timezone.now(),
         )
         contribution = initiate_contribution(
@@ -782,7 +784,7 @@ class RazorpayServiceTests(TestCase):
             role=get_user_model().Role.OWNER,
         )
         publish_scheme_rate(
-            metal=SchemeRate.Metal.GOLD,
+            metal_grade=metal_grade_for(SchemeRate.Metal.GOLD),
             rate_per_gram=Decimal("12500.0000"),
             published_by=owner,
         )
@@ -906,7 +908,7 @@ class RazorpayWebhookRecoveryTests(TestCase):
             role=get_user_model().Role.OWNER,
         )
         publish_scheme_rate(
-            metal=SchemeRate.Metal.GOLD,
+            metal_grade=metal_grade_for(SchemeRate.Metal.GOLD),
             rate_per_gram=Decimal("12500.0000"),
             published_by=self.owner,
         )
@@ -1168,9 +1170,10 @@ class RazorpayViewTests(TestCase):
             mode=SchemeAccount.SavingsMode.GOLD,
         )
         SchemeRate.objects.create(
+            metal_grade=self.account.metal_grade,
             metal=SchemeRate.Metal.GOLD,
             rate_per_gram=Decimal("12500.0000"),
-            purity=Decimal("0.9999"),
+            purity=self.account.metal_grade.fineness,
             effective_from=timezone.now(),
         )
         self.client.force_login(self.customer.user)

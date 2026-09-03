@@ -22,11 +22,14 @@ graph TD
   U[accounts.CustomUser] -->|one-to-one| C[Customer]
   C -->|one-to-many| A[SchemeAccount]
   P[SchemePlan] -->|one-to-many| A
+  P -->|offers through SchemePlanOffering| G[MetalGrade]
+  G -->|fixed on each metal account| A
   A -->|one-to-many| N[Contribution]
   A -->|one-to-many| D[Redemption]
   D -->|zero-or-one| V[RedemptionReversal]
   W[PaymentWebhookEvent] -->|zero-or-many| N
   U -->|publishes| R[SchemeRate]
+  G -->|has independent rates| R
   R -->|locked by many| N
   N -->|zero-or-one| M[MetalAllocation]
   R -->|used by many| M
@@ -38,14 +41,18 @@ graph TD
   U -->|last updates| O
 ```
 
-`SchemeAccount` snapshots plan terms during enrolment so later plan edits do not change existing agreements. Cash agreements also snapshot the bonus policy version, percentage, and minimum qualifying duration.
+`SchemeAccount` snapshots plan terms during enrolment so later plan edits do not
+change existing agreements. A metal account also fixes one immutable `MetalGrade`;
+changing a plan offering affects only future enrolment. Cash agreements snapshot the
+bonus policy version, percentage, and minimum qualifying duration.
 
 ## Layers
 
 - Views authorize, validate forms, call services/selectors, and render or redirect.
 - Services own transactional mutations such as customer creation, enrolment, and redemption.
 - Selectors own reusable reads such as customer scheme summaries.
-- The owner liability selector derives separate INR, gold, and silver obligations and applies current published Scheme Rates only for indicative metal exposure.
+- The owner liability selector derives separate INR and exact-grade metal obligations
+  and applies each grade's current published Scheme Rate only for indicative exposure.
 - The redemption eligibility selector partitions open accounts from their snapshotted `eligible_from` dates into non-overlapping owner forecast windows without mutating account state.
 - Document selectors assemble printable receipts and lifetime statements directly from verified contributions, immutable allocation snapshots, redemptions, reversals, and current derived entitlement. They do not copy financial data into a reporting ledger.
 - Models and database constraints protect structural invariants.
@@ -87,7 +94,13 @@ If public signup is introduced later, registration must create a complete custom
 
 ## Financial source of truth
 
-Cash principal is derived by selectors from `PAID` contribution records less completed, unreversed cash redemptions; pending and failed attempts contribute zero. Gold and silver balances are derived from immutable `MetalAllocation` quantities attached one-to-one to paid contributions less completed, unreversed redemptions in the matching metal. Historical `SchemeRate`, allocation, contribution, `Redemption`, and `RedemptionReversal` records remain visible and reject application-level edits. There are no mutable balance fields.
+Cash principal is derived by selectors from `PAID` contribution records less
+completed, unreversed cash redemptions; pending and failed attempts contribute zero.
+Each metal-grade balance is derived from immutable `MetalAllocation` quantities
+attached one-to-one to paid contributions less completed, unreversed redemptions in
+the same grade. Historical `SchemeRate`, allocation, contribution, `Redemption`, and
+`RedemptionReversal` records remain visible and reject application-level edits. There
+are no mutable balance fields.
 
 Cash bonus is derived from immutable paid contributions and the versioned policy snapshot on the agreement. Before eligibility it is projected exposure only. At eligibility it becomes earned from principal paid by the eligibility-date cutoff. Cash redemptions store immutable principal and bonus components whose sum equals the cash settlement total; partial settlement consumes principal first. There is no mutable bonus balance field.
 
@@ -110,9 +123,23 @@ An eligible recovery reuses the existing idempotent confirmation and original
 locked-rate allocation services and appends an immutable audit event. Abandoned,
 failed, unknown, or mismatched payments remain manual reconciliation/refund work.
 
-`SchemeRate` is the only authoritative conversion rate for gold and silver. An active owner publishes append-only, timestamped gold or silver records through a service-layer mutation and audited owner UI. Current means the latest rate for that metal whose `effective_from` is applicable. There is no mutable active flag and no external rate provider in the allocation path.
+`SchemeRate` is the only authoritative conversion rate for a supported metal grade.
+Under [ADR-0007](decisions/ADR-0007-grade-specific-metal-rates.md), an active owner
+publishes append-only, timestamped records independently for `GOLD_22K_916`,
+`GOLD_24K_9999`, and `SILVER_999`. Current means the latest applicable record for
+that exact grade. There is no mutable active flag, cross-grade fallback, derived
+purity rate, or external rate provider in the allocation path.
 
-A metal contribution selects and stores its `SchemeRate` and `rate_locked_at` before mock payment initiation or Razorpay order creation. A missing current rate blocks the contribution before any payable order exists. Payment confirmation and metal allocation use separate transactions: verified metal payment is first durably `PAID_UNALLOCATED`, and allocation changes it to `PAID` only after creating at most one immutable `MetalAllocation` from the stored lock. Exceptions or process interruption therefore remain visible and retryable, while a later publication cannot affect the allocation. Owner retry reuses the original locked rate and never obtains a replacement quote.
+A metal contribution selects and stores the `SchemeRate` matching its immutable
+account grade and `rate_locked_at` before mock payment initiation or Razorpay order
+creation. A missing rate for that grade blocks the contribution before any payable
+order exists; another Gold or Silver grade cannot substitute. Payment confirmation
+and metal allocation use separate transactions: verified metal payment is first
+durably `PAID_UNALLOCATED`, and allocation changes it to `PAID` only after creating
+at most one immutable, grade-matched `MetalAllocation` from the stored lock.
+Exceptions or process interruption therefore remain visible and retryable, while a
+later publication cannot affect the allocation. Owner retry reuses the original
+locked rate and never obtains a replacement quote.
 
 New payment exposure is additionally governed by the domain-specific control accepted
 in [ADR-0005](decisions/ADR-0005-payment-operations-circuit-breaker.md). A default-off
@@ -144,7 +171,11 @@ immutable provider snapshot remain for audit because Razorpay exposes no Orders 
 cancellation. A late capture is routed to the financial-exception workflow rather
 than silently creating entitlement.
 
-Metal contribution: owner publishes Scheme Rate → customer selects Pay now → current applicable rate is locked → payment starts and is verified → one immutable six-decimal allocation uses the lock → derived gold or silver gram balance. No published rate means no payment initiation.
+Metal contribution: owner publishes an exact-grade Scheme Rate → customer selects
+Pay now → the account's grade-matched current rate is locked → payment starts and is
+verified → one immutable six-decimal allocation uses the lock → derived balance for
+that grade. Customer pages show three-decimal grams without changing the stored
+quantity. No grade-matched published rate means no payment initiation.
 
 Payment operations: environment fail-safe, audited global/per-metal pause, optional
 India-local business-hours window, and optional current-day rate review combine to
@@ -153,7 +184,12 @@ in-flight callback or signed captured webhook bypasses this new-exposure gate an
 completes idempotent locked-rate allocation. Routine closing hours never suspend
 financial reconciliation.
 
-Owner liability dashboard: paid cash contributions → outstanding INR principal plus earned bonus, with projected bonus exposure shown separately; paid metal allocations → separate gold/silver grams → current published Scheme Rates → separate indicative INR exposures. Projected bonus and Scheme Rates used for display do not alter historical records. Activity counters use successful payment timestamps in the India-local calendar day and month.
+Owner liability dashboard: paid cash contributions → outstanding INR principal plus
+earned bonus, with projected bonus exposure shown separately; paid metal allocations
+→ separate grams per exact grade → each grade's current published Scheme Rate →
+separate indicative INR exposures. Projected bonus and Scheme Rates used for display
+do not alter historical records. Activity counters use successful payment timestamps
+in the India-local calendar day and month.
 
 Eligibility: India-local current date plus each agreement's `eligible_from` snapshot → active/not-yet-eligible or redemption-eligible display state → exclusive owner windows for eligible now, days 1–30, 31–60, and 61–90. Eligibility is a read model; it does not create a redemption or persist an automatic status change.
 

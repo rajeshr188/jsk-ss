@@ -23,6 +23,7 @@ from schemes.models import (
 )
 from schemes.operations import get_payment_availability
 from schemes.payments import PaymentOrder
+from schemes.tests.grade_helpers import enrolment_grade_kwargs, metal_grade_for
 from schemes.services import (
     confirm_razorpay_contribution,
     create_customer,
@@ -94,13 +95,13 @@ class PaymentOperationsTests(TestCase):
         self.account = enroll_customer(
             customer=self.customer,
             plan=self.plan,
-            savings_mode=SchemeAccount.SavingsMode.GOLD,
+            **enrolment_grade_kwargs(self.plan, SchemeAccount.SavingsMode.GOLD),
             start_date=timezone.localdate(),
             performed_by=self.owner,
             reason="Set up operations-control test account.",
         )
         self.rate = publish_scheme_rate(
-            metal=SchemeRate.Metal.GOLD,
+            metal_grade=metal_grade_for(SchemeRate.Metal.GOLD),
             rate_per_gram=Decimal("12500.0000"),
             published_by=self.owner,
             notes="Operations-control test rate.",
@@ -144,8 +145,8 @@ class PaymentOperationsTests(TestCase):
         self.assertEqual(windows[6].closes_at.hour, 13)
         self.assertTrue(
             get_payment_availability(
-                metal=SchemeRate.Metal.GOLD,
-                at=datetime(2026, 8, 31, 23, 0, tzinfo=IST),
+                metal_grade=self.account.metal_grade,
+                at=timezone.now(),
             ).allowed
         )
 
@@ -156,7 +157,7 @@ class PaymentOperationsTests(TestCase):
         )
 
         availability = get_payment_availability(
-            metal=SchemeRate.Metal.GOLD,
+            metal_grade=metal_grade_for(SchemeRate.Metal.GOLD),
             at=datetime(2026, 8, 31, 21, 0, tzinfo=IST),
         )
 
@@ -184,7 +185,9 @@ class PaymentOperationsTests(TestCase):
         today_window.closes_at = time(23, 59, 59)
         today_window.save(update_fields=["opens_at", "closes_at"])
 
-        availability = get_payment_availability(metal=SchemeRate.Metal.GOLD)
+        availability = get_payment_availability(
+            metal_grade=metal_grade_for(SchemeRate.Metal.GOLD)
+        )
 
         self.assertFalse(availability.allowed)
         self.assertEqual(availability.code, "RATE_REVIEW_REQUIRED")
@@ -192,8 +195,12 @@ class PaymentOperationsTests(TestCase):
     def test_manual_metal_pause_is_audited_with_before_and_after_state(self):
         self.update_control(gold_pause=True, customer_message="Rates under review.")
 
-        gold = get_payment_availability(metal=SchemeRate.Metal.GOLD)
-        silver = get_payment_availability(metal=SchemeRate.Metal.SILVER)
+        gold = get_payment_availability(
+            metal_grade=metal_grade_for(SchemeRate.Metal.GOLD)
+        )
+        silver = get_payment_availability(
+            metal_grade=metal_grade_for(SchemeRate.Metal.SILVER)
+        )
         event = AuditEvent.objects.get(
             action=AuditEvent.Action.PAYMENT_OPERATIONS_CHANGE
         )
@@ -206,7 +213,9 @@ class PaymentOperationsTests(TestCase):
 
     @override_settings(PAYMENT_INITIATION_KILL_SWITCH=True)
     def test_environment_kill_switch_overrides_database_open_state(self):
-        availability = get_payment_availability(metal=SchemeRate.Metal.GOLD)
+        availability = get_payment_availability(
+            metal_grade=metal_grade_for(SchemeRate.Metal.GOLD)
+        )
 
         self.assertFalse(availability.allowed)
         self.assertEqual(availability.code, "ENVIRONMENT_KILL_SWITCH")
@@ -376,5 +385,6 @@ class PaymentOperationsTests(TestCase):
         value = output.getvalue()
         self.assertIn("payment_operations_check status=ok", value)
         self.assertIn("schedule_enabled=false", value)
-        self.assertIn("gold=OPEN", value)
+        self.assertIn("gold_22k_916=RATE_UNAVAILABLE", value)
+        self.assertIn("gold_24k_9999=OPEN", value)
         self.assertNotIn("test-key-secret", value)

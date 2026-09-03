@@ -7,6 +7,7 @@ from django.utils import timezone
 
 from schemes.models import Contribution, MetalAllocation, SchemeAccount, SchemePlan, SchemeRate
 from schemes.services import create_customer, enroll_customer, publish_scheme_rate
+from schemes.tests.grade_helpers import enrolment_grade_kwargs, metal_grade_for
 
 
 def make_gold_account():
@@ -27,7 +28,7 @@ def make_gold_account():
     account = enroll_customer(
         customer=customer,
         plan=plan,
-        savings_mode=SchemeAccount.SavingsMode.GOLD,
+        **enrolment_grade_kwargs(plan, SchemeAccount.SavingsMode.GOLD),
         start_date=timezone.localdate(),
     )
     return customer, account
@@ -47,7 +48,7 @@ class MetalContributionViewTests(TestCase):
 
     def publish_gold(self):
         return publish_scheme_rate(
-            metal=SchemeRate.Metal.GOLD,
+            metal_grade=metal_grade_for(SchemeRate.Metal.GOLD),
             rate_per_gram=Decimal("12500.0000"),
             published_by=self.owner,
         )
@@ -59,7 +60,7 @@ class MetalContributionViewTests(TestCase):
             {"amount": "10000.00"},
             follow=True,
         )
-        self.assertContains(response, "0.800000 g")
+        self.assertContains(response, "0.800 g")
         self.assertContains(response, "12500.0000")
         self.assertContains(response, "24K Gold was allocated")
         self.assertEqual(MetalAllocation.objects.count(), 1)
