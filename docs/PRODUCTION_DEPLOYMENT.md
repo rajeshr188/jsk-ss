@@ -7,9 +7,10 @@ explicit Razorpay Test/Live modes, and manually published Scheme Rate build. Dev
 
 ## Production-readiness boundary
 
-Production release `51c931a9de5b27349f781cd44670c41307479dfa` runs the accepted
+Production release `315f836ac0717fbaaf2d8d90268471ac1670e5b1` runs the accepted
 Live Razorpay path, provider-backed abandoned-order lifecycle, exact-grade metal
-contracts, payment-operations circuit breaker, and snapshotted Checkout expiry. This
+contracts, payment-operations circuit breaker, snapshotted Checkout expiry, and
+audited in-store cash contribution channel. This
 proves those bounded application controls, but the deployment is **not fully
 production-gate complete**:
 
@@ -1981,6 +1982,47 @@ At each daily cash close, compare physical cash and the external books with the 
 ledger's received, reversed, and net figures. Investigate every difference, every
 `PAID_UNALLOCATED` receipt, and every integrity-check failure before redemption. Keep
 the flag and payment initiation paused during unresolved financial incidents.
+
+#### Completed production rollout evidence — 2026-09-03
+
+- PR `#33` merged FW-PAY-006 as release
+  `315f836ac0717fbaaf2d8d90268471ac1670e5b1`. The Linode candidate image was
+  `jsk-savings:315f836ac0717fbaaf2d8d90268471ac1670e5b1`, identity
+  `sha256:3484b41b607ca1a6bdef7926b0ba5b13b133244c6fc678d589d4fb9a5479f881`;
+  rollback evidence retained image/release
+  `51c931a9de5b27349f781cd44670c41307479dfa`.
+- The operator recorded the 2026-09-03 4:00 PM IST managed PostgreSQL recovery
+  point. The pre-migration baseline was six customers, eight scheme accounts, zero
+  pending Razorpay contributions, zero cash principal/earned bonus,
+  `0.010227` g `GOLD_22K_916`, `0.329272` g `GOLD_24K_9999`, and zero
+  `SILVER_999`. Every grade was under `MANUAL_GLOBAL_PAUSE`, provider
+  reconciliation found no candidate or review case, and the financial-exception,
+  Razorpay Live-readiness, and exact-grade checks all reported `status=ok`.
+- The reviewed plan contained only
+  `schemes.0018_in_store_cash_contributions`. It applied successfully with Caddy
+  and the old web service stopped; every Scheme migration through `0018` then
+  reported applied. The candidate became healthy while the feature remained
+  disabled, Caddy was recreated, and public Live/Ready identified the exact release.
+  The new integrity command reported zero missing receipts, invalid mappings,
+  reversed-without-correction rows, status mismatches, and lifecycle errors.
+- The owner reviewed the gated record-cash path, role restrictions, exact-grade
+  scheme selection, confirmation fields, and legacy/customer exclusions without
+  creating a record.
+  `IN_STORE_CASH_CONTRIBUTIONS_ENABLED=True` was then activated while payment
+  operations remained paused; all paths were reviewed again before a separately
+  audited reopening of 22K Gold, legacy 24K Gold, and 999 Silver.
+- The first legitimate physical-cash transaction created receipt `CASH-150E7205`
+  and contribution `15` for INR `1000.00`. Account, locked-rate, and allocation
+  grades all matched `GOLD_22K_916`; INR `14667.0000`/g produced exactly
+  `0.068180` g. The contribution was `PAID` through `IN_STORE_CASH`, remained
+  unreversed, and had exactly one receipt audit event. The receipt, customer
+  statement, owner ledger, and CSV were verified, while the daily cash summary
+  reconciled INR `1000.00` received, zero reversed, and INR `1000.00` net.
+- Final in-store-cash, financial-exception, exact-grade, Razorpay Live-readiness,
+  payment-operations, container-health, liveness, and readiness gates all passed.
+  Application-only rollback to the old image is no longer write-safe after `0018`;
+  any recovery must keep payments paused and reconcile all activity after the
+  recorded recovery point before restoring the database and old image together.
 
 ### Live reconciliation, payment-error refund, and dispute boundary
 
