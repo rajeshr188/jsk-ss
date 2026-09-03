@@ -2,14 +2,13 @@
 
 ## Current milestone
 
-`FW-PAY-006` is implemented locally under ADR-0009 and awaits CI/production rollout.
-It treats showroom cash as an owner-recorded payment channel for an existing exact-
-grade metal scheme, not a CASH savings product. A two-step receipt confirmation uses
-the current Scheme Rate and existing payment controls; immutable receipt/reversal
+`FW-PAY-006` completed production rollout and acceptance on 2026-09-03. Showroom
+cash is now an owner-recorded payment channel for an existing exact-grade metal
+scheme, not a CASH savings product. The two-step receipt confirmation uses the
+current Scheme Rate and existing payment controls; immutable receipt/reversal
 ledgers, a terminal `REVERSED` contribution state, customer documents, CSV evidence,
 daily reconciliation, and a non-mutating integrity command preserve the financial
-trail. Production remains default-off until controlled migration `schemes.0018` and
-owner workflow verification pass.
+trail.
 
 ## Completed
 
@@ -281,13 +280,21 @@ owner workflow verification pass.
   contributions, zero pending rows missing expiry, and green payment-operations,
   financial-exception, Live-readiness, exact-grade, container-health, liveness, and
   readiness gates before a separately audited reopening of all three grades.
+- `FW-PAY-006` completed production rollout and acceptance on 2026-09-03 in release
+  `315f836ac0717fbaaf2d8d90268471ac1670e5b1`. From the recorded 2026-09-03
+  4:00 PM IST PostgreSQL recovery point, migration
+  `schemes.0018_in_store_cash_contributions` applied as the only planned operation
+  after every grade was paused and the pending Razorpay count was zero. The feature
+  remained disabled through migration, integrity, health, and owner-path review,
+  then was enabled before a separately audited reopening. The first legitimate
+  showroom receipt, `CASH-150E7205`, recorded INR `1000.00` on contribution `15`,
+  locked the `GOLD_22K_916` rate of INR `14667.0000`/g, and allocated exactly
+  `0.068180` g. The immutable receipt, one audit event, statement, owner ledger, and
+  CSV reconciled; cash, financial-exception, exact-grade, and Razorpay Live-readiness
+  checks remained green.
 
 ## In progress
 
-- `FW-PAY-006` local implementation is complete on
-  `agent/in-store-cash-contributions`. CI review, default-off production migration,
-  integrity checks, owner UI review, flag activation, and reconciliation of the first
-  legitimate showroom receipt remain.
 - `FW-PAY-003` retains two no-mutation recovery evidence exercises: an isolated
   Test-mode review/dry-run/apply case and an idempotent replay of an already-processed
   Live capture. External alerting and coordinated secret rotation remain separately
@@ -308,14 +315,15 @@ owner workflow verification pass.
   CA are in place, SSH access is verified, Docker is installed, and the owned domain
   returns liveness and PostgreSQL readiness `200` through Caddy-managed HTTPS;
   paid external alert exercises remain deferred.
-- Production release `51c931a9de5b27349f781cd44670c41307479dfa` is healthy with
-  migrations through `schemes.0017_contribution_checkout_expiry`,
+- Production release `315f836ac0717fbaaf2d8d90268471ac1670e5b1` is healthy with
+  migrations through `schemes.0018_in_store_cash_contributions`,
   `catalog.0001_initial`, `pages.0001_initial`,
   and `accounts.0003_customerinvitation_and_more`
   applied, zero reported financial exceptions, successful live/ready checks, valid
   catalogue authorization, working R2 media, published reviewed products, and public
   Jewellery links in the primary and footer navigation. Its production metal-only
-  boundary and payment-operations manual pause/resume both passed owner/customer smoke.
+  boundary, payment-operations manual pause/resume, and audited in-store cash receipt
+  path passed owner/customer smoke.
 
 ## Known limitations
 
@@ -376,9 +384,8 @@ owner workflow verification pass.
 - Wagtail 7.4.3 and Django 6.0.4 pass system checks, production-shaped deploy checks,
   static collection, and an applied-migration check. Wagtail, taggit, and catalogue
   migrations are applied to production PostgreSQL.
-- Local PostgreSQL 16 migrations are defined through
-  `schemes.0018_in_store_cash_contributions`; production remains applied through
-  `schemes.0017_contribution_checkout_expiry` until the controlled rollout.
+- Local and production PostgreSQL 16 migrations are applied through
+  `schemes.0018_in_store_cash_contributions`.
 - 280 tests pass, including in-store cash preview/confirmation, owner authorization,
   payment-control and pending-Razorpay blocking, exact-rate locking, idempotency,
   durable allocation, bounded append-only correction, active-balance removal, daily

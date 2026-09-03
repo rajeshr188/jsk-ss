@@ -216,7 +216,7 @@ here are not implemented behavior and do not relax the financial invariants in
   and reopened every grade through a separate audited owner action.
   Razorpay exposes no order cancellation API, so the provider-inspection residual
   risk and manual late-capture refund boundary remain.
-- **FW-PAY-006 — In-store cash tender for metal contributions (in progress):**
+- **FW-PAY-006 — In-store cash tender for metal contributions (completed 2026-09-03):**
   [ADR-0009](decisions/ADR-0009-in-store-cash-contributions.md) defines cash as a
   payment channel for exact-grade metal schemes, not a CASH savings balance:
   - [x] Add explicit payment-channel history with migration backfill and database
@@ -232,11 +232,18 @@ here are not implemented behavior and do not relax the financial invariants in
     adjustments, owner CSV metadata, and daily received/reversed/net reconciliation.
   - [x] Add a non-mutating integrity check plus service, permission, UI, migration,
     race, idempotency, and balance tests.
-  - [ ] Complete CI review and controlled migration `schemes.0018` with the feature
+  - [x] Complete CI review and controlled migration `schemes.0018` with the feature
     disabled, then run the production integrity command.
-  - [ ] Review the owner workflow and enable the flag; reconcile the first legitimate
+  - [x] Review the owner workflow and enable the flag; reconcile the first legitimate
     showroom receipt against physical cash, customer statement, grade allocation,
     audit log, and CSV before marking the rollout complete.
+  Production release `315f836ac0717fbaaf2d8d90268471ac1670e5b1` used the recorded
+  2026-09-03 4:00 PM IST recovery point, applied only `schemes.0018`, and retained
+  zero pending Razorpay orders and green financial/payment/grade gates. After the
+  default-off migration and owner review, receipt `CASH-150E7205` recorded a genuine
+  INR `1000.00` showroom payment against `GOLD_22K_916` at INR `14667.0000`/g and
+  allocated `0.068180` g. Its immutable receipt, single audit event, customer
+  statement, owner ledger, CSV, and INR `1000.00` daily net cash total reconciled.
   Legal/accounting review of cash acceptance, statutory receipts, external bookkeeping,
   corrections outside the routine window, refunds, and dual approval remain outside
   this bounded feature.
