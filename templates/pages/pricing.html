@@ -7,7 +7,7 @@
 <div class="text-center pricing-header mx-auto mb-5">
   <p class="page-eyebrow">Gold and silver savings schemes</p>
   <h1 class="display-4">Savings plans with clear terms</h1>
-  <p class="lead text-secondary">All contributions are paid in INR. Choose gold or silver when the showroom enrols you; each verified contribution is converted to a recorded quantity of that metal.</p>
+  <p class="lead text-secondary">All contributions are paid in INR. Choose an available metal grade when the showroom enrols you; each verified contribution is converted to a recorded quantity of that exact grade.</p>
 </div>
 
 <div class="row g-4">
@@ -18,6 +18,11 @@
         <p class="page-eyebrow mb-2">Available at the showroom</p>
         <h2 class="h3 mb-3">{{ plan.name }}</h2>
         {% if plan.description %}<p class="text-secondary">{{ plan.description|linebreaksbr }}</p>{% endif %}
+        <div class="d-flex flex-wrap gap-2 mb-3" aria-label="Available metal grades">
+          {% for offering in plan.metal_offerings.all %}{% if offering.active %}
+          <span class="badge text-bg-light border">{{ offering.metal_grade.display_name }}</span>
+          {% endif %}{% endfor %}
+        </div>
         <dl class="row mb-0 border-top pt-3">
           <dt class="col-5">INR contribution</dt>
           <dd class="col-7">
@@ -46,7 +51,7 @@
     <p class="page-eyebrow">Getting started</p>
     <h2 class="h3">How to join and contribute</h2>
     <p>Enrolment is completed at the showroom after you review and accept the applicable terms. The store then creates your customer login. Online payment is available only after enrolment and only for amounts allowed by your recorded plan.</p>
-    <p>The current Jai Sri Krishna Jewellery Scheme Rate for your selected metal is shown and locked before payment starts. After verification, your INR contribution is converted to a recorded gold or silver quantity using that rate. A later Scheme Rate does not change quantities already credited.</p>
+    <p>The current Jai Sri Krishna Jewellery Scheme Rate for your selected grade is shown and locked before payment starts. After verification, your INR contribution is converted to a recorded quantity of that exact grade. A later Scheme Rate does not change quantities already credited.</p>
     <p>Once the plan becomes eligible, the accumulated metal quantity may be applied toward jewellery or an eligible matching-metal coin at our showroom. It cannot be withdrawn as cash through this website.</p>
     <div class="d-flex flex-wrap gap-2">
       <a class="btn btn-jsk" href="{% url 'contact' %}">Contact us to enrol</a>

@@ -26,7 +26,7 @@
   <dl class="row">
     <dt class="col-sm-4">Customer</dt><dd class="col-sm-8">{{ receipt.contribution.scheme_account.customer.full_name }} ({{ receipt.contribution.scheme_account.customer.customer_number }})</dd>
     <dt class="col-sm-4">Scheme number</dt><dd class="col-sm-8">{{ receipt.contribution.scheme_account.scheme_number }}</dd>
-    <dt class="col-sm-4">Savings mode</dt><dd class="col-sm-8">{{ receipt.contribution.scheme_account.get_savings_mode_display }}</dd>
+    <dt class="col-sm-4">Entitlement</dt><dd class="col-sm-8">{{ receipt.contribution.scheme_account.entitlement_name }}</dd>
     <dt class="col-sm-4">Amount received</dt><dd class="col-sm-8 fw-semibold">₹{{ receipt.contribution.amount|floatformat:2 }}</dd>
     <dt class="col-sm-4">Payment reference</dt><dd class="col-sm-8">{{ receipt.contribution.gateway_reference }}</dd>
     <dt class="col-sm-4">Payment method</dt><dd class="col-sm-8">{{ receipt.contribution.payment_gateway|title }}</dd>
@@ -37,7 +37,7 @@
     <dl class="row mb-0">
       <dt class="col-sm-4">Metal</dt><dd class="col-sm-8">{{ receipt.allocation.get_metal_display }}</dd>
       <dt class="col-sm-4">Scheme Rate</dt><dd class="col-sm-8">₹{{ receipt.allocation.scheme_rate.rate_per_gram|floatformat:4 }} per g</dd>
-      <dt class="col-sm-4">Quantity allocated</dt><dd class="col-sm-8 fw-semibold">{{ receipt.allocation.quantity|floatformat:6 }} g</dd>
+      <dt class="col-sm-4">Quantity allocated</dt><dd class="col-sm-8 fw-semibold">{{ receipt.allocation.quantity|floatformat:3 }} g {{ receipt.allocation.metal_grade.display_name }}</dd>
     </dl>
   </div>
   {% elif receipt.contribution.scheme_account.savings_mode != 'CASH' %}

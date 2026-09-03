@@ -10,7 +10,7 @@ from django.utils import timezone
 class ManualSchemeRateMigrationTests(TransactionTestCase):
     migrate_from = ("schemes", "0009_schemeplan_publicly_listed")
     migrate_to = ("schemes", "0010_manual_scheme_rates")
-    restore_to = ("schemes", "0011_razorpay_gateway_mode")
+    restore_to = ("schemes", "0016_graded_rate_precision_labels")
     accounts_target = ("accounts", "0002_customuser_role")
 
     def setUp(self):

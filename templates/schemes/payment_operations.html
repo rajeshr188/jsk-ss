@@ -23,26 +23,18 @@
 {% endif %}
 
 <div class="row g-3 mb-4">
-  <div class="col-md-6">
-    <div class="card stat-card stat-card--gold h-100"><div class="card-body">
-      <div class="stat-label">Gold payments</div>
-      <div class="stat-value">{% if availability.GOLD.allowed %}Open{% else %}Paused{% endif %}</div>
-      <div class="stat-meta">{{ availability.GOLD.message }}</div>
-      {% if availability.GOLD.next_opening %}<div class="small mt-2">Next scheduled opening: {{ availability.GOLD.next_opening|date:"D, d M Y, g:i A" }}</div>{% endif %}
+  {% for row in operations_rows %}
+  <div class="col-md-6 col-xl-4">
+    <div class="card stat-card {% if row.grade.metal == 'GOLD' %}stat-card--gold{% else %}stat-card--silver{% endif %} h-100"><div class="card-body">
+      <div class="stat-label">{{ row.grade.display_name }} payments</div>
+      <div class="stat-value">{% if row.availability.allowed %}Open{% else %}Paused{% endif %}</div>
+      <div class="stat-meta">{{ row.availability.message }}</div>
+      {% if row.availability.next_opening %}<div class="small mt-2">Next scheduled opening: {{ row.availability.next_opening|date:"D, d M Y, g:i A" }}</div>{% endif %}
       <hr>
-      <div class="small">Pending locked orders: {{ pending_exposure.GOLD.count }} · ₹{{ pending_exposure.GOLD.amount|floatformat:2 }}</div>
+      <div class="small">Pending locked orders: {{ row.exposure.count }} · ₹{{ row.exposure.amount|floatformat:2 }}</div>
     </div></div>
   </div>
-  <div class="col-md-6">
-    <div class="card stat-card stat-card--silver h-100"><div class="card-body">
-      <div class="stat-label">Silver payments</div>
-      <div class="stat-value">{% if availability.SILVER.allowed %}Open{% else %}Paused{% endif %}</div>
-      <div class="stat-meta">{{ availability.SILVER.message }}</div>
-      {% if availability.SILVER.next_opening %}<div class="small mt-2">Next scheduled opening: {{ availability.SILVER.next_opening|date:"D, d M Y, g:i A" }}</div>{% endif %}
-      <hr>
-      <div class="small">Pending locked orders: {{ pending_exposure.SILVER.count }} · ₹{{ pending_exposure.SILVER.amount|floatformat:2 }}</div>
-    </div></div>
-  </div>
+  {% endfor %}
 </div>
 
 <div class="alert alert-info" role="note">

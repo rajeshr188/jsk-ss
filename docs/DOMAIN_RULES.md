@@ -15,8 +15,9 @@ This is the canonical source for stable business rules.
 
 ## Scheme and contribution rules
 
-- **SCH-001:** Historical liabilities remain separated into `CASH`, `GOLD`, and
-  `SILVER` dimensions; new production enrolments are limited to `GOLD` and `SILVER`.
+- **SCH-001:** Historical liabilities remain separated into `CASH` and exact Gold or
+  Silver grade dimensions; new production enrolments are limited to explicitly
+  offered metal grades.
 - **SCH-002:** An account snapshots the plan's economic terms at enrolment; later plan edits do not rewrite the agreement.
 - **SCH-003:** Minimum and default durations are at least 12 months; the agreed duration cannot be below the plan minimum.
 - **SCH-004:** Eligibility is the account start date plus agreed calendar months. Eligibility does not itself redeem or close an account.
@@ -27,6 +28,12 @@ This is the canonical source for stable business rules.
   With `DEBUG=False`, the service layer rejects both operations, the owner cannot
   select CASH during enrolment, and direct payment URLs for historical CASH accounts
   are blocked. Existing CASH records remain readable and are never rewritten.
+- **SCH-008:** Every metal account is permanently tied at enrolment to one immutable
+  `MetalGrade`. A plan offering controls future enrolment only; disabling an offering
+  never changes an existing agreement.
+- **SCH-009:** Existing pre-grade Gold contracts remain `GOLD_24K_9999` and existing
+  Silver contracts remain `SILVER_999`. They are never numerically converted or
+  relabelled as `GOLD_22K_916`.
 - **CON-001:** Amount rules (`FIXED`/`VARIABLE`) and frequency rules (`ONCE_PER_MONTH`/`FLEXIBLE`) are independent.
 - **CON-002:** Monthly periods use deterministic calendar keys such as `2026-08`, never rolling 30-day windows.
 - **CON-003:** `ONCE_PER_MONTH` permits one successfully paid contribution per scheme account and calendar month. Both `PAID` and `PAID_UNALLOCATED` consume the opportunity; `PENDING` and `FAILED` attempts do not.
@@ -88,20 +95,35 @@ This is the canonical source for stable business rules.
 - **METAL-001 / FIN-002:** A metal contribution creates at most one successful allocation.
 - **METAL-002 / FIN-003:** A Scheme Rate used by an allocation is immutable.
 - **METAL-003 / FIN-004:** Historical allocated grams never change when a newer Scheme Rate is published.
-- **METAL-004:** Allocation quantity equals INR contribution divided by the locked Scheme Rate per gram, rounded to 6 decimal places using `ROUND_HALF_UP`.
+- **METAL-004:** Allocation quantity equals INR contribution divided by the locked
+  Scheme Rate for the account's exact grade, rounded to 6 decimal places using
+  `ROUND_HALF_UP`.
 - **METAL-005:** A verified metal payment is durably recorded as `PAID_UNALLOCATED`
   until its allocation is stored, then transitions to `PAID`. This recovery state
   covers allocation exceptions and process interruption; it is not a missing-rate
   workflow. Retry must reuse the contribution's original lock.
-- **RATE-001:** Only a manually published Jai Sri Krishna Jewellery `SchemeRate` may be used for a new gold or silver allocation.
-- **RATE-002:** A metal contribution must lock its current applicable `SchemeRate` before mock payment initiation or Razorpay order creation.
+- **METAL-006:** `GOLD_22K_916`, `GOLD_24K_9999`, and `SILVER_999`
+  liabilities are independent. Account, rate, allocation, and redemption grades must
+  match; base metal alone is not a sufficient financial key.
+- **RATE-001:** Only a manually published Jai Sri Krishna Jewellery `SchemeRate` for
+  the exact account grade may be used for a new allocation.
+- **RATE-002:** A metal contribution must lock its current applicable grade-specific
+  `SchemeRate` before mock payment initiation or Razorpay order creation.
 - **RATE-003:** Publishing a new `SchemeRate` never changes an already locked contribution.
 - **RATE-004:** Publishing a new `SchemeRate` never changes historical `MetalAllocation` quantity.
-- **RATE-005:** A gold or silver payment cannot be initiated when no valid current `SchemeRate` exists.
+- **RATE-005:** A metal payment cannot be initiated when no valid current
+  `SchemeRate` exists for that exact grade; another grade's rate is never a fallback.
 - **RATE-006:** Published Scheme Rates used by financial allocations are immutable and protected from deletion.
-- **RATE-007:** Current rate means the latest applicable record for the metal ordered by `effective_from`, publication time, and ID. Publication appends a record; there is no mutable active flag.
-- **RATE-008:** Gold uses the established 24K fineness `0.9999`; silver uses `0.9990`. Publication accepts a positive `Decimal` rate only.
+- **RATE-007:** Current rate means the latest applicable record for the exact grade
+  ordered by `effective_from`, publication time, and ID. Publication appends a
+  record; there is no mutable active flag.
+- **RATE-008:** The initial immutable definitions are `GOLD_22K_916` fineness
+  `0.916000`, `GOLD_24K_9999` fineness `0.999900`, and `SILVER_999` fineness
+  `0.999000`. Publication accepts a positive `Decimal` rate only.
 - **RATE-009:** Only an active owner or superuser may publish. Every publication records publisher, timestamp, optional note, and immutable audit event.
+- **RATE-010:** Rates are recorded independently for each grade. The application does
+  not derive a customer rate from another purity and does not silently convert,
+  interpolate, or reuse one grade's rate.
 
 ## Historical cash bonus rules
 
@@ -136,7 +158,7 @@ authorize new production CASH enrolments or contributions under `SCH-007`.
 - **RED-006:** Cash principal outstanding equals paid cash contributions minus the
   principal components of completed redemptions; cash redeemable amount adds only
   outstanding earned bonus. Gold and silver outstanding each equal paid allocated
-  grams minus completed redemptions in the same metal.
+  grams minus completed redemptions in the same exact grade.
 - **RED-007:** A historical CASH account with an existing entitlement may settle as
   `CASH` or `JEWELLERY_PURCHASE`; gold and silver accounts may settle as `METAL` or
   `JEWELLERY_PURCHASE`. Preserving legacy settlement does not reopen CASH enrolment or
@@ -146,7 +168,8 @@ authorize new production CASH enrolments or contributions under `SCH-007`.
 - **RED-010:** Jewellery-purchase redemption requires an external invoice or sales reference. The MVP records the reference, entitlement settled, and notes but does not manage inventory or invoices.
 - **RED-011:** A redemption correction appends one immutable `RedemptionReversal`; it never edits or deletes the original redemption. Reversed settlements are excluded from outstanding-balance and liability subtraction.
 - **RED-012:** Reversing any settlement restores that denomination's entitlement. If the account was fully redeemed, the stored account status reopens to `ACTIVE`; date-derived eligibility still presents it as redemption eligible.
-- **FIN-007:** Gold, silver, and INR liabilities are never combined into a single balance.
+- **FIN-007:** INR and each exact metal-grade liability are never combined into a
+  single balance.
 - **FIN-008:** All financial calculations use `Decimal` with explicit rounding.
 - **FIN-009:** Editing a plan does not rewrite existing account economic terms.
 - **FIN-010:** Owner liability aggregates reconcile with underlying customer obligations.
@@ -172,9 +195,11 @@ authorize new production CASH enrolments or contributions under `SCH-007`.
 ## Owner liability reporting
 
 - **LIA-001:** Outstanding cash principal is paid cash contributions minus completed cash redemptions. Pending and failed attempts contribute zero.
-- **LIA-002:** Outstanding gold and silver quantities are paid allocations minus completed redemptions in the matching metal. The primary metal liabilities remain grams.
+- **LIA-002:** Outstanding quantity for each grade is paid allocations minus completed
+  redemptions in that exact grade. The primary metal liabilities remain grams.
 - **LIA-003:** Indicative metal exposure equals outstanding grams multiplied by the current Scheme Rate, rounded to 2 money decimal places with `ROUND_HALF_UP`. It does not rewrite historical allocations.
-- **LIA-004:** Cash principal, gold exposure, and silver exposure are never added into a single headline liability total.
+- **LIA-004:** Cash principal and the separate exposures for every metal grade are
+  never added into a single headline liability total.
 - **LIA-005:** If a current Scheme Rate is unavailable, the dashboard must continue showing authoritative gram liabilities and explicitly mark the rate and exposure as unavailable.
 - **LIA-006:** Dashboard contribution counts include both `PAID` and `PAID_UNALLOCATED` verified payments and use `paid_at` within India-local calendar-day and calendar-month boundaries.
 - **LIA-007:** Owner cash obligations show outstanding principal and earned bonus as
@@ -188,7 +213,9 @@ authorize new production CASH enrolments or contributions under `SCH-007`.
 - **DOC-003:** Metal receipts and statements use the immutable allocation's Scheme Rate and quantity. A paid-unallocated record displays allocation pending with no invented rate or grams.
 - **DOC-004:** A scheme statement includes verified payments, allocations, redemptions, and reversals and reports the current remaining entitlement in the scheme's denomination. Projected cash bonus remains separately labelled and non-redeemable.
 - **DOC-005:** Customer documents are accessible only to that customer or an owner. Owner CSV exports require owner authorization and neutralize spreadsheet-formula text.
-- **DOC-006:** INR amounts, gold grams, and silver grams remain separate in documents and exports. Indicative current metal exposure is not exported as booked cash liability.
+- **DOC-006:** INR amounts and each exact grade's grams remain separate in documents
+  and exports. Indicative current metal exposure is not exported as booked cash
+  liability.
 - **DOC-007:** MVP documents are on-demand printable HTML acknowledgements, not tax invoices or archived legal snapshots.
 
 ## Catalogue boundaries
@@ -264,4 +291,9 @@ authorize new production CASH enrolments or contributions under `SCH-007`.
 
 ## Precision
 
-Money uses 2 decimal places. Contribution and cash-redemption input with more than 2 decimal places is rejected rather than silently rounded. Cash bonus calculations use `ROUND_HALF_UP` to 2 decimal places. Metal quantities and metal-redemption input use 6 decimal places; excess precision is rejected. Allocation calculations use `ROUND_HALF_UP`. Scheme Rates and purity metadata use 4 decimal places.
+Money uses 2 decimal places. Contribution and cash-redemption input with more than 2
+decimal places is rejected rather than silently rounded. Cash bonus calculations use
+`ROUND_HALF_UP` to 2 decimal places. Metal quantities, allocation calculations, and
+owner metal-redemption entry use 6 decimal places; excess input precision is rejected.
+Customer-facing gram values render to 3 decimal places without changing the stored
+quantity. Scheme Rates use 4 decimal places and grade fineness metadata uses 6.

@@ -39,6 +39,7 @@
     </fieldset>{% endif %}
     <fieldset class="form-section">
       <legend>Availability{% if form.audit_reason %} and audit record{% endif %}</legend>
+      {{ form.metal_grades|as_crispy_field }}
       {{ form.active|as_crispy_field }}
       {% if form.publicly_listed %}{{ form.publicly_listed|as_crispy_field }}{% endif %}
       {% if form.audit_reason %}{{ form.audit_reason|as_crispy_field }}{% endif %}

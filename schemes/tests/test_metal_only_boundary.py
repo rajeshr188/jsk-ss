@@ -12,6 +12,7 @@ from django.utils import timezone
 from schemes.forms import EnrolmentForm, SchemePlanForm
 from schemes.models import Contribution, SchemeAccount, SchemePlan
 from schemes.services import create_customer, enroll_customer, initiate_contribution
+from schemes.tests.grade_helpers import enrolment_grade_kwargs, grade_for_mode
 
 
 PRODUCTION_PAYMENT_SETTINGS = {
@@ -44,6 +45,8 @@ class MetalOnlyProductionBoundaryTests(TestCase):
             minimum_contribution=Decimal("1000.00"),
             maximum_contribution=Decimal("1000.00"),
         )
+        self.gold_grade = grade_for_mode(self.plan, SchemeAccount.SavingsMode.GOLD)
+        grade_for_mode(self.plan, SchemeAccount.SavingsMode.SILVER)
         # Production already has one empty historical CASH account. Build the same
         # shape under the development-only compatibility boundary for read tests.
         with override_settings(DEBUG=True):
@@ -57,10 +60,8 @@ class MetalOnlyProductionBoundaryTests(TestCase):
     def test_cash_is_absent_from_production_enrolment_choices(self):
         form = EnrolmentForm()
 
-        self.assertEqual(
-            [value for value, _label in form.fields["savings_mode"].choices],
-            [SchemeAccount.SavingsMode.GOLD, SchemeAccount.SavingsMode.SILVER],
-        )
+        self.assertNotIn("savings_mode", form.fields)
+        self.assertEqual(form.fields["metal_grade"].queryset.count(), 2)
 
     def test_service_rejects_new_cash_enrolment(self):
         with self.assertRaises(ValidationError) as raised:
@@ -78,7 +79,7 @@ class MetalOnlyProductionBoundaryTests(TestCase):
         account = enroll_customer(
             customer=self.customer,
             plan=self.plan,
-            savings_mode=SchemeAccount.SavingsMode.GOLD,
+            metal_grade=self.gold_grade,
             start_date=date(2026, 8, 1),
         )
 

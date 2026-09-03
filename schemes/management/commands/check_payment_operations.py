@@ -1,7 +1,7 @@
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 
-from schemes.models import PaymentOperationsControl, PaymentScheduleWindow, SchemeRate
+from schemes.models import MetalGrade, PaymentOperationsControl, PaymentScheduleWindow
 from schemes.operations import get_payment_availability
 from schemes.selectors import get_pending_payment_exposure
 
@@ -26,9 +26,8 @@ class Command(BaseCommand):
                 "each weekday."
             )
 
-        gold = get_payment_availability(metal=SchemeRate.Metal.GOLD)
-        silver = get_payment_availability(metal=SchemeRate.Metal.SILVER)
         exposure = get_pending_payment_exposure()
+        grades = list(MetalGrade.objects.all())
         self.stdout.write(
             " ".join(
                 [
@@ -36,10 +35,15 @@ class Command(BaseCommand):
                     f"release={settings.APP_RELEASE}",
                     f"kill_switch={str(settings.PAYMENT_INITIATION_KILL_SWITCH).lower()}",
                     f"schedule_enabled={str(control.schedule_enabled).lower()}",
-                    f"gold={gold.code}",
-                    f"silver={silver.code}",
-                    f"pending_gold={exposure[SchemeRate.Metal.GOLD]['count']}",
-                    f"pending_silver={exposure[SchemeRate.Metal.SILVER]['count']}",
+                    *[
+                        f"{grade.code.lower()}="
+                        f"{get_payment_availability(metal_grade=grade).code}"
+                        for grade in grades
+                    ],
+                    *[
+                        f"pending_{grade.code.lower()}={exposure[grade.code]['count']}"
+                        for grade in grades
+                    ],
                 ]
             )
         )

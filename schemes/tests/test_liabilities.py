@@ -6,9 +6,10 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
-from schemes.models import Contribution, MetalAllocation, SchemeAccount, SchemePlan, SchemeRate
+from schemes.models import Contribution, MetalAllocation, MetalGrade, SchemeAccount, SchemePlan, SchemeRate
 from schemes.selectors import get_owner_activity_summary, get_owner_liability_summary
 from schemes.services import create_customer, enroll_customer, publish_scheme_rate
+from schemes.tests.grade_helpers import enrolment_grade_kwargs, metal_grade_for
 
 
 def make_owner(suffix="liability"):
@@ -39,7 +40,7 @@ def make_liability_accounts():
         mode: enroll_customer(
             customer=customer,
             plan=plan,
-            savings_mode=mode,
+            **enrolment_grade_kwargs(plan, mode),
             start_date=date(2026, 1, 1),
         )
         for mode in SchemeAccount.SavingsMode.values
@@ -65,10 +66,12 @@ def make_contribution(account, amount, status, reference, paid_at=None):
 
 
 def make_allocation(contribution, metal, quantity, historical_rate, effective_from=None):
+    metal_grade = contribution.scheme_account.metal_grade
     rate = SchemeRate.objects.create(
+        metal_grade=metal_grade,
         metal=metal,
         rate_per_gram=historical_rate,
-        purity=Decimal("0.9999") if metal == SchemeRate.Metal.GOLD else Decimal("0.9990"),
+        purity=metal_grade.fineness,
         effective_from=effective_from or timezone.now(),
     )
     contribution.scheme_rate = rate
@@ -77,8 +80,17 @@ def make_allocation(contribution, metal, quantity, historical_rate, effective_fr
     return MetalAllocation.objects.create(
         contribution=contribution,
         scheme_rate=rate,
+        metal_grade=metal_grade,
         metal=metal,
         quantity=quantity,
+    )
+
+
+def liability_for(summary, code):
+    return next(
+        liability
+        for liability in summary.metal_grades
+        if liability.metal_grade.code == code
     )
 
 
@@ -112,18 +124,20 @@ class OwnerLiabilitySelectorTests(TestCase):
         )
         make_allocation(failed_gold, SchemeRate.Metal.GOLD, Decimal("0.400000"), Decimal("12500.0000"))
         owner = make_owner()
-        publish_scheme_rate(metal="GOLD", rate_per_gram=Decimal("14000.0000"), published_by=owner)
-        publish_scheme_rate(metal="SILVER", rate_per_gram=Decimal("155.0000"), published_by=owner)
+        publish_scheme_rate(metal_grade=metal_grade_for("GOLD"), rate_per_gram=Decimal("14000.0000"), published_by=owner)
+        publish_scheme_rate(metal_grade=metal_grade_for("SILVER"), rate_per_gram=Decimal("155.0000"), published_by=owner)
 
         summary = get_owner_liability_summary()
 
         self.assertEqual(summary.cash_principal, Decimal("12500.00"))
-        self.assertEqual(summary.gold.quantity, Decimal("0.800000"))
-        self.assertEqual(summary.gold.scheme_rate, Decimal("14000.0000"))
-        self.assertEqual(summary.gold.indicative_exposure, Decimal("11200.00"))
-        self.assertEqual(summary.silver.quantity, Decimal("66.666667"))
-        self.assertEqual(summary.silver.scheme_rate, Decimal("155.0000"))
-        self.assertEqual(summary.silver.indicative_exposure, Decimal("10333.33"))
+        gold = liability_for(summary, "GOLD_24K_9999")
+        silver = liability_for(summary, "SILVER_999")
+        self.assertEqual(gold.quantity, Decimal("0.800000"))
+        self.assertEqual(gold.scheme_rate, Decimal("14000.0000"))
+        self.assertEqual(gold.indicative_exposure, Decimal("11200.00"))
+        self.assertEqual(silver.quantity, Decimal("66.666667"))
+        self.assertEqual(silver.scheme_rate, Decimal("155.0000"))
+        self.assertEqual(silver.indicative_exposure, Decimal("10333.33"))
 
     def test_missing_current_rate_preserves_authoritative_gram_liability(self):
         gold = make_contribution(
@@ -140,9 +154,10 @@ class OwnerLiabilitySelectorTests(TestCase):
 
         summary = get_owner_liability_summary()
 
-        self.assertEqual(summary.gold.quantity, Decimal("0.800000"))
-        self.assertIsNone(summary.gold.scheme_rate)
-        self.assertIsNone(summary.gold.indicative_exposure)
+        gold = liability_for(summary, "GOLD_24K_9999")
+        self.assertEqual(gold.quantity, Decimal("0.800000"))
+        self.assertIsNone(gold.scheme_rate)
+        self.assertIsNone(gold.indicative_exposure)
 
     def test_activity_counts_only_successful_payments_in_india_periods(self):
         local_timezone = timezone.get_current_timezone()
@@ -181,16 +196,19 @@ class OwnerLiabilityDashboardTests(TestCase):
             Decimal("10000.00"), Contribution.Status.PAID, "dashboard-gold", timezone.now(),
         )
         make_allocation(gold, SchemeRate.Metal.GOLD, Decimal("0.800000"), Decimal("12500.0000"))
-        publish_scheme_rate(metal="GOLD", rate_per_gram=Decimal("14000.0000"), published_by=self.owner)
-        publish_scheme_rate(metal="SILVER", rate_per_gram=Decimal("155.0000"), published_by=self.owner)
+        publish_scheme_rate(metal_grade=metal_grade_for("GOLD"), rate_per_gram=Decimal("14000.0000"), published_by=self.owner)
+        publish_scheme_rate(metal_grade=metal_grade_for("SILVER"), rate_per_gram=Decimal("155.0000"), published_by=self.owner)
 
     def test_owner_sees_liabilities_scheme_rates_and_activity(self):
         self.client.force_login(self.owner)
         response = self.client.get(reverse("schemes:owner_dashboard"))
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.context["liabilities"].gold.quantity, Decimal("0.800000"))
+        self.assertEqual(
+            liability_for(response.context["liabilities"], "GOLD_24K_9999").quantity,
+            Decimal("0.800000"),
+        )
         self.assertContains(response, "Outstanding customer liabilities")
-        self.assertContains(response, "0.800000 g")
+        self.assertContains(response, "0.800 g")
         self.assertContains(response, "14000.0000")
         self.assertContains(response, "11200.00")
         self.assertContains(response, "Current Scheme Rate")

@@ -20,8 +20,8 @@
         <td>{{ redemption.get_settlement_type_display }}</td>
         <td>
           {% if redemption.cash_amount is not None %}₹{{ redemption.cash_amount|floatformat:2 }}<br><small class="text-muted">Principal ₹{{ redemption.cash_principal_amount|floatformat:2 }} · Bonus ₹{{ redemption.cash_bonus_amount|floatformat:2 }}</small>
-          {% elif redemption.gold_quantity is not None %}{{ redemption.gold_quantity|floatformat:6 }} g gold
-          {% else %}{{ redemption.silver_quantity|floatformat:6 }} g silver{% endif %}
+          {% elif redemption.gold_quantity is not None %}{{ redemption.gold_quantity|floatformat:3 }} g {{ redemption.metal_grade.display_name }}
+          {% else %}{{ redemption.silver_quantity|floatformat:3 }} g {{ redemption.metal_grade.display_name }}{% endif %}
         </td>
         <td>{{ redemption.external_reference|default:'—' }}</td>
         <td>{{ redemption.notes|default:'—' }}</td>

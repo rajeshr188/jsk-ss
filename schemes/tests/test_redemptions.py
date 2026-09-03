@@ -17,6 +17,7 @@ from schemes.models import (
     SchemeAccount,
     SchemePlan,
 )
+from schemes.forms import RedemptionForm
 from schemes.selectors import (
     get_cash_balance,
     get_customer_scheme_summary,
@@ -24,6 +25,7 @@ from schemes.selectors import (
     get_owner_liability_summary,
 )
 from schemes.services import complete_redemption, create_customer, enroll_customer
+from schemes.tests.grade_helpers import enrolment_grade_kwargs
 
 
 def make_redemption_fixture():
@@ -54,7 +56,7 @@ def make_account(*, customer, plan, mode, eligible=True):
     account = enroll_customer(
         customer=customer,
         plan=plan,
-        savings_mode=mode,
+        **enrolment_grade_kwargs(plan, mode),
         start_date=timezone.localdate() - timedelta(days=365),
     )
     account.eligible_from = timezone.localdate() + timedelta(days=-1 if eligible else 1)
@@ -78,13 +80,10 @@ def make_paid_contribution(account, amount, reference):
 def make_metal_entitlement(account, quantity, reference):
     contribution = make_paid_contribution(account, Decimal("10000.00"), reference)
     scheme_rate = SchemeRate.objects.create(
+        metal_grade=account.metal_grade,
         metal=account.savings_mode,
         rate_per_gram=Decimal("12500.0000"),
-        purity=(
-            Decimal("0.9999")
-            if account.savings_mode == SchemeRate.Metal.GOLD
-            else Decimal("0.9990")
-        ),
+        purity=account.metal_grade.fineness,
         effective_from=timezone.now(),
     )
     contribution.scheme_rate = scheme_rate
@@ -93,6 +92,7 @@ def make_metal_entitlement(account, quantity, reference):
     return MetalAllocation.objects.create(
         contribution=contribution,
         scheme_rate=scheme_rate,
+        metal_grade=account.metal_grade,
         metal=account.savings_mode,
         quantity=quantity,
     )
@@ -253,8 +253,17 @@ class RedemptionServiceTests(TestCase):
                 self.assertIsNone(redemption.gold_quantity)
 
         summary = get_owner_liability_summary()
-        self.assertEqual(summary.gold.quantity, Decimal("0.500000"))
-        self.assertEqual(summary.silver.quantity, Decimal("50.000000"))
+        liabilities = {
+            item.metal_grade.code: item for item in summary.metal_grades
+        }
+        self.assertEqual(
+            liabilities["GOLD_24K_9999"].quantity,
+            Decimal("0.500000"),
+        )
+        self.assertEqual(
+            liabilities["SILVER_999"].quantity,
+            Decimal("50.000000"),
+        )
 
     def test_full_metal_redemption_closes_account(self):
         account = make_account(
@@ -303,6 +312,28 @@ class RedemptionServiceTests(TestCase):
                         idempotency_key=uuid.uuid4(),
                     )
         self.assertFalse(Redemption.objects.exists())
+
+    def test_owner_metal_redemption_input_preserves_six_decimal_settlement(self):
+        account = make_account(
+            customer=self.customer,
+            plan=self.plan,
+            mode=SchemeAccount.SavingsMode.GOLD,
+        )
+        form = RedemptionForm(
+            data={
+                "settlement_type": Redemption.SettlementType.METAL,
+                "amount": "0.123456",
+                "external_reference": "",
+                "notes": "",
+                "audit_reason": "Customer requested a metal redemption.",
+                "idempotency_key": str(uuid.uuid4()),
+            },
+            scheme_account=account,
+            outstanding=Decimal("0.800000"),
+        )
+
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.cleaned_data["amount"], Decimal("0.123456"))
 
     def test_metal_to_cash_and_unreferenced_jewellery_are_rejected(self):
         account = make_account(

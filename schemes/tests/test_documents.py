@@ -23,6 +23,7 @@ from schemes.services import (
     publish_scheme_rate,
     reverse_redemption,
 )
+from schemes.tests.grade_helpers import enrolment_grade_kwargs, metal_grade_for
 
 
 def make_owner():
@@ -61,7 +62,7 @@ def make_account(*, customer, plan, owner, mode=SchemeAccount.SavingsMode.CASH):
     return enroll_customer(
         customer=customer,
         plan=plan,
-        savings_mode=mode,
+        **enrolment_grade_kwargs(plan, mode),
         start_date=add_calendar_months(timezone.localdate(), -12),
         agreed_months=12,
         performed_by=owner,
@@ -105,12 +106,12 @@ class ReceiptAndStatementTests(TestCase):
             owner=self.owner,
         )
         publish_scheme_rate(
-            metal=SchemeRate.Metal.SILVER,
+            metal_grade=metal_grade_for(SchemeRate.Metal.SILVER),
             rate_per_gram=Decimal("150.0000"),
             published_by=self.owner,
         )
         publish_scheme_rate(
-            metal=SchemeRate.Metal.GOLD,
+            metal_grade=metal_grade_for(SchemeRate.Metal.GOLD),
             rate_per_gram=Decimal("12500.0000"),
             published_by=self.owner,
         )
@@ -152,7 +153,7 @@ class ReceiptAndStatementTests(TestCase):
 
         self.assertContains(response, "24K Gold")
         self.assertContains(response, "₹12500.0000 per g")
-        self.assertContains(response, "0.800000 g")
+        self.assertContains(response, "0.800 g 24K Gold")
 
     def test_paid_unallocated_receipt_never_invents_rate_or_quantity(self):
         gold_account = make_account(
@@ -250,7 +251,7 @@ class ReceiptAndStatementTests(TestCase):
         self.assertEqual(entry.scheme_rate, Decimal("150.0000"))
         self.assertEqual(entry.metal_allocation, Decimal("2.000000"))
         self.assertEqual(statement.remaining_entitlement, Decimal("2.000000"))
-        self.assertEqual(statement.entitlement_unit, "g silver")
+        self.assertEqual(statement.entitlement_unit, "g 999 Silver")
 
     def test_statement_excludes_pending_and_failed_attempts(self):
         make_paid_contribution(self.cash_account, status=Contribution.Status.PENDING)

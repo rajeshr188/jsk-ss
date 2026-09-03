@@ -20,6 +20,7 @@ from schemes.models import (
     SchemePlan,
     SchemeRate,
 )
+from schemes.tests.grade_helpers import enrolment_grade_kwargs, metal_grade_for
 from schemes.selectors import (
     get_cash_balance,
     get_financial_exception_counts,
@@ -70,10 +71,11 @@ def make_customer(email="customer-audit@example.com"):
 
 def make_account(*, mode=SchemeAccount.SavingsMode.CASH, owner=None, plan=None):
     today = timezone.localdate()
+    plan = plan or make_plan()
     return enroll_customer(
         customer=make_customer(),
-        plan=plan or make_plan(),
-        savings_mode=mode,
+        plan=plan,
+        **enrolment_grade_kwargs(plan, mode),
         start_date=add_calendar_months(today, -12),
         agreed_months=12,
         performed_by=owner,
@@ -119,6 +121,7 @@ class AuditAndExceptionTests(TestCase):
         plan = make_plan()
         account = make_account(owner=owner, plan=plan)
         original_minimum = account.minimum_amount_snapshot
+        gold_grade = metal_grade_for(SchemeRate.Metal.GOLD)
         self.client.force_login(owner)
 
         response = self.client.post(
@@ -138,6 +141,7 @@ class AuditAndExceptionTests(TestCase):
                 "cash_bonus_minimum_months": 12,
                 "active": "on",
                 "publicly_listed": "on",
+                "metal_grades": [gold_grade.pk],
                 "audit_reason": "New terms apply to future enrolments only.",
             },
         )
@@ -271,7 +275,7 @@ class AuditAndExceptionTests(TestCase):
         owner = make_owner()
         account = make_account(mode=SchemeAccount.SavingsMode.GOLD, owner=owner)
         scheme_rate = publish_scheme_rate(
-            metal=SchemeRate.Metal.GOLD,
+            metal_grade=metal_grade_for(SchemeRate.Metal.GOLD),
             rate_per_gram=Decimal("10000.0000"),
             published_by=owner,
         )

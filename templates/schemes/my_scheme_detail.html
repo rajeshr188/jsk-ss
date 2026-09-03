@@ -7,7 +7,7 @@
   <div>
     <a class="small d-inline-block mb-2" href="{% url 'schemes:my_schemes' %}">← All schemes</a>
     <p class="page-eyebrow">{{ scheme_account.plan.name }}</p>
-    <h1>{{ scheme_account.get_savings_mode_display }}</h1>
+    <h1>{{ scheme_account.entitlement_name }}</h1>
     <div class="page-subtitle">{{ scheme_account.scheme_number }}</div>
     <span class="badge text-bg-secondary mt-2">{{ scheme_account.effective_status_label }}</span>
   </div>
@@ -61,8 +61,8 @@
 
 {% if scheme_account.savings_mode == 'GOLD' or scheme_account.savings_mode == 'SILVER' %}
 <div class="card stat-card {% if scheme_account.savings_mode == 'GOLD' %}stat-card--gold{% else %}stat-card--silver{% endif %} mb-4"><div class="card-body p-4">
-  <div class="stat-label">{{ scheme_account.get_savings_mode_display }} entitlement</div>
-  <div class="stat-value">{{ metal_balance|floatformat:6 }} g</div>
+  <div class="stat-label">{{ scheme_account.entitlement_name }} entitlement</div>
+  <div class="stat-value">{{ metal_balance|floatformat:3 }} g</div>
   <div class="mt-3"><strong>Current Scheme Rate:</strong> {% if current_scheme_rate %}₹{{ current_scheme_rate.rate_per_gram|floatformat:4 }}/g{% else %}Not published{% endif %}</div>
   <small class="text-muted">Immutable allocations less completed metal redemptions.</small>
 </div></div>
@@ -78,7 +78,7 @@
         <td>{{ contribution.created_at|date:'d M Y, g:i A' }}</td>
         <td>{{ contribution.contribution_period|date:'F Y' }}</td>
         <td>₹{{ contribution.amount|floatformat:2 }}</td>
-        <td>{% if contribution.metal_allocation %}{{ contribution.metal_allocation.quantity|floatformat:6 }} g{% else %}—{% endif %}</td>
+        <td>{% if contribution.metal_allocation %}{{ contribution.metal_allocation.quantity|floatformat:3 }} g {{ contribution.metal_allocation.metal_grade.display_name }}{% else %}—{% endif %}</td>
         <td>{% if contribution.metal_allocation %}₹{{ contribution.metal_allocation.scheme_rate.rate_per_gram|floatformat:4 }}/g{% elif contribution.scheme_rate %}₹{{ contribution.scheme_rate.rate_per_gram|floatformat:4 }}/g locked{% else %}—{% endif %}</td>
         <td>
           {% if contribution.status == 'PAID' %}<span class="badge text-bg-success">Paid</span>
@@ -116,7 +116,7 @@
     </div>
     <dl class="row small">
       <dt class="col-5">Date</dt><dd class="col-7 text-end">{{ contribution.created_at|date:'d M Y, g:i A' }}</dd>
-      <dt class="col-5">Metal credited</dt><dd class="col-7 text-end">{% if contribution.metal_allocation %}{{ contribution.metal_allocation.quantity|floatformat:6 }} g{% else %}—{% endif %}</dd>
+      <dt class="col-5">Metal credited</dt><dd class="col-7 text-end">{% if contribution.metal_allocation %}{{ contribution.metal_allocation.quantity|floatformat:3 }} g {{ contribution.metal_allocation.metal_grade.display_name }}{% else %}—{% endif %}</dd>
       <dt class="col-5">Scheme Rate</dt><dd class="col-7 text-end">{% if contribution.metal_allocation %}₹{{ contribution.metal_allocation.scheme_rate.rate_per_gram|floatformat:4 }}/g{% elif contribution.scheme_rate %}₹{{ contribution.scheme_rate.rate_per_gram|floatformat:4 }}/g locked{% else %}—{% endif %}</dd>
       <dt class="col-5">Reference</dt><dd class="col-7 text-end text-break">{{ contribution.gateway_reference|default:'—' }}</dd>
     </dl>
@@ -145,8 +145,8 @@
         <td>{{ redemption.get_settlement_type_display }}</td>
         <td>
           {% if redemption.cash_amount is not None %}₹{{ redemption.cash_amount|floatformat:2 }}<br><small class="text-muted">Principal ₹{{ redemption.cash_principal_amount|floatformat:2 }} · Bonus ₹{{ redemption.cash_bonus_amount|floatformat:2 }}</small>
-          {% elif redemption.gold_quantity is not None %}{{ redemption.gold_quantity|floatformat:6 }} g gold
-          {% else %}{{ redemption.silver_quantity|floatformat:6 }} g silver{% endif %}
+          {% elif redemption.gold_quantity is not None %}{{ redemption.gold_quantity|floatformat:3 }} g {{ redemption.metal_grade.display_name }}
+          {% else %}{{ redemption.silver_quantity|floatformat:3 }} g {{ redemption.metal_grade.display_name }}{% endif %}
         </td>
         <td>{{ redemption.external_reference|default:'—' }}</td>
         <td>{% if redemption.reversal %}<span class="badge text-bg-secondary">Reversed</span><br><small class="text-muted">{{ redemption.reversal.reason }}</small>{% else %}<span class="badge text-bg-success">Completed</span>{% endif %}</td>
@@ -166,8 +166,8 @@
       <dt class="col-5">Settlement</dt><dd class="col-7 text-end">{{ redemption.get_settlement_type_display }}</dd>
       <dt class="col-5">Entitlement</dt><dd class="col-7 text-end">
         {% if redemption.cash_amount is not None %}₹{{ redemption.cash_amount|floatformat:2 }}<br><span class="text-muted">Principal ₹{{ redemption.cash_principal_amount|floatformat:2 }} · Bonus ₹{{ redemption.cash_bonus_amount|floatformat:2 }}</span>
-        {% elif redemption.gold_quantity is not None %}{{ redemption.gold_quantity|floatformat:6 }} g gold
-        {% else %}{{ redemption.silver_quantity|floatformat:6 }} g silver{% endif %}
+        {% elif redemption.gold_quantity is not None %}{{ redemption.gold_quantity|floatformat:3 }} g {{ redemption.metal_grade.display_name }}
+        {% else %}{{ redemption.silver_quantity|floatformat:3 }} g {{ redemption.metal_grade.display_name }}{% endif %}
       </dd>
       <dt class="col-5">External reference</dt><dd class="col-7 text-end text-break">{{ redemption.external_reference|default:'—' }}</dd>
       {% if redemption.reversal %}<dt class="col-5">Reversal reason</dt><dd class="col-7 text-end">{{ redemption.reversal.reason }}</dd>{% endif %}

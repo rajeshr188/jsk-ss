@@ -12,9 +12,9 @@
     {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
     <fieldset class="form-section">
       <legend>Scheme terms</legend>
-      <p class="form-section-description">Select the plan and whether entitlement will be recorded as gold or silver.</p>
+      <p class="form-section-description">Select the plan and exact metal grade. The grade becomes a permanent part of this agreement.</p>
       {{ form.plan|as_crispy_field }}
-      {{ form.savings_mode|as_crispy_field }}
+      {{ form.metal_grade|as_crispy_field }}
     </fieldset>
     <fieldset class="form-section">
       <legend>Agreement schedule and record</legend>

@@ -10,6 +10,7 @@ from django.utils import timezone
 from schemes.models import SchemeAccount, SchemePlan
 from schemes.selectors import get_redemption_eligibility_summary
 from schemes.services import create_customer, enroll_customer
+from schemes.tests.grade_helpers import enrolment_grade_kwargs
 
 
 def make_eligibility_fixture():
@@ -34,7 +35,7 @@ def make_account(*, customer, plan, eligible_from, status=SchemeAccount.Status.A
     account = enroll_customer(
         customer=customer,
         plan=plan,
-        savings_mode=SchemeAccount.SavingsMode.GOLD,
+        **enrolment_grade_kwargs(plan, SchemeAccount.SavingsMode.GOLD),
         start_date=date(2025, 1, 1),
     )
     account.eligible_from = eligible_from

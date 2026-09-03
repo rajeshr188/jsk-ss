@@ -6,14 +6,49 @@ from .models import (
     Contribution,
     Customer,
     MetalAllocation,
+    MetalGrade,
     PaymentWebhookEvent,
     SchemeRate,
     Redemption,
     RedemptionReversal,
     SchemeAccount,
     SchemePlan,
+    SchemePlanOffering,
     WebhookProcessingAttempt,
 )
+
+
+@admin.register(MetalGrade)
+class MetalGradeAdmin(admin.ModelAdmin):
+    list_display = ("code", "display_name", "metal", "fineness", "display_order")
+    list_filter = ("metal",)
+    readonly_fields = (
+        "code",
+        "display_name",
+        "metal",
+        "fineness",
+        "display_order",
+        "created_at",
+    )
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(SchemePlanOffering)
+class SchemePlanOfferingAdmin(admin.ModelAdmin):
+    list_display = ("plan", "metal_grade", "active", "updated_at")
+    list_filter = ("active", "metal_grade")
+    readonly_fields = ("plan", "metal_grade", "active", "created_at", "updated_at")
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 @admin.register(Customer)
@@ -51,14 +86,16 @@ class SchemeAccountAdmin(admin.ModelAdmin):
         "scheme_number",
         "customer",
         "savings_mode",
+        "metal_grade",
         "start_date",
         "eligible_from",
         "status",
     )
-    list_filter = ("savings_mode", "status")
+    list_filter = ("savings_mode", "metal_grade", "status")
     search_fields = ("scheme_number", "customer__full_name", "customer__customer_number")
     readonly_fields = (
         "scheme_number",
+        "metal_grade",
         "amount_rule_snapshot",
         "frequency_rule_snapshot",
         "fixed_amount_snapshot",
@@ -210,16 +247,17 @@ class WebhookProcessingAttemptAdmin(admin.ModelAdmin):
 class SchemeRateAdmin(admin.ModelAdmin):
     list_display = (
         "id",
-        "metal",
+        "metal_grade",
         "rate_per_gram",
         "purity",
         "effective_from",
         "published_by",
         "published_at",
     )
-    list_filter = ("metal",)
+    list_filter = ("metal_grade", "metal")
     readonly_fields = (
         "metal",
+        "metal_grade",
         "rate_per_gram",
         "purity",
         "effective_from",
@@ -237,8 +275,8 @@ class SchemeRateAdmin(admin.ModelAdmin):
 
 @admin.register(MetalAllocation)
 class MetalAllocationAdmin(admin.ModelAdmin):
-    list_display = ("id", "contribution", "metal", "quantity", "created_at")
-    list_filter = ("metal",)
+    list_display = ("id", "contribution", "metal_grade", "quantity", "created_at")
+    list_filter = ("metal_grade", "metal")
     search_fields = (
         "contribution__gateway_reference",
         "contribution__scheme_account__scheme_number",
@@ -248,6 +286,7 @@ class MetalAllocationAdmin(admin.ModelAdmin):
         "contribution",
         "scheme_rate",
         "metal",
+        "metal_grade",
         "quantity",
         "created_at",
     )
@@ -286,6 +325,7 @@ class RedemptionAdmin(admin.ModelAdmin):
         "cash_bonus_amount",
         "gold_quantity",
         "silver_quantity",
+        "metal_grade",
         "external_reference",
         "notes",
         "processed_by",

@@ -5,11 +5,13 @@ from django import forms
 from django.contrib.auth import get_user_model
 
 from .models import (
+    MetalGrade,
     PaymentOperationsControl,
     PaymentScheduleWindow,
     Redemption,
     SchemeAccount,
     SchemePlan,
+    SchemePlanOffering,
     SchemeRate,
 )
 from .services import cash_scheme_activity_is_enabled, validate_contribution_allowed
@@ -28,6 +30,16 @@ class CustomerCreateForm(forms.Form):
         return email
 
 class SchemePlanForm(forms.ModelForm):
+    metal_grades = forms.ModelMultipleChoiceField(
+        queryset=MetalGrade.objects.none(),
+        label="Metal grades offered for new enrolment",
+        widget=forms.CheckboxSelectMultiple,
+        help_text=(
+            "Each new scheme account is permanently tied to one selected grade. "
+            "Existing accounts are unaffected when an offering is disabled."
+        ),
+    )
+
     class Meta:
         model = SchemePlan
         fields = [
@@ -58,9 +70,38 @@ class SchemePlanForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields["metal_grades"].queryset = MetalGrade.objects.all()
+        if self.instance.pk:
+            self.fields["metal_grades"].initial = MetalGrade.objects.filter(
+                plan_offerings__plan=self.instance,
+                plan_offerings__active=True,
+            )
+        elif not self.is_bound:
+            self.fields["metal_grades"].initial = MetalGrade.objects.filter(
+                code__in=[MetalGrade.GOLD_22K_916, MetalGrade.SILVER_999]
+            )
         if not cash_scheme_activity_is_enabled():
             self.fields.pop("cash_bonus_percentage", None)
             self.fields.pop("cash_bonus_minimum_months", None)
+
+    def save_offerings(self):
+        selected_ids = set(self.cleaned_data["metal_grades"].values_list("pk", flat=True))
+        existing = {
+            offering.metal_grade_id: offering
+            for offering in self.instance.metal_offerings.all()
+        }
+        for grade in MetalGrade.objects.all():
+            active = grade.pk in selected_ids
+            offering = existing.get(grade.pk)
+            if offering is None:
+                SchemePlanOffering.objects.create(
+                    plan=self.instance,
+                    metal_grade=grade,
+                    active=active,
+                )
+            elif offering.active != active:
+                offering.active = active
+                offering.save(update_fields=["active", "updated_at"])
 
 
 class SchemePlanChangeForm(SchemePlanForm):
@@ -83,7 +124,10 @@ class SchemePlanChangeForm(SchemePlanForm):
 
 class EnrolmentForm(forms.Form):
     plan = forms.ModelChoiceField(queryset=SchemePlan.objects.none())
-    savings_mode = forms.ChoiceField(choices=SchemeAccount.SavingsMode.choices)
+    metal_grade = forms.ModelChoiceField(
+        queryset=MetalGrade.objects.none(),
+        label="Metal grade",
+    )
     start_date = forms.DateField(widget=forms.DateInput(attrs={"type": "date"}))
     agreed_months = forms.IntegerField(min_value=12)
     audit_reason = forms.CharField(
@@ -95,17 +139,25 @@ class EnrolmentForm(forms.Form):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["plan"].queryset = SchemePlan.objects.filter(active=True)
-        if not cash_scheme_activity_is_enabled():
-            self.fields["savings_mode"].choices = [
-                choice
-                for choice in SchemeAccount.SavingsMode.choices
-                if choice[0] != SchemeAccount.SavingsMode.CASH
-            ]
+        self.fields["metal_grade"].queryset = MetalGrade.objects.filter(
+            plan_offerings__active=True,
+            plan_offerings__plan__active=True,
+        ).distinct()
 
     def clean(self):
         cleaned = super().clean()
         plan = cleaned.get("plan")
+        metal_grade = cleaned.get("metal_grade")
         agreed_months = cleaned.get("agreed_months")
+        if plan and metal_grade and not SchemePlanOffering.objects.filter(
+            plan=plan,
+            metal_grade=metal_grade,
+            active=True,
+        ).exists():
+            self.add_error(
+                "metal_grade",
+                "This metal grade is not offered by the selected plan.",
+            )
         if plan and agreed_months and agreed_months < plan.minimum_months:
             self.add_error(
                 "agreed_months",
@@ -268,7 +320,10 @@ class PaymentOperationsForm(forms.Form):
 class SchemeRatePublishForm(forms.Form):
     LARGE_CHANGE_PERCENT = Decimal("5.00")
 
-    metal = forms.ChoiceField(choices=SchemeRate.Metal.choices)
+    metal_grade = forms.ModelChoiceField(
+        queryset=MetalGrade.objects.none(),
+        label="Metal grade",
+    )
     rate_per_gram = forms.DecimalField(
         label="New Scheme Rate per gram",
         max_digits=14,
@@ -287,6 +342,7 @@ class SchemeRatePublishForm(forms.Form):
 
     def __init__(self, *args, current_rates=None, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields["metal_grade"].queryset = MetalGrade.objects.all()
         self.current_rates = current_rates or {}
         self.current_rate = None
         self.difference = None
@@ -295,9 +351,11 @@ class SchemeRatePublishForm(forms.Form):
 
     def clean(self):
         cleaned = super().clean()
-        metal = cleaned.get("metal")
+        metal_grade = cleaned.get("metal_grade")
         new_rate = cleaned.get("rate_per_gram")
-        self.current_rate = self.current_rates.get(metal)
+        self.current_rate = (
+            self.current_rates.get(metal_grade.code) if metal_grade else None
+        )
         if self.current_rate is None or new_rate is None:
             return cleaned
 
@@ -357,7 +415,7 @@ class RedemptionForm(forms.Form):
                 help_text=f"Outstanding principal: ₹{outstanding:.2f}",
             )
         else:
-            metal_name = scheme_account.get_savings_mode_display()
+            metal_name = scheme_account.entitlement_name
             self.fields["settlement_type"].choices = [
                 choice
                 for choice in Redemption.SettlementType.choices
@@ -373,7 +431,7 @@ class RedemptionForm(forms.Form):
                 decimal_places=6,
                 min_value=Decimal("0.000001"),
                 max_value=outstanding,
-                help_text=f"Outstanding entitlement: {outstanding:.6f} g",
+                help_text=f"Exact outstanding entitlement: {outstanding:.6f} g",
             )
 
     def clean(self):

@@ -72,7 +72,11 @@ class PricingPageView(ListView):
     context_object_name = "plans"
 
     def get_queryset(self):
-        return SchemePlan.objects.filter(active=True, publicly_listed=True).order_by(
+        return SchemePlan.objects.filter(
+            active=True,
+            publicly_listed=True,
+            metal_offerings__active=True,
+        ).prefetch_related("metal_offerings__metal_grade").distinct().order_by(
             "name", "code"
         )
 

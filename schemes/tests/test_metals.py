@@ -17,6 +17,7 @@ from schemes.services import (
     process_mock_contribution,
     publish_scheme_rate,
 )
+from schemes.tests.grade_helpers import enrolment_grade_kwargs, metal_grade_for
 
 
 def make_owner(suffix="default"):
@@ -52,7 +53,7 @@ def make_metal_account(
     return enroll_customer(
         customer=customer,
         plan=plan,
-        savings_mode=metal,
+        **enrolment_grade_kwargs(plan, metal),
         start_date=timezone.localdate(),
     )
 
@@ -61,7 +62,7 @@ def make_metal_account(
 class MetalAllocationTests(TestCase):
     def publish(self, metal, rate, suffix="default"):
         return publish_scheme_rate(
-            metal=metal,
+            metal_grade=metal_grade_for(metal),
             rate_per_gram=Decimal(rate),
             published_by=make_owner(suffix),
         )

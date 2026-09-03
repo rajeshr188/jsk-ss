@@ -6,6 +6,7 @@ from django.test import TestCase
 
 from schemes.models import SchemeAccount, SchemePlan
 from schemes.services import add_calendar_months, create_customer, enroll_customer
+from schemes.tests.grade_helpers import grade_for_mode
 
 
 def make_plan(**overrides):
@@ -40,12 +41,13 @@ class EnrolmentServiceTests(TestCase):
             password="correct-horse-battery-staple",
         )
         self.plan = make_plan()
+        self.gold_grade = grade_for_mode(self.plan, SchemeAccount.SavingsMode.GOLD)
 
     def test_enrolment_snapshots_plan_terms_and_eligibility(self):
         account = enroll_customer(
             customer=self.customer,
             plan=self.plan,
-            savings_mode=SchemeAccount.SavingsMode.GOLD,
+            metal_grade=self.gold_grade,
             start_date=date(2026, 1, 31),
             agreed_months=12,
         )
@@ -67,7 +69,7 @@ class EnrolmentServiceTests(TestCase):
             enroll_customer(
                 customer=self.customer,
                 plan=self.plan,
-                savings_mode=SchemeAccount.SavingsMode.GOLD,
+                metal_grade=self.gold_grade,
                 start_date=date(2026, 1, 1),
                 agreed_months=12,
             )
@@ -78,6 +80,6 @@ class EnrolmentServiceTests(TestCase):
             enroll_customer(
                 customer=self.customer,
                 plan=self.plan,
-                savings_mode=SchemeAccount.SavingsMode.GOLD,
+                metal_grade=self.gold_grade,
                 agreed_months=12,
             )

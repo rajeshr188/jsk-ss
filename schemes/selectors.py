@@ -14,6 +14,7 @@ from .models import (
     Contribution,
     Customer,
     MetalAllocation,
+    MetalGrade,
     PaymentWebhookEvent,
     SchemeRate,
     Redemption,
@@ -30,7 +31,7 @@ SUCCESSFUL_PAYMENT_STATUSES = (
 
 @dataclass(frozen=True)
 class MetalLiability:
-    metal: str
+    metal_grade: MetalGrade
     quantity: Decimal
     scheme_rate: Decimal | None = None
     indicative_exposure: Decimal | None = None
@@ -42,8 +43,7 @@ class OwnerLiabilitySummary:
     cash_principal: Decimal
     cash_earned_bonus: Decimal
     cash_projected_bonus: Decimal
-    gold: MetalLiability
-    silver: MetalLiability
+    metal_grades: tuple[MetalLiability, ...]
 
     @property
     def cash_redeemable_amount(self):
@@ -212,7 +212,7 @@ def get_customer_scheme_summary(user):
     )
     return (
         SchemeAccount.objects.filter(customer__user=user)
-        .select_related("plan", "customer")
+        .select_related("plan", "customer", "metal_grade")
         .annotate(
             cash_contributed=Coalesce(
                 Subquery(cash_contributions, output_field=money_field),
@@ -264,7 +264,8 @@ def get_owner_customers():
 
 def get_owner_customer(customer_id):
     return Customer.objects.select_related("user").prefetch_related(
-        "scheme_accounts__plan"
+        "scheme_accounts__plan",
+        "scheme_accounts__metal_grade",
     ).get(pk=customer_id)
 
 
@@ -281,11 +282,14 @@ def get_customer_scheme_account(user, scheme_number):
     return get_customer_scheme_summary(user).filter(scheme_number=scheme_number).first()
 
 
-def get_current_scheme_rate(metal, at=None):
+def get_current_scheme_rate(metal_grade, at=None):
     at = at or timezone.now()
+    grade_id = getattr(metal_grade, "pk", None)
+    if grade_id is None:
+        grade_id = MetalGrade.objects.only("pk").get(code=metal_grade).pk
     return (
-        SchemeRate.objects.filter(metal=metal, effective_from__lte=at)
-        .select_related("published_by")
+        SchemeRate.objects.filter(metal_grade_id=grade_id, effective_from__lte=at)
+        .select_related("published_by", "metal_grade")
         .order_by("-effective_from", "-published_at", "-pk")
         .first()
     )
@@ -293,20 +297,22 @@ def get_current_scheme_rate(metal, at=None):
 
 def get_current_scheme_rates(at=None):
     return {
-        metal: get_current_scheme_rate(metal, at=at)
-        for metal in (SchemeRate.Metal.GOLD, SchemeRate.Metal.SILVER)
+        grade.code: get_current_scheme_rate(grade, at=at)
+        for grade in MetalGrade.objects.all()
     }
 
 
 def get_scheme_rate_history(limit=50):
-    return SchemeRate.objects.select_related("published_by").order_by(
+    return SchemeRate.objects.select_related("published_by", "metal_grade").order_by(
         "-effective_from", "-published_at", "-pk"
     )[:limit]
 
 
 def get_contribution_history(scheme_account):
     return scheme_account.contributions.select_related(
-        "scheme_rate", "metal_allocation__scheme_rate"
+        "scheme_rate__metal_grade",
+        "metal_allocation__scheme_rate",
+        "metal_allocation__metal_grade",
     )
 
 
@@ -321,9 +327,11 @@ def get_owner_contributions():
         "scheme_account",
         "scheme_account__customer",
         "scheme_account__plan",
+        "scheme_account__metal_grade",
         "metal_allocation",
-        "scheme_rate",
+        "scheme_rate__metal_grade",
         "metal_allocation__scheme_rate",
+        "metal_allocation__metal_grade",
     )
 
 
@@ -338,23 +346,26 @@ def get_pending_payment_exposure():
                 SchemeAccount.SavingsMode.SILVER,
             ],
         )
-        .values("scheme_account__savings_mode")
+        .values(
+            "scheme_account__metal_grade__code",
+            "scheme_account__metal_grade__display_name",
+        )
         .annotate(count=Count("pk"), amount=Sum("amount"))
     )
     exposure = {
-        SchemeAccount.SavingsMode.GOLD: {
+        grade.code: {
             "count": 0,
             "amount": Decimal("0.00"),
-        },
-        SchemeAccount.SavingsMode.SILVER: {
-            "count": 0,
-            "amount": Decimal("0.00"),
-        },
+            "display_name": grade.display_name,
+        }
+        for grade in MetalGrade.objects.all()
     }
     for row in rows:
-        exposure[row["scheme_account__savings_mode"]] = {
+        code = row["scheme_account__metal_grade__code"]
+        exposure[code] = {
             "count": row["count"],
             "amount": row["amount"] or Decimal("0.00"),
+            "display_name": row["scheme_account__metal_grade__display_name"],
         }
     return exposure
 
@@ -496,12 +507,12 @@ def get_scheme_statement(scheme_account):
             unit = "INR"
         elif allocation is None:
             description = (
-                f"{scheme_account.get_savings_mode_display()} payment — allocation pending"
+                f"{scheme_account.entitlement_name} payment — allocation pending"
             )
-            unit = "g"
+            unit = f"g {scheme_account.entitlement_name}"
         else:
-            description = f"{allocation.get_metal_display()} contribution allocated"
-            unit = "g"
+            description = f"{allocation.metal_grade.display_name} contribution allocated"
+            unit = f"g {allocation.metal_grade.display_name}"
         entries.append(
             StatementEntry(
                 occurred_at=contribution.paid_at,
@@ -548,11 +559,7 @@ def get_scheme_statement(scheme_account):
         entitlement_unit = "INR"
     else:
         remaining_entitlement = get_metal_balance(scheme_account)
-        entitlement_unit = (
-            "g gold"
-            if scheme_account.savings_mode == SchemeAccount.SavingsMode.GOLD
-            else "g silver"
-        )
+        entitlement_unit = f"g {scheme_account.entitlement_name}"
     return SchemeStatement(
         scheme_account=scheme_account,
         generated_at=timezone.now(),
@@ -599,6 +606,7 @@ def get_cash_bonus_summary(scheme_account, as_of=None):
     redeemed = scheme_account.redemptions.filter(
         status=Redemption.Status.COMPLETED,
         reversal__isnull=True,
+        metal_grade=scheme_account.metal_grade,
     ).aggregate(
         principal=Coalesce(
             Sum("cash_principal_amount"),
@@ -666,7 +674,7 @@ def get_metal_balance(scheme_account):
     allocated = MetalAllocation.objects.filter(
         contribution__scheme_account=scheme_account,
         contribution__status=Contribution.Status.PAID,
-        metal=scheme_account.savings_mode,
+        metal_grade=scheme_account.metal_grade,
     ).aggregate(
         total=Coalesce(
             Sum("quantity"),
@@ -713,60 +721,55 @@ def get_owner_liability_summary():
         cash_earned_bonus += summary.earned_bonus
         cash_projected_bonus += summary.projected_bonus
 
-    metal_totals = MetalAllocation.objects.filter(
-        contribution__status=Contribution.Status.PAID,
-    ).aggregate(
-        gold=Coalesce(
-            Sum("quantity", filter=Q(metal=SchemeRate.Metal.GOLD)),
-            Value(Decimal("0.000000")),
-            output_field=DecimalField(max_digits=18, decimal_places=6),
-        ),
-        silver=Coalesce(
-            Sum("quantity", filter=Q(metal=SchemeRate.Metal.SILVER)),
-            Value(Decimal("0.000000")),
-            output_field=DecimalField(max_digits=18, decimal_places=6),
-        ),
-    )
-    metal_redeemed = Redemption.objects.filter(
-        status=Redemption.Status.COMPLETED,
-        reversal__isnull=True,
-    ).aggregate(
-        gold=Coalesce(
-            Sum("gold_quantity"),
-            Value(Decimal("0.000000")),
-            output_field=DecimalField(max_digits=18, decimal_places=6),
-        ),
-        silver=Coalesce(
-            Sum("silver_quantity"),
-            Value(Decimal("0.000000")),
-            output_field=DecimalField(max_digits=18, decimal_places=6),
-        ),
-    )
-    metal_totals["gold"] -= metal_redeemed["gold"]
-    metal_totals["silver"] -= metal_redeemed["silver"]
-
-    gold = _get_current_metal_liability(
-        SchemeAccount.SavingsMode.GOLD, metal_totals["gold"]
-    )
-    silver = _get_current_metal_liability(
-        SchemeAccount.SavingsMode.SILVER, metal_totals["silver"]
+    allocated = {
+        row["metal_grade_id"]: row["quantity"]
+        for row in MetalAllocation.objects.filter(
+            contribution__status=Contribution.Status.PAID,
+        )
+        .values("metal_grade_id")
+        .annotate(quantity=Sum("quantity"))
+    }
+    redeemed = {
+        row["metal_grade_id"]: row["quantity"]
+        for row in Redemption.objects.filter(
+            status=Redemption.Status.COMPLETED,
+            reversal__isnull=True,
+            metal_grade__isnull=False,
+        )
+        .values("metal_grade_id")
+        .annotate(
+            quantity=Sum(
+                Case(
+                    When(gold_quantity__isnull=False, then=F("gold_quantity")),
+                    default=F("silver_quantity"),
+                    output_field=DecimalField(max_digits=18, decimal_places=6),
+                )
+            )
+        )
+    }
+    grade_liabilities = tuple(
+        _get_current_metal_liability(
+            grade,
+            allocated.get(grade.pk, Decimal("0.000000"))
+            - redeemed.get(grade.pk, Decimal("0.000000")),
+        )
+        for grade in MetalGrade.objects.all()
     )
 
     return OwnerLiabilitySummary(
         cash_principal=cash_principal,
         cash_earned_bonus=cash_earned_bonus,
         cash_projected_bonus=cash_projected_bonus,
-        gold=gold,
-        silver=silver,
+        metal_grades=grade_liabilities,
     )
 
 
-def _get_current_metal_liability(metal, quantity):
-    scheme_rate = get_current_scheme_rate(metal)
+def _get_current_metal_liability(metal_grade, quantity):
+    scheme_rate = get_current_scheme_rate(metal_grade)
     if scheme_rate is None:
-        return MetalLiability(metal=metal, quantity=quantity)
+        return MetalLiability(metal_grade=metal_grade, quantity=quantity)
     return MetalLiability(
-        metal=metal,
+        metal_grade=metal_grade,
         quantity=quantity,
         scheme_rate=scheme_rate.rate_per_gram,
         indicative_exposure=(quantity * scheme_rate.rate_per_gram).quantize(
@@ -835,12 +838,12 @@ def get_redemption_eligibility_summary(as_of=None):
     day_90 = as_of + timedelta(days=90)
     open_accounts = list(
         SchemeAccount.objects.exclude(status=SchemeAccount.Status.REDEEMED)
-        .select_related("customer", "plan")
+        .select_related("customer", "plan", "metal_grade")
         .order_by("eligible_from", "scheme_number")
     )
     redeemed = tuple(
         SchemeAccount.objects.filter(status=SchemeAccount.Status.REDEEMED)
-        .select_related("customer", "plan")
+        .select_related("customer", "plan", "metal_grade")
         .order_by("-eligible_from", "scheme_number")
     )
     return RedemptionEligibilitySummary(
