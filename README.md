@@ -66,6 +66,7 @@ Alternatively, set `DJANGO_SECRET_KEY` and run `docker compose up --build`; Comp
 | `RAZORPAY_KEY_SECRET` | Razorpay | Mode-matched API secret; server-side only and never committed |
 | `RAZORPAY_WEBHOOK_SECRET` | Razorpay | Secret configured separately for webhook signing |
 | `RAZORPAY_TIMEOUT_SECONDS` | no | Razorpay API timeout; defaults to `10`, maximum `30` |
+| `RAZORPAY_CHECKOUT_EXPIRY_MINUTES` | no | Snapshotted Razorpay Checkout lifetime; defaults to `10`, accepted range `3`–`15` |
 | `SECURE_SSL_REDIRECT` | no | Defaults on outside debug; set for the deployment's TLS topology |
 | `SECURE_HSTS_SECONDS` | no | Defaults to 3600 outside debug |
 | `SECURE_HSTS_INCLUDE_SUBDOMAINS` | no | Explicit opt-in after every affected subdomain is HTTPS-capable |
@@ -157,6 +158,7 @@ RAZORPAY_KEY_ID=rzp_test_replace_me
 RAZORPAY_KEY_SECRET=replace-me
 RAZORPAY_WEBHOOK_SECRET=replace-me-with-a-separate-secret
 RAZORPAY_TIMEOUT_SECONDS=10
+RAZORPAY_CHECKOUT_EXPIRY_MINUTES=10
 ```
 
 Configure the test-mode webhook URL as `https://your-host.example/scheme/payments/razorpay/webhook/` and subscribe to `payment.captured`. The browser callback is verified with HMAC using the order ID stored locally, then the server fetches the payment and requires the same order, amount, INR currency, and captured status. Webhooks are verified against the untouched request body; duplicate `X-Razorpay-Event-Id` values are idempotent.

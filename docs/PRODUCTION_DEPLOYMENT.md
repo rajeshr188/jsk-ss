@@ -633,6 +633,7 @@ RAZORPAY_KEY_ID=<rzp_test_key-id>
 RAZORPAY_KEY_SECRET=<test-key-secret>
 RAZORPAY_WEBHOOK_SECRET=<separate-webhook-secret>
 RAZORPAY_TIMEOUT_SECONDS=10
+RAZORPAY_CHECKOUT_EXPIRY_MINUTES=10
 
 SECURE_SSL_REDIRECT=True
 TRUST_PROXY_SSL_HEADER=True
@@ -1832,6 +1833,54 @@ database and old image is safe only if the operator proves no payment, webhook,
 allocation, redemption, rate, enrolment, or other financial write occurred after the
 recovery point; otherwise reconcile every later event before any restore. Never
 reverse these migrations casually or relabel 24K history as 22K.
+
+### Razorpay Checkout-expiry deployment (`schemes.0017`)
+
+[ADR-0008](decisions/ADR-0008-razorpay-checkout-expiry.md) adds a required,
+snapshotted application deadline to every pending Razorpay contribution. This is a
+controlled cutover: after `0017`, an old image cannot create a valid pending Razorpay
+row because it does not populate the deadline.
+
+Set `RAZORPAY_CHECKOUT_EXPIRY_MINUTES=10` in the candidate environment. Before the
+maintenance window, enable the audited global payment pause, record the image
+identities and current managed-PostgreSQL recovery point, and require zero pending
+Razorpay contributions. Dry-run provider reconciliation before applying it; do not
+change an attempted or uncertain order merely to satisfy this gate.
+
+```bash
+docker compose --env-file .env.production -f compose.production.yml \
+  exec -T web python manage.py shell -c \
+'from schemes.models import Contribution; print("pending_razorpay=", Contribution.objects.filter(status="PENDING", payment_gateway="razorpay").count())'
+
+docker compose --env-file .env.production -f compose.production.yml \
+  exec -T web python manage.py reconcile_abandoned_razorpay_orders
+
+docker compose --env-file .env.production -f compose.production.yml \
+  run --rm --no-deps web python manage.py migrate --plan
+```
+
+The reviewed plan must contain only
+`schemes.0017_contribution_checkout_expiry`. Stop Caddy and the old web service,
+apply the migration once with the candidate, and start only the candidate web service.
+Require it to become healthy before validating/recreating Caddy.
+
+```bash
+docker compose --env-file .env.production -f compose.production.yml stop caddy web
+
+docker compose --env-file .env.production -f compose.production.yml \
+  run --rm --no-deps web python manage.py migrate --noinput
+
+docker compose --env-file .env.production -f compose.production.yml \
+  up -d --force-recreate --no-deps web
+```
+
+After external Live/Ready checks identify the candidate, rerun financial exceptions,
+Razorpay Live readiness, payment operations, and a zero-pending-order check. In a
+controlled Test-mode environment, prove the page receives a bounded timeout, the
+Resume action disappears after the snapshotted deadline, and an already verified
+capture is still processed idempotently. Keep production paused until these checks
+pass, then reopen through a separate audited owner action. Expiry is not provider
+cancellation and never authorizes deleting or failing a pending contribution.
 
 ### Live reconciliation, payment-error refund, and dispute boundary
 

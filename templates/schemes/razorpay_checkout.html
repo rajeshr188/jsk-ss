@@ -12,6 +12,7 @@
     {% if contribution.scheme_rate %}
     <div class="mt-2"><strong>Locked Scheme Rate:</strong> ₹{{ contribution.scheme_rate.rate_per_gram|floatformat:4 }}/g</div>
     {% endif %}
+    <div class="mt-2"><strong>Checkout available until:</strong> {{ checkout_expires_at|date:'d M Y, g:i:s A' }}</div>
   </div></div>
   {% if razorpay_mode == 'live' %}
   <div class="alert alert-info" role="alert">
@@ -41,18 +42,41 @@
     const button = document.getElementById("open-checkout");
     const form = document.getElementById("verification-form");
     const status = document.getElementById("checkout-status");
+    const expiresAt = Date.parse("{{ checkout_expires_at|date:'c'|escapejs }}");
+    const serverTimeoutSeconds = {{ checkout_timeout_seconds }};
+    let verificationStarted = false;
 
     const showStatus = (message, level = "danger") => {
       status.textContent = message;
       status.className = `alert alert-${level}`;
     };
 
+    const expireCheckout = () => {
+      if (verificationStarted) return;
+      button.disabled = true;
+      showStatus(
+        "This Checkout window has expired. No payment was credited. The showroom must reconcile the order before another attempt.",
+        "warning"
+      );
+    };
+
+    const millisecondsRemaining = expiresAt - Date.now();
+    if (millisecondsRemaining <= 0) {
+      expireCheckout();
+    } else {
+      window.setTimeout(expireCheckout, millisecondsRemaining);
+    }
+
     button.addEventListener("click", () => {
+      const secondsRemaining = Math.floor((expiresAt - Date.now()) / 1000);
+      if (secondsRemaining <= 0) {
+        expireCheckout();
+        return;
+      }
       if (typeof Razorpay === "undefined") {
         showStatus("Razorpay Checkout could not be loaded. Check your connection and try again.");
         return;
       }
-      let verificationStarted = false;
       const checkout = new Razorpay({
         key: "{{ razorpay_key_id|escapejs }}",
         amount: "{{ amount_subunits }}",
@@ -60,6 +84,7 @@
         name: "Jai Sri Krishna Jewellery",
         description: "Scheme contribution{% if razorpay_mode == 'test' %} (test mode){% endif %}",
         order_id: "{{ contribution.gateway_order_id|escapejs }}",
+        timeout: Math.max(1, Math.min(serverTimeoutSeconds, secondsRemaining)),
         prefill: {
           name: "{{ contribution.scheme_account.customer.full_name|escapejs }}",
           email: "{{ contribution.scheme_account.customer.email|escapejs }}",

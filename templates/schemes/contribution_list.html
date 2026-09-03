@@ -18,7 +18,9 @@
         <td>{{ contribution.scheme_account.scheme_number }}</td>
         <td>{{ contribution.contribution_period|date:'F Y' }}</td>
         <td>₹{{ contribution.amount|floatformat:2 }}</td>
-        <td>{{ contribution.payment_gateway|title }}{% if contribution.gateway_mode %} · {{ contribution.get_gateway_mode_display }}{% endif %}</td>
+        <td>{{ contribution.payment_gateway|title }}{% if contribution.gateway_mode %} · {{ contribution.get_gateway_mode_display }}{% endif %}
+          {% if contribution.payment_gateway == 'razorpay' and contribution.checkout_expires_at %}<div class="small text-muted">Checkout expiry: {{ contribution.checkout_expires_at|date:'d M Y, g:i A' }}</div>{% endif %}
+        </td>
         <td>{% if contribution.metal_allocation %}{{ contribution.metal_allocation.quantity|floatformat:3 }} g {{ contribution.metal_allocation.metal_grade.display_name }}{% else %}—{% endif %}</td>
         <td>
           {% if contribution.status == 'PAID' %}<span class="badge text-bg-success">Paid</span>

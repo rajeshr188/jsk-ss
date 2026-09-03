@@ -172,6 +172,12 @@ RAZORPAY_KEY_ID = os.getenv("RAZORPAY_KEY_ID", "").strip()
 RAZORPAY_KEY_SECRET = os.getenv("RAZORPAY_KEY_SECRET", "").strip()
 RAZORPAY_WEBHOOK_SECRET = os.getenv("RAZORPAY_WEBHOOK_SECRET", "").strip()
 RAZORPAY_TIMEOUT_SECONDS = os.getenv("RAZORPAY_TIMEOUT_SECONDS", "10")
+RAZORPAY_CHECKOUT_EXPIRY_MINUTES = env_int(
+    "RAZORPAY_CHECKOUT_EXPIRY_MINUTES",
+    10,
+    minimum=3,
+    maximum=15,
+)
 
 # Password validation
 # https://docs.djangoproject.com/en/dev/ref/settings/#auth-password-validators
