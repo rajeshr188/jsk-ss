@@ -19,8 +19,11 @@ from .models import (
     Contribution,
     Customer,
     GatewayMode,
+    InStoreCashContributionReversal,
+    InStoreCashReceipt,
     MetalAllocation,
     MetalGrade,
+    PaymentChannel,
     PaymentOperationsControl,
     PaymentScheduleWindow,
     PaymentWebhookEvent,
@@ -42,6 +45,7 @@ from .payments import (
 from .selectors import (
     get_cash_bonus_summary,
     get_current_scheme_rate,
+    get_metal_balance,
     get_outstanding_entitlement,
 )
 
@@ -75,6 +79,15 @@ class RazorpayWebhookRecoveryResult:
     applied: bool
 
 
+@dataclass(frozen=True)
+class InStoreCashContributionPreview:
+    scheme_account: SchemeAccount
+    amount: Decimal
+    contribution_period: date
+    scheme_rate: SchemeRate
+    quantity: Decimal
+
+
 class WebhookTransientProcessingError(Exception):
     """A signed delivery could not be durably consumed and should be retried."""
 
@@ -89,6 +102,10 @@ class _WebhookReviewRequired(Exception):
 def cash_scheme_activity_is_enabled():
     """Retain CASH workflows only for local historical regression coverage."""
     return settings.DEBUG
+
+
+def in_store_cash_contributions_are_enabled():
+    return settings.IN_STORE_CASH_CONTRIBUTIONS_ENABLED
 
 
 def _actor_label(actor):
@@ -211,6 +228,7 @@ def publish_scheme_rate(
     _validate_owner(published_by)
     if metal_grade is None or not metal_grade.pk:
         raise ValidationError({"metal_grade": "Select a metal grade."})
+    metal_grade = MetalGrade.objects.select_for_update().get(pk=metal_grade.pk)
     try:
         normalized_rate = Decimal(str(rate_per_gram))
     except (InvalidOperation, TypeError, ValueError):
@@ -556,6 +574,11 @@ def initiate_contribution(
         frequency_rule_snapshot=locked_account.frequency_rule_snapshot,
         status=Contribution.Status.PENDING,
         payment_gateway=payment_gateway,
+        payment_channel=(
+            PaymentChannel.RAZORPAY
+            if payment_gateway == "razorpay"
+            else PaymentChannel.MOCK
+        ),
         gateway_mode=gateway_mode,
         checkout_expires_at=(
             timezone.now()
@@ -568,6 +591,177 @@ def initiate_contribution(
     contribution.full_clean()
     contribution.save()
     return contribution
+
+
+def preview_in_store_cash_contribution(*, scheme_account, amount):
+    if not in_store_cash_contributions_are_enabled():
+        raise ValidationError("In-store cash contribution recording is disabled.")
+    if scheme_account.savings_mode not in {
+        SchemeAccount.SavingsMode.GOLD,
+        SchemeAccount.SavingsMode.SILVER,
+    }:
+        raise ValidationError(
+            "In-store cash can be recorded only against a gold or silver scheme."
+        )
+    ensure_payment_initiation_allowed(metal_grade=scheme_account.metal_grade)
+    normalized_amount, period = validate_contribution_allowed(scheme_account, amount)
+    scheme_rate = get_current_scheme_rate(scheme_account.metal_grade)
+    if scheme_rate is None:
+        raise ValidationError(
+            f"{scheme_account.entitlement_name} contributions are temporarily "
+            "unavailable because the current Scheme Rate has not been published."
+        )
+    quantity = (normalized_amount / scheme_rate.rate_per_gram).quantize(
+        METAL_QUANTUM,
+        rounding=ROUND_HALF_UP,
+    )
+    if quantity <= 0:
+        raise ValidationError("The contribution is too small to allocate.")
+    return InStoreCashContributionPreview(
+        scheme_account=scheme_account,
+        amount=normalized_amount,
+        contribution_period=period,
+        scheme_rate=scheme_rate,
+        quantity=quantity,
+    )
+
+
+def record_in_store_cash_contribution(
+    *,
+    scheme_account,
+    amount,
+    expected_scheme_rate_id,
+    received_by,
+    idempotency_key,
+    paper_receipt_number="",
+    notes="",
+    audit_reason="Cash received at the showroom.",
+):
+    if not in_store_cash_contributions_are_enabled():
+        raise ValidationError("In-store cash contribution recording is disabled.")
+    _validate_owner(received_by)
+    paper_receipt_number = paper_receipt_number.strip() or None
+    notes = notes.strip()
+    normalized_reason = audit_reason.strip()
+    if not normalized_reason:
+        raise ValidationError({"audit_reason": "Enter a reason for recording the cash."})
+
+    with transaction.atomic():
+        existing = (
+            InStoreCashReceipt.objects.select_related(
+                "contribution",
+                "contribution__scheme_account",
+            )
+            .filter(idempotency_key=idempotency_key)
+            .first()
+        )
+        if existing is not None:
+            contribution = existing.contribution
+            submitted_amount = validate_contribution_amount(
+                contribution.scheme_account,
+                amount,
+            )
+            if (
+                contribution.scheme_account_id == scheme_account.pk
+                and contribution.amount == submitted_amount
+                and existing.paper_receipt_number == paper_receipt_number
+                and existing.notes == notes
+                and contribution.scheme_rate_id == expected_scheme_rate_id
+            ):
+                return _apply_contribution_entitlement(contribution)
+            raise ValidationError("The cash receipt submission token was already used.")
+
+        account = (
+            SchemeAccount.objects.select_for_update(of=("self",))
+            .select_related("customer", "metal_grade")
+            .get(pk=scheme_account.pk)
+        )
+        if account.savings_mode not in {
+            SchemeAccount.SavingsMode.GOLD,
+            SchemeAccount.SavingsMode.SILVER,
+        }:
+            raise ValidationError(
+                "In-store cash can be recorded only against a gold or silver scheme."
+            )
+        MetalGrade.objects.select_for_update().get(pk=account.metal_grade_id)
+        ensure_payment_initiation_allowed(metal_grade=account.metal_grade, lock=True)
+        if Contribution.objects.filter(
+            scheme_account=account,
+            status=Contribution.Status.PENDING,
+            payment_gateway="razorpay",
+        ).exists():
+            raise ValidationError(
+                "This scheme has a pending Razorpay order. Reconcile or complete it "
+                "before recording in-store cash."
+            )
+        normalized_amount, period = validate_contribution_allowed(account, amount)
+        now = timezone.now()
+        scheme_rate = (
+            SchemeRate.objects.select_for_update()
+            .filter(
+                metal_grade=account.metal_grade,
+                effective_from__lte=now,
+            )
+            .order_by("-effective_from", "-published_at", "-pk")
+            .first()
+        )
+        if scheme_rate is None:
+            raise ValidationError("The current Scheme Rate has not been published.")
+        if scheme_rate.pk != expected_scheme_rate_id:
+            raise ValidationError(
+                "The Scheme Rate changed after preview. Review the updated rate "
+                "before confirming cash receipt."
+            )
+
+        receipt_reference = _reference(
+            "CASH",
+            InStoreCashReceipt,
+            "receipt_reference",
+        )
+        contribution = Contribution(
+            scheme_account=account,
+            amount=normalized_amount,
+            contribution_period=period,
+            frequency_rule_snapshot=account.frequency_rule_snapshot,
+            status=Contribution.Status.PAID_UNALLOCATED,
+            payment_gateway="in_store_cash",
+            payment_channel=PaymentChannel.IN_STORE_CASH,
+            gateway_reference=receipt_reference,
+            scheme_rate=scheme_rate,
+            rate_locked_at=now,
+            paid_at=now,
+        )
+        contribution.full_clean()
+        contribution.save()
+        receipt = InStoreCashReceipt(
+            contribution=contribution,
+            receipt_reference=receipt_reference,
+            idempotency_key=idempotency_key,
+            paper_receipt_number=paper_receipt_number,
+            received_by=received_by,
+            received_by_label=_actor_label(received_by),
+            received_at=now,
+            notes=notes,
+        )
+        receipt.full_clean()
+        receipt.save()
+        record_audit_event(
+            action=AuditEvent.Action.IN_STORE_CASH_RECEIPT,
+            actor=received_by,
+            reason=normalized_reason,
+            scheme_account=account,
+            contribution=contribution,
+            scheme_rate=scheme_rate,
+            details={
+                "receipt_reference": receipt_reference,
+                "paper_receipt_number": paper_receipt_number,
+                "amount_inr": str(normalized_amount),
+                "metal_grade": account.metal_grade.code,
+                "rate_per_gram": str(scheme_rate.rate_per_gram),
+            },
+        )
+
+    return _apply_contribution_entitlement(contribution)
 
 
 @transaction.atomic
@@ -1737,6 +1931,99 @@ def reverse_redemption(*, redemption, processed_by, reason):
             "redemption_number": locked_redemption.redemption_number,
             "amount": str(locked_redemption.entitlement_amount),
             "unit": locked_redemption.entitlement_unit,
+        },
+    )
+    return reversal
+
+
+@transaction.atomic
+def reverse_in_store_cash_contribution(
+    *,
+    contribution,
+    processed_by,
+    reason_code,
+    reason,
+):
+    _validate_owner(processed_by)
+    normalized_reason = reason.strip()
+    if not normalized_reason:
+        raise ValidationError({"reason": "Enter the bookkeeping error details."})
+    if reason_code not in InStoreCashContributionReversal.ReasonCode.values:
+        raise ValidationError({"reason_code": "Select a valid correction reason."})
+
+    account_id = Contribution.objects.only("scheme_account_id").get(
+        pk=contribution.pk
+    ).scheme_account_id
+    account = SchemeAccount.objects.select_for_update().get(pk=account_id)
+    locked = (
+        Contribution.objects.select_for_update(of=("self",))
+        .select_related("scheme_account", "metal_allocation")
+        .get(pk=contribution.pk)
+    )
+    if locked.payment_channel != PaymentChannel.IN_STORE_CASH:
+        raise ValidationError("Only an in-store cash contribution can be corrected.")
+    if locked.status == Contribution.Status.REVERSED:
+        raise ValidationError("This in-store cash contribution is already reversed.")
+    if locked.status not in SUCCESSFUL_PAYMENT_STATUSES:
+        raise ValidationError("Only a recorded in-store cash receipt can be corrected.")
+    if InStoreCashContributionReversal.objects.filter(contribution=locked).exists():
+        raise ValidationError("This in-store cash contribution is already reversed.")
+
+    reversal_deadline = locked.paid_at + timedelta(
+        hours=settings.IN_STORE_CASH_REVERSAL_HOURS
+    )
+    if timezone.now() > reversal_deadline:
+        raise ValidationError(
+            "The routine correction window has closed. Escalate this record for "
+            "manual financial review."
+        )
+    if account.status == SchemeAccount.Status.REDEEMED or Redemption.objects.filter(
+        scheme_account=account,
+        completed_at__gte=locked.paid_at,
+        reversal__isnull=True,
+    ).exists():
+        raise ValidationError(
+            "This contribution cannot be reversed after a downstream redemption."
+        )
+    try:
+        allocation = locked.metal_allocation
+    except MetalAllocation.DoesNotExist:
+        allocation = None
+    if allocation is not None and get_metal_balance(account) < allocation.quantity:
+        raise ValidationError(
+            "The allocated metal is no longer fully available for this correction."
+        )
+
+    reversal = InStoreCashContributionReversal(
+        contribution=locked,
+        reversal_number=_reference(
+            "CRV",
+            InStoreCashContributionReversal,
+            "reversal_number",
+        ),
+        reason_code=reason_code,
+        reason=normalized_reason,
+        processed_by=processed_by,
+        processed_by_label=_actor_label(processed_by),
+    )
+    reversal.full_clean()
+    reversal.save()
+    locked.status = Contribution.Status.REVERSED
+    locked.full_clean()
+    locked.save(update_fields=["status"])
+    record_audit_event(
+        action=AuditEvent.Action.IN_STORE_CASH_REVERSAL,
+        actor=processed_by,
+        reason=normalized_reason,
+        scheme_account=account,
+        contribution=locked,
+        scheme_rate=locked.scheme_rate,
+        details={
+            "reversal_number": reversal.reversal_number,
+            "receipt_reference": locked.gateway_reference,
+            "reason_code": reason_code,
+            "amount_inr": str(locked.amount),
+            "allocation_quantity": str(allocation.quantity) if allocation else None,
         },
     )
     return reversal

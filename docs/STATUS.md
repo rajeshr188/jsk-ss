@@ -2,13 +2,14 @@
 
 ## Current milestone
 
-`FW-PAY-005` is deployed and accepted in production under ADR-0008. Every new
-Razorpay contribution snapshots a configurable 3–15 minute Checkout deadline
-(10 minutes in production); expired pages and Resume actions fail closed without
-changing financial state, while verified callbacks/webhooks and provider-backed
-abandonment retain their existing conservative boundaries. The next bounded payment
-task resumes `FW-PAY-003` with an idempotent replay of one already-processed Live
-capture event and retained owner-review evidence.
+`FW-PAY-006` is implemented locally under ADR-0009 and awaits CI/production rollout.
+It treats showroom cash as an owner-recorded payment channel for an existing exact-
+grade metal scheme, not a CASH savings product. A two-step receipt confirmation uses
+the current Scheme Rate and existing payment controls; immutable receipt/reversal
+ledgers, a terminal `REVERSED` contribution state, customer documents, CSV evidence,
+daily reconciliation, and a non-mutating integrity command preserve the financial
+trail. Production remains default-off until controlled migration `schemes.0018` and
+owner workflow verification pass.
 
 ## Completed
 
@@ -283,6 +284,10 @@ capture event and retained owner-review evidence.
 
 ## In progress
 
+- `FW-PAY-006` local implementation is complete on
+  `agent/in-store-cash-contributions`. CI review, default-off production migration,
+  integrity checks, owner UI review, flag activation, and reconciliation of the first
+  legitimate showroom receipt remain.
 - `FW-PAY-003` retains two no-mutation recovery evidence exercises: an isolated
   Test-mode review/dry-run/apply case and an idempotent replay of an already-processed
   Live capture. External alerting and coordinated secret rotation remain separately
@@ -336,8 +341,9 @@ capture event and retained owner-review evidence.
   retain logs and exercise uptime, 5xx, capacity, backup, TLS, and financial alerts.
 - The application records redemptions but does not execute payouts, move inventory,
   create invoices, or convert metal to cash.
-- Automated payment correction, voids, refunds/disputes, dual approval, provider
-  settlement import, and automated retries remain. The Live runbook permits only a
+- Generic online-payment correction, voids, refunds/disputes, dual approval, provider
+  settlement import, and automated retries remain. In-store cash bookkeeping errors
+  now have a bounded append-only reversal, but this is not a refund. The Live runbook permits only a
   tightly bounded manual Dashboard refund for a captured payment that created no
   local entitlement; any credited-payment refund or chargeback remains an incident.
 - Public policy pages require business/legal approval before they are treated as
@@ -370,9 +376,14 @@ capture event and retained owner-review evidence.
 - Wagtail 7.4.3 and Django 6.0.4 pass system checks, production-shaped deploy checks,
   static collection, and an applied-migration check. Wagtail, taggit, and catalogue
   migrations are applied to production PostgreSQL.
-- Local and production PostgreSQL 16 migrations are applied through
-  `schemes.0017_contribution_checkout_expiry`.
-- 267 tests pass, including Razorpay Checkout expiry/backfill, expired-resume
+- Local PostgreSQL 16 migrations are defined through
+  `schemes.0018_in_store_cash_contributions`; production remains applied through
+  `schemes.0017_contribution_checkout_expiry` until the controlled rollout.
+- 280 tests pass, including in-store cash preview/confirmation, owner authorization,
+  payment-control and pending-Razorpay blocking, exact-rate locking, idempotency,
+  durable allocation, bounded append-only correction, active-balance removal, daily
+  reconciliation, receipt/statement visibility, and provider-channel migration,
+  plus Razorpay Checkout expiry/backfill, expired-resume
   blocking, capture-after-expiry confirmation, exact 22K/24K rate separation,
   six-decimal allocation,
   immutable enrolment grade, legacy old-schema preflight, history mapping, default

@@ -68,6 +68,16 @@ urlpatterns = [
     path("owner/plans/<int:plan_id>/edit/", views.plan_edit, name="plan_edit"),
     path("owner/contributions/", views.contribution_list, name="contribution_list"),
     path(
+        "owner/schemes/<str:scheme_number>/cash-contribution/",
+        views.in_store_cash_contribution,
+        name="in_store_cash_contribution",
+    ),
+    path(
+        "owner/contributions/<int:contribution_id>/reverse-cash/",
+        views.in_store_cash_contribution_reverse,
+        name="in_store_cash_contribution_reverse",
+    ),
+    path(
         "owner/contributions/<int:contribution_id>/retry-allocation/",
         views.retry_contribution_allocation,
         name="retry_contribution_allocation",

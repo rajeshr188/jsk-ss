@@ -9,7 +9,7 @@ from django.test import TransactionTestCase
 class RazorpayModeMigrationTests(TransactionTestCase):
     migrate_from = ("schemes", "0010_manual_scheme_rates")
     migrate_to = ("schemes", "0011_razorpay_gateway_mode")
-    restore_to = ("schemes", "0017_contribution_checkout_expiry")
+    restore_to = ("schemes", "0018_in_store_cash_contributions")
     accounts_target = ("accounts", "0002_customuser_role")
 
     def setUp(self):

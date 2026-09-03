@@ -7,6 +7,13 @@
   <div><p class="page-eyebrow">Payment records</p><h1>Contributions</h1><p class="page-subtitle">All customer payment attempts.</p></div>
   <div class="page-actions"><a class="btn btn-outline-dark" href="{% url 'schemes:contribution_export' %}">Download CSV</a></div>
 </div>
+{% if in_store_cash_enabled %}
+<div class="row g-3 mb-4">
+  <div class="col-6 col-lg-3"><div class="card stat-card h-100"><div class="card-body"><div class="stat-label">Cash received today</div><div class="stat-value">₹{{ cash_daily_summary.received_amount|floatformat:2 }}</div><div class="stat-meta">{{ cash_daily_summary.receipts_count }} receipt{{ cash_daily_summary.receipts_count|pluralize }}</div></div></div></div>
+  <div class="col-6 col-lg-3"><div class="card stat-card h-100"><div class="card-body"><div class="stat-label">Corrections today</div><div class="stat-value">₹{{ cash_daily_summary.reversed_amount|floatformat:2 }}</div><div class="stat-meta">{{ cash_daily_summary.reversals_count }} reversal{{ cash_daily_summary.reversals_count|pluralize }}</div></div></div></div>
+  <div class="col-12 col-lg-3"><div class="card stat-card stat-card--success h-100"><div class="card-body"><div class="stat-label">Net cash record today</div><div class="stat-value">₹{{ cash_daily_summary.net_amount|floatformat:2 }}</div><div class="stat-meta">{{ cash_daily_summary.as_of|date:'d M Y' }}</div></div></div></div>
+</div>
+{% endif %}
 <div class="table-responsive">
   <table class="table align-middle">
     <thead><tr><th scope="col">Created</th><th scope="col">Customer</th><th scope="col">Scheme</th><th scope="col">Period</th><th scope="col">Amount</th><th scope="col">Provider</th><th scope="col">Entitlement</th><th scope="col">Status</th><th scope="col">Action</th></tr></thead>
@@ -18,8 +25,9 @@
         <td>{{ contribution.scheme_account.scheme_number }}</td>
         <td>{{ contribution.contribution_period|date:'F Y' }}</td>
         <td>₹{{ contribution.amount|floatformat:2 }}</td>
-        <td>{{ contribution.payment_gateway|title }}{% if contribution.gateway_mode %} · {{ contribution.get_gateway_mode_display }}{% endif %}
+        <td>{{ contribution.payment_method_display }}{% if contribution.gateway_mode %} · {{ contribution.get_gateway_mode_display }}{% endif %}
           {% if contribution.payment_gateway == 'razorpay' and contribution.checkout_expires_at %}<div class="small text-muted">Checkout expiry: {{ contribution.checkout_expires_at|date:'d M Y, g:i A' }}</div>{% endif %}
+          {% if contribution.cash_receipt.paper_receipt_number %}<div class="small text-muted">Paper receipt: {{ contribution.cash_receipt.paper_receipt_number }}</div>{% endif %}
         </td>
         <td>{% if contribution.metal_allocation %}{{ contribution.metal_allocation.quantity|floatformat:3 }} g {{ contribution.metal_allocation.metal_grade.display_name }}{% else %}—{% endif %}</td>
         <td>
@@ -27,11 +35,15 @@
           {% elif contribution.status == 'PAID_UNALLOCATED' %}<span class="badge text-bg-warning">Paid — allocation pending</span>
           {% if contribution.allocation_error %}<div class="small text-danger mt-1">{{ contribution.allocation_error }}</div>{% endif %}
           {% elif contribution.status == 'FAILED' %}<span class="badge text-bg-danger">Failed</span>
+          {% elif contribution.status == 'REVERSED' %}<span class="badge text-bg-secondary">Reversed</span><div class="small text-muted mt-1">{{ contribution.cash_reversal.get_reason_code_display }}</div>
           {% else %}<span class="badge text-bg-warning">Pending</span>{% endif %}
         </td>
         <td>
-          {% if contribution.status == 'PAID' or contribution.status == 'PAID_UNALLOCATED' %}
+          {% if contribution.status == 'PAID' or contribution.status == 'PAID_UNALLOCATED' or contribution.status == 'REVERSED' %}
           <a class="btn btn-sm btn-outline-dark mb-2" href="{% url 'schemes:contribution_receipt' contribution.pk %}">Receipt</a>
+          {% endif %}
+          {% if contribution.payment_gateway == 'in_store_cash' and contribution.status != 'REVERSED' %}
+          <a class="btn btn-sm btn-outline-danger mb-2" href="{% url 'schemes:in_store_cash_contribution_reverse' contribution.pk %}">Correct entry</a>
           {% endif %}
           {% if contribution.status == 'PAID_UNALLOCATED' %}
           <form method="post" action="{% url 'schemes:retry_contribution_allocation' contribution.pk %}">

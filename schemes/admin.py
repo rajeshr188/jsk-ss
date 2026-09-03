@@ -5,6 +5,8 @@ from .models import (
     AuditEvent,
     Contribution,
     Customer,
+    InStoreCashContributionReversal,
+    InStoreCashReceipt,
     MetalAllocation,
     MetalGrade,
     PaymentWebhookEvent,
@@ -129,12 +131,19 @@ class ContributionAdmin(admin.ModelAdmin):
         "frequency_rule_snapshot",
         "status",
         "payment_gateway",
+        "payment_channel",
         "gateway_mode",
         "scheme_rate",
         "rate_locked_at",
         "created_at",
     )
-    list_filter = ("status", "payment_gateway", "gateway_mode", "contribution_period")
+    list_filter = (
+        "status",
+        "payment_channel",
+        "payment_gateway",
+        "gateway_mode",
+        "contribution_period",
+    )
     search_fields = (
         "gateway_order_id",
         "gateway_reference",
@@ -148,6 +157,7 @@ class ContributionAdmin(admin.ModelAdmin):
         "frequency_rule_snapshot",
         "status",
         "payment_gateway",
+        "payment_channel",
         "gateway_mode",
         "gateway_order_id",
         "gateway_reference",
@@ -156,6 +166,56 @@ class ContributionAdmin(admin.ModelAdmin):
         "allocation_attempted_at",
         "created_at",
         "paid_at",
+    )
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(InStoreCashReceipt)
+class InStoreCashReceiptAdmin(admin.ModelAdmin):
+    list_display = (
+        "receipt_reference",
+        "contribution",
+        "paper_receipt_number",
+        "received_by_label",
+        "received_at",
+    )
+    search_fields = (
+        "receipt_reference",
+        "paper_receipt_number",
+        "contribution__scheme_account__scheme_number",
+        "contribution__scheme_account__customer__full_name",
+    )
+    readonly_fields = tuple(field.name for field in InStoreCashReceipt._meta.fields)
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(InStoreCashContributionReversal)
+class InStoreCashContributionReversalAdmin(admin.ModelAdmin):
+    list_display = (
+        "reversal_number",
+        "contribution",
+        "reason_code",
+        "processed_by_label",
+        "reversed_at",
+    )
+    list_filter = ("reason_code", "reversed_at")
+    search_fields = (
+        "reversal_number",
+        "contribution__gateway_reference",
+        "contribution__scheme_account__scheme_number",
+    )
+    readonly_fields = tuple(
+        field.name for field in InStoreCashContributionReversal._meta.fields
     )
 
     def has_add_permission(self, request):

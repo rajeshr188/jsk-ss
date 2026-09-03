@@ -5,6 +5,7 @@ from django import forms
 from django.contrib.auth import get_user_model
 
 from .models import (
+    InStoreCashContributionReversal,
     MetalGrade,
     PaymentOperationsControl,
     PaymentScheduleWindow,
@@ -192,6 +193,73 @@ class ContributionForm(forms.Form):
         amount = self.cleaned_data["amount"]
         validated_amount, _ = validate_contribution_allowed(self.scheme_account, amount)
         return validated_amount
+
+
+class InStoreCashContributionForm(ContributionForm):
+    idempotency_key = forms.UUIDField(widget=forms.HiddenInput)
+    expected_scheme_rate_id = forms.IntegerField(
+        required=False,
+        widget=forms.HiddenInput,
+    )
+    paper_receipt_number = forms.CharField(
+        required=False,
+        max_length=80,
+        label="Paper receipt number (optional)",
+        help_text="If entered, this number must be unique.",
+    )
+    notes = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={"rows": 2}),
+        help_text="Optional internal note; do not record sensitive payment data.",
+    )
+    audit_reason = forms.CharField(
+        label="Reason for recording",
+        initial="Cash received at the showroom.",
+        widget=forms.Textarea(attrs={"rows": 2}),
+        help_text="Recorded with your identity and timestamp.",
+    )
+    confirm_cash_received = forms.BooleanField(
+        required=False,
+        label="I confirm the showroom has physically received this cash amount.",
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for name in ("amount", "paper_receipt_number", "notes", "audit_reason"):
+            self.fields[name].widget.attrs["class"] = "form-control"
+        self.fields["confirm_cash_received"].widget.attrs["class"] = (
+            "form-check-input"
+        )
+
+    def clean_paper_receipt_number(self):
+        return self.cleaned_data["paper_receipt_number"].strip()
+
+
+class InStoreCashContributionReversalForm(forms.Form):
+    reason_code = forms.ChoiceField(
+        label="Correction reason",
+        choices=InStoreCashContributionReversal.ReasonCode.choices,
+    )
+    reason = forms.CharField(
+        label="Bookkeeping error details",
+        widget=forms.Textarea(attrs={"rows": 3}),
+        help_text=(
+            "This is not a customer cancellation or cash refund. Explain the "
+            "incorrect record and any replacement entry required."
+        ),
+    )
+    confirm_reversal = forms.BooleanField(
+        label=(
+            "I confirm this is a bookkeeping correction and the original metal "
+            "entitlement must be removed."
+        ),
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["reason_code"].widget.attrs["class"] = "form-select"
+        self.fields["reason"].widget.attrs["class"] = "form-control"
+        self.fields["confirm_reversal"].widget.attrs["class"] = "form-check-input"
 
 
 class PaymentOperationsForm(forms.Form):

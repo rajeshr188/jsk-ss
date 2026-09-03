@@ -216,6 +216,30 @@ here are not implemented behavior and do not relax the financial invariants in
   and reopened every grade through a separate audited owner action.
   Razorpay exposes no order cancellation API, so the provider-inspection residual
   risk and manual late-capture refund boundary remain.
+- **FW-PAY-006 — In-store cash tender for metal contributions (in progress):**
+  [ADR-0009](decisions/ADR-0009-in-store-cash-contributions.md) defines cash as a
+  payment channel for exact-grade metal schemes, not a CASH savings balance:
+  - [x] Add explicit payment-channel history with migration backfill and database
+    constraints while preserving Razorpay mode and provider identifiers.
+  - [x] Add owner-only, feature-gated preview/confirm recording with server time,
+    amount/frequency/payment-control checks, exact current-rate locking, pending-
+    Razorpay conflict rejection, idempotency, and optional unique paper receipts.
+  - [x] Commit the cash receipt before allocation and reuse the durable
+    `PAID_UNALLOCATED` exception/retry workflow.
+  - [x] Add immutable, bounded correction through a one-to-one reversal and terminal
+    `REVERSED` state; block it after downstream redemption or unavailable entitlement.
+  - [x] Expose payment method, preserved/reversed receipts, customer statement
+    adjustments, owner CSV metadata, and daily received/reversed/net reconciliation.
+  - [x] Add a non-mutating integrity check plus service, permission, UI, migration,
+    race, idempotency, and balance tests.
+  - [ ] Complete CI review and controlled migration `schemes.0018` with the feature
+    disabled, then run the production integrity command.
+  - [ ] Review the owner workflow and enable the flag; reconcile the first legitimate
+    showroom receipt against physical cash, customer statement, grade allocation,
+    audit log, and CSV before marking the rollout complete.
+  Legal/accounting review of cash acceptance, statutory receipts, external bookkeeping,
+  corrections outside the routine window, refunds, and dual approval remain outside
+  this bounded feature.
 - **FW-SETTLE-001:** Integrate actual payout, metal handover, or point-of-sale
   confirmation if the business later requires the application to execute rather
   than merely record settlement.

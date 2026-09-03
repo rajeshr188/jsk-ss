@@ -36,7 +36,7 @@ This is the canonical source for stable business rules.
   relabelled as `GOLD_22K_916`.
 - **CON-001:** Amount rules (`FIXED`/`VARIABLE`) and frequency rules (`ONCE_PER_MONTH`/`FLEXIBLE`) are independent.
 - **CON-002:** Monthly periods use deterministic calendar keys such as `2026-08`, never rolling 30-day windows.
-- **CON-003:** `ONCE_PER_MONTH` permits one successfully paid contribution per scheme account and calendar month. Both `PAID` and `PAID_UNALLOCATED` consume the opportunity; `PENDING` and `FAILED` attempts do not.
+- **CON-003:** `ONCE_PER_MONTH` permits one successfully paid contribution per scheme account and calendar month. Both `PAID` and `PAID_UNALLOCATED` consume the opportunity; `PENDING`, `FAILED`, `ABANDONED`, and corrected `REVERSED` records do not.
 - **CON-004:** `FLEXIBLE` permits multiple successful contributions in the same calendar month.
 - **CON-005:** Fixed contributions must exactly equal the snapshotted fixed amount. Variable contributions must remain within snapshotted minimum/maximum boundaries.
 - **CON-006:** Contributions are rejected before the account start date, after redemption, and after eligibility unless the agreement snapshot explicitly permits them.
@@ -107,6 +107,32 @@ This is the canonical source for stable business rules.
   expiry but before provider-verified abandonment is confirmed idempotently from its
   original locked Scheme Rate. A capture after `ABANDONED` remains a financial
   exception; expiry is never a reason to ignore received money.
+- **PAY-022:** In-store cash is an owner-recorded payment channel for an existing
+  Gold or Silver scheme contribution. It creates exact-grade metal entitlement and
+  never creates a legacy CASH-mode INR balance, cash redemption right, or customer
+  self-service payment path.
+- **PAY-023:** An in-store cash receipt requires a server-retained review followed by
+  explicit owner confirmation that cash was physically received. It uses server time,
+  supports no backdating or split tender, and records one immutable idempotent receipt,
+  actor label, internal reference, optional unique paper reference, and audit reason.
+- **PAY-024:** Agreement amount/frequency/date rules, all payment-operation controls,
+  and the current exact-grade Scheme Rate apply to in-store cash. A changed rate or
+  changed preview must be reviewed again. Any pending Razorpay order on the account
+  blocks cash recording until provider reconciliation removes the capture race.
+- **PAY-025:** Cash receipt and its `PAID_UNALLOCATED` contribution commit before
+  metal allocation. Allocation reuses the exact locked-rate workflow; a failure stays
+  visible for owner retry and never loses evidence that the showroom received money.
+- **PAY-026:** An erroneous in-store cash record is never edited or deleted. One
+  immutable reversal changes the original to terminal `REVERSED`, preserves its
+  receipt/rate/allocation, and removes that exact allocation from active entitlement.
+  A corrected amount/account requires a separate newly reviewed receipt.
+- **PAY-027:** Routine cash-entry reversal is owner-only, bounded by the configured
+  correction window, and blocked after downstream unreversed redemption or when its
+  exact allocation is no longer available. It is a bookkeeping correction, not a
+  customer cancellation or cash-refund workflow.
+- **PAY-028:** Daily showroom reconciliation separately reports cash received,
+  corrections, and net recorded cash. Cross-record integrity must pass before and
+  after deployment and during routine financial review.
 - **METAL-001 / FIN-002:** A metal contribution creates at most one successful allocation.
 - **METAL-002 / FIN-003:** A Scheme Rate used by an allocation is immutable.
 - **METAL-003 / FIN-004:** Historical allocated grams never change when a newer Scheme Rate is published.
@@ -123,7 +149,8 @@ This is the canonical source for stable business rules.
 - **RATE-001:** Only a manually published Jai Sri Krishna Jewellery `SchemeRate` for
   the exact account grade may be used for a new allocation.
 - **RATE-002:** A metal contribution must lock its current applicable grade-specific
-  `SchemeRate` before mock payment initiation or Razorpay order creation.
+  `SchemeRate` before mock payment initiation, Razorpay order creation, or final
+  confirmation of an in-store cash receipt.
 - **RATE-003:** Publishing a new `SchemeRate` never changes an already locked contribution.
 - **RATE-004:** Publishing a new `SchemeRate` never changes historical `MetalAllocation` quantity.
 - **RATE-005:** A metal payment cannot be initiated when no valid current

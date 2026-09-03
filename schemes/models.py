@@ -403,6 +403,12 @@ class GatewayMode(models.TextChoices):
     LIVE = "live", "Live"
 
 
+class PaymentChannel(models.TextChoices):
+    RAZORPAY = "RAZORPAY", "Razorpay online"
+    IN_STORE_CASH = "IN_STORE_CASH", "In-store cash"
+    MOCK = "MOCK", "Mock payment"
+
+
 class Contribution(models.Model):
     class Status(models.TextChoices):
         PENDING = "PENDING", "Pending"
@@ -410,6 +416,7 @@ class Contribution(models.Model):
         PAID_UNALLOCATED = "PAID_UNALLOCATED", "Paid — allocation pending"
         FAILED = "FAILED", "Failed"
         ABANDONED = "ABANDONED", "Abandoned"
+        REVERSED = "REVERSED", "Reversed"
 
     scheme_account = models.ForeignKey(
         SchemeAccount,
@@ -425,6 +432,11 @@ class Contribution(models.Model):
     )
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
     payment_gateway = models.CharField(max_length=30)
+    payment_channel = models.CharField(
+        max_length=20,
+        choices=PaymentChannel.choices,
+        default=PaymentChannel.MOCK,
+    )
     gateway_mode = models.CharField(
         max_length=10,
         choices=GatewayMode.choices,
@@ -476,7 +488,7 @@ class Contribution(models.Model):
             models.CheckConstraint(
                 condition=(
                     models.Q(
-                        status__in=["PAID", "PAID_UNALLOCATED"],
+                        status__in=["PAID", "PAID_UNALLOCATED", "REVERSED"],
                         paid_at__isnull=False,
                         gateway_reference__isnull=False,
                     )
@@ -499,6 +511,43 @@ class Contribution(models.Model):
                     )
                 ),
                 name="contribution_razorpay_mode_valid",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(
+                        payment_gateway="razorpay",
+                        payment_channel=PaymentChannel.RAZORPAY,
+                    )
+                    | models.Q(
+                        payment_gateway="in_store_cash",
+                        payment_channel=PaymentChannel.IN_STORE_CASH,
+                    )
+                    | (
+                        ~models.Q(payment_gateway__in=["razorpay", "in_store_cash"])
+                        & models.Q(payment_channel=PaymentChannel.MOCK)
+                    )
+                ),
+                name="contribution_payment_channel_valid",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    ~models.Q(payment_channel=PaymentChannel.IN_STORE_CASH)
+                    | models.Q(
+                        gateway_mode="",
+                        gateway_order_id__isnull=True,
+                        gateway_signature="",
+                        checkout_expires_at__isnull=True,
+                        status__in=["PAID", "PAID_UNALLOCATED", "REVERSED"],
+                    )
+                ),
+                name="in_store_cash_fields_valid",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    ~models.Q(status="REVERSED")
+                    | models.Q(payment_channel=PaymentChannel.IN_STORE_CASH)
+                ),
+                name="reversed_contribution_is_cash",
             ),
             models.CheckConstraint(
                 condition=(
@@ -545,8 +594,85 @@ class Contribution(models.Model):
             or timezone.now() >= self.checkout_expires_at
         )
 
+    @property
+    def payment_method_display(self):
+        return self.get_payment_channel_display()
+
+    def save(self, *args, **kwargs):
+        if self._state.adding:
+            if self.payment_gateway == "razorpay":
+                self.payment_channel = PaymentChannel.RAZORPAY
+            elif self.payment_gateway == "in_store_cash":
+                self.payment_channel = PaymentChannel.IN_STORE_CASH
+            else:
+                self.payment_channel = PaymentChannel.MOCK
+        return super().save(*args, **kwargs)
+
     def __str__(self):
         return f"{self.scheme_account.scheme_number} — ₹{self.amount} — {self.status}"
+
+
+class InStoreCashReceipt(models.Model):
+    contribution = models.OneToOneField(
+        Contribution,
+        on_delete=models.PROTECT,
+        related_name="cash_receipt",
+    )
+    receipt_reference = models.CharField(max_length=32, unique=True)
+    idempotency_key = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    paper_receipt_number = models.CharField(
+        max_length=80,
+        null=True,
+        blank=True,
+        unique=True,
+        help_text="Optional unique number from the showroom's paper receipt book.",
+    )
+    received_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="received_in_store_cash_contributions",
+    )
+    received_by_label = models.CharField(max_length=254)
+    received_at = models.DateTimeField(default=timezone.now)
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-received_at", "-pk"]
+        constraints = [
+            models.CheckConstraint(
+                condition=~models.Q(receipt_reference=""),
+                name="cash_receipt_reference_required",
+            ),
+            models.CheckConstraint(
+                condition=~models.Q(received_by_label=""),
+                name="cash_receipt_actor_label_required",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["received_at"], name="cash_receipt_time_idx"),
+        ]
+
+    def clean(self):
+        super().clean()
+        if self.contribution_id and (
+            self.contribution.payment_channel != PaymentChannel.IN_STORE_CASH
+            or self.contribution.payment_gateway != "in_store_cash"
+        ):
+            raise ValidationError(
+                {"contribution": "The contribution is not an in-store cash payment."}
+            )
+
+    def save(self, *args, **kwargs):
+        if self.pk and type(self).objects.filter(pk=self.pk).exists():
+            raise ValidationError("Historical in-store cash receipts are immutable.")
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Historical in-store cash receipts cannot be deleted.")
+
+    def __str__(self):
+        return f"{self.receipt_reference} — {self.contribution.scheme_account.scheme_number}"
 
 
 class PaymentWebhookEvent(models.Model):
@@ -1114,6 +1240,75 @@ class RedemptionReversal(models.Model):
         return f"{self.reversal_number} — {self.redemption.redemption_number}"
 
 
+class InStoreCashContributionReversal(models.Model):
+    class ReasonCode(models.TextChoices):
+        DUPLICATE_ENTRY = "DUPLICATE_ENTRY", "Duplicate entry"
+        WRONG_ACCOUNT = "WRONG_ACCOUNT", "Wrong scheme account"
+        WRONG_AMOUNT = "WRONG_AMOUNT", "Wrong amount"
+        CASH_NOT_RECEIVED = "CASH_NOT_RECEIVED", "Cash was not received"
+
+    contribution = models.OneToOneField(
+        Contribution,
+        on_delete=models.PROTECT,
+        related_name="cash_reversal",
+    )
+    reversal_number = models.CharField(max_length=32, unique=True)
+    reason_code = models.CharField(max_length=24, choices=ReasonCode.choices)
+    reason = models.TextField()
+    processed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="processed_in_store_cash_reversals",
+    )
+    processed_by_label = models.CharField(max_length=254)
+    reversed_at = models.DateTimeField(default=timezone.now)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-reversed_at", "-pk"]
+        constraints = [
+            models.CheckConstraint(
+                condition=~models.Q(reversal_number=""),
+                name="cash_reversal_number_required",
+            ),
+            models.CheckConstraint(
+                condition=~models.Q(reason=""),
+                name="cash_reversal_reason_required",
+            ),
+            models.CheckConstraint(
+                condition=~models.Q(processed_by_label=""),
+                name="cash_reversal_actor_label_required",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["reversed_at"], name="cash_reversal_time_idx"),
+        ]
+
+    def clean(self):
+        super().clean()
+        if self.contribution_id and (
+            self.contribution.payment_channel != PaymentChannel.IN_STORE_CASH
+        ):
+            raise ValidationError(
+                {"contribution": "Only an in-store cash contribution can be reversed."}
+            )
+
+    def save(self, *args, **kwargs):
+        if self.pk and type(self).objects.filter(pk=self.pk).exists():
+            raise ValidationError(
+                "Historical in-store cash contribution reversals are immutable."
+            )
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError(
+            "Historical in-store cash contribution reversals cannot be deleted."
+        )
+
+    def __str__(self):
+        return f"{self.reversal_number} — {self.contribution.gateway_reference}"
+
+
 class AuditEvent(models.Model):
     class Action(models.TextChoices):
         CUSTOMER_ENROLMENT = "CUSTOMER_ENROLMENT", "Customer enrolment"
@@ -1122,6 +1317,8 @@ class AuditEvent(models.Model):
             "MANUAL_PAYMENT_CORRECTION",
             "Manual payment correction",
         )
+        IN_STORE_CASH_RECEIPT = "IN_STORE_CASH_RECEIPT", "In-store cash receipt"
+        IN_STORE_CASH_REVERSAL = "IN_STORE_CASH_REVERSAL", "In-store cash reversal"
         SCHEME_RATE_PUBLICATION = "SCHEME_RATE_PUBLICATION", "Scheme rate publication"
         REDEMPTION = "REDEMPTION", "Redemption"
         REVERSAL = "REVERSAL", "Reversal"

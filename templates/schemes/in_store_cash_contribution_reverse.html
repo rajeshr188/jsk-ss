@@ -1,0 +1,35 @@
+{% extends '_base.html' %}
+
+{% block title %}Reverse in-store cash contribution | Jai Sri Krishna Jewellery{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <a class="small d-inline-block mb-2" href="{% url 'schemes:contribution_receipt' contribution.pk %}">← Contribution receipt</a>
+    <p class="page-eyebrow">Append-only correction</p>
+    <h1>Reverse cash contribution</h1>
+    <p class="page-subtitle">{{ contribution.scheme_account.customer.full_name }} · {{ contribution.scheme_account.scheme_number }}</p>
+  </div>
+</div>
+
+<div class="alert alert-danger" role="alert">
+  {% if contribution.metal_allocation %}This removes the contribution's {{ contribution.metal_allocation.quantity|floatformat:3 }} g entitlement from the active balance.{% else %}This closes the cash record while its allocation is still pending.{% endif %} The original receipt, locked rate, actor, and any allocation remain permanently visible. This workflow does not record a cash refund.
+</div>
+
+<div class="card"><div class="card-body p-4">
+  <dl class="row">
+    <dt class="col-sm-4">Cash receipt</dt><dd class="col-sm-8">{{ contribution.gateway_reference }}</dd>
+    <dt class="col-sm-4">Amount</dt><dd class="col-sm-8">₹{{ contribution.amount|floatformat:2 }}</dd>
+    <dt class="col-sm-4">Received</dt><dd class="col-sm-8">{{ contribution.paid_at|date:'d M Y, g:i A' }}</dd>
+  </dl>
+  <form method="post" novalidate>
+    {% csrf_token %}
+    {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+    <div class="mb-3"><label class="form-label" for="{{ form.reason_code.id_for_label }}">{{ form.reason_code.label }}</label>{{ form.reason_code }}{{ form.reason_code.errors }}</div>
+    <div class="mb-3"><label class="form-label" for="{{ form.reason.id_for_label }}">{{ form.reason.label }}</label>{{ form.reason }}<div class="form-text">{{ form.reason.help_text }}</div>{{ form.reason.errors }}</div>
+    <div class="form-check mb-3">{{ form.confirm_reversal }}<label class="form-check-label" for="{{ form.confirm_reversal.id_for_label }}">{{ form.confirm_reversal.label }}</label>{{ form.confirm_reversal.errors }}</div>
+    <button class="btn btn-danger" type="submit">Reverse contribution</button>
+    <a class="btn btn-link" href="{% url 'schemes:contribution_receipt' contribution.pk %}">Cancel</a>
+  </form>
+</div></div>
+{% endblock %}

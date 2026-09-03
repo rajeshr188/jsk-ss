@@ -1,0 +1,89 @@
+{% extends '_base.html' %}
+
+{% block title %}Record in-store cash | Jai Sri Krishna Jewellery{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <a class="small d-inline-block mb-2" href="{% url 'schemes:customer_detail' scheme_account.customer.pk %}">← Customer record</a>
+    <p class="page-eyebrow">Owner-only cash desk</p>
+    <h1>Record in-store cash</h1>
+    <p class="page-subtitle">{{ scheme_account.customer.full_name }} · {{ scheme_account.scheme_number }} · {{ scheme_account.entitlement_name }}</p>
+  </div>
+</div>
+
+<div class="alert alert-warning" role="alert">
+  Record this only after physically receiving the cash. It creates a contribution and locks the current Scheme Rate; it is not a cash savings balance, refund, or tax invoice.
+</div>
+
+<div class="row g-4">
+  <div class="col-12 col-lg-7">
+    <div class="card"><div class="card-body p-4">
+      <form method="post" novalidate>
+        {% csrf_token %}
+        {{ form.idempotency_key }}
+        {% if preview %}<input type="hidden" name="expected_scheme_rate_id" value="{{ preview.scheme_rate.pk }}">{% else %}{{ form.expected_scheme_rate_id }}{% endif %}
+        {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+
+        <div class="mb-3">
+          <label class="form-label" for="{{ form.amount.id_for_label }}">{{ form.amount.label }}</label>
+          {{ form.amount }}
+          {% if form.amount.help_text %}<div class="form-text">{{ form.amount.help_text }}</div>{% endif %}
+          {{ form.amount.errors }}
+        </div>
+        <div class="mb-3">
+          <label class="form-label" for="{{ form.paper_receipt_number.id_for_label }}">{{ form.paper_receipt_number.label }}</label>
+          {{ form.paper_receipt_number }}
+          <div class="form-text">{{ form.paper_receipt_number.help_text }}</div>
+          {{ form.paper_receipt_number.errors }}
+        </div>
+        <div class="mb-3">
+          <label class="form-label" for="{{ form.notes.id_for_label }}">{{ form.notes.label }}</label>
+          {{ form.notes }}
+          <div class="form-text">{{ form.notes.help_text }}</div>
+          {{ form.notes.errors }}
+        </div>
+        <div class="mb-3">
+          <label class="form-label" for="{{ form.audit_reason.id_for_label }}">{{ form.audit_reason.label }}</label>
+          {{ form.audit_reason }}
+          <div class="form-text">{{ form.audit_reason.help_text }}</div>
+          {{ form.audit_reason.errors }}
+        </div>
+
+        {% if preview %}
+        <div class="card bg-light mb-3"><div class="card-body">
+          <h2 class="h5">Confirm receipt preview</h2>
+          <dl class="row mb-0">
+            <dt class="col-sm-6">Cash received</dt><dd class="col-sm-6 text-sm-end">₹{{ preview.amount|floatformat:2 }}</dd>
+            <dt class="col-sm-6">Contribution period</dt><dd class="col-sm-6 text-sm-end">{{ preview.contribution_period|date:'F Y' }}</dd>
+            <dt class="col-sm-6">Locked Scheme Rate</dt><dd class="col-sm-6 text-sm-end">₹{{ preview.scheme_rate.rate_per_gram|floatformat:4 }}/g</dd>
+            <dt class="col-sm-6">Metal to allocate</dt><dd class="col-sm-6 text-sm-end fw-semibold">{{ preview.quantity|floatformat:3 }} g {{ scheme_account.entitlement_name }}</dd>
+          </dl>
+        </div></div>
+        <div class="form-check mb-3">
+          {{ form.confirm_cash_received }}
+          <label class="form-check-label" for="{{ form.confirm_cash_received.id_for_label }}">{{ form.confirm_cash_received.label }}</label>
+          {{ form.confirm_cash_received.errors }}
+        </div>
+        <button class="btn btn-jsk" type="submit" name="action" value="confirm">Confirm cash received</button>
+        <button class="btn btn-outline-dark" type="submit" name="action" value="preview">Refresh preview</button>
+        {% else %}
+        <button class="btn btn-jsk" type="submit" name="action" value="preview">Review receipt</button>
+        {% endif %}
+        <a class="btn btn-link" href="{% url 'schemes:customer_detail' scheme_account.customer.pk %}">Cancel</a>
+      </form>
+    </div></div>
+  </div>
+  <div class="col-12 col-lg-5">
+    <div class="card stat-card h-100"><div class="card-body p-4">
+      <h2 class="h5">Safety controls</h2>
+      <ul class="mb-0">
+        <li>No backdating or split tender.</li>
+        <li>Pending Razorpay orders block cash recording.</li>
+        <li>Payment pauses, schedule, amount rules, and current rates apply.</li>
+        <li>Corrections preserve the original record and require an audit reason.</li>
+      </ul>
+    </div></div>
+  </div>
+</div>
+{% endblock %}

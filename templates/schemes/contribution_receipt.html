@@ -19,6 +19,12 @@
     <h1 class="h2 mb-1">Jai Sri Krishna Jewellery</h1>
     <p class="text-muted mb-0">Savings contribution acknowledgement — not a tax invoice</p>
   </div>
+  {% if receipt.contribution.status == 'REVERSED' %}
+  <div class="alert alert-secondary">
+    <strong>Reversed financial record.</strong> This receipt remains preserved, but its metal entitlement is no longer part of the active scheme balance.<br>
+    Correction {{ receipt.contribution.cash_reversal.reversal_number }} · {{ receipt.contribution.cash_reversal.get_reason_code_display }} · {{ receipt.contribution.cash_reversal.reversed_at|date:'d M Y, g:i A' }}
+  </div>
+  {% endif %}
   <div class="d-flex justify-content-between flex-wrap gap-2 mb-4">
     <div><strong>Receipt number</strong><br>{{ receipt.receipt_number }}</div>
     <div class="text-md-end"><strong>Date</strong><br>{{ receipt.contribution.paid_at|date:'d M Y, g:i A' }}</div>
@@ -29,7 +35,11 @@
     <dt class="col-sm-4">Entitlement</dt><dd class="col-sm-8">{{ receipt.contribution.scheme_account.entitlement_name }}</dd>
     <dt class="col-sm-4">Amount received</dt><dd class="col-sm-8 fw-semibold">₹{{ receipt.contribution.amount|floatformat:2 }}</dd>
     <dt class="col-sm-4">Payment reference</dt><dd class="col-sm-8">{{ receipt.contribution.gateway_reference }}</dd>
-    <dt class="col-sm-4">Payment method</dt><dd class="col-sm-8">{{ receipt.contribution.payment_gateway|title }}</dd>
+    <dt class="col-sm-4">Payment method</dt><dd class="col-sm-8">{{ receipt.contribution.payment_method_display }}</dd>
+    {% if receipt.contribution.cash_receipt %}
+    <dt class="col-sm-4">Received by</dt><dd class="col-sm-8">{{ receipt.contribution.cash_receipt.received_by_label }}</dd>
+    {% if receipt.contribution.cash_receipt.paper_receipt_number %}<dt class="col-sm-4">Paper receipt</dt><dd class="col-sm-8">{{ receipt.contribution.cash_receipt.paper_receipt_number }}</dd>{% endif %}
+    {% endif %}
   </dl>
   {% if receipt.allocation %}
   <div class="border-top pt-3 mt-3">
@@ -42,6 +52,11 @@
   </div>
   {% elif receipt.contribution.scheme_account.savings_mode != 'CASH' %}
   <div class="alert alert-warning mt-3 mb-0">Payment is verified, but metal allocation is pending. No rate or quantity has been assigned.</div>
+  {% endif %}
+  {% if receipt.contribution.payment_gateway == 'in_store_cash' and receipt.contribution.status != 'REVERSED' %}
+    {% if request.user.is_superuser or request.user.role == 'OWNER' %}
+    <div class="d-print-none border-top pt-3 mt-4"><a class="btn btn-sm btn-outline-danger" href="{% url 'schemes:in_store_cash_contribution_reverse' receipt.contribution.pk %}">Correct this cash entry</a></div>
+    {% endif %}
   {% endif %}
   <p class="small text-muted border-top pt-3 mt-4 mb-0">Generated from the verified payment record. Keep the receipt number and payment reference for enquiries.</p>
 </div></article>

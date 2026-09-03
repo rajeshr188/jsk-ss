@@ -84,10 +84,11 @@
           {% if contribution.status == 'PAID' %}<span class="badge text-bg-success">Paid</span>
           {% elif contribution.status == 'PAID_UNALLOCATED' %}<span class="badge text-bg-warning">Paid — allocation pending</span>
           {% elif contribution.status == 'FAILED' %}<span class="badge text-bg-danger">Failed</span>
+          {% elif contribution.status == 'REVERSED' %}<span class="badge text-bg-secondary">Reversed</span>
           {% else %}<span class="badge text-bg-warning">Pending</span>{% endif %}
         </td>
-        <td><small>{{ contribution.gateway_reference|default:'—' }}</small>
-          {% if contribution.status == 'PAID' or contribution.status == 'PAID_UNALLOCATED' %}
+        <td><small>{{ contribution.gateway_reference|default:'—' }}{% if contribution.gateway_reference %}<br>{{ contribution.payment_method_display }}{% endif %}</small>
+          {% if contribution.status == 'PAID' or contribution.status == 'PAID_UNALLOCATED' or contribution.status == 'REVERSED' %}
           <br><a href="{% url 'schemes:contribution_receipt' contribution.pk %}">Receipt</a>
           {% endif %}
           {% if contribution.status == 'PENDING' and contribution.payment_gateway == 'razorpay' and contribution.gateway_order_id and contribution.gateway_mode == razorpay_mode %}
@@ -115,6 +116,7 @@
         {% if contribution.status == 'PAID' %}<span class="badge text-bg-success">Paid</span>
         {% elif contribution.status == 'PAID_UNALLOCATED' %}<span class="badge text-bg-warning">Paid — allocation pending</span>
         {% elif contribution.status == 'FAILED' %}<span class="badge text-bg-danger">Failed</span>
+        {% elif contribution.status == 'REVERSED' %}<span class="badge text-bg-secondary">Reversed</span>
         {% else %}<span class="badge text-bg-warning">Pending</span>{% endif %}
       </div>
     </div>
@@ -123,8 +125,9 @@
       <dt class="col-5">Metal credited</dt><dd class="col-7 text-end">{% if contribution.metal_allocation %}{{ contribution.metal_allocation.quantity|floatformat:3 }} g {{ contribution.metal_allocation.metal_grade.display_name }}{% else %}—{% endif %}</dd>
       <dt class="col-5">Scheme Rate</dt><dd class="col-7 text-end">{% if contribution.metal_allocation %}₹{{ contribution.metal_allocation.scheme_rate.rate_per_gram|floatformat:4 }}/g{% elif contribution.scheme_rate %}₹{{ contribution.scheme_rate.rate_per_gram|floatformat:4 }}/g locked{% else %}—{% endif %}</dd>
       <dt class="col-5">Reference</dt><dd class="col-7 text-end text-break">{{ contribution.gateway_reference|default:'—' }}</dd>
+      {% if contribution.gateway_reference %}<dt class="col-5">Payment method</dt><dd class="col-7 text-end">{{ contribution.payment_method_display }}</dd>{% endif %}
     </dl>
-    {% if contribution.status == 'PAID' or contribution.status == 'PAID_UNALLOCATED' %}
+    {% if contribution.status == 'PAID' or contribution.status == 'PAID_UNALLOCATED' or contribution.status == 'REVERSED' %}
     <a class="btn btn-sm btn-outline-dark" href="{% url 'schemes:contribution_receipt' contribution.pk %}">View receipt</a>
     {% endif %}
     {% if contribution.status == 'PENDING' and contribution.payment_gateway == 'razorpay' and contribution.gateway_order_id and contribution.gateway_mode == razorpay_mode %}
