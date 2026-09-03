@@ -1,418 +1,187 @@
 # Future Work Register
 
-This document converts known MVP limitations into explicit follow-up work. Items
-here are not implemented behavior and do not relax the financial invariants in
+This is the actionable backlog for known limitations that remain unresolved. It does
+not describe implemented behavior and does not relax the financial invariants in
 [Domain rules](DOMAIN_RULES.md).
 
-## MVP Beta deployment gate
+Detailed completed-work evidence belongs in [Project status](STATUS.md), the
+[production runbook](PRODUCTION_DEPLOYMENT.md), and the applicable
+[architecture decisions](decisions/README.md). A compact completed-item index and the
+historical milestone ledger remain here so stable `FW-*` identifiers and previously
+recorded limitations are not lost.
 
-- **FW-BETA-001 — External Razorpay test journey (completed 2026-08-18):** Enrolment
-  through redemption was exercised with a captured Razorpay Test Mode payment and a
-  signed `payment.captured` webhook delivered to a public HTTPS endpoint.
-- **FW-BETA-002 — Live GoldAPI smoke (superseded by ADR-0003):** External rates were
-  removed from the authoritative allocation workflow. No provider smoke is required.
-- **FW-BETA-003 — Production operations baseline (completed 2026-08-18):** The
-  repository now defines secret rotation, PostgreSQL backup/restore drills, HTTPS
-  and HSTS ownership, health/readiness checks, logging/monitoring responsibilities,
-  and deployment rollback procedures. The environment-specific exercises below
-  remain release gates before handling real customer funds.
+## Prioritization
 
-## Production rollout
+1. Protect real funds: monitoring, recovery, rotation, webhook reconciliation, and
+   correction controls.
+2. Complete legal/accounting and statutory-document review for the live business
+   flows.
+3. Improve settlement, eligibility communication, and customer onboarding only after
+   their business rules are approved.
+4. Add catalogue and pricing enhancements without coupling CMS state to financial
+   contracts.
 
-- **FW-PROD-001 — Backup recovery proof (completed 2026-08-27):** A Linode Managed
-  PostgreSQL newest-full-plus-incremental backup was restored into an isolated fork.
-  Provisioning from 13:57 to 14:12 IST demonstrated a 15-minute RTO. The fork retained
-  every migration through `schemes.0011` and exactly matched the recorded baseline:
-  five customers, six scheme accounts, no pending Razorpay contribution, zero cash
-  principal/earned bonus, `0.299097` gold grams, and zero silver grams. Authentication
-  integrity and financial-exception checks passed, the original release remained live
-  and ready, and the fork plus its temporary environment and CA were removed.
-- **FW-PROD-002 — Observability foundation implemented; activation remains:** Caddy
-  serves the owned domain with automatic HTTPS, verified proxy trust, masked
-  structured access logs, and release labels. The repository includes an aggregate
-  financial-exception check plus a five-minute external-heartbeat systemd timer, and
-  the runbook selects Better Stack for external checks/log retention and Linode for
-  capacity/backup events. Configure the two provider accounts and retain exercised
-  evidence for 5xx/readiness, failed webhooks, allocation exceptions, database
-  capacity, certificate renewal, backup failure, escalation, and retention before
-  marking this item complete. The owner explicitly deferred paid external monitoring
-  on 2026-08-27 to preserve the operating budget; this item remains open rather than
-  being treated as a passed production gate.
-- **FW-PROD-003 — Delivery verified; rotations remain:** Postmark approved the
-  account and a real password-reset message reached the controlled Gmail mailbox on
-  2026-08-26. The production Django Site identity was corrected from `example.com` to
-  the owned domain on 2026-08-26. Deploy and verify direct untracked authentication
-  links, then retain evidence. The owner explicitly deferred the SMTP token-rotation
-  rehearsal; Django, database, SMTP, Razorpay API, and webhook rotation drills
-  therefore remain open.
-- **FW-PROD-004 — Image-build confirmation (completed locally 2026-08-18):** The
-  hardened image builds with production static assets and runs as the unprivileged
-  `app` user. The same build is an independent CI gate on the next GitHub run.
-- **FW-PROD-005 — Public-policy deployment completed; formal review remains:** Public
-  business, contact, privacy, terms, cancellation/refund, fulfilment, and
-  database-backed pricing pages are deployed; the displayed contact channels and one
-  owner-reviewed active plan have been verified. Before treating the pages as binding
-  business terms, obtain appropriate Indian legal/accounting review and confirm the
-  manual payment-error refund process can meet the stated response timelines.
+## Production operations
 
-## Milestone 9 — cash bonus
+- **FW-PROD-002 — Activate and exercise external observability:** Caddy already
+  provides masked structured logs, release-labelled health endpoints, and the
+  repository includes a five-minute financial-exception heartbeat. Configure the
+  selected external monitoring/log-retention accounts and retain exercised evidence
+  for readiness/5xx failures, webhook and allocation exceptions, database capacity,
+  certificate renewal, backup failure, escalation, and retention. Paid monitoring
+  remains explicitly deferred for budget reasons; local checks and provider consoles
+  do not close this item.
+- **FW-PROD-003 — Rehearse coordinated secret rotation:** Postmark delivery and the
+  owned Django Site identity are verified. Rehearse Django signing-key, database,
+  SMTP, Razorpay API, and webhook-secret changes with bounded overlap or coordinated
+  cutover, rollback criteria, and retained evidence. SMTP token rotation remains
+  explicitly deferred.
+- **FW-PROD-005 — Obtain formal policy review:** Public business, contact, privacy,
+  terms, cancellation/refund, fulfilment, and database-backed pricing pages are live.
+  Obtain appropriate Indian legal/accounting review before treating them as binding,
+  and verify the manual payment-error refund process can meet the displayed response
+  timelines.
 
-- **FW-BONUS-001 (completed in Milestone 9):** A dedicated `CASH-BONUS-V1` policy
-  service supports a plan percentage and minimum qualifying duration.
-- **FW-BONUS-002 (completed in Milestone 9):** Customer and owner reads distinguish
-  principal, earned bonus, projected bonus, and redeemable amount without rewriting
-  historical contributions.
-- **FW-BONUS-003 (completed in Milestone 9):** Enrolments snapshot the versioned
-  policy terms; boundary, cutoff, rounding, redemption, and reconciliation tests cover
-  the resulting earned entitlement.
-- **FW-BONUS-004:** Define any future caps, tiers, discretionary approval, forfeiture,
-  cancellation, tax treatment, or policy for projections that include expected future
-  contributions. Current projections use paid principal only.
-- **FW-BONUS-005:** Optimize aggregate bonus-liability reads only after measured cash
-  account volume shows the current correctness-first per-account calculation is costly.
+## Payments, cash, and audit
 
-## Milestone 10 — audit and exceptions
+- **FW-PAY-003 — Complete Razorpay webhook-recovery evidence:** ADR-0006 and release
+  `69eecf9` provide signed-event classification, append-only attempt evidence, and an
+  owner-only provider-backed dry-run/apply workflow. The remaining work is:
 
-- **FW-AUDIT-001 (completed in Milestone 10):** Supported sensitive owner actions
-  append immutable actor/timestamp/reason audit events, and an erroneous redemption
-  is corrected through one immutable compensating reversal rather than editing it.
-- **FW-AUDIT-002:** Define approval and segregation-of-duties rules for sensitive
-  settlements, including who may initiate, approve, and review them.
-- **FW-AUDIT-003 (initial queue completed in Milestone 10):** The owner queue derives
-  paid-unallocated/failed-allocation and failed or mismatched webhook exceptions.
-  Add provider reconciliation and resolution workflows for delayed/unmatched
-  payments, Razorpay refunds/disputes, and other external settlement differences.
-- **FW-AUDIT-004:** Automate safe retries and external alerts for
-  `PAID_UNALLOCATED` metal contributions while preserving idempotency.
-- **FW-AUDIT-005:** Define and implement manual payment correction and payment void
-  policies, including compensating-event shape, required evidence, customer
-  disclosure, and authorization. Published Scheme Rates are append-only and must
-  never be corrected by editing a historical record.
+  - [ ] Exercise one controlled review/dry-run/apply case in isolated Test mode.
+  - [ ] Replay an already-processed Live capture from Razorpay and prove an
+    `ALREADY_FINAL` attempt is appended without duplicate entitlement.
+  - [ ] Alert on stale `RECEIVED` and unresolved `REVIEW_REQUIRED` events under
+    `FW-PROD-002`.
+  - [ ] Rehearse synchronized webhook-secret rotation under `FW-PROD-003`.
 
-## Milestone 11 — receipts and statements
+  Automatic refunds, background workers, and manual entitlement overrides remain out
+  of scope.
+- **FW-PAY-007 — Extend payment schedules only if required:** Current controls support
+  one weekly window per day plus audited manual pause/resume. Define holiday
+  exceptions, multiple daily windows, expiring force-open overrides, and a separate
+  allocation-integrity hold before implementing any of them.
+- **FW-AUDIT-002 — Define segregation of duties:** Decide who may initiate, approve,
+  and review sensitive settlements, refunds, corrections, and exceptional cash
+  operations. Implement dual approval only after those roles and thresholds are
+  approved.
+- **FW-AUDIT-003 — Expand external settlement reconciliation:** The existing queue
+  covers paid-unallocated allocations and failed/mismatched webhooks. Add resolution
+  workflows for delayed or provider-only payments, late captures, Razorpay refunds
+  and disputes, chargebacks, and other provider/local differences.
+- **FW-AUDIT-004 — Automate safe allocation recovery:** Add bounded retries and
+  external alerts for `PAID_UNALLOCATED` metal contributions while preserving
+  idempotency and owner visibility.
+- **FW-AUDIT-005 — Define online-payment correction and void policy:** Specify
+  compensating-event shape, evidence, customer disclosure, authorization, and
+  provider reconciliation. Decide whether database-trigger protection against bulk
+  updates is warranted. Never edit a historical payment or Scheme Rate.
+- **FW-CASH-001 — Harden showroom cash operations:** Obtain legal/accounting review
+  of cash acceptance and external bookkeeping; decide statutory receipt requirements,
+  daily close ownership, corrections outside the configured 24-hour window, refunds,
+  and dual approval. The deployed append-only reversal is a bookkeeping correction,
+  not a refund.
+- **FW-PRODUCT-002 — Resolve the empty legacy CASH account:** One inert production
+  CASH account has no liability and no audited cancellation state. Decide with the
+  customer and business owner whether a general no-liability cancellation workflow is
+  required. Never delete it, relabel its mode, or mark it redeemed merely to hide it.
 
-- **FW-DOC-001 (completed in Milestone 11):** Customer lifetime scheme statements
-  show verified contributions, captured metal allocations, redemptions, reversals,
-  and current denomination-specific entitlement.
-- **FW-DOC-002 (completed for MVP in Milestone 11):** Verified contributions have
-  printable HTML acknowledgements with deterministic receipt references; reprinting
-  derives the same reference without creating a new financial event.
-- **FW-DOC-003 (completed in Milestone 11):** Owner contribution/redemption CSV
-  exports use separate INR, gold-gram, and silver-gram columns and exclude indicative
-  current metal exposure from booked amounts.
-- **FW-DOC-004:** Before treating documents as statutory receipts or tax invoices,
-  define business/tax identity fields, numbering jurisdiction, signatures, rendered
-  copy retention, delivery/reissue tracking, correction/cancellation treatment, and
-  whether server-generated PDF/PDF-A is required. Current HTML is an acknowledgement.
+## Bonus, documents, pricing, and settlement
 
-## Payments and settlement operations
+- **FW-BONUS-004 — Define richer bonus policy if CASH products return:** Specify caps,
+  tiers, discretionary approval, forfeiture, cancellation, tax treatment, and whether
+  projections may include expected future contributions. Current projections use
+  paid principal only.
+- **FW-BONUS-005 — Optimize bonus aggregation only when measured:** Retain the
+  correctness-first per-account calculation until production volume demonstrates a
+  material cost.
+- **FW-DOC-004 — Define statutory receipt/invoice requirements:** Decide business and
+  tax identity fields, jurisdictional numbering, signatures, retained rendered copies,
+  delivery/reissue tracking, correction/cancellation treatment, date-filtered exports,
+  and whether server-generated PDF/PDF-A is required. Current HTML documents are
+  acknowledgements, not tax invoices.
+- **FW-PRICE-002 — Model early-discontinuation terms:** Define the exact plan-specific
+  wastage/value-addition discount schedule before advertising numeric benefits. Until
+  then, the public policy promises no additional discount unless it exists in the
+  customer's written enrolment terms.
+- **FW-SETTLE-001 — Integrate fulfilment evidence if required:** Add actual payout,
+  metal handover, or point-of-sale confirmation only if the application must execute
+  rather than merely record settlement.
+- **FW-SETTLE-002 — Define metal-to-cash conversion:** Approve authoritative rate
+  timing, spread or fee, taxes, rounding, authorization, and customer disclosure
+  before implementation.
+- **FW-SETTLE-003 — Define partial-redemption policy:** Decide minimum amounts,
+  maximum counts, reservations, expiry, and approval requirements.
+- **FW-SETTLE-004 — Keep inventory and invoicing separate:** If introduced, validate
+  jewellery invoice value, taxes, making charges, returns, and stock movement in a
+  dedicated bounded workflow. Current redemption stores only external references and
+  notes.
 
-- **FW-PRODUCT-001 — Metal-only production boundary (completed in production
-  2026-08-25):** Release `93ba4273c976cd427d86a79a58454e2b7e58c55f`
-  blocks production CASH enrolment and contribution initiation
-  in services and UI whenever `DEBUG=False`; owner forms expose only gold/silver,
-  direct legacy CASH payment URLs return `403`, and production checks reject DEBUG.
-  Historical CASH reads, statements, exports, bonus calculations, redemptions, and
-  audit records remain intact. Pre- and post-release production audits found one open
-  CASH account with
-  zero pending/verified payments, zero INR exposure, zero redemptions, and no nonzero
-  cash-bonus plan. Live/readiness, financial-exception, log, and manual UI checks
-  passed; the release required no schema migration.
-- **FW-PRODUCT-002 — Empty legacy CASH account disposition:** The one production
-  CASH account remains an inert historical record because the lifecycle currently has
-  no audited cancellation state. Decide with the customer/business owner whether a
-  general no-liability cancellation workflow is required; never mark it redeemed,
-  delete it, or rewrite its mode merely to remove it from an active-account list.
-- **FW-PAY-001 — Razorpay Live Mode readiness (completed 2026-08-31):** Mode-matched
-  Test and Live credentials fail
-  closed, contributions and webhooks retain their provider mode, cross-mode resume/
-  confirmation is rejected, historical records migrate truthfully to Test, owner
-  exports expose mode, and a no-secret readiness command blocks unsafe cutover.
-  Production release `5fa726b` completed two real captured payments totalling INR
-  `350.00`; their signed capture webhooks were processed once each and their immutable
-  gold allocations total `0.021202` g. Two never-attempted Live orders were verified
-  with Razorpay and retired through the service, leaving zero pending Live contributions
-  and zero financial exceptions. The final evidence was reconciled on 2026-08-31.
-- **FW-PAY-002 — Abandoned Razorpay order lifecycle (completed 2026-08-31):** A
-  mode-matched provider inspection and dry-run-first management command now close
-  only aged orders that remain `created` with zero attempts, payments, and paid amount.
-  Applied orders use the explicit application-side `ABANDONED` state while retaining
-  their order ID and Scheme Rate lock plus an immutable reconciliation audit snapshot.
-  Pending orders remain resumable, monthly replacement attempts are released only
-  after reconciliation, flexible attempts are handled independently, and any late
-  capture becomes a failed-webhook exception for manual refund/recovery. Razorpay does
-  not expose order cancellation, so the runbook explicitly preserves that residual
-  late-payment boundary. Production release `c3e8c46` applied `schemes.0012` with
-  the 2026-08-30 12:00 PM IST recovery point recorded; Live/Ready, financial
-  exceptions, Live readiness, and the provider reconciliation dry run all passed
-  with zero candidates.
-- **FW-PAY-003 — Razorpay webhook recovery (in progress):** The stable owned HTTPS
-  endpoint has replaced development quick tunnels and
-  [ADR-0006](decisions/ADR-0006-razorpay-webhook-recovery.md) defines the recovery
-  boundary. Progress is tracked here:
-  - [x] Classify untrusted/conflicting requests as `400`, durably reviewed signed
-    events as `200`, and transient processing failures as retryable `503` responses.
-  - [x] Add append-only provider-delivery/owner-recovery attempt evidence without
-    storing full webhook payloads or secrets.
-  - [x] Add owner-only dry-run/apply recovery using a fresh, mode-matched provider
-    payment read and exact ID/order/amount/currency/captured-state comparison.
-  - [x] Reuse idempotent confirmation and original locked-rate allocation; keep
-    abandoned, failed, unknown, and mismatched cases blocked for manual handling.
-  - [x] Deploy migration `schemes.0014` in production release `69eecf9` and record
-    recovery-point, image, migration, health, financial, Razorpay, operations-control,
-    reconciliation, liability, route, and bounded-log evidence.
-  - [ ] Exercise one controlled review/dry-run/apply case in an isolated Test-mode
-    environment.
-  - [ ] Replay one already-processed Live capture event through Razorpay Dashboard and
-    prove an `ALREADY_FINAL` attempt is appended with no duplicate entitlement.
-  - [ ] Add external alerting and an operational threshold for stale `RECEIVED` and
-    unresolved `REVIEW_REQUIRED` events under the deferred `FW-PROD-002` boundary.
-  - [ ] Design and rehearse synchronized webhook-secret rotation, including a bounded
-    overlap or coordinated cutover, under deferred `FW-PROD-003`.
-  Automatic refunds, background workers, and a manual entitlement override remain
-  outside this item.
-- **FW-PAY-004 — Payment operations circuit breaker (completed 2026-08-31):**
-  [ADR-0005](decisions/ADR-0005-payment-operations-circuit-breaker.md) defines a
-  domain-specific, audited control for new payment exposure; django-waffle is not a
-  financial authorization dependency. Progress is tracked here:
-  - [x] Record scheduled/manual closure, in-flight capture, locked-rate allocation,
-    audit, and emergency-override rules.
-  - [x] Add the default-off singleton control and reviewed Monday–Saturday
-    09:00–21:00 / Sunday 09:00–13:00 Asia/Kolkata schedule through migration
-    `schemes.0013`.
-  - [x] Enforce global/per-metal/scheduled/current-day-rate gates before local and
-    provider order creation and Checkout resumption.
-  - [x] Add an owner-only Bootstrap control surface, customer closure guidance,
-    pending-order exposure, and immutable before/after audit events.
-  - [x] Prove that pauses block new orders but do not block callbacks, captured
-    webhooks, or allocation from the original locked Scheme Rate.
-  - [x] Review the seeded hours and current-day-rate requirement with the owner,
-    deploy migration `schemes.0013` with the schedule disabled, and pass a controlled
-    manual Pause-All/reopening test in production.
-  - [x] After current-day Gold and Silver Scheme Rates were both published and
-    reviewed, activate the weekly schedule and verify its exact closing/reopening
-    boundary in production.
-  Holiday exceptions, multiple windows per day, expiring force-open overrides, and a
-  separate allocation-integrity hold remain outside this first phase.
-- **FW-PAY-005 — Snapshotted Razorpay Checkout expiry (completed 2026-09-03):**
-  [ADR-0008](decisions/ADR-0008-razorpay-checkout-expiry.md) separates the
-  customer-facing Checkout deadline from provider-backed abandonment:
-  - [x] Define a default 10-minute policy constrained to the accepted 3–15 minute
-    range and snapshot an absolute deadline on each new Razorpay contribution.
-  - [x] Stop rendering/resuming expired Checkout, expose the deadline to customers
-    and owners, and pass the remaining seconds to Razorpay Standard Checkout.
-  - [x] Preserve callback/webhook confirmation after expiry and retain provider-
-    verified abandonment plus late-capture exception handling.
-  - [x] Backfill any pending historical Razorpay row as `created_at + 10 minutes` and
-    enforce/index the pending-order deadline through `schemes.0017`.
-  - [x] Add migration, service, view, UI, and captured-after-expiry regression tests.
-  - [x] Pass the complete 267-test local regression suite plus Django system and
-    migration-drift checks.
-  - [x] Complete CI review and deploy `schemes.0017` through the documented paused,
-    zero-pending controlled cutover.
-  Production release `51c931a9de5b27349f781cd44670c41307479dfa` used the recorded
-  2026-09-03 1:00 PM IST recovery point, applied only `schemes.0017`, retained zero
-  pending Razorpay orders, passed all financial/payment/grade and public health gates,
-  and reopened every grade through a separate audited owner action.
-  Razorpay exposes no order cancellation API, so the provider-inspection residual
-  risk and manual late-capture refund boundary remain.
-- **FW-PAY-006 — In-store cash tender for metal contributions (completed 2026-09-03):**
-  [ADR-0009](decisions/ADR-0009-in-store-cash-contributions.md) defines cash as a
-  payment channel for exact-grade metal schemes, not a CASH savings balance:
-  - [x] Add explicit payment-channel history with migration backfill and database
-    constraints while preserving Razorpay mode and provider identifiers.
-  - [x] Add owner-only, feature-gated preview/confirm recording with server time,
-    amount/frequency/payment-control checks, exact current-rate locking, pending-
-    Razorpay conflict rejection, idempotency, and optional unique paper receipts.
-  - [x] Commit the cash receipt before allocation and reuse the durable
-    `PAID_UNALLOCATED` exception/retry workflow.
-  - [x] Add immutable, bounded correction through a one-to-one reversal and terminal
-    `REVERSED` state; block it after downstream redemption or unavailable entitlement.
-  - [x] Expose payment method, preserved/reversed receipts, customer statement
-    adjustments, owner CSV metadata, and daily received/reversed/net reconciliation.
-  - [x] Add a non-mutating integrity check plus service, permission, UI, migration,
-    race, idempotency, and balance tests.
-  - [x] Complete CI review and controlled migration `schemes.0018` with the feature
-    disabled, then run the production integrity command.
-  - [x] Review the owner workflow and enable the flag; reconcile the first legitimate
-    showroom receipt against physical cash, customer statement, grade allocation,
-    audit log, and CSV before marking the rollout complete.
-  Production release `315f836ac0717fbaaf2d8d90268471ac1670e5b1` used the recorded
-  2026-09-03 4:00 PM IST recovery point, applied only `schemes.0018`, and retained
-  zero pending Razorpay orders and green financial/payment/grade gates. After the
-  default-off migration and owner review, receipt `CASH-150E7205` recorded a genuine
-  INR `1000.00` showroom payment against `GOLD_22K_916` at INR `14667.0000`/g and
-  allocated `0.068180` g. Its immutable receipt, single audit event, customer
-  statement, owner ledger, CSV, and INR `1000.00` daily net cash total reconciled.
-  Legal/accounting review of cash acceptance, statutory receipts, external bookkeeping,
-  corrections outside the routine window, refunds, and dual approval remain outside
-  this bounded feature.
-- **FW-SETTLE-001:** Integrate actual payout, metal handover, or point-of-sale
-  confirmation if the business later requires the application to execute rather
-  than merely record settlement.
-- **FW-SETTLE-002:** Define metal-to-cash conversion, including the authoritative
-  rate timestamp, spread/fee, taxes, rounding, approval, and customer disclosure.
-- **FW-SETTLE-003:** Decide whether partial redemptions need minimum amounts,
-  maximum counts, reservations, expiry, or dual approval.
-- **FW-SETTLE-004:** If inventory or invoicing is introduced, validate jewellery
-  invoice value, taxes, making charges, returns, and stock movement in a separate
-  bounded workflow. Milestone 8 stores only an external reference and notes.
+## Eligibility and customer communication
 
-## Rates and pricing
+- **FW-ELIG-001 — Define calendar exceptions:** Specify business-day, holiday, and
+  grace-period treatment if the current India-local calendar rule is insufficient.
+- **FW-ELIG-002 — Add reminders and delivery evidence:** Support configurable
+  customer/owner reminders for upcoming eligibility, allocation exceptions, and
+  completed redemptions, with delivery-state tracking.
+- **FW-AUTH-002 — Design safe public signup before enabling it:** Add complete customer
+  profile creation, email/mobile verification, duplicate handling, consent capture,
+  abuse controls, and an explicit awaiting-owner-approval state.
+- **FW-AUTH-003 — Keep login separate from enrolment:** Contribution access must remain
+  disabled until an owner creates a valid `SchemeAccount`; a public login must never
+  imply financial enrolment.
 
-- **FW-PRICE-001 (completed 2026-08-19):** Display only active plans explicitly
-  approved with `publicly_listed`, using their structured INR amount/range,
-  frequency, duration, description, and cash-bonus terms. Existing plans migrate as
-  private and owner plan edits continue to be audited.
-- **FW-PRICE-002:** Define and model the exact plan-specific early-discontinuation
-  wastage/value-addition discount schedule before advertising a numeric scaled
-  discount. Until then, the public policy promises no additional discount unless a
-  schedule is present in the customer's written enrolment terms.
-- **FW-RATE-001 (completed by ADR-0003):** Owner-published Scheme Rates are the sole
-  authoritative gold/silver conversion rates. Publication is append-only, audited,
-  and protected by validation plus a 5% large-change confirmation.
-- **FW-RATE-002 — Abandoned Scheme Rate locks (resolved by FW-PAY-002):** An abandoned
-  contribution retains its original immutable Scheme Rate lock for evidence. A
-  replacement contribution obtains the then-current rate before its new order is
-  created; historical locks are never deleted or rewritten.
-- **FW-RATE-003:** If external market data is later useful, add it only as
-  owner-facing reference information. It must not become authoritative for customer
+## Rates, media, and catalogue
+
+- **FW-RATE-003 — Keep external rates informational:** If market data is later useful,
+  add it only as owner-facing reference information. It must not control customer
   allocation without a new ADR and explicit pricing/disclosure rules.
-
-## Eligibility and communication
-
-- **FW-ELIG-001:** Define business-day, holiday, and grace-period treatment if exact
-  India-local calendar eligibility is no longer sufficient.
-- **FW-ELIG-002:** Add configurable customer/owner reminders and delivery tracking
-  for upcoming eligibility, allocation exceptions, and completed redemptions.
-
-## Customer onboarding
-
-- **FW-AUTH-001 (completed in production 2026-08-26):** Owner-created
-  customer profiles now begin with unusable passwords and receive one-time,
-  digest-only, expiring password-setup invitations. Resend supersedes older links;
-  activated users use password reset. Provider acceptance/failure is visible without
-  storing provider error detail, Postmark tracking is disabled for authentication
-  mail, token-bearing responses are non-cacheable, disclose only their origin through
-  the referrer policy, and are excluded from Caddy access logs. Login email uniqueness
-  has a stop-before-migration preflight. The initial production policy used
-  `no-referrer`, which produced opaque `Origin: null` password submissions in a real
-  browser. Production release `f9081c1a52a3ce3dc99e1d816cce9846a5b31f92`
-  corrected those responses to `strict-origin`; controlled invitation setup and
-  subsequent forgot-password reset both passed.
-- **FW-AUTH-002:** Before public signup, implement complete customer-profile creation,
-  email/mobile verification, duplicate handling, consent capture, abuse controls,
-  and an explicit awaiting-owner-approval state.
-- **FW-AUTH-003:** Keep contribution access disabled until an owner creates a valid
-  `SchemeAccount`; a public login must never imply financial enrolment.
-
-## Catalogue content management
-
-- **FW-CMS-001 — Wagtail feasibility and architecture (completed 2026-08-24):**
-  [ADR-0004](decisions/ADR-0004-wagtail-catalog-cms.md) accepts Wagtail 7.4 LTS as a
-  bounded catalogue CMS while preserving the existing Django application,
-  `accounts.CustomUser`, Bootstrap 5 public UI, and financial-domain separation.
-- **FW-CMS-002 — Foundation spike (completed 2026-08-24):** Wagtail 7.4.3 is
-  integrated additively at `/cms/` with PostgreSQL search, the existing
-  `accounts.CustomUser`, `/admin/`, `/scheme/`, public-route precedence, restricted
-  document types, and development-only local media. A customer and an owner without
-  `wagtailadmin.access_admin` are denied; an explicitly authorized staff user can
-  enter. Wagtail migrations apply locally and all 147 tests pass. Production
-  promotion remains separate from this local foundation milestone.
-- **FW-MEDIA-001 — Cloudflare R2 media foundation (functionally completed
-  2026-08-24):** The application now selects local
-  filesystem or Cloudflare R2 storage through environment variables, retains
-  WhiteNoise for static files, keeps originals/documents behind short-lived signed
-  URLs, publishes only generated renditions through an owned custom domain, and
-  rejects an unsafe production configuration. Automated configuration, URL-isolation,
-  upload, read, rendition, cleanup, and deployment-check tests pass. The production
-  runbook records isolated buckets, bucket-scoped Object Read & Write tokens, the
-  smoke command, CORS/cache/WAF policy, token rotation, and media recovery. A real
-  isolated non-production R2 upload/read/rendition/cleanup smoke passed on 2026-08-24
-  without retaining the temporary media. The real production bucket, owned media
-  domain, public rendition path, private-prefix WAF rules, and no-residue smoke also
-  passed on 2026-08-24. A second production smoke proved the public 24-hour cache
-  header and a real Cloudflare cache hit. A replacement bucket-scoped token passed
-  before and after the old token was deleted. Do not use the rate-limited `r2.dev`
-  endpoint in production.
-- **FW-MEDIA-002 — Media backup, recovery, and monitoring (accepted deferral
-  2026-08-24):** The owner accepted deferring the isolated copy/delete/restore/hash
-  drill and ongoing usage-monitoring evidence to keep the catalogue roadmap moving.
-  This does not block local `FW-CATALOG-001` work. Until a separate backup target and
-  periodic restore test exist, retain approved source photographs outside R2 and do
-  not treat R2 as their only copy. Production editor activation requires explicit
-  acceptance of this limitation and a source-original retention process.
-- **FW-CATALOG-001 — Catalogue domain (completed 2026-08-24):** A dedicated
-  `catalog` application provides one `CatalogIndexPage`, focused `ProductPage`,
-  reusable category and marketing-collection snippets, and ordered image galleries
-  with required alt text. Optional positive INR display prices are explicitly
-  informational and independent of Scheme Rates or customer entitlements. Model
-  validation, case-insensitive uniqueness, preview, revision, image, rendition, and
-  showroom-only boundary tests pass; no inventory, cart, checkout, invoicing,
-  fulfilment, or financial mutations were introduced. Production promotion remains
-  a later catalogue rollout step.
-- **FW-CATALOG-002 — Publishing and authorization (completed 2026-08-24):**
-  An explicit idempotent bootstrap creates a draft catalogue root, dedicated media
-  collection, subtree-scoped Catalogue Editors/Publishers/Administrators groups,
-  collection-scoped image permissions, and a publisher approval workflow. Group
-  membership is never inferred from application role, and non-staff users remain
-  denied if mistakenly assigned. Drift detection, CMS entry, draft privacy, editor
-  submission, publisher approval, publish/unpublish visibility, and actor-attributed
-  Wagtail audit history tests pass. Workflow email is not an activation dependency;
-  production group assignment remains part of rollout/training.
-- **FW-CATALOG-003 — Public catalogue (completed 2026-08-24):** Accessible
-  Bootstrap 5 catalogue/product pages now provide live-only search, category and
-  collection filters, 12-item pagination, responsive Wagtail renditions, empty states,
-  canonical/Open Graph/Product and CollectionPage metadata, and phone/email/showroom
-  enquiry paths. Global navigation is protected by a default-off rollout flag and a
-  second live/public check. Automated checks cover discovery, structured content,
-  responsive image attributes, showroom-only wording, pagination, and draft/public
-  visibility; production browser accessibility/performance proof remains in
-  `FW-CATALOG-004`.
-- **FW-CATALOG-004 — Production rollout (completed 2026-08-25):** Production release
-  `2311ccf` was promoted after a current database recovery point and clean financial
-  baseline. Additive Wagtail/taggit/catalogue migrations, authorization reconciliation,
-  R2 upload/read/rendition/cleanup, explicit staff publishing access, reviewed content,
-  direct mobile/desktop browser checks, health checks, and navigation activation all
-  passed. `FW-MEDIA-002` remains an accepted limitation, so approved source originals
-  must remain independently retained outside R2.
-- **FW-CMS-003 — Editorial-page migration (completed locally 2026-08-25):** About and
-  Our Story now have constrained Wagtail page types, seeded draft content, optional
-  accessible R2-backed images, dedicated Editorial groups/media/workflow, stable named
-  routes, and a default-off rollout gate with reviewed Django fallbacks. Catalogue
-  permissions remain independent; savings plans, financial flows, policies, contact
-  identity, and the conversion-focused homepage remain Django-owned. Production
-  migration, staff assignment, content approval, and flag activation remain a separate
-  reviewed rollout.
-- **FW-CATALOG-005 — Scheme Plan marketing media:** If richer plan marketing is later
-  required, design an optional Wagtail-managed image/editorial presentation linked to
-  an authoritative `SchemePlan`. Do not duplicate or let CMS state control contribution
-  amounts, duration, frequency, metal, bonus, eligibility, public-listing state, or
+- **FW-MEDIA-002 — Add independent media recovery and monitoring:** The owner accepted
+  deferring the isolated copy/delete/restore/hash drill and ongoing usage monitoring.
+  Until a separate backup target and periodic restore proof exist, retain approved
+  source photographs outside R2 and never treat R2 as their only copy.
+- **FW-CATALOG-005 — Add Scheme Plan marketing media without financial coupling:**
+  Design optional Wagtail-managed imagery/editorial presentation linked to an
+  authoritative `SchemePlan`. CMS state must not control or duplicate contribution
+  amounts, duration, frequency, grade, bonus, eligibility, public-listing state, or
   enrolment terms. Define deletion/unpublish fallbacks, accessibility, approval, and
-  historical-enrolment behavior before implementation.
+  historical-enrolment behavior first.
 
-## Prioritization rule
+## Completed item index
 
-Complete the remaining production deployment gates before handling real funds. Feature
-work may continue in the [MVP plan](MVP_PLAN.md), but production use should prioritize
-the operational and audit items above feature expansion.
+Completed implementation and rollout details are intentionally not repeated here:
+
+- **Foundation and production:** `FW-BETA-001`, `FW-BETA-002`, `FW-BETA-003`,
+  `FW-PROD-001`, and `FW-PROD-004`.
+- **Financial domain:** `FW-BONUS-001`, `FW-BONUS-002`, `FW-BONUS-003`,
+  `FW-AUDIT-001`, `FW-DOC-001`, `FW-DOC-002`, `FW-DOC-003`, `FW-PRODUCT-001`,
+  `FW-PAY-001`, `FW-PAY-002`, `FW-PAY-004`, `FW-PAY-005`, `FW-PAY-006`,
+  `FW-PRICE-001`, `FW-RATE-001`, and `FW-RATE-002`.
+- **Authentication:** `FW-AUTH-001`.
+- **CMS, media, and catalogue:** `FW-CMS-001`, `FW-CMS-002`, `FW-CMS-003`,
+  `FW-MEDIA-001`, `FW-CATALOG-001`, `FW-CATALOG-002`, `FW-CATALOG-003`, and
+  `FW-CATALOG-004`.
+
+Use [Project status](STATUS.md) for the completed capability summary, the
+[production runbook](PRODUCTION_DEPLOYMENT.md) for release evidence, and ADR-0003
+through ADR-0009 for the corresponding durable architecture decisions.
 
 ## Historical milestone ledger
 
-This ledger preserves what was documented at each checkpoint. “Resolved” means a
-later milestone implemented the deferred capability; it remains here for provenance
-and is not current work.
+This compact ledger preserves limitations recorded at each checkpoint. “Resolved”
+means later work implemented that capability; unresolved parts point to active items
+above.
 
-| Checkpoint | Limitations or deferred scope recorded then | Current disposition |
+| Checkpoint | Limitation recorded then | Current disposition |
 | --- | --- | --- |
-| Milestones 0–1 | No issue was identified inside the implemented foundation/enrolment slice. Contributions, providers, rates, allocations, liabilities, and redemption were deferred. | Resolved by Milestones 2–8. |
-| Milestone 2 | Real payment providers, rates, metal allocations, liability reporting, and redemption were deferred. | Allocations, liabilities, redemption, external Razorpay Test and Live journeys, manual Scheme Rates, and backup recovery proof are resolved. Observability activation, rotation rehearsals, and webhook recovery remain `FW-PROD-002`–`FW-PROD-003` and `FW-PAY-003`. |
-| Milestone 3 | Real payment/rate providers, paid-unallocated retry handling, liability reporting, and redemption were deferred. | Manual allocation recovery, liabilities, redemption, external Razorpay Test Mode validation, and manual Scheme Rates are resolved. Unexpected-allocation automation remains `FW-AUDIT-004`. |
-| Milestone 4 / MVP Alpha | Real providers, paid-unallocated retry handling, and redemption remained deferred. | External test-mode payment, manual Scheme Rates, recovery, redemption, and the production-operations baseline are resolved. Deployment proof and automated recovery remain in the production and audit items above. |
-| Milestone 5 | GoldAPI had deterministic boundary tests but no private-key live smoke; applied rate had no premium/margin/tax/approval policy; cache was process-local; allocation retry and alerts were manual. Razorpay, redemption, bonus, and audit/corrections were deferred. | ADR-0003 superseded the API architecture with audited manual Scheme Rates locked before payment, and Razorpay Test/Live acceptance plus abandoned-lock handling are complete. Remaining work is tracked by `FW-RATE-003`, `FW-AUDIT-004`, `FW-PAY-003`, `FW-BONUS-004`–`FW-BONUS-005`, and the Milestone 10 audit items. |
-| Milestone 6 | No external Razorpay transaction/webhook had been exercised; live keys were rejected pending live operations; abandoned monthly orders had no expiry/cancellation. Earlier Milestone 5 limitations remained. | External Test and Live payments, signed capture webhooks, production-operations baseline, isolated recovery proof, and abandoned-order handling are resolved. Observability/rotation activation and webhook recovery remain `FW-PROD-002`–`FW-PROD-003` and `FW-PAY-003`. |
-| Milestone 7 | Eligibility had no reminders and did not initiate/complete redemption. The later review also noted exact-calendar behavior with no business-day or grace-period policy. | Redemption execution was resolved by Milestone 8. Communication and calendar policy remain `FW-ELIG-001` and `FW-ELIG-002`. |
-| Milestone 8 | Redemption only recorded settlement; no payout, metal handover, POS, inventory, invoice validation, or metal-to-cash policy existed. Bonus, correction/reversal/approval, and configurable partial-settlement policies remained deferred. Receipts/statements were also deferred. | Initial bonus, audit/reversal, and MVP documents are resolved by Milestones 9–11. Remaining settlement, bonus, approval, and statutory-document work is tracked by the corresponding open items. |
-| Milestone 9 | The initial cash bonus has one plan-configured percentage, a minimum qualifying duration, a paid-principal eligibility cutoff, and principal-first redemption. It has no caps, tiers, approval/forfeiture/tax policy, future-contribution projection, or optimized aggregate read model. | Tracked by `FW-BONUS-004` and `FW-BONUS-005`; initial audit/reversal is resolved by Milestone 10 while dual approval remains `FW-AUDIT-002`. |
-| Milestone 10 | Immutable audit events cover supported sensitive actions; redemption reversal is append-only; the exception queue covers current paid-unallocated and failed webhook records. There is no manual payment/rate correction, void, refund/dispute reconciliation, dual approval, automated retry/alerting, or immutable database trigger protection against bulk ORM updates. | Tracked by `FW-AUDIT-002` through `FW-AUDIT-005`, `FW-PAY-003`, and the production operations gate. |
-| Milestone 11 | Receipts and statements are on-demand printable HTML, not archived rendered files or statutory tax invoices. There is no server-side PDF, email delivery/reissue log, signature, statutory business/tax identity, formal invoice numbering, or export date filtering. | MVP scope is complete; production/legal document requirements remain `FW-DOC-004`. |
+| Milestones 0–1 | Contributions, rates, allocations, liabilities, and redemption were deferred. | Resolved by Milestones 2–8. |
+| Milestone 2 | Real providers, rates, allocations, liabilities, and redemption were deferred. | Core financial flow and provider acceptance are resolved; operations remain `FW-PROD-002`, `FW-PROD-003`, and `FW-PAY-003`. |
+| Milestone 3 | Paid-unallocated recovery, liabilities, providers, and redemption were deferred. | Manual recovery and the financial flow are resolved; automation remains `FW-AUDIT-004`. |
+| Milestone 4 / MVP Alpha | Real providers, recovery, and redemption remained deferred. | Resolved except the active production/audit items above. |
+| Milestone 5 | Provider rates, premium/tax policy, allocation automation, Razorpay, settlement, bonus, and audit were incomplete. | Manual Scheme Rates and core flows are resolved; open work remains `FW-RATE-003`, `FW-AUDIT-002`–`FW-AUDIT-005`, and `FW-BONUS-004`–`FW-BONUS-005`. |
+| Milestone 6 | External Razorpay/webhook proof, live-key controls, and abandoned orders were incomplete. | Test/Live acceptance and order lifecycle are resolved; recovery evidence and operations remain `FW-PAY-003`, `FW-PROD-002`, and `FW-PROD-003`. |
+| Milestone 7 | Eligibility did not initiate redemption and lacked reminders/business-day policy. | Redemption is resolved; calendar and communication remain `FW-ELIG-001`–`FW-ELIG-002`. |
+| Milestone 8 | No payout, handover, POS, inventory, invoice validation, metal-to-cash policy, bonus, corrections, or documents existed. | MVP bonus/audit/documents are resolved; remaining scope is `FW-SETTLE-001`–`FW-SETTLE-004`, `FW-AUDIT-002`–`FW-AUDIT-005`, and `FW-DOC-004`. |
+| Milestone 9 | Bonus lacked caps, tiers, approval, forfeiture, tax policy, and optimized aggregation. | `FW-BONUS-004`–`FW-BONUS-005`. |
+| Milestone 10 | No generic payment correction, refund/dispute reconciliation, dual approval, automated retry/alerts, or database-trigger protection existed. | `FW-AUDIT-002`–`FW-AUDIT-005`, `FW-PAY-003`, and `FW-PROD-002`. |
+| Milestone 11 | Documents were printable HTML rather than archived statutory invoices, with no PDF, signature, delivery log, tax identity, formal numbering, or date-filtered export. | `FW-DOC-004`. |
