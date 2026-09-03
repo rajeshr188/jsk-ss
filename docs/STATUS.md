@@ -2,16 +2,16 @@
 
 ## Current milestone
 
-Grade-specific metal contracts and rates are implemented locally on
-`agent/graded-metal-rates` under ADR-0007. The additive `schemes.0015`/`0016`
-migration preserves existing Gold history as `GOLD_24K_9999`, preserves Silver as
-`SILVER_999`, adds `GOLD_22K_916` for new enrolments, and never converts historical
-quantities. Rates, locks, allocations, redemptions, liabilities, payment controls,
-and customer records now remain separated by exact grade. Customer-facing gram
-values use three decimals; source records, calculations, owner settlement entry,
-integrity checks, and exports retain six decimals. Production remains on release
-`69eecf9cdebb4f660ae4ed898476e18a6fe32905` through `schemes.0014` until this
-branch is reviewed, merged, and deployed with the documented controlled cutover.
+Grade-specific metal contracts and rates are deployed in production on release
+`df5a7506bfa3c5b255faf284d3f90ef2ac7d7b28` under ADR-0007. The controlled
+`schemes.0015`/`0016` cutover preserved existing Gold history as
+`GOLD_24K_9999`, preserved Silver as `SILVER_999`, added `GOLD_22K_916` for new
+enrolments, and did not convert historical quantities. Rates, locks, allocations,
+redemptions, liabilities, payment controls, and customer records remain separated
+by exact grade. Customer-facing gram values use three decimals; source records,
+calculations, owner settlement entry, integrity checks, and exports retain six.
+The next bounded payment item is `FW-PAY-005`, an application checkout-expiry
+contract layered over provider-verified abandoned-order reconciliation.
 
 ## Completed
 
@@ -263,13 +263,20 @@ branch is reviewed, merged, and deployed with the documented controlled cutover.
   seven-day Asia/Kolkata schedule. Current-day Gold and Silver Scheme Rates were
   published, the schedule was enabled with an audit reason, and its exact closing and
   reopening boundary worked as expected after the manual pause/resume exercise.
+- Grade-specific metal rates completed production rollout and acceptance on
+  2026-09-03 in release `df5a7506bfa3c5b255faf284d3f90ef2ac7d7b28`.
+  The controlled migration applied `schemes.0015` and `schemes.0016` from a
+  recorded 2026-09-03 11:00 AM IST PostgreSQL recovery point after proving zero
+  pending Razorpay orders. Legacy Gold remained `GOLD_24K_9999` at the unchanged
+  `0.329272` g baseline, new enrolment moved to independently priced
+  `GOLD_22K_916`, and exact-grade integrity, financial-exception, Razorpay Live
+  readiness, health, and readiness gates all passed. A controlled INR `150.00`
+  Live contribution locked the `GOLD_22K_916` rate of INR `14667.0000`/g,
+  processed one signed `payment.captured` webhook, and created exactly one
+  `GOLD_22K_916` allocation of `0.010227` g with no financial exception.
 
 ## In progress
 
-- Grade-specific metal rates await review, merge, and the controlled production
-  rollout documented for `schemes.0015`/`0016`. Before reopening Gold payments after
-  that cutover, the owner must publish a current `GOLD_22K_916` Scheme Rate; 24K and
-  Silver rate histories remain independent and are never used as fallbacks.
 - `FW-MEDIA-002` tracks the accepted backup/recovery and usage-monitoring deferral.
   It does not block catalogue use, but approved source photographs must
   remain outside R2 until an isolated backup target and restore proof exist.
@@ -286,8 +293,9 @@ branch is reviewed, merged, and deployed with the documented controlled cutover.
   CA are in place, SSH access is verified, Docker is installed, and the owned domain
   returns liveness and PostgreSQL readiness `200` through Caddy-managed HTTPS;
   paid external alert exercises remain deferred.
-- Production release `e027b9ae1550c314584c551eb3da31d5529ea544` is healthy with
-  `schemes.0013_payment_operations_control`, `catalog.0001_initial`, `pages.0001_initial`,
+- Production release `df5a7506bfa3c5b255faf284d3f90ef2ac7d7b28` is healthy with
+  migrations through `schemes.0016_graded_rate_precision_labels`,
+  `catalog.0001_initial`, `pages.0001_initial`,
   and `accounts.0003_customerinvitation_and_more`
   applied, zero reported financial exceptions, successful live/ready checks, valid
   catalogue authorization, working R2 media, published reviewed products, and public
@@ -352,9 +360,8 @@ branch is reviewed, merged, and deployed with the documented controlled cutover.
 - Wagtail 7.4.3 and Django 6.0.4 pass system checks, production-shaped deploy checks,
   static collection, and an applied-migration check. Wagtail, taggit, and catalogue
   migrations are applied to production PostgreSQL.
-- Local PostgreSQL 16 migrations are applied through
-  `schemes.0016_graded_rate_precision_labels`; production remains through
-  `schemes.0014_webhook_processing_attempt` pending the controlled grade rollout.
+- Local and production PostgreSQL 16 migrations are applied through
+  `schemes.0016_graded_rate_precision_labels`.
 - 262 tests pass, including exact 22K/24K rate separation, six-decimal allocation,
   immutable enrolment grade, legacy old-schema preflight, history mapping, default
   plan offerings, Razorpay webhook response classification, append-only
@@ -445,9 +452,7 @@ branch is reviewed, merged, and deployed with the documented controlled cutover.
 
 ## Next recommended step
 
-Complete the full regression and review this branch. After merge, deploy with the
-documented `schemes.0015`/`0016` controlled cutover: pause payments, prove zero
-pending orders, capture a current recovery point and financial baseline, run the
-old-schema grade preflight, migrate once with the candidate image, run the migrated
-integrity gate, publish a current `GOLD_22K_916` Scheme Rate, and only then reopen
-Gold payments. Verify legacy 24K balances and new 22K enrolment separately.
+Implement `FW-PAY-005` as a separate reviewed change: define a bounded application
+checkout lifetime, snapshot its expiry on each Razorpay contribution, stop offering
+Checkout after expiry, pass the remaining lifetime to Razorpay Standard Checkout,
+and retain the current provider-verification and late-capture exception boundaries.
