@@ -2,13 +2,13 @@
 
 ## Current milestone
 
-`FW-PAY-005` is implemented locally on `agent/order-expiry` under ADR-0008. Every
-new Razorpay contribution snapshots a configurable 3–15 minute Checkout deadline
-(10 minutes by default), expired pages and Resume actions fail closed, and Standard
-Checkout receives only the remaining seconds. Expiry does not alter financial state:
-a verified capture before provider-backed abandonment still uses the original locked
-Scheme Rate, while the existing late-capture exception remains unchanged. Migration
-`schemes.0017` backfills any pending Razorpay history and enforces the deadline.
+`FW-PAY-005` is deployed and accepted in production under ADR-0008. Every new
+Razorpay contribution snapshots a configurable 3–15 minute Checkout deadline
+(10 minutes in production); expired pages and Resume actions fail closed without
+changing financial state, while verified callbacks/webhooks and provider-backed
+abandonment retain their existing conservative boundaries. The next bounded payment
+task resumes `FW-PAY-003` with an idempotent replay of one already-processed Live
+capture event and retained owner-review evidence.
 
 ## Completed
 
@@ -271,11 +271,22 @@ Scheme Rate, while the existing late-capture exception remains unchanged. Migrat
   Live contribution locked the `GOLD_22K_916` rate of INR `14667.0000`/g,
   processed one signed `payment.captured` webhook, and created exactly one
   `GOLD_22K_916` allocation of `0.010227` g with no financial exception.
+- `FW-PAY-005` completed production rollout and acceptance on 2026-09-03 in release
+  `51c931a9de5b27349f781cd44670c41307479dfa`. From the recorded 2026-09-03
+  1:00 PM IST PostgreSQL recovery point, the controlled global pause covered every
+  offered grade, provider reconciliation found zero candidates, and migration
+  `schemes.0017_contribution_checkout_expiry` applied as the only planned operation.
+  The candidate reported the configured 10-minute deadline, zero pending Razorpay
+  contributions, zero pending rows missing expiry, and green payment-operations,
+  financial-exception, Live-readiness, exact-grade, container-health, liveness, and
+  readiness gates before a separately audited reopening of all three grades.
 
 ## In progress
 
-- `FW-PAY-005` awaits full regression, review, merge, and the documented paused,
-  zero-pending controlled production cutover for `schemes.0017`.
+- `FW-PAY-003` retains two no-mutation recovery evidence exercises: an isolated
+  Test-mode review/dry-run/apply case and an idempotent replay of an already-processed
+  Live capture. External alerting and coordinated secret rotation remain separately
+  deferred under `FW-PROD-002` and `FW-PROD-003`.
 - `FW-MEDIA-002` tracks the accepted backup/recovery and usage-monitoring deferral.
   It does not block catalogue use, but approved source photographs must
   remain outside R2 until an isolated backup target and restore proof exist.
@@ -292,8 +303,8 @@ Scheme Rate, while the existing late-capture exception remains unchanged. Migrat
   CA are in place, SSH access is verified, Docker is installed, and the owned domain
   returns liveness and PostgreSQL readiness `200` through Caddy-managed HTTPS;
   paid external alert exercises remain deferred.
-- Production release `df5a7506bfa3c5b255faf284d3f90ef2ac7d7b28` is healthy with
-  migrations through `schemes.0016_graded_rate_precision_labels`,
+- Production release `51c931a9de5b27349f781cd44670c41307479dfa` is healthy with
+  migrations through `schemes.0017_contribution_checkout_expiry`,
   `catalog.0001_initial`, `pages.0001_initial`,
   and `accounts.0003_customerinvitation_and_more`
   applied, zero reported financial exceptions, successful live/ready checks, valid
@@ -359,9 +370,8 @@ Scheme Rate, while the existing late-capture exception remains unchanged. Migrat
 - Wagtail 7.4.3 and Django 6.0.4 pass system checks, production-shaped deploy checks,
   static collection, and an applied-migration check. Wagtail, taggit, and catalogue
   migrations are applied to production PostgreSQL.
-- Local PostgreSQL 16 migrations are defined through
-  `schemes.0017_contribution_checkout_expiry`; production is applied through
-  `schemes.0016_graded_rate_precision_labels` pending the `FW-PAY-005` rollout.
+- Local and production PostgreSQL 16 migrations are applied through
+  `schemes.0017_contribution_checkout_expiry`.
 - 267 tests pass, including Razorpay Checkout expiry/backfill, expired-resume
   blocking, capture-after-expiry confirmation, exact 22K/24K rate separation,
   six-decimal allocation,
@@ -454,7 +464,8 @@ Scheme Rate, while the existing late-capture exception remains unchanged. Migrat
 
 ## Next recommended step
 
-Complete the full regression and review `agent/order-expiry`. After merge, deploy
-`schemes.0017` with the documented global pause, zero-pending/provider-reconciliation
-gate, current recovery point, single migration runner, candidate-only restart, and
-post-deployment Checkout-expiry acceptance checks.
+Resume the bounded `FW-PAY-003` evidence work: replay one already-processed Live
+`payment.captured` event through Razorpay Dashboard and prove that an `ALREADY_FINAL`
+attempt is appended without creating another contribution entitlement or allocation.
+Keep paid external alerting and coordinated secret rotation deferred under the
+already accepted `FW-PROD-002`/`FW-PROD-003` budget boundary.
