@@ -12,6 +12,7 @@ from django.utils import timezone
 class GradedMetalRateMigrationTests(TransactionTestCase):
     migrate_from = ("schemes", "0014_paymentwebhookevent_failure_code_and_more")
     migrate_to = ("schemes", "0016_graded_rate_precision_labels")
+    restore_to = ("schemes", "0017_contribution_checkout_expiry")
     accounts_target = ("accounts", "0003_customerinvitation_and_more")
 
     def setUp(self):
@@ -23,7 +24,7 @@ class GradedMetalRateMigrationTests(TransactionTestCase):
 
     def tearDown(self):
         MigrationExecutor(connection).migrate(
-            [self.migrate_to, self.accounts_target]
+            [self.restore_to, self.accounts_target]
         )
         super().tearDown()
 

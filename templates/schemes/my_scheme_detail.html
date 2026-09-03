@@ -91,8 +91,12 @@
           <br><a href="{% url 'schemes:contribution_receipt' contribution.pk %}">Receipt</a>
           {% endif %}
           {% if contribution.status == 'PENDING' and contribution.payment_gateway == 'razorpay' and contribution.gateway_order_id and contribution.gateway_mode == razorpay_mode %}
+          {% if contribution.razorpay_checkout_expired %}
+          <br><span class="small text-muted">Checkout expired — awaiting provider reconciliation</span>
+          {% else %}
           {% if contribution.scheme_account.savings_mode != 'CASH' or cash_scheme_activity_enabled %}{% if not payment_availability or payment_availability.allowed %}
           <br><a href="{% url 'schemes:razorpay_checkout' contribution.pk %}">Resume payment</a>
+          {% endif %}
           {% endif %}
           {% endif %}
           {% endif %}
@@ -124,8 +128,12 @@
     <a class="btn btn-sm btn-outline-dark" href="{% url 'schemes:contribution_receipt' contribution.pk %}">View receipt</a>
     {% endif %}
     {% if contribution.status == 'PENDING' and contribution.payment_gateway == 'razorpay' and contribution.gateway_order_id and contribution.gateway_mode == razorpay_mode %}
+    {% if contribution.razorpay_checkout_expired %}
+    <p class="small text-muted mb-0">Checkout expired — awaiting provider reconciliation</p>
+    {% else %}
     {% if contribution.scheme_account.savings_mode != 'CASH' or cash_scheme_activity_enabled %}{% if not payment_availability or payment_availability.allowed %}
     <a class="btn btn-sm btn-jsk" href="{% url 'schemes:razorpay_checkout' contribution.pk %}">Resume payment</a>
+    {% endif %}
     {% endif %}
     {% endif %}
     {% endif %}

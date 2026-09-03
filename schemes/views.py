@@ -2,6 +2,7 @@ import csv
 import hashlib
 import json
 import logging
+import math
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -1083,6 +1084,16 @@ def razorpay_checkout(request, contribution_id):
             "schemes:my_scheme_detail",
             scheme_number=contribution.scheme_account.scheme_number,
         )
+    if contribution.razorpay_checkout_expired:
+        messages.warning(
+            request,
+            "This Checkout window has expired. No payment was credited. The "
+            "showroom must reconcile the provider order before another attempt.",
+        )
+        return redirect(
+            "schemes:my_scheme_detail",
+            scheme_number=contribution.scheme_account.scheme_number,
+        )
     availability = get_payment_availability(
         metal_grade=contribution.scheme_account.metal_grade
     )
@@ -1092,6 +1103,10 @@ def razorpay_checkout(request, contribution_id):
             "schemes:my_scheme_detail",
             scheme_number=contribution.scheme_account.scheme_number,
         )
+    checkout_timeout_seconds = max(
+        1,
+        math.ceil((contribution.checkout_expires_at - timezone.now()).total_seconds()),
+    )
     return render(
         request,
         "schemes/razorpay_checkout.html",
@@ -1100,6 +1115,8 @@ def razorpay_checkout(request, contribution_id):
             "razorpay_key_id": gateway.key_id,
             "razorpay_mode": gateway.mode,
             "amount_subunits": int(contribution.amount * 100),
+            "checkout_timeout_seconds": checkout_timeout_seconds,
+            "checkout_expires_at": contribution.checkout_expires_at,
         },
     )
 

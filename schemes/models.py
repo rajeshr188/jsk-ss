@@ -442,6 +442,14 @@ class Contribution(models.Model):
     gateway_order_id = models.CharField(max_length=120, null=True, blank=True, unique=True)
     gateway_reference = models.CharField(max_length=120, null=True, blank=True, unique=True)
     gateway_signature = models.CharField(max_length=128, blank=True)
+    checkout_expires_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text=(
+            "Application deadline for opening or resuming this Razorpay Checkout. "
+            "It does not cancel the provider order or reject a captured payment."
+        ),
+    )
     allocation_error = models.TextField(blank=True)
     allocation_attempted_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -492,6 +500,16 @@ class Contribution(models.Model):
                 ),
                 name="contribution_razorpay_mode_valid",
             ),
+            models.CheckConstraint(
+                condition=(
+                    ~models.Q(
+                        payment_gateway="razorpay",
+                        status="PENDING",
+                    )
+                    | models.Q(checkout_expires_at__isnull=False)
+                ),
+                name="pending_rzp_checkout_expiry",
+            ),
             models.UniqueConstraint(
                 fields=["scheme_account", "contribution_period"],
                 condition=models.Q(
@@ -512,7 +530,20 @@ class Contribution(models.Model):
         ]
         indexes = [
             models.Index(fields=["status", "created_at"], name="contrib_status_created_idx"),
+            models.Index(
+                fields=["status", "checkout_expires_at"],
+                name="contrib_status_expiry_idx",
+            ),
         ]
+
+    @property
+    def razorpay_checkout_expired(self):
+        if self.payment_gateway != "razorpay":
+            return False
+        return (
+            self.checkout_expires_at is None
+            or timezone.now() >= self.checkout_expires_at
+        )
 
     def __str__(self):
         return f"{self.scheme_account.scheme_number} — ₹{self.amount} — {self.status}"

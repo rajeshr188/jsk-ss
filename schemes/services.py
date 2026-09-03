@@ -2,7 +2,7 @@ import calendar
 import hashlib
 import secrets
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, timedelta
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 
 from django.conf import settings
@@ -557,6 +557,12 @@ def initiate_contribution(
         status=Contribution.Status.PENDING,
         payment_gateway=payment_gateway,
         gateway_mode=gateway_mode,
+        checkout_expires_at=(
+            timezone.now()
+            + timedelta(minutes=settings.RAZORPAY_CHECKOUT_EXPIRY_MINUTES)
+            if payment_gateway == "razorpay"
+            else None
+        ),
     )
     _lock_current_scheme_rate(contribution)
     contribution.full_clean()

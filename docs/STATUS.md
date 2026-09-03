@@ -2,16 +2,13 @@
 
 ## Current milestone
 
-Grade-specific metal contracts and rates are deployed in production on release
-`df5a7506bfa3c5b255faf284d3f90ef2ac7d7b28` under ADR-0007. The controlled
-`schemes.0015`/`0016` cutover preserved existing Gold history as
-`GOLD_24K_9999`, preserved Silver as `SILVER_999`, added `GOLD_22K_916` for new
-enrolments, and did not convert historical quantities. Rates, locks, allocations,
-redemptions, liabilities, payment controls, and customer records remain separated
-by exact grade. Customer-facing gram values use three decimals; source records,
-calculations, owner settlement entry, integrity checks, and exports retain six.
-The next bounded payment item is `FW-PAY-005`, an application checkout-expiry
-contract layered over provider-verified abandoned-order reconciliation.
+`FW-PAY-005` is implemented locally on `agent/order-expiry` under ADR-0008. Every
+new Razorpay contribution snapshots a configurable 3–15 minute Checkout deadline
+(10 minutes by default), expired pages and Resume actions fail closed, and Standard
+Checkout receives only the remaining seconds. Expiry does not alter financial state:
+a verified capture before provider-backed abandonment still uses the original locked
+Scheme Rate, while the existing late-capture exception remains unchanged. Migration
+`schemes.0017` backfills any pending Razorpay history and enforces the deadline.
 
 ## Completed
 
@@ -277,6 +274,8 @@ contract layered over provider-verified abandoned-order reconciliation.
 
 ## In progress
 
+- `FW-PAY-005` awaits full regression, review, merge, and the documented paused,
+  zero-pending controlled production cutover for `schemes.0017`.
 - `FW-MEDIA-002` tracks the accepted backup/recovery and usage-monitoring deferral.
   It does not block catalogue use, but approved source photographs must
   remain outside R2 until an isolated backup target and restore proof exist.
@@ -360,9 +359,12 @@ contract layered over provider-verified abandoned-order reconciliation.
 - Wagtail 7.4.3 and Django 6.0.4 pass system checks, production-shaped deploy checks,
   static collection, and an applied-migration check. Wagtail, taggit, and catalogue
   migrations are applied to production PostgreSQL.
-- Local and production PostgreSQL 16 migrations are applied through
-  `schemes.0016_graded_rate_precision_labels`.
-- 262 tests pass, including exact 22K/24K rate separation, six-decimal allocation,
+- Local PostgreSQL 16 migrations are defined through
+  `schemes.0017_contribution_checkout_expiry`; production is applied through
+  `schemes.0016_graded_rate_precision_labels` pending the `FW-PAY-005` rollout.
+- 267 tests pass, including Razorpay Checkout expiry/backfill, expired-resume
+  blocking, capture-after-expiry confirmation, exact 22K/24K rate separation,
+  six-decimal allocation,
   immutable enrolment grade, legacy old-schema preflight, history mapping, default
   plan offerings, Razorpay webhook response classification, append-only
   processing-attempt evidence, provider-backed owner dry-run/apply recovery,
@@ -452,7 +454,7 @@ contract layered over provider-verified abandoned-order reconciliation.
 
 ## Next recommended step
 
-Implement `FW-PAY-005` as a separate reviewed change: define a bounded application
-checkout lifetime, snapshot its expiry on each Razorpay contribution, stop offering
-Checkout after expiry, pass the remaining lifetime to Razorpay Standard Checkout,
-and retain the current provider-verification and late-capture exception boundaries.
+Complete the full regression and review `agent/order-expiry`. After merge, deploy
+`schemes.0017` with the documented global pause, zero-pending/provider-reconciliation
+gate, current recovery point, single migration runner, candidate-only restart, and
+post-deployment Checkout-expiry acceptance checks.

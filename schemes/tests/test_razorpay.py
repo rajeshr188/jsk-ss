@@ -60,6 +60,7 @@ RAZORPAY_SETTINGS = {
     "RAZORPAY_KEY_SECRET": "test-key-secret",
     "RAZORPAY_WEBHOOK_SECRET": "test-webhook-secret",
     "RAZORPAY_TIMEOUT_SECONDS": "2",
+    "RAZORPAY_CHECKOUT_EXPIRY_MINUTES": 10,
 }
 
 
@@ -493,6 +494,60 @@ class RazorpayOrderReconciliationCommandTests(TestCase):
 
 @override_settings(DEBUG=True)
 class RazorpayServiceTests(TestCase):
+    def test_razorpay_order_snapshots_bounded_checkout_expiry(self):
+        _, account = make_account(email="checkout-expiry@example.com")
+        before = timezone.now()
+
+        contribution = initiate_razorpay_contribution(
+            scheme_account=account,
+            amount=Decimal("5000.00"),
+            gateway=FakeRazorpayGateway(),
+        )
+
+        self.assertIsNotNone(contribution.checkout_expires_at)
+        self.assertGreaterEqual(
+            contribution.checkout_expires_at,
+            before + timedelta(minutes=9, seconds=59),
+        )
+        self.assertLessEqual(
+            contribution.checkout_expires_at,
+            timezone.now() + timedelta(minutes=10),
+        )
+
+    def test_expired_checkout_does_not_reject_verified_capture(self):
+        _, account = make_account(email="expired-capture@example.com")
+        gateway = FakeRazorpayGateway()
+        contribution = initiate_razorpay_contribution(
+            scheme_account=account,
+            amount=Decimal("5000.00"),
+            gateway=gateway,
+        )
+        Contribution.objects.filter(pk=contribution.pk).update(
+            checkout_expires_at=timezone.now() - timedelta(minutes=1)
+        )
+
+        confirmed = confirm_razorpay_contribution(
+            contribution_id=contribution.pk,
+            callback_order_id=contribution.gateway_order_id,
+            payment_id="pay_after_checkout_expiry",
+            signature="verified-signature",
+            gateway=gateway,
+        )
+
+        self.assertEqual(confirmed.status, Contribution.Status.PAID)
+        self.assertEqual(get_cash_balance(account), Decimal("5000.00"))
+
+    def test_non_razorpay_contribution_has_no_checkout_expiry(self):
+        _, account = make_account(email="mock-no-expiry@example.com")
+
+        contribution = initiate_contribution(
+            scheme_account=account,
+            amount=Decimal("5000.00"),
+            payment_gateway="mock",
+        )
+
+        self.assertIsNone(contribution.checkout_expires_at)
+
     def test_monthly_pending_cash_order_is_reused_without_scheme_rate(self):
         _, account = make_account(email="pending@example.com")
         self.assertEqual(account.savings_mode, SchemeAccount.SavingsMode.CASH)
@@ -1192,7 +1247,36 @@ class RazorpayViewTests(TestCase):
         self.assertContains(response, "rzp_test_public_key")
         self.assertContains(response, 'checkout.on("payment.failed"', html=False)
         self.assertContains(response, "Checkout was cancelled", html=False)
-        self.assertEqual(Contribution.objects.get().gateway_order_id, "order_view")
+        self.assertContains(response, "Checkout available until")
+        self.assertContains(response, "timeout: Math.max", html=False)
+        contribution = Contribution.objects.get()
+        self.assertEqual(contribution.gateway_order_id, "order_view")
+        self.assertIsNotNone(contribution.checkout_expires_at)
+        self.assertGreater(response.context["checkout_timeout_seconds"], 590)
+        self.assertLessEqual(response.context["checkout_timeout_seconds"], 600)
+
+    def test_expired_checkout_cannot_be_rendered_or_resumed(self):
+        contribution = initiate_contribution(
+            scheme_account=self.account,
+            amount=Decimal("5000.00"),
+            payment_gateway="razorpay",
+            gateway_mode="test",
+        )
+        contribution.gateway_order_id = "order_expired_view"
+        contribution.checkout_expires_at = timezone.now() - timedelta(seconds=1)
+        contribution.save(
+            update_fields=["gateway_order_id", "checkout_expires_at"]
+        )
+
+        response = self.client.get(
+            reverse("schemes:razorpay_checkout", args=[contribution.pk]),
+            follow=True,
+        )
+
+        self.assertContains(response, "Checkout window has expired")
+        self.assertContains(response, "awaiting provider reconciliation")
+        self.assertNotContains(response, "rzp_test_public_key")
+        self.assertNotContains(response, "Resume payment")
 
     @override_settings(
         RAZORPAY_MODE="live",
@@ -1380,7 +1464,7 @@ class RazorpayViewTests(TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertFalse(PaymentWebhookEvent.objects.exists())
 
-    def test_signed_captured_webhook_confirms_payment(self):
+    def test_signed_captured_webhook_after_expiry_confirms_payment(self):
         contribution = initiate_contribution(
             scheme_account=self.account,
             amount=Decimal("5000.00"),
@@ -1388,7 +1472,10 @@ class RazorpayViewTests(TestCase):
             gateway_mode="test",
         )
         contribution.gateway_order_id = "order_signed_webhook"
-        contribution.save(update_fields=["gateway_order_id"])
+        contribution.checkout_expires_at = timezone.now() - timedelta(seconds=1)
+        contribution.save(
+            update_fields=["gateway_order_id", "checkout_expires_at"]
+        )
         payload = {
             "event": "payment.captured",
             "payload": {

@@ -92,6 +92,21 @@ This is the canonical source for stable business rules.
   the existing idempotent confirmation and original locked-rate allocation services.
   Abandoned or failed contributions and any mismatch remain manual refund/
   reconciliation cases with no override in the recovery UI.
+- **PAY-018:** Every new Razorpay contribution snapshots an application Checkout
+  deadline from the configured 3–15 minute policy when its pending record is created.
+  The default is 10 minutes, and later configuration changes never rewrite an
+  existing deadline or locked Scheme Rate.
+- **PAY-019:** The application must not render or resume Checkout after that deadline.
+  A rendered page passes the remaining seconds to Razorpay and disables its local
+  action at expiry, but browser timing is advisory and is not provider cancellation.
+- **PAY-020:** Checkout expiry alone never changes payment status, releases a monthly
+  attempt, or creates/removes entitlement. Provider-backed, dry-run-first
+  reconciliation remains required before an untouched order becomes application-side
+  `ABANDONED`.
+- **PAY-021:** A valid captured callback or signed webhook received after Checkout
+  expiry but before provider-verified abandonment is confirmed idempotently from its
+  original locked Scheme Rate. A capture after `ABANDONED` remains a financial
+  exception; expiry is never a reason to ignore received money.
 - **METAL-001 / FIN-002:** A metal contribution creates at most one successful allocation.
 - **METAL-002 / FIN-003:** A Scheme Rate used by an allocation is immutable.
 - **METAL-003 / FIN-004:** Historical allocated grams never change when a newer Scheme Rate is published.
