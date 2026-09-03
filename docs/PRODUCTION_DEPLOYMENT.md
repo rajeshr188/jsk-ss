@@ -7,9 +7,10 @@ explicit Razorpay Test/Live modes, and manually published Scheme Rate build. Dev
 
 ## Production-readiness boundary
 
-Production release `c3e8c46` runs the Live Razorpay path accepted on `5fa726b` and the
-deployed FW-PAY-002 abandoned-order lifecycle. This proves the Live payment path and
-its conservative stale-order boundary, but the deployment is **not fully
+Production release `51c931a9de5b27349f781cd44670c41307479dfa` runs the accepted
+Live Razorpay path, provider-backed abandoned-order lifecycle, exact-grade metal
+contracts, payment-operations circuit breaker, and snapshotted Checkout expiry. This
+proves those bounded application controls, but the deployment is **not fully
 production-gate complete**:
 
 - The deploy check accepts `test` and `live` only when `RAZORPAY_MODE` agrees with
@@ -1881,6 +1882,35 @@ Resume action disappears after the snapshotted deadline, and an already verified
 capture is still processed idempotently. Keep production paused until these checks
 pass, then reopen through a separate audited owner action. Expiry is not provider
 cancellation and never authorizes deleting or failing a pending contribution.
+
+#### Completed production rollout evidence — 2026-09-03
+
+- PR `#31` merged FW-PAY-005 as release
+  `51c931a9de5b27349f781cd44670c41307479dfa`. The Linode candidate image was
+  `jsk-savings:51c931a9de5b27349f781cd44670c41307479dfa`, identity
+  `sha256:ebfe3fd78fc64e66e4f4e4bf8a42f8875835b9ce9fc4d98d56db040cc65f9c2a`;
+  rollback evidence retained release/image
+  `df5a7506bfa3c5b255faf284d3f90ef2ac7d7b28`.
+- The operator recorded the 2026-09-03 1:00 PM IST managed PostgreSQL recovery
+  point and enabled the audited global pause. All three exact grades reported
+  `MANUAL_GLOBAL_PAUSE`, every per-grade pending count was zero, the aggregate
+  pending Razorpay count was zero, and the Live provider reconciliation dry run
+  found zero candidates, review cases, abandonments, or errors.
+- The financial-exception, Razorpay Live-readiness, and exact-grade integrity checks
+  all reported `status=ok`. The reviewed migration plan contained only
+  `schemes.0017_contribution_checkout_expiry`; it applied successfully and every
+  Scheme migration through `0017` reported applied.
+- The candidate web service became healthy with
+  `RAZORPAY_CHECKOUT_EXPIRY_MINUTES=10`, zero pending Razorpay contributions, and
+  zero pending rows missing a deadline. Payment operations remained paused and all
+  post-migration financial, Razorpay, grade, and reconciliation gates stayed green.
+- Caddy was restored only after the candidate health gate. Public liveness and
+  PostgreSQL readiness both returned `status=ok` with the exact candidate release.
+  The owner then reopened payment initiation through a separate audited change; 22K
+  Gold, legacy 24K Gold, and 999 Silver all reported `OPEN` with zero pending orders.
+- No disposable Live order was created merely to exercise the timer. Confirm the
+  snapshotted 10-minute deadline and normal completion/expiry behavior on the first
+  legitimate post-release contribution without weakening provider reconciliation.
 
 ### Live reconciliation, payment-error refund, and dispute boundary
 

@@ -194,7 +194,7 @@ here are not implemented behavior and do not relax the financial invariants in
     boundary in production.
   Holiday exceptions, multiple windows per day, expiring force-open overrides, and a
   separate allocation-integrity hold remain outside this first phase.
-- **FW-PAY-005 — Snapshotted Razorpay Checkout expiry (in progress):**
+- **FW-PAY-005 — Snapshotted Razorpay Checkout expiry (completed 2026-09-03):**
   [ADR-0008](decisions/ADR-0008-razorpay-checkout-expiry.md) separates the
   customer-facing Checkout deadline from provider-backed abandonment:
   - [x] Define a default 10-minute policy constrained to the accepted 3–15 minute
@@ -208,8 +208,12 @@ here are not implemented behavior and do not relax the financial invariants in
   - [x] Add migration, service, view, UI, and captured-after-expiry regression tests.
   - [x] Pass the complete 267-test local regression suite plus Django system and
     migration-drift checks.
-  - [ ] Complete CI review and deploy `schemes.0017` through the documented paused,
+  - [x] Complete CI review and deploy `schemes.0017` through the documented paused,
     zero-pending controlled cutover.
+  Production release `51c931a9de5b27349f781cd44670c41307479dfa` used the recorded
+  2026-09-03 1:00 PM IST recovery point, applied only `schemes.0017`, retained zero
+  pending Razorpay orders, passed all financial/payment/grade and public health gates,
+  and reopened every grade through a separate audited owner action.
   Razorpay exposes no order cancellation API, so the provider-inspection residual
   risk and manual late-capture refund boundary remain.
 - **FW-SETTLE-001:** Integrate actual payout, metal handover, or point-of-sale
