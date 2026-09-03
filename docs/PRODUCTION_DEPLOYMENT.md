@@ -1796,6 +1796,36 @@ the global pause until the owner confirms the rate, plan offerings, a controlled
 enrolment, and a non-chargeable/approved payment smoke path. Unpausing must be a
 separate audited owner action.
 
+#### Completed production rollout evidence — 2026-09-03
+
+- Release `df5a7506bfa3c5b255faf284d3f90ef2ac7d7b28` was built as image
+  `jsk-savings:df5a7506bfa3c5b255faf284d3f90ef2ac7d7b28`, identity
+  `sha256:005c298d450e2682b50215d7ec78223302a41e78d30870629ca019f4a58ba2fb`.
+  The previous release was `69eecf9cdebb4f660ae4ed898476e18a6fe32905`; it was
+  retained only as evidence because it is not a safe write-capable rollback after
+  the grade constraints are applied.
+- The operator recorded the 2026-09-03 11:00 AM IST managed PostgreSQL recovery
+  point. The pre-migration baseline was six customers, seven scheme accounts, zero
+  pending Razorpay contributions, zero cash principal/earned bonus, `0.329272` g
+  Gold, and zero Silver. The candidate old-schema preflight reported ready with zero
+  unallocated metal payments, open orders, and allocation/redemption mismatches.
+- The reviewed plan contained only `schemes.0015_graded_metal_rates` and
+  `schemes.0016_graded_rate_precision_labels`. Both applied successfully with Caddy
+  and the old web service stopped. Every Scheme migration through `0016` then
+  reported applied, and the post-migration exact-grade check reported all mismatch
+  and missing-grade counters at zero.
+- The candidate web service became healthy, Caddy validated and was recreated, and
+  external Live/Ready responses identified the exact candidate release. Financial
+  exceptions and Razorpay Live readiness both reported `status=ok` with no pending
+  cross-mode order, failed Live webhook, paid-unallocated contribution, failed
+  webhook, or mismatched webhook.
+- The owner reviewed independent 22K Gold, legacy 24K Gold, and 999 Silver rates and
+  plan offerings before a separate audited reopening. A controlled INR `150.00`
+  Live payment on contribution `14` used account grade, locked-rate grade, and
+  allocation grade `GOLD_22K_916`; it locked INR `14667.0000`/g, allocated
+  `0.010227` g, and its signed `payment.captured` webhook was `PROCESSED`. Final
+  graded-rate, financial-exception, and Razorpay Live-readiness checks remained green.
+
 If migration or candidate verification fails, keep traffic and payments stopped.
 Prefer fixing and rolling forward with a compatible candidate. Restoring the recorded
 database and old image is safe only if the operator proves no payment, webhook,
