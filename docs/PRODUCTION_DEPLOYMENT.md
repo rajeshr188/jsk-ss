@@ -1912,6 +1912,76 @@ cancellation and never authorizes deleting or failing a pending contribution.
   snapshotted 10-minute deadline and normal completion/expiry behavior on the first
   legitimate post-release contribution without weakening provider reconciliation.
 
+### In-store cash contribution deployment (`schemes.0018`)
+
+[ADR-0009](decisions/ADR-0009-in-store-cash-contributions.md) introduces a non-null
+payment channel plus immutable cash receipt/reversal ledgers. Treat this as a
+controlled stop-the-old-web migration because the old image does not populate the new
+channel column. This is not a Razorpay mode change and must not alter API/webhook
+credentials.
+
+Prepare the candidate environment with the feature closed:
+
+```dotenv
+IN_STORE_CASH_CONTRIBUTIONS_ENABLED=False
+IN_STORE_CASH_REVERSAL_HOURS=24
+```
+
+Record the rollback image/release, candidate image digest, operator, current managed
+PostgreSQL recovery point, customer/account/liability baseline, and daily physical
+cash cutoff. Enable the audited global payment pause and require zero pending
+Razorpay orders before stopping traffic. The old production image cannot run the new
+integrity command, so use the existing payment, grade, financial, and reconciliation
+checks for the pre-migration gate.
+
+```bash
+docker compose --env-file .env.production -f compose.production.yml \
+  exec -T web python manage.py check_payment_operations
+
+docker compose --env-file .env.production -f compose.production.yml \
+  exec -T web python manage.py reconcile_abandoned_razorpay_orders
+
+docker compose --env-file .env.production -f compose.production.yml \
+  run --rm --no-deps web python manage.py migrate --plan
+```
+
+The reviewed plan must contain only
+`schemes.0018_in_store_cash_contributions`. It backfills existing Razorpay and Mock
+history; it does not create a cash receipt or change any balance. Stop Caddy and the
+old web process, apply the migration once with the candidate, and start only the
+candidate web service.
+
+```bash
+docker compose --env-file .env.production -f compose.production.yml stop caddy web
+
+docker compose --env-file .env.production -f compose.production.yml \
+  run --rm --no-deps web python manage.py migrate --noinput
+
+docker compose --env-file .env.production -f compose.production.yml \
+  up -d --force-recreate --no-deps web
+
+docker compose --env-file .env.production -f compose.production.yml \
+  exec -T web python manage.py check_in_store_cash_contributions
+```
+
+Require a healthy candidate, all prior financial/Razorpay/grade gates, and an
+`in_store_cash_check status=ok` result with the feature still disabled. Validate and
+recreate Caddy, then confirm public Live/Ready identify the exact candidate release.
+Review the owner customer-detail, contribution ledger, receipt, reversal warning, CSV,
+and customer statement paths without creating disposable production money records.
+
+After sign-off, set `IN_STORE_CASH_CONTRIBUTIONS_ENABLED=True`, validate Compose, and
+force-recreate only `web`. Reopening payment operations is a separate audited owner
+action. Reconcile the first legitimate receipt against the physical drawer, optional
+paper receipt, contribution acknowledgement, exact-grade allocation, customer
+statement, audit log, CSV export, and the integrity command. A mistaken entry must use
+the reversal screen; never edit/delete rows or describe reversal as a refund.
+
+At each daily cash close, compare physical cash and the external books with the owner
+ledger's received, reversed, and net figures. Investigate every difference, every
+`PAID_UNALLOCATED` receipt, and every integrity-check failure before redemption. Keep
+the flag and payment initiation paused during unresolved financial incidents.
+
 ### Live reconciliation, payment-error refund, and dispute boundary
 
 - **Daily reconciliation:** compare Razorpay Live captured payments against the owner

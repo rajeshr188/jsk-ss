@@ -46,7 +46,12 @@
     <div class="mt-3">{{ account.plan.name }}</div>
     <small class="text-secondary">Started {{ account.start_date }} · eligible {{ account.eligible_from }} · {{ account.agreed_months }} months</small>
     {% if account.savings_mode == 'CASH' and not cash_scheme_activity_enabled %}<div class="alert alert-secondary small mt-3 mb-0">Legacy record; new cash contributions are unavailable.</div>{% endif %}
-    <div class="mt-3"><a class="btn btn-sm btn-outline-dark" href="{% url 'schemes:scheme_statement' account.scheme_number %}">View statement</a></div>
+    <div class="mt-3 d-flex flex-wrap gap-2">
+      <a class="btn btn-sm btn-outline-dark" href="{% url 'schemes:scheme_statement' account.scheme_number %}">View statement</a>
+      {% if in_store_cash_enabled and account.savings_mode != 'CASH' and account.status != 'REDEEMED' %}
+      <a class="btn btn-sm btn-jsk" href="{% url 'schemes:in_store_cash_contribution' account.scheme_number %}">Record in-store cash</a>
+      {% endif %}
+    </div>
   </div></article></div>
   {% empty %}
   <div class="col-12"><div class="card empty-state"><h3 class="h5">No scheme accounts yet</h3><p>This customer has a login profile but has not been enrolled in a savings agreement.</p><div><a class="btn btn-jsk" href="{% url 'schemes:customer_enroll' customer.pk %}">Enrol customer</a></div></div></div>

@@ -13,6 +13,8 @@ from .models import (
     AuditEvent,
     Contribution,
     Customer,
+    InStoreCashContributionReversal,
+    InStoreCashReceipt,
     MetalAllocation,
     MetalGrade,
     PaymentWebhookEvent,
@@ -27,6 +29,7 @@ SUCCESSFUL_PAYMENT_STATUSES = (
     Contribution.Status.PAID,
     Contribution.Status.PAID_UNALLOCATED,
 )
+RECEIPT_PAYMENT_STATUSES = (*SUCCESSFUL_PAYMENT_STATUSES, Contribution.Status.REVERSED)
 
 
 @dataclass(frozen=True)
@@ -70,6 +73,19 @@ class OwnerActivitySummary:
     contribution_count_today: int
     contribution_count_month: int
     unallocated_payment_count: int
+
+
+@dataclass(frozen=True)
+class InStoreCashDailySummary:
+    as_of: date
+    receipts_count: int
+    received_amount: Decimal
+    reversals_count: int
+    reversed_amount: Decimal
+
+    @property
+    def net_amount(self):
+        return self.received_amount - self.reversed_amount
 
 
 @dataclass(frozen=True)
@@ -143,6 +159,7 @@ class StatementEntry:
     amount_inr: Decimal | None = None
     scheme_rate: Decimal | None = None
     metal_allocation: Decimal | None = None
+    metal_reversal: Decimal | None = None
     redemption: Decimal | None = None
     restoration: Decimal | None = None
     entitlement_unit: str = ""
@@ -313,6 +330,10 @@ def get_contribution_history(scheme_account):
         "scheme_rate__metal_grade",
         "metal_allocation__scheme_rate",
         "metal_allocation__metal_grade",
+        "cash_receipt",
+        "cash_receipt__received_by",
+        "cash_reversal",
+        "cash_reversal__processed_by",
     )
 
 
@@ -332,6 +353,50 @@ def get_owner_contributions():
         "scheme_rate__metal_grade",
         "metal_allocation__scheme_rate",
         "metal_allocation__metal_grade",
+        "cash_receipt",
+        "cash_receipt__received_by",
+        "cash_reversal",
+        "cash_reversal__processed_by",
+    )
+
+
+def get_in_store_cash_daily_summary(as_of=None):
+    local_date = as_of or timezone.localdate()
+    current_timezone = timezone.get_current_timezone()
+    day_start = timezone.make_aware(
+        datetime.combine(local_date, time.min),
+        current_timezone,
+    )
+    day_end = day_start + timedelta(days=1)
+    money_field = DecimalField(max_digits=14, decimal_places=2)
+    receipts = InStoreCashReceipt.objects.filter(
+        received_at__gte=day_start,
+        received_at__lt=day_end,
+    ).aggregate(
+        count=Count("pk"),
+        amount=Coalesce(
+            Sum("contribution__amount"),
+            Value(Decimal("0.00")),
+            output_field=money_field,
+        ),
+    )
+    reversals = InStoreCashContributionReversal.objects.filter(
+        reversed_at__gte=day_start,
+        reversed_at__lt=day_end,
+    ).aggregate(
+        count=Count("pk"),
+        amount=Coalesce(
+            Sum("contribution__amount"),
+            Value(Decimal("0.00")),
+            output_field=money_field,
+        ),
+    )
+    return InStoreCashDailySummary(
+        as_of=local_date,
+        receipts_count=receipts["count"],
+        received_amount=receipts["amount"],
+        reversals_count=reversals["count"],
+        reversed_amount=reversals["amount"],
     )
 
 
@@ -479,7 +544,7 @@ def contribution_receipt_number(contribution):
 
 
 def get_contribution_receipt_summary(contribution):
-    if contribution.status not in SUCCESSFUL_PAYMENT_STATUSES:
+    if contribution.status not in RECEIPT_PAYMENT_STATUSES:
         raise ValueError("Only verified payments have contribution receipts.")
     try:
         allocation = contribution.metal_allocation
@@ -495,7 +560,7 @@ def get_contribution_receipt_summary(contribution):
 def get_scheme_statement(scheme_account):
     entries = []
     contributions = get_contribution_history(scheme_account).filter(
-        status__in=SUCCESSFUL_PAYMENT_STATUSES
+        status__in=RECEIPT_PAYMENT_STATUSES
     )
     for contribution in contributions:
         try:
@@ -528,6 +593,19 @@ def get_scheme_statement(scheme_account):
                 contribution_id=contribution.pk,
             )
         )
+        if contribution.status == Contribution.Status.REVERSED:
+            reversal = contribution.cash_reversal
+            entries.append(
+                StatementEntry(
+                    occurred_at=reversal.reversed_at,
+                    description="In-store cash contribution correction",
+                    reference=reversal.reversal_number,
+                    status="Entitlement removed",
+                    metal_reversal=allocation.quantity if allocation else None,
+                    entitlement_unit=unit,
+                    contribution_id=contribution.pk,
+                )
+            )
 
     for redemption in get_redemption_history(scheme_account):
         entries.append(

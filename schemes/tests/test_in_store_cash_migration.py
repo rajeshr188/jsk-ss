@@ -7,10 +7,9 @@ from django.test import TransactionTestCase
 from django.utils import timezone
 
 
-class CheckoutExpiryMigrationTests(TransactionTestCase):
-    migrate_from = ("schemes", "0016_graded_rate_precision_labels")
-    migrate_to = ("schemes", "0017_contribution_checkout_expiry")
-    restore_to = ("schemes", "0018_in_store_cash_contributions")
+class InStoreCashMigrationTests(TransactionTestCase):
+    migrate_from = ("schemes", "0017_contribution_checkout_expiry")
+    migrate_to = ("schemes", "0018_in_store_cash_contributions")
     accounts_target = ("accounts", "0003_customerinvitation_and_more")
 
     def setUp(self):
@@ -22,11 +21,11 @@ class CheckoutExpiryMigrationTests(TransactionTestCase):
 
     def tearDown(self):
         MigrationExecutor(connection).migrate(
-            [self.restore_to, self.accounts_target]
+            [self.migrate_to, self.accounts_target]
         )
         super().tearDown()
 
-    def test_backfills_only_pending_razorpay_checkout_deadline(self):
+    def test_backfills_historical_provider_channels(self):
         User = self.old_apps.get_model("accounts", "CustomUser")
         Customer = self.old_apps.get_model("schemes", "Customer")
         MetalGrade = self.old_apps.get_model("schemes", "MetalGrade")
@@ -35,25 +34,25 @@ class CheckoutExpiryMigrationTests(TransactionTestCase):
         Contribution = self.old_apps.get_model("schemes", "Contribution")
 
         user = User.objects.create(
-            username="checkout-expiry-migration@example.com",
-            email="checkout-expiry-migration@example.com",
+            username="cash-channel-migration@example.com",
+            email="cash-channel-migration@example.com",
             password="!",
             role="CUSTOMER",
         )
         customer = Customer.objects.create(
             user=user,
-            customer_number="EXPIRY-MIG",
-            full_name="Checkout Expiry Migration",
-            mobile_number="9000000777",
+            customer_number="CASH-CHANNEL-MIG",
+            full_name="Cash Channel Migration",
+            mobile_number="9000000102",
             email=user.email,
         )
         plan = SchemePlan.objects.create(
-            name="Checkout expiry migration plan",
-            code="EXPIRY-MIG",
+            name="Cash channel migration plan",
+            code="CASH-CHANNEL-MIG",
             amount_rule="VARIABLE",
             frequency_rule="FLEXIBLE",
             minimum_contribution=Decimal("100.00"),
-            maximum_contribution=Decimal("100000.00"),
+            maximum_contribution=Decimal("10000.00"),
         )
         grade = MetalGrade.objects.create(
             code="GOLD_22K_916",
@@ -63,7 +62,7 @@ class CheckoutExpiryMigrationTests(TransactionTestCase):
             display_order=10,
         )
         account = SchemeAccount.objects.create(
-            scheme_number="JSK-EXPIRY-MIG",
+            scheme_number="JSK-CASH-CHANNEL-MIG",
             customer=customer,
             plan=plan,
             start_date=date(2026, 1, 1),
@@ -74,39 +73,40 @@ class CheckoutExpiryMigrationTests(TransactionTestCase):
             amount_rule_snapshot="VARIABLE",
             frequency_rule_snapshot="FLEXIBLE",
             minimum_amount_snapshot=Decimal("100.00"),
-            maximum_amount_snapshot=Decimal("100000.00"),
+            maximum_amount_snapshot=Decimal("10000.00"),
         )
-        pending = Contribution.objects.create(
+        razorpay = Contribution.objects.create(
             scheme_account=account,
-            amount=Decimal("5000.00"),
+            amount=Decimal("500.00"),
             contribution_period=date(2026, 9, 1),
             frequency_rule_snapshot="FLEXIBLE",
             status="PENDING",
             payment_gateway="razorpay",
-            gateway_mode="test",
-            gateway_order_id="order_checkout_expiry_migration",
+            gateway_mode="live",
+            gateway_order_id="order_channel_migration",
+            checkout_expires_at=timezone.now() + timedelta(minutes=10),
         )
         mock = Contribution.objects.create(
             scheme_account=account,
-            amount=Decimal("5000.00"),
+            amount=Decimal("500.00"),
             contribution_period=date(2026, 8, 1),
             frequency_rule_snapshot="FLEXIBLE",
             status="FAILED",
             payment_gateway="mock",
         )
-        created_at = timezone.now() - timedelta(hours=2)
-        Contribution.objects.filter(pk=pending.pk).update(created_at=created_at)
 
         executor = MigrationExecutor(connection)
         targets = [self.migrate_to, self.accounts_target]
         executor.migrate(targets)
-        new_apps = executor.loader.project_state(targets).apps
-        NewContribution = new_apps.get_model("schemes", "Contribution")
-
-        migrated_pending = NewContribution.objects.get(pk=pending.pk)
-        migrated_mock = NewContribution.objects.get(pk=mock.pk)
-        self.assertEqual(
-            migrated_pending.checkout_expires_at,
-            created_at + timedelta(minutes=10),
+        NewContribution = executor.loader.project_state(targets).apps.get_model(
+            "schemes", "Contribution"
         )
-        self.assertIsNone(migrated_mock.checkout_expires_at)
+
+        self.assertEqual(
+            NewContribution.objects.get(pk=razorpay.pk).payment_channel,
+            "RAZORPAY",
+        )
+        self.assertEqual(
+            NewContribution.objects.get(pk=mock.pk).payment_channel,
+            "MOCK",
+        )

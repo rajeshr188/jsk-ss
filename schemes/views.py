@@ -3,6 +3,7 @@ import hashlib
 import json
 import logging
 import math
+import uuid
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -23,6 +24,8 @@ from .forms import (
     ContributionForm,
     CustomerCreateForm,
     EnrolmentForm,
+    InStoreCashContributionForm,
+    InStoreCashContributionReversalForm,
     PaymentOperationsForm,
     RedemptionForm,
     RedemptionReversalForm,
@@ -63,6 +66,7 @@ from .selectors import (
     get_latest_customer_invitation,
     get_current_scheme_rate,
     get_current_scheme_rates,
+    get_in_store_cash_daily_summary,
     get_metal_balance,
     get_owner_activity_summary,
     get_owner_audit_events,
@@ -85,11 +89,15 @@ from .services import (
     enroll_customer,
     confirm_razorpay_contribution,
     initiate_razorpay_contribution,
+    in_store_cash_contributions_are_enabled,
+    preview_in_store_cash_contribution,
     process_razorpay_webhook,
     process_mock_contribution,
     publish_scheme_rate,
+    record_in_store_cash_contribution,
     record_scheme_plan_change,
     reverse_redemption,
+    reverse_in_store_cash_contribution,
     retry_metal_allocation,
     reconcile_razorpay_webhook,
     update_payment_operations_control,
@@ -416,11 +424,16 @@ def contribution_receipt(request, contribution_id):
             "scheme_account__customer__user",
             "metal_allocation",
             "metal_allocation__scheme_rate",
+            "cash_receipt",
+            "cash_receipt__received_by",
+            "cash_reversal",
+            "cash_reversal__processed_by",
         ),
         pk=contribution_id,
         status__in=[
             Contribution.Status.PAID,
             Contribution.Status.PAID_UNALLOCATED,
+            Contribution.Status.REVERSED,
         ],
     )
     if not _can_view_scheme_account(request.user, contribution.scheme_account):
@@ -470,17 +483,32 @@ def contribution_export(request):
             "metal",
             "scheme_rate_inr_per_g",
             "quantity_g",
+            "payment_channel",
+            "cash_received_by",
+            "paper_receipt_number",
+            "cash_reversal_number",
+            "cash_reversed_at",
+            "cash_reversal_reason_code",
         ]
     )
     contributions = get_owner_contributions().filter(
         status__in=[
             Contribution.Status.PAID,
             Contribution.Status.PAID_UNALLOCATED,
+            Contribution.Status.REVERSED,
         ]
     )
     for contribution in contributions:
         receipt = get_contribution_receipt_summary(contribution)
         allocation = receipt.allocation
+        cash_receipt = (
+            contribution.cash_receipt if hasattr(contribution, "cash_receipt") else None
+        )
+        cash_reversal = (
+            contribution.cash_reversal
+            if hasattr(contribution, "cash_reversal")
+            else None
+        )
         writer.writerow(
             [
                 receipt.receipt_number,
@@ -497,6 +525,12 @@ def contribution_export(request):
                 allocation.metal if allocation else "",
                 f"{allocation.scheme_rate.rate_per_gram:.4f}" if allocation else "",
                 f"{allocation.quantity:.6f}" if allocation else "",
+                contribution.payment_channel,
+                _safe_csv_cell(cash_receipt.received_by_label) if cash_receipt else "",
+                _safe_csv_cell(cash_receipt.paper_receipt_number) if cash_receipt else "",
+                cash_reversal.reversal_number if cash_reversal else "",
+                _local_iso(cash_reversal.reversed_at) if cash_reversal else "",
+                cash_reversal.reason_code if cash_reversal else "",
             ]
         )
     return response
@@ -721,6 +755,7 @@ def customer_detail(request, customer_id):
             "customer": customer,
             "latest_invitation": get_latest_customer_invitation(customer),
             "cash_scheme_activity_enabled": cash_scheme_activity_is_enabled(),
+            "in_store_cash_enabled": in_store_cash_contributions_are_enabled(),
         },
     )
 
@@ -1231,7 +1266,161 @@ def contribution_list(request):
     return render(
         request,
         "schemes/contribution_list.html",
-        {"contributions": get_owner_contributions()},
+        {
+            "contributions": get_owner_contributions(),
+            "cash_daily_summary": get_in_store_cash_daily_summary(),
+            "in_store_cash_enabled": in_store_cash_contributions_are_enabled(),
+        },
+    )
+
+
+@owner_required
+def in_store_cash_contribution(request, scheme_number):
+    if not in_store_cash_contributions_are_enabled():
+        raise Http404
+    account = get_object_or_404(
+        SchemeAccount.objects.select_related("customer", "plan", "metal_grade"),
+        scheme_number=scheme_number,
+        savings_mode__in=[
+            SchemeAccount.SavingsMode.GOLD,
+            SchemeAccount.SavingsMode.SILVER,
+        ],
+    )
+    form = InStoreCashContributionForm(
+        request.POST or None,
+        scheme_account=account,
+        initial={"idempotency_key": uuid.uuid4()},
+    )
+    preview = None
+    if request.method == "POST" and form.is_valid():
+        action = request.POST.get("action")
+        token = str(form.cleaned_data["idempotency_key"])
+        session_key = f"in_store_cash_preview:{token}"
+        if action == "preview":
+            try:
+                preview = preview_in_store_cash_contribution(
+                    scheme_account=account,
+                    amount=form.cleaned_data["amount"],
+                )
+            except ValidationError as error:
+                form.add_error(None, " ".join(error.messages))
+            else:
+                request.session[session_key] = {
+                    "scheme_account_id": account.pk,
+                    "amount": str(form.cleaned_data["amount"]),
+                    "scheme_rate_id": preview.scheme_rate.pk,
+                    "paper_receipt_number": form.cleaned_data[
+                        "paper_receipt_number"
+                    ],
+                    "notes": form.cleaned_data["notes"].strip(),
+                    "audit_reason": form.cleaned_data["audit_reason"].strip(),
+                }
+        elif action == "confirm":
+            snapshot = request.session.get(session_key)
+            current_values = {
+                "scheme_account_id": account.pk,
+                "amount": str(form.cleaned_data["amount"]),
+                "scheme_rate_id": form.cleaned_data["expected_scheme_rate_id"],
+                "paper_receipt_number": form.cleaned_data[
+                    "paper_receipt_number"
+                ],
+                "notes": form.cleaned_data["notes"].strip(),
+                "audit_reason": form.cleaned_data["audit_reason"].strip(),
+            }
+            if not form.cleaned_data["confirm_cash_received"]:
+                form.add_error(
+                    "confirm_cash_received",
+                    "Confirm that the showroom physically received the cash.",
+                )
+            elif snapshot is None or snapshot != current_values:
+                form.add_error(
+                    None,
+                    "The preview is missing or the details changed. Review the "
+                    "cash receipt again before confirming.",
+                )
+            else:
+                try:
+                    contribution = record_in_store_cash_contribution(
+                        scheme_account=account,
+                        amount=form.cleaned_data["amount"],
+                        expected_scheme_rate_id=snapshot["scheme_rate_id"],
+                        received_by=request.user,
+                        idempotency_key=form.cleaned_data["idempotency_key"],
+                        paper_receipt_number=form.cleaned_data[
+                            "paper_receipt_number"
+                        ],
+                        notes=form.cleaned_data["notes"],
+                        audit_reason=form.cleaned_data["audit_reason"],
+                    )
+                except ValidationError as error:
+                    request.session.pop(session_key, None)
+                    form.add_error(None, " ".join(error.messages))
+                else:
+                    request.session.pop(session_key, None)
+                    if contribution.status == Contribution.Status.PAID:
+                        messages.success(
+                            request,
+                            "In-store cash was recorded and metal was allocated.",
+                        )
+                    else:
+                        messages.warning(
+                            request,
+                            "Cash receipt was recorded, but metal allocation requires "
+                            "owner review.",
+                        )
+                    return redirect(
+                        "schemes:contribution_receipt",
+                        contribution_id=contribution.pk,
+                    )
+        else:
+            form.add_error(None, "Choose Review receipt before confirmation.")
+    return render(
+        request,
+        "schemes/in_store_cash_contribution.html",
+        {
+            "scheme_account": account,
+            "form": form,
+            "preview": preview,
+        },
+    )
+
+
+@owner_required
+def in_store_cash_contribution_reverse(request, contribution_id):
+    contribution = get_object_or_404(
+        get_owner_contributions(),
+        pk=contribution_id,
+        payment_gateway="in_store_cash",
+        status__in=[
+            Contribution.Status.PAID,
+            Contribution.Status.PAID_UNALLOCATED,
+        ],
+    )
+    form = InStoreCashContributionReversalForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        try:
+            reverse_in_store_cash_contribution(
+                contribution=contribution,
+                processed_by=request.user,
+                reason_code=form.cleaned_data["reason_code"],
+                reason=form.cleaned_data["reason"],
+            )
+        except ValidationError as error:
+            form.add_error(None, " ".join(error.messages))
+        else:
+            messages.success(
+                request,
+                "The contribution was reversed without deleting its receipt or "
+                "financial history.",
+            )
+            return redirect(
+                "schemes:contribution_receipt",
+                contribution_id=contribution.pk,
+            )
+    return render(
+        request,
+        "schemes/in_store_cash_contribution_reverse.html",
+        {"contribution": contribution, "form": form},
     )
 
 

@@ -43,7 +43,7 @@
         <td>{% if entry.amount_inr is not None %}₹{{ entry.amount_inr|floatformat:2 }}{% else %}—{% endif %}</td>
         <td>{% if entry.scheme_rate is not None %}₹{{ entry.scheme_rate|floatformat:4 }}/g{% else %}—{% endif %}</td>
         <td>{% if entry.metal_allocation is not None %}{{ entry.metal_allocation|floatformat:3 }} g{% else %}—{% endif %}</td>
-        <td>{% if entry.redemption is not None %}{{ entry.redemption }} {{ entry.entitlement_unit }} redeemed{% elif entry.restoration is not None %}{{ entry.restoration }} {{ entry.entitlement_unit }} restored{% else %}—{% endif %}</td>
+        <td>{% if entry.redemption is not None %}{{ entry.redemption }} {{ entry.entitlement_unit }} redeemed{% elif entry.restoration is not None %}{{ entry.restoration }} {{ entry.entitlement_unit }} restored{% elif entry.metal_reversal is not None %}{{ entry.metal_reversal|floatformat:3 }} {{ entry.entitlement_unit }} removed{% else %}—{% endif %}</td>
         <td>{{ entry.status }}</td>
       </tr>
       {% empty %}<tr><td colspan="8" class="text-center text-muted py-4">No verified financial activity.</td></tr>{% endfor %}
