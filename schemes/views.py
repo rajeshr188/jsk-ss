@@ -5,6 +5,7 @@ import logging
 import math
 import uuid
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ImproperlyConfigured, ValidationError
@@ -76,6 +77,7 @@ from .selectors import (
     get_owner_exception_queue,
     get_pending_payment_exposure,
     get_owner_redemptions,
+    get_owner_scheme_reminders,
     get_redemption_eligibility_summary,
     get_redemption_history,
     get_scheme_statement,
@@ -331,6 +333,19 @@ def audit_log(request):
         request,
         "schemes/audit_log.html",
         {"audit_events": get_owner_audit_events()},
+    )
+
+
+@owner_required
+def reminder_delivery_log(request):
+    return render(
+        request,
+        "schemes/reminder_delivery_log.html",
+        {
+            "reminders": get_owner_scheme_reminders()[:200],
+            "reminders_enabled": settings.SCHEME_REMINDERS_ENABLED,
+            "eligibility_days": settings.SCHEME_REMINDER_ELIGIBILITY_DAYS,
+        },
     )
 
 

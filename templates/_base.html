@@ -60,7 +60,7 @@
             <li class="nav-item"><a class="nav-link{% if current_url == 'owner_dashboard' %} active{% endif %}"{% if current_url == 'owner_dashboard' %} aria-current="page"{% endif %} href="{% url 'schemes:owner_dashboard' %}">Dashboard</a></li>
             <li class="nav-item"><a class="nav-link{% if current_url == 'customer_list' or current_url == 'customer_detail' or current_url == 'customer_add' or current_url == 'customer_enroll' %} active{% endif %}" href="{% url 'schemes:customer_list' %}">Customers</a></li>
             <li class="nav-item dropdown">
-              <a class="nav-link dropdown-toggle{% if current_url == 'payment_operations' or current_url == 'scheme_rates' or current_url == 'plan_list' or current_url == 'plan_add' or current_url == 'plan_edit' or current_url == 'contribution_list' or current_url == 'redemption_eligibility' or current_url == 'redemption_list' or current_url == 'exception_queue' or current_url == 'audit_log' %} active{% endif %}" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">Operations</a>
+              <a class="nav-link dropdown-toggle{% if current_url == 'payment_operations' or current_url == 'scheme_rates' or current_url == 'plan_list' or current_url == 'plan_add' or current_url == 'plan_edit' or current_url == 'contribution_list' or current_url == 'redemption_eligibility' or current_url == 'redemption_list' or current_url == 'exception_queue' or current_url == 'reminder_delivery_log' or current_url == 'audit_log' %} active{% endif %}" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">Operations</a>
               <ul class="dropdown-menu">
                 <li><a class="dropdown-item" href="{% url 'schemes:payment_operations' %}">Payment operations</a></li>
                 <li><a class="dropdown-item" href="{% url 'schemes:scheme_rates' %}">Scheme rates</a></li>
@@ -71,6 +71,7 @@
                 <li><a class="dropdown-item" href="{% url 'schemes:redemption_list' %}">Redemptions</a></li>
                 <li><hr class="dropdown-divider"></li>
                 <li><a class="dropdown-item" href="{% url 'schemes:exception_queue' %}">Exception queue</a></li>
+                <li><a class="dropdown-item" href="{% url 'schemes:reminder_delivery_log' %}">Reminder deliveries</a></li>
                 <li><a class="dropdown-item" href="{% url 'schemes:audit_log' %}">Audit log</a></li>
               </ul>
             </li>

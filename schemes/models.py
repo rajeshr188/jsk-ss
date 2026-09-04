@@ -1314,6 +1314,217 @@ class InStoreCashContributionReversal(models.Model):
         return f"{self.reversal_number} — {self.contribution.gateway_reference}"
 
 
+class SchemeReminder(models.Model):
+    class Kind(models.TextChoices):
+        UPCOMING_ELIGIBILITY = (
+            "UPCOMING_ELIGIBILITY",
+            "Upcoming eligibility",
+        )
+        ALLOCATION_EXCEPTION = (
+            "ALLOCATION_EXCEPTION",
+            "Allocation exception",
+        )
+        COMPLETED_REDEMPTION = (
+            "COMPLETED_REDEMPTION",
+            "Completed redemption",
+        )
+
+    class Audience(models.TextChoices):
+        CUSTOMER = "CUSTOMER", "Customer"
+        OWNER = "OWNER", "Owner"
+
+    idempotency_key = models.CharField(max_length=64, unique=True, editable=False)
+    kind = models.CharField(max_length=32, choices=Kind.choices)
+    audience = models.CharField(max_length=10, choices=Audience.choices)
+    recipient_email = models.EmailField()
+    scheme_account = models.ForeignKey(
+        SchemeAccount,
+        on_delete=models.PROTECT,
+        related_name="reminders",
+    )
+    contribution = models.ForeignKey(
+        Contribution,
+        on_delete=models.PROTECT,
+        related_name="reminders",
+        null=True,
+        blank=True,
+    )
+    redemption = models.ForeignKey(
+        Redemption,
+        on_delete=models.PROTECT,
+        related_name="reminders",
+        null=True,
+        blank=True,
+    )
+    event_date = models.DateField()
+    eligibility_lead_days = models.PositiveSmallIntegerField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at", "-pk"]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(
+                    kind__in=[
+                        "UPCOMING_ELIGIBILITY",
+                        "ALLOCATION_EXCEPTION",
+                        "COMPLETED_REDEMPTION",
+                    ]
+                ),
+                name="scheme_reminder_kind_valid",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(audience__in=["CUSTOMER", "OWNER"]),
+                name="scheme_reminder_audience_valid",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(
+                        kind="UPCOMING_ELIGIBILITY",
+                        contribution__isnull=True,
+                        redemption__isnull=True,
+                        eligibility_lead_days__isnull=False,
+                    )
+                    | models.Q(
+                        kind="ALLOCATION_EXCEPTION",
+                        contribution__isnull=False,
+                        redemption__isnull=True,
+                        eligibility_lead_days__isnull=True,
+                    )
+                    | models.Q(
+                        kind="COMPLETED_REDEMPTION",
+                        contribution__isnull=True,
+                        redemption__isnull=False,
+                        eligibility_lead_days__isnull=True,
+                    )
+                ),
+                name="scheme_reminder_target_shape_valid",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=["kind", "event_date"],
+                name="scheme_reminder_kind_date_idx",
+            ),
+        ]
+
+    def clean(self):
+        super().clean()
+        errors = {}
+        if self.contribution_id:
+            if self.contribution.scheme_account_id != self.scheme_account_id:
+                errors["contribution"] = (
+                    "The reminder contribution must belong to its scheme account."
+                )
+        if self.redemption_id:
+            if self.redemption.scheme_account_id != self.scheme_account_id:
+                errors["redemption"] = (
+                    "The reminder redemption must belong to its scheme account."
+                )
+        if self.kind == self.Kind.UPCOMING_ELIGIBILITY:
+            if self.event_date != self.scheme_account.eligible_from:
+                errors["event_date"] = (
+                    "An eligibility reminder must retain the contractual eligibility date."
+                )
+            if not self.eligibility_lead_days:
+                errors["eligibility_lead_days"] = (
+                    "An upcoming eligibility reminder requires a positive lead time."
+                )
+        if errors:
+            raise ValidationError(errors)
+
+    def save(self, *args, **kwargs):
+        if self.pk and type(self).objects.filter(pk=self.pk).exists():
+            raise ValidationError("Historical scheme reminders are immutable.")
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Historical scheme reminders cannot be deleted.")
+
+    @property
+    def delivery_status(self):
+        attempts = list(self.delivery_attempts.all())
+        if any(
+            attempt.outcome == SchemeReminderDeliveryAttempt.Outcome.ACCEPTED
+            for attempt in attempts
+        ):
+            return "Accepted by email provider"
+        if attempts:
+            return "Delivery failed"
+        return "Pending delivery"
+
+    @property
+    def latest_delivery_attempt(self):
+        attempts = list(self.delivery_attempts.all())
+        return attempts[-1] if attempts else None
+
+    def __str__(self):
+        return (
+            f"{self.get_kind_display()} — {self.scheme_account.scheme_number} "
+            f"— {self.recipient_email}"
+        )
+
+
+class SchemeReminderDeliveryAttempt(models.Model):
+    class Outcome(models.TextChoices):
+        ACCEPTED = "ACCEPTED", "Accepted by email provider"
+        FAILED = "FAILED", "Failed"
+
+    reminder = models.ForeignKey(
+        SchemeReminder,
+        on_delete=models.PROTECT,
+        related_name="delivery_attempts",
+    )
+    outcome = models.CharField(max_length=12, choices=Outcome.choices)
+    backend = models.CharField(max_length=200)
+    accepted_count = models.PositiveSmallIntegerField(default=0)
+    error_code = models.CharField(max_length=100, blank=True)
+    attempted_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["attempted_at", "pk"]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(outcome__in=["ACCEPTED", "FAILED"]),
+                name="scheme_reminder_attempt_outcome_valid",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(
+                        outcome="ACCEPTED",
+                        accepted_count=1,
+                        error_code="",
+                    )
+                    | (
+                        models.Q(
+                            outcome="FAILED",
+                            accepted_count=0,
+                        )
+                        & ~models.Q(error_code="")
+                    )
+                ),
+                name="scheme_reminder_attempt_result_valid",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=["reminder", "attempted_at"],
+                name="scheme_rem_attempt_time_idx",
+            ),
+        ]
+
+    def save(self, *args, **kwargs):
+        if self.pk and type(self).objects.filter(pk=self.pk).exists():
+            raise ValidationError("Historical reminder delivery attempts are immutable.")
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Historical reminder delivery attempts cannot be deleted.")
+
+    def __str__(self):
+        return f"{self.reminder} — {self.get_outcome_display()}"
+
+
 class AuditEvent(models.Model):
     class Action(models.TextChoices):
         CUSTOMER_ENROLMENT = "CUSTOMER_ENROLMENT", "Customer enrolment"

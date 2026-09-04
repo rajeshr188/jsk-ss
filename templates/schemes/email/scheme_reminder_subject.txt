@@ -1,0 +1,1 @@
+{% if kind == 'UPCOMING_ELIGIBILITY' %}{% if audience == 'CUSTOMER' %}Your scheme eligibility date is approaching{% else %}Upcoming scheme eligibility{% endif %}{% elif kind == 'ALLOCATION_EXCEPTION' %}Action required: metal allocation pending{% else %}{% if audience == 'CUSTOMER' %}Your redemption has been recorded{% else %}Completed customer redemption{% endif %}{% endif %}

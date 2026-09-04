@@ -204,6 +204,32 @@ authorize new production CASH enrolments or contributions under `SCH-007`.
 - **ELIG-004:** Eligibility forecasts use ordinary calendar-day bands. Post-
   eligibility contributions remain governed only by the agreement's snapshotted
   contribution setting.
+- **REM-001:** Scheme reminders are transactional communication derived from existing
+  records. Building or delivering a reminder must never change eligibility, account
+  status, a contribution, an allocation, a redemption, or any liability.
+- **REM-002:** Upcoming-eligibility reminders use only the contractual
+  `eligible_from` date and configured positive calendar-day lead times. They do not
+  create grace, expiry, business-day adjustment, or automatic redemption behavior.
+- **REM-003:** Allocation-exception reminders are owner-only and derive from
+  `PAID_UNALLOCATED` contributions. A reminder neither resolves the exception nor
+  replaces the controlled idempotent allocation-retry workflow.
+- **REM-004:** Completed-redemption reminders identify one immutable completed
+  redemption. A redemption reversed before candidate selection is excluded; later
+  reversal does not rewrite or delete already retained communication evidence.
+- **REM-005:** Each event, audience, and normalized recipient has one deterministic
+  reminder identity. An email already accepted by the backend is not sent again;
+  failed attempts may be retried only to the configured bounded limit.
+- **REM-006:** Reminder records and delivery attempts are append-oriented and
+  immutable. Backend acceptance is evidence only that the configured email backend
+  accepted the message; it is not evidence of inbox delivery, opening, or reading.
+- **REM-007:** Customer reminders require an active login whose normalized email
+  exactly matches the customer record. Owner reminders go only to active application
+  owners or superusers with a nonblank email. Invalid or missing recipients are an
+  operational alert and are never silently substituted.
+- **REM-008:** Scheduled delivery is disabled by default and runs through an explicit
+  externally scheduled management command. Dry-run is read-only, historical-date
+  apply requires explicit confirmation, output is aggregate rather than recipient-
+  identifying, and each audience may be independently disabled.
 - **RED-001 / FIN-006:** A customer cannot redeem more than the outstanding entitlement.
 - **RED-002:** Before redemption, effective status is derived under ELIG-001 through
   ELIG-004: before `eligible_from` is `ACTIVE / NOT YET ELIGIBLE`; on or after

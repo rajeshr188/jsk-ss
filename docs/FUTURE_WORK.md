@@ -130,9 +130,13 @@ recorded limitations are not lost.
 
 ## Eligibility and customer communication
 
-- **FW-ELIG-002 — Add reminders and delivery evidence:** Support configurable
-  customer/owner reminders for upcoming eligibility, allocation exceptions, and
-  completed redemptions, with delivery-state tracking.
+- **FW-ELIG-002 — Roll out reminders and delivery evidence:** Repository
+  implementation is ready on its feature branch: configurable email audiences cover
+  upcoming eligibility, owner allocation exceptions, and completed redemptions;
+  immutable reminder/attempt records, bounded retries, aggregate dry-run output, and
+  an owner delivery-evidence view are included. Production remains fail-closed until
+  migration `schemes.0019_scheme_reminders`, recipient review, an SMTP acceptance
+  smoke, and the external systemd schedule pass the documented rollout.
 - **FW-AUTH-002 — Design safe public signup before enabling it:** Add complete customer
   profile creation, email/mobile verification, duplicate handling, consent capture,
   abuse controls, and an explicit awaiting-owner-approval state.
@@ -189,7 +193,7 @@ above.
 | Milestone 4 / MVP Alpha | Real providers, recovery, and redemption remained deferred. | Resolved except the active production/audit items above. |
 | Milestone 5 | Provider rates, premium/tax policy, allocation automation, Razorpay, settlement, bonus, and audit were incomplete. | Manual Scheme Rates and core flows are resolved; open work remains `FW-RATE-003`, `FW-AUDIT-002`–`FW-AUDIT-005`, and `FW-BONUS-004`–`FW-BONUS-005`. |
 | Milestone 6 | External Razorpay/webhook proof, live-key controls, and abandoned orders were incomplete. | Test/Live acceptance and order lifecycle are resolved; recovery evidence and operations remain `FW-PAY-003`, `FW-PROD-002`, and `FW-PROD-003`. |
-| Milestone 7 | Eligibility did not initiate redemption and lacked reminders/business-day policy. | Redemption and exact-calendar policy are resolved; communication remains `FW-ELIG-002`. |
+| Milestone 7 | Eligibility did not initiate redemption and lacked reminders/business-day policy. | Redemption and exact-calendar policy are resolved; reminder implementation is ready, with production rollout remaining under `FW-ELIG-002`. |
 | Milestone 8 | No payout, handover, POS, inventory, invoice validation, metal-to-cash policy, bonus, corrections, or documents existed. | MVP bonus/audit/documents are resolved; remaining scope is `FW-SETTLE-001`–`FW-SETTLE-004`, `FW-AUDIT-002`–`FW-AUDIT-005`, and `FW-DOC-004`. |
 | Milestone 9 | Bonus lacked caps, tiers, approval, forfeiture, tax policy, and optimized aggregation. | `FW-BONUS-004`–`FW-BONUS-005`. |
 | Milestone 10 | No generic payment correction, refund/dispute reconciliation, dual approval, automated retry/alerts, or database-trigger protection existed. | `FW-AUDIT-002`–`FW-AUDIT-005`, `FW-PAY-003`, and `FW-PROD-002`. |

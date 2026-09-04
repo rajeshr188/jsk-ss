@@ -2,12 +2,14 @@
 
 ## Current milestone
 
-`FW-ELIG-001` completed production rollout and acceptance on 2026-09-04 in release
-`50bfd3673c57dff51b46238094bcad899a36c8fa`. Contractual eligibility now has one
-explicit exact-calendar policy across enrolment, contribution, bonus, effective
-status, forecast, and redemption paths: month-end clamping is deterministic;
-weekends, public holidays, showroom closure, schedules, and payment pauses do not
-shift the date; there is no early grace or later expiry.
+`FW-ELIG-002` repository implementation is ready on
+`agent/eligibility-reminders`. Transactional email candidates now cover configured
+upcoming-eligibility lead days, owner allocation exceptions, and completed
+redemptions without mutating any financial or eligibility record. Deterministic
+idempotency, append-oriented delivery attempts, bounded retries, aggregate dry-run
+output, fail-closed audience controls, an owner evidence view, and a versioned
+systemd schedule are complete. Protected-`main` CI and the controlled production
+rollout of additive migration `schemes.0019_scheme_reminders` remain pending.
 
 ## Completed
 
@@ -69,6 +71,12 @@ shift the date; there is no early grace or later expiry.
   so exceptions or process interruption remain visible; owner retry is idempotent
   and reuses the original locked Scheme Rate.
 - Owner alerts, diagnostics, and an authorized idempotent allocation-retry action.
+- Configurable email reminders for upcoming exact-calendar eligibility, owner-only
+  paid-unallocated exceptions, and completed redemptions, with deterministic per-
+  recipient idempotency, immutable backend-acceptance/failure attempts, bounded
+  retries, Postmark tracking disabled, aggregate cron-safe command output, and an
+  owner-only delivery-evidence view. Production sending remains disabled pending the
+  `FW-ELIG-002` rollout.
 - Future public-signup requirements documented under `AUTH-*` domain rules.
 - Razorpay test-mode order creation and customer Standard Checkout flow.
 - Explicit fail-closed Razorpay `test`/`live` configuration: the declared mode must
@@ -382,9 +390,11 @@ shift the date; there is no early grace or later expiry.
   forfeiture, tax treatment, or expected-future-contribution projection.
 - Bonus liability reads are calculated per cash account; aggregate optimization is
   deferred until measured account volume requires it.
-- Plan-specific early-discontinuation pricing, eligibility reminders, open public
-  self-registration, and partial-settlement policy are not yet
-  defined. Owner-invitation onboarding is deployed; public self-registration remains
+- Plan-specific early-discontinuation pricing, open public self-registration, and
+  partial-settlement policy are not yet defined. Email reminders are implemented but
+  production rollout remains pending; SMS/WhatsApp, inbox-delivery/read proof,
+  automatic multi-day catch-up, and end-to-end exactly-once SMTP delivery are not
+  claimed. Owner-invitation onboarding is deployed; public self-registration remains
   intentionally closed.
 - The production catalogue is active and its deployment, authorization, content,
   browser, and R2 smoke gates pass. There is still no isolated media backup/restore
@@ -402,9 +412,10 @@ shift the date; there is no early grace or later expiry.
 - Wagtail 7.4.3 and Django 6.0.4 pass system checks, production-shaped deploy checks,
   static collection, and an applied-migration check. Wagtail, taggit, and catalogue
   migrations are applied to production PostgreSQL.
-- Local and production PostgreSQL 16 migrations are applied through
-  `schemes.0018_in_store_cash_contributions`.
-- 285 tests pass, including exact-calendar eligibility month-end clamping,
+- Local PostgreSQL 16 migrations are applied through
+  `schemes.0019_scheme_reminders`; production remains applied through
+  `schemes.0018_in_store_cash_contributions` pending the controlled rollout.
+- 293 tests pass, including exact-calendar eligibility month-end clamping,
   weekend/calendar-marker non-adjustment, exact-day activation without early grace,
   non-expiring eligibility, calendar-day forecast distance, in-store cash
   preview/confirmation, owner authorization,
@@ -447,7 +458,10 @@ shift the date; there is no early grace or later expiry.
   reversal reconciliation, cash-bonus boundaries/rounding, Razorpay failure handling,
   redemption precision, over-redemption protection,
   idempotency, partial/full closure, denomination separation, access control,
-  PostgreSQL constraints, and all prior regressions.
+  PostgreSQL constraints, exact-date reminder candidate selection, audience and
+  recipient safety, dry-run non-mutation, accepted-message idempotency, sanitized
+  bounded retry evidence, fail-closed disablement, record immutability, and owner-
+  only delivery review, plus all prior regressions.
 - Migration drift check reports no changes.
 - Django system check and migration drift check pass.
 - The rendered anonymous homepage passes Deque axe-core 4.13's WCAG AA
@@ -464,7 +478,7 @@ shift the date; there is no early grace or later expiry.
   starts without attempting a control socket on the read-only application filesystem.
 - GitHub Actions CI is defined with SHA-pinned checkout, Node-24-compatible Docker,
   and scanner actions, PostgreSQL 16, migrations, drift/system/deploy checks, the
-  285-test regression suite, static collection, unprivileged review-image builds,
+  293-test regression suite, static collection, unprivileged review-image builds,
   and a GHCR publisher restricted to protected `main`, with an immutable digest
   output. Actionlint 1.7.12 validates
   the workflow locally. The first protected-`main` run `33848413888` built merge
@@ -478,6 +492,10 @@ shift the date; there is no early grace or later expiry.
   On 2026-09-04 the Linode pulled and inspected that digest with an empty temporary
   Docker configuration, proving anonymous access; production remained healthy and
   unchanged on release `50bfd3673c57dff51b46238094bcad899a36c8fa`.
+  PR `#41` then merged the public-GHCR boundary as
+  `b3d94c9deed8ebd6c78ed096d541620057535093`; protected-`main` run `33851821679`
+  passed and published
+  `ghcr.io/rajeshr188/jsk-savings@sha256:5dbd8de9ad5493c2c87de08e244e1350c6f774a5ba335996c3f65e3816b8ae61`.
 - The Linode production Compose model passes `docker compose config --quiet`, and
   Caddy 2.11.4 validates the exact apex-domain, `www` redirect, masked JSON access
   log, and release-label configuration. The financial heartbeat shell script passes
@@ -516,9 +534,11 @@ shift the date; there is no early grace or later expiry.
 
 ## Next recommended step
 
-Merge this public-GHCR boundary record through protected `main`. For the next approved
-application release, deploy the exact CI-published `jsk-savings` digest without
-building on the Linode, retain the normal recovery, migration, reconciliation, and
-health evidence, then close `FW-PROD-006`. Afterward resume the bounded `FW-PAY-003`
-replay evidence work. Keep paid external alerting and coordinated secret rotation
-deferred under the accepted `FW-PROD-002`/`FW-PROD-003` budget boundary.
+Commit and review `FW-ELIG-002` through protected `main`. After its CI succeeds,
+deploy that run's exact public `jsk-savings` GHCR digest without building on the
+Linode. Keep reminders disabled while applying additive migration `schemes.0019`,
+run the aggregate dry-run and recipient/configuration gates, then explicitly enable
+the web setting and external systemd timer. This first registry-sourced application
+release can also close `FW-PROD-006` after its digest, capacity, health, and rollback
+evidence pass. Keep `FW-PAY-003` and the accepted `FW-PROD-002`/`FW-PROD-003` budget
+deferrals separate.

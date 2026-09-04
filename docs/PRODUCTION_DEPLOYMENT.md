@@ -1063,7 +1063,7 @@ language dependency build on the 1 GiB production Compute Instance. Release-laye
 export plus an immediate one-off candidate container exhausted its 961 MiB RAM and
 496 MiB swap on 2026-09-04 and caused an origin outage. If GitHub Actions is
 unavailable, use a reviewed separate builder to build the exact merged commit, scan
-it, push it to the same private registry, and record its digest before deployment;
+it, push it to the approved registry package, and record its digest before deployment;
 otherwise defer the release.
 
 Before every production pull or candidate command, record capacity and confirm the
@@ -1119,8 +1119,8 @@ the example and thereby erase production secrets:
 nano .env.production
 ```
 
-Set `APP_IMAGE` to the approved digest or local staging tag and set `APP_RELEASE` to
-the matching full commit SHA. Then validate the exact candidate against the real
+Set `APP_IMAGE` to the approved digest and set `APP_RELEASE` to the matching full
+commit SHA. Then validate the exact candidate against the real
 production configuration and review database state without mutation:
 
 ```bash
@@ -2129,6 +2129,125 @@ date is not shifted. Reaching eligibility must not mutate stored account status.
   `2024-02-29`, and unshifted Sunday `2026-09-06`. Recent logs contained no release
   failure; one routine WordPress-probe `404` and Caddy's known HTTP/3 receive-buffer
   notice required no action.
+
+### FW-ELIG-002 scheme-reminder rollout (`schemes.0019`)
+
+This release adds email reminders for configured upcoming-eligibility lead days,
+owner-only `PAID_UNALLOCATED` exceptions, and same-day completed redemptions. It adds
+communication evidence only: candidate selection and delivery do not mutate an
+account, payment, allocation, eligibility date, redemption, or liability. Keep the
+master switch closed through migration, recipient review, and dry-run validation:
+
+```dotenv
+SCHEME_REMINDERS_ENABLED=False
+SCHEME_REMINDER_ELIGIBILITY_DAYS=30,7,1
+SCHEME_REMINDER_CUSTOMER_ELIGIBILITY=True
+SCHEME_REMINDER_OWNER_ELIGIBILITY=True
+SCHEME_REMINDER_OWNER_ALLOCATION_EXCEPTIONS=True
+SCHEME_REMINDER_CUSTOMER_REDEMPTIONS=True
+SCHEME_REMINDER_OWNER_REDEMPTIONS=True
+SCHEME_REMINDER_RETRY_LIMIT=3
+SCHEME_REMINDER_BASE_URL=https://jaishrikrishnajewellery.com
+```
+
+Use the exact protected-`main` GHCR digest from the successful Actions run. Do not
+build on the Linode. Record the current immutable image/release, a current managed
+PostgreSQL recovery point, capacity, customer/account/liability/exception baselines,
+and every existing financial, Razorpay, grade, in-store-cash, payment-operations, and
+provider-reconciliation gate. Run candidate one-offs sequentially and remove each
+temporary container before continuing.
+
+The reviewed migration plan must contain only
+`schemes.0019_scheme_reminders`. It creates the append-oriented reminder and delivery-
+attempt tables, indexes, and constraints; it does not backfill messages or send email.
+It is additive and the previous application image ignores the new tables, so apply it
+once with the candidate while the existing web remains available:
+
+```bash
+docker compose --env-file .env.production -f compose.production.yml \
+  run --rm --no-deps web python manage.py migrate --plan
+
+docker compose --env-file .env.production -f compose.production.yml \
+  run --rm --no-deps web python manage.py migrate --noinput
+
+docker compose --env-file .env.production -f compose.production.yml \
+  up -d --force-recreate --no-deps web
+```
+
+Wait for the candidate to become healthy, validate and recreate Caddy, and require
+public Live/Ready to identify the exact release. Run all prior integrity gates and
+then preview reminder work without sending:
+
+```bash
+docker compose --env-file .env.production -f compose.production.yml \
+  exec -T web python manage.py send_scheme_reminders
+```
+
+The summary intentionally contains counts rather than customer addresses. Require
+`status=ok`, review the configured active owner addresses in the application, and
+require `invalid_customer_recipients=0`. The candidate count may legitimately be zero.
+Do not invent a financial event to force a reminder. A provider-accepted message for
+the first legitimate candidate is the controlled SMTP smoke; acceptance does not
+prove inbox receipt or reading.
+
+Install the externally scheduled job while it is still fail-closed. These files are
+versioned with the exact release:
+
+```bash
+sudo install -o root -g root -m 0644 \
+  deploy/systemd/jsk-scheme-reminders.service \
+  /etc/systemd/system/jsk-scheme-reminders.service
+sudo install -o root -g root -m 0644 \
+  deploy/systemd/jsk-scheme-reminders.timer \
+  /etc/systemd/system/jsk-scheme-reminders.timer
+sudo systemctl daemon-reload
+sudo systemctl start jsk-scheme-reminders.service
+sudo systemctl status jsk-scheme-reminders.service --no-pager
+```
+
+The manual run must report `enabled=false` and send nothing. After the owner approves
+the audiences and dry-run, set `SCHEME_REMINDERS_ENABLED=True`, validate Compose, and
+force-recreate only `web`. Confirm the setting inside Django before enabling the
+timer:
+
+```bash
+docker compose --env-file .env.production -f compose.production.yml config --quiet
+docker compose --env-file .env.production -f compose.production.yml \
+  up -d --force-recreate --no-deps web
+docker compose --env-file .env.production -f compose.production.yml \
+  exec -T web python manage.py shell -c \
+  'from django.conf import settings; print("release=", settings.APP_RELEASE); print("reminders_enabled=", settings.SCHEME_REMINDERS_ENABLED)'
+
+sudo systemctl enable --now jsk-scheme-reminders.timer
+sudo systemctl list-timers jsk-scheme-reminders.timer --no-pager
+sudo journalctl -u jsk-scheme-reminders.service -n 50 --no-pager
+```
+
+The timer checks every fifteen minutes. One deterministic identity exists per event,
+audience, and normalized recipient; provider-accepted messages are not resent and
+failures stop retrying at the configured limit. Inspect aggregate command/journal
+status and the owner-only Reminder deliveries page. Never place recipient addresses,
+message bodies, or action URLs in shared rollout evidence.
+
+Upcoming eligibility and completed-redemption candidates are date-bound. If the job
+was unavailable for an entire India-local day, first perform a read-only catch-up
+preview, investigate recipients privately, and apply only with explicit approval:
+
+```bash
+docker compose --env-file .env.production -f compose.production.yml \
+  exec -T web python manage.py send_scheme_reminders --as-of YYYY-MM-DD
+docker compose --env-file .env.production -f compose.production.yml \
+  exec -T web python manage.py send_scheme_reminders \
+  --as-of YYYY-MM-DD --confirm-date-override --apply
+```
+
+Application rollback is safe because `0019` is additive, but stop and disable the
+timer before selecting the previous image. Retain the reminder tables and their
+evidence; never reverse or delete accepted/failed history merely to roll back code.
+An SMTP backend can accept a message immediately before a later database failure, so
+end-to-end exactly-once delivery cannot be claimed. Treat a suspected duplicate as a
+communication incident, preserve provider and local evidence, and do not edit the
+financial record.
 
 ### Live reconciliation, payment-error refund, and dispute boundary
 

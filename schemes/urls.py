@@ -20,6 +20,11 @@ urlpatterns = [
     ),
     path("owner/redemptions/", views.redemption_list, name="redemption_list"),
     path("owner/audit/", views.audit_log, name="audit_log"),
+    path(
+        "owner/reminders/",
+        views.reminder_delivery_log,
+        name="reminder_delivery_log",
+    ),
     path("owner/exceptions/", views.exception_queue, name="exception_queue"),
     path(
         "owner/exceptions/webhooks/<int:event_id>/recovery/",
