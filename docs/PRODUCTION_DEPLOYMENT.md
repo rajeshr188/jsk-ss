@@ -2191,7 +2191,10 @@ the first legitimate candidate is the controlled SMTP smoke; acceptance does not
 prove inbox receipt or reading.
 
 Install the externally scheduled job while it is still fail-closed. These files are
-versioned with the exact release:
+versioned with the exact release. The service deliberately calls `docker exec`
+against the stable `jsk-savings-web-1` container name and uses an empty systemd-owned
+`DOCKER_CONFIG`; it does not depend on a Docker Compose plugin or credentials beneath
+the protected deploy user's home directory:
 
 ```bash
 sudo install -o root -g root -m 0644 \

@@ -2,14 +2,15 @@
 
 ## Current milestone
 
-`FW-ELIG-002` repository implementation is ready on
-`agent/eligibility-reminders`. Transactional email candidates now cover configured
-upcoming-eligibility lead days, owner allocation exceptions, and completed
-redemptions without mutating any financial or eligibility record. Deterministic
-idempotency, append-oriented delivery attempts, bounded retries, aggregate dry-run
-output, fail-closed audience controls, an owner evidence view, and a versioned
-systemd schedule are complete. Protected-`main` CI and the controlled production
-rollout of additive migration `schemes.0019_scheme_reminders` remain pending.
+`FW-ELIG-002` application release `94cf3927a7138cf735da733c6ae68a8cce785cff`
+is healthy in production with additive migration `schemes.0019_scheme_reminders`
+applied. The fail-closed dry-run found zero current candidates, two owner recipients,
+and zero invalid customer recipients; all financial and provider gates remain green.
+Reminder sending remains disabled because the initial systemd service could not
+resolve the Docker Compose plugin while `ProtectHome=true` hid per-user Docker state.
+The focused `agent/reminder-systemd-hotfix` keeps that isolation and instead uses a
+systemd-owned empty Docker configuration plus direct execution in the stable web
+container. Review, CI, deployment, and scheduler activation remain pending.
 
 ## Completed
 
@@ -412,10 +413,9 @@ rollout of additive migration `schemes.0019_scheme_reminders` remain pending.
 - Wagtail 7.4.3 and Django 6.0.4 pass system checks, production-shaped deploy checks,
   static collection, and an applied-migration check. Wagtail, taggit, and catalogue
   migrations are applied to production PostgreSQL.
-- Local PostgreSQL 16 migrations are applied through
-  `schemes.0019_scheme_reminders`; production remains applied through
-  `schemes.0018_in_store_cash_contributions` pending the controlled rollout.
-- 293 tests pass, including exact-calendar eligibility month-end clamping,
+- Local and production PostgreSQL 16 migrations are applied through
+  `schemes.0019_scheme_reminders`.
+- 294 tests pass, including exact-calendar eligibility month-end clamping,
   weekend/calendar-marker non-adjustment, exact-day activation without early grace,
   non-expiring eligibility, calendar-day forecast distance, in-store cash
   preview/confirmation, owner authorization,
@@ -478,7 +478,7 @@ rollout of additive migration `schemes.0019_scheme_reminders` remain pending.
   starts without attempting a control socket on the read-only application filesystem.
 - GitHub Actions CI is defined with SHA-pinned checkout, Node-24-compatible Docker,
   and scanner actions, PostgreSQL 16, migrations, drift/system/deploy checks, the
-  293-test regression suite, static collection, unprivileged review-image builds,
+  294-test regression suite, static collection, unprivileged review-image builds,
   and a GHCR publisher restricted to protected `main`, with an immutable digest
   output. Actionlint 1.7.12 validates
   the workflow locally. The first protected-`main` run `33848413888` built merge
@@ -496,6 +496,11 @@ rollout of additive migration `schemes.0019_scheme_reminders` remain pending.
   `b3d94c9deed8ebd6c78ed096d541620057535093`; protected-`main` run `33851821679`
   passed and published
   `ghcr.io/rajeshr188/jsk-savings@sha256:5dbd8de9ad5493c2c87de08e244e1350c6f774a5ba335996c3f65e3816b8ae61`.
+  PR `#42` merged FW-ELIG-002 as
+  `94cf3927a7138cf735da733c6ae68a8cce785cff`; protected-`main` run
+  `33862547971` passed the 293-test, deploy, static, publish, and critical-
+  vulnerability gates and produced
+  `ghcr.io/rajeshr188/jsk-savings@sha256:8270e175b9f4789dc12f83b9b41f504b0b3dcd5814a1b82f904aa61116623a7e`.
 - The Linode production Compose model passes `docker compose config --quiet`, and
   Caddy 2.11.4 validates the exact apex-domain, `www` redirect, masked JSON access
   log, and release-label configuration. The financial heartbeat shell script passes
@@ -534,11 +539,11 @@ rollout of additive migration `schemes.0019_scheme_reminders` remain pending.
 
 ## Next recommended step
 
-Commit and review `FW-ELIG-002` through protected `main`. After its CI succeeds,
-deploy that run's exact public `jsk-savings` GHCR digest without building on the
-Linode. Keep reminders disabled while applying additive migration `schemes.0019`,
-run the aggregate dry-run and recipient/configuration gates, then explicitly enable
-the web setting and external systemd timer. This first registry-sourced application
-release can also close `FW-PROD-006` after its digest, capacity, health, and rollback
-evidence pass. Keep `FW-PAY-003` and the accepted `FW-PROD-002`/`FW-PROD-003` budget
-deferrals separate.
+Commit and review the focused reminder-systemd hotfix through protected `main`, then
+deploy its exact public GHCR digest without building on the Linode. Reinstall and run
+the service while `SCHEME_REMINDERS_ENABLED=False`; only after its isolated Docker
+execution succeeds and the two owner recipients are privately approved should the
+web setting and timer be enabled. Record the final health, financial, provider,
+timer, and first legitimate provider-acceptance evidence before closing
+`FW-ELIG-002` and `FW-PROD-006`. Keep `FW-PAY-003` and the accepted
+`FW-PROD-002`/`FW-PROD-003` budget deferrals separate.

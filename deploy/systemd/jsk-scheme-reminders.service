@@ -9,7 +9,10 @@ Type=oneshot
 User=deploy
 Group=deploy
 WorkingDirectory=/opt/jsk/app
-ExecStart=/usr/bin/docker compose --env-file .env.production -f compose.production.yml exec -T web python manage.py send_scheme_reminders --apply
+RuntimeDirectory=jsk-scheme-reminders
+RuntimeDirectoryMode=0700
+Environment=DOCKER_CONFIG=/run/jsk-scheme-reminders
+ExecStart=/usr/bin/docker exec jsk-savings-web-1 python manage.py send_scheme_reminders --apply
 TimeoutStartSec=5min
 
 NoNewPrivileges=true
