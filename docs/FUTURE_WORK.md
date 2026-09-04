@@ -23,17 +23,6 @@ recorded limitations are not lost.
 
 ## Production operations
 
-- **FW-PROD-006 — Prove the first registry-backed release:** Repository implementation
-  now separates unprivileged pull-request image validation from protected-`main`
-  publication. The merged commit is built once in CI, published to public GHCR under
-  its full commit SHA, scanned, and handed off by immutable digest. The owner accepted
-  public artifact visibility on 2026-09-04 because the source repository is public,
-  runtime secrets are excluded from the image, and anonymous pulls avoid a persistent
-  GitHub credential on the Linode. The `jsk-savings` digest pull and inspection passed
-  anonymously on the Linode without changing the healthy production release. Closure
-  now requires the next approved production release to deploy the CI-published digest
-  without an on-host build. The memory/disk preflight remains mandatory; external
-  capacity alert activation remains under `FW-PROD-002`.
 - **FW-PROD-002 — Activate and exercise external observability:** Caddy already
   provides masked structured logs, release-labelled health endpoints, and the
   repository includes a five-minute financial-exception heartbeat. Configure the
@@ -130,13 +119,14 @@ recorded limitations are not lost.
 
 ## Eligibility and customer communication
 
-- **FW-ELIG-002 — Roll out reminders and delivery evidence:** Repository
-  implementation is ready on its feature branch: configurable email audiences cover
-  upcoming eligibility, owner allocation exceptions, and completed redemptions;
-  immutable reminder/attempt records, bounded retries, aggregate dry-run output, and
-  an owner delivery-evidence view are included. Production remains fail-closed until
-  migration `schemes.0019_scheme_reminders`, recipient review, an SMTP acceptance
-  smoke, and the external systemd schedule pass the documented rollout.
+- **FW-ELIG-002 — Observe the first genuine reminder delivery:** The configurable
+  email audiences, immutable reminder/attempt evidence, bounded retries, aggregate
+  command, owner view, additive `schemes.0019` migration, and hardened systemd
+  execution boundary are deployed. A zero-candidate production run correctly sent
+  nothing. Formal closure now requires the first naturally occurring reminder to be
+  accepted by Postmark and appear in the owner delivery view; do not manufacture a
+  financial or redemption event for this observation. This does not block isolated
+  `FW-AUTH-002` development.
 - **FW-AUTH-002 — Design safe public signup before enabling it:** Add complete customer
   profile creation, email/mobile verification, duplicate handling, consent capture,
   abuse controls, and an explicit awaiting-owner-approval state.
@@ -165,7 +155,7 @@ recorded limitations are not lost.
 Completed implementation and rollout details are intentionally not repeated here:
 
 - **Foundation and production:** `FW-BETA-001`, `FW-BETA-002`, `FW-BETA-003`,
-  `FW-PROD-001`, and `FW-PROD-004`.
+  `FW-PROD-001`, `FW-PROD-004`, and `FW-PROD-006`.
 - **Financial domain:** `FW-BONUS-001`, `FW-BONUS-002`, `FW-BONUS-003`,
   `FW-AUDIT-001`, `FW-DOC-001`, `FW-DOC-002`, `FW-DOC-003`, `FW-PRODUCT-001`,
   `FW-PAY-001`, `FW-PAY-002`, `FW-PAY-004`, `FW-PAY-005`, `FW-PAY-006`,
@@ -193,7 +183,7 @@ above.
 | Milestone 4 / MVP Alpha | Real providers, recovery, and redemption remained deferred. | Resolved except the active production/audit items above. |
 | Milestone 5 | Provider rates, premium/tax policy, allocation automation, Razorpay, settlement, bonus, and audit were incomplete. | Manual Scheme Rates and core flows are resolved; open work remains `FW-RATE-003`, `FW-AUDIT-002`–`FW-AUDIT-005`, and `FW-BONUS-004`–`FW-BONUS-005`. |
 | Milestone 6 | External Razorpay/webhook proof, live-key controls, and abandoned orders were incomplete. | Test/Live acceptance and order lifecycle are resolved; recovery evidence and operations remain `FW-PAY-003`, `FW-PROD-002`, and `FW-PROD-003`. |
-| Milestone 7 | Eligibility did not initiate redemption and lacked reminders/business-day policy. | Redemption and exact-calendar policy are resolved; reminder implementation is ready, with production rollout remaining under `FW-ELIG-002`. |
+| Milestone 7 | Eligibility did not initiate redemption and lacked reminders/business-day policy. | Redemption and exact-calendar policy are resolved; reminders are deployed, with the first genuine delivery observation remaining under `FW-ELIG-002`. |
 | Milestone 8 | No payout, handover, POS, inventory, invoice validation, metal-to-cash policy, bonus, corrections, or documents existed. | MVP bonus/audit/documents are resolved; remaining scope is `FW-SETTLE-001`–`FW-SETTLE-004`, `FW-AUDIT-002`–`FW-AUDIT-005`, and `FW-DOC-004`. |
 | Milestone 9 | Bonus lacked caps, tiers, approval, forfeiture, tax policy, and optimized aggregation. | `FW-BONUS-004`–`FW-BONUS-005`. |
 | Milestone 10 | No generic payment correction, refund/dispute reconciliation, dual approval, automated retry/alerts, or database-trigger protection existed. | `FW-AUDIT-002`–`FW-AUDIT-005`, `FW-PAY-003`, and `FW-PROD-002`. |

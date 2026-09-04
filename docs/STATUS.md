@@ -2,15 +2,14 @@
 
 ## Current milestone
 
-`FW-ELIG-002` application release `94cf3927a7138cf735da733c6ae68a8cce785cff`
-is healthy in production with additive migration `schemes.0019_scheme_reminders`
-applied. The fail-closed dry-run found zero current candidates, two owner recipients,
-and zero invalid customer recipients; all financial and provider gates remain green.
-Reminder sending remains disabled because the initial systemd service could not
-resolve the Docker Compose plugin while `ProtectHome=true` hid per-user Docker state.
-The focused `agent/reminder-systemd-hotfix` keeps that isolation and instead uses a
-systemd-owned empty Docker configuration plus direct execution in the stable web
-container. Review, CI, deployment, and scheduler activation remain pending.
+`FW-PROD-006` completed production acceptance on 2026-09-04 in release
+`c889ee6906a8bddd4c7852955025efe42ffa5752`: the Linode pulled and deployed the exact
+public-GHCR digest produced and vulnerability-scanned by protected `main`, with no
+serving-host build. `FW-ELIG-002` is operational on the same release with migration
+`schemes.0019_scheme_reminders` applied and its hardened systemd execution boundary
+passing. The first genuine reminder-specific Postmark acceptance remains an
+operational observation because the controlled production run had zero candidates;
+it does not block beginning fail-closed `FW-AUTH-002` design.
 
 ## Completed
 
@@ -76,8 +75,9 @@ container. Review, CI, deployment, and scheduler activation remain pending.
   paid-unallocated exceptions, and completed redemptions, with deterministic per-
   recipient idempotency, immutable backend-acceptance/failure attempts, bounded
   retries, Postmark tracking disabled, aggregate cron-safe command output, and an
-  owner-only delivery-evidence view. Production sending remains disabled pending the
-  `FW-ELIG-002` rollout.
+  owner-only delivery-evidence view. The production execution boundary is deployed;
+  the first naturally occurring provider acceptance remains to be observed under
+  `FW-ELIG-002`.
 - Future public-signup requirements documented under `AUTH-*` domain rules.
 - Razorpay test-mode order creation and customer Standard Checkout flow.
 - Explicit fail-closed Razorpay `test`/`live` configuration: the declared mode must
@@ -311,17 +311,9 @@ container. Review, CI, deployment, and scheduler activation remain pending.
 
 ## In progress
 
-- `FW-PROD-006` repository implementation publishes only a successful protected-
-  `main` image to public GHCR under its full commit SHA, scans both review images and
-  the published digest for fixable critical vulnerabilities, and records the exact
-  deploy digest in the Actions summary. The owner accepted public image visibility on
-  2026-09-04 because the source repository is public, runtime secrets are excluded
-  from the image, and this avoids a persistent GitHub credential on the Linode. An
-  isolated anonymous Linode pull and digest inspection passed for the `jsk-savings`
-  package. The production guide still prohibits on-host builds and requires capacity,
-  immutable-digest, migration, and health gates. Closure awaits the next approved
-  production release deployed from its CI-published digest; the currently healthy
-  production release is unchanged.
+- `FW-ELIG-002` awaits only the first naturally occurring reminder-specific Postmark
+  acceptance and matching owner delivery record. Its deployed zero-candidate run is
+  correct evidence that no message is invented merely to satisfy a rollout smoke.
 - `FW-PAY-003` retains two no-mutation recovery evidence exercises: an isolated
   Test-mode review/dry-run/apply case and an idempotent replay of an already-processed
   Live capture. External alerting and coordinated secret rotation remain separately
@@ -501,6 +493,11 @@ container. Review, CI, deployment, and scheduler activation remain pending.
   `33862547971` passed the 293-test, deploy, static, publish, and critical-
   vulnerability gates and produced
   `ghcr.io/rajeshr188/jsk-savings@sha256:8270e175b9f4789dc12f83b9b41f504b0b3dcd5814a1b82f904aa61116623a7e`.
+  PR `#43` merged the reminder service hotfix as
+  `c889ee6906a8bddd4c7852955025efe42ffa5752`; protected-`main` run
+  `33865158341` passed the 294-test, deploy, static, publish, and critical-
+  vulnerability gates and produced
+  `ghcr.io/rajeshr188/jsk-savings@sha256:88eea68169da2ea04f9f104358ecb69ec929989b15f5e447825ab0f0bd806c33`.
 - The Linode production Compose model passes `docker compose config --quiet`, and
   Caddy 2.11.4 validates the exact apex-domain, `www` redirect, masked JSON access
   log, and release-label configuration. The financial heartbeat shell script passes
@@ -539,11 +536,10 @@ container. Review, CI, deployment, and scheduler activation remain pending.
 
 ## Next recommended step
 
-Commit and review the focused reminder-systemd hotfix through protected `main`, then
-deploy its exact public GHCR digest without building on the Linode. Reinstall and run
-the service while `SCHEME_REMINDERS_ENABLED=False`; only after its isolated Docker
-execution succeeds and the two owner recipients are privately approved should the
-web setting and timer be enabled. Record the final health, financial, provider,
-timer, and first legitimate provider-acceptance evidence before closing
-`FW-ELIG-002` and `FW-PROD-006`. Keep `FW-PAY-003` and the accepted
+Record this production evidence through protected `main`, then start `FW-AUTH-002`
+on a fresh feature branch. First define the registration, verification, consent,
+duplicate-identity, abuse-control, awaiting-owner-approval, rejection, and audit
+contract. Public signup must remain disabled by default, must never create a
+`SchemeAccount`, and must not grant payment access. Keep the first genuine
+`FW-ELIG-002` delivery observation, `FW-PAY-003`, and the accepted
 `FW-PROD-002`/`FW-PROD-003` budget deferrals separate.
