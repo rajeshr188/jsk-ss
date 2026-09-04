@@ -302,6 +302,14 @@ shift the date; there is no early grace or later expiry.
 
 ## In progress
 
+- `FW-PROD-006` repository implementation publishes only a successful protected-
+  `main` image to private GHCR under its full commit SHA, scans both review images and
+  the published digest for fixable critical vulnerabilities, and records the exact
+  deploy digest in the Actions summary. The production guide now prohibits an
+  on-host build, requires capacity preflight and sequential candidate checks, and
+  documents a least-privilege read-only Linode pull credential. Completion still
+  requires a green merged publication and the first authenticated Linode digest
+  pull; the currently healthy production release is unchanged.
 - `FW-PAY-003` retains two no-mutation recovery evidence exercises: an isolated
   Test-mode review/dry-run/apply case and an idempotent replay of an already-processed
   Live capture. External alerting and coordinated secret rotation remain separately
@@ -451,9 +459,11 @@ shift the date; there is no early grace or later expiry.
 - The corrected `jsk-savings:deployment-guide-check` image builds successfully and a
   disposable liveness smoke returns `200` with the expected release; Gunicorn 25.3
   starts without attempting a control socket on the read-only application filesystem.
-- GitHub Actions CI is defined with SHA-pinned checkout/setup actions, PostgreSQL 16,
-  migrations, drift/system/deploy checks, the regression suite, static collection,
-  and an independent production-image build.
+- GitHub Actions CI is defined with SHA-pinned checkout, Docker, and scanner actions,
+  PostgreSQL 16, migrations, drift/system/deploy checks, the 285-test regression
+  suite, static collection, unprivileged review-image builds, and a protected-`main`-
+  only GHCR publisher with an immutable digest output. Actionlint 1.7.12 validates
+  the workflow locally; registry publication and pull proof require the merged run.
 - The Linode production Compose model passes `docker compose config --quiet`, and
   Caddy 2.11.4 validates the exact apex-domain, `www` redirect, masked JSON access
   log, and release-label configuration. The financial heartbeat shell script passes
@@ -492,8 +502,10 @@ shift the date; there is no early grace or later expiry.
 
 ## Next recommended step
 
-Complete `FW-PROD-006` before the next application release: publish the CI-built
-image to an immutable registry digest (or use a separate builder) so the 1 GiB
-production host never builds an image while serving traffic. Then resume the bounded
+Open and merge the `FW-PROD-006` implementation through protected `main`, require its
+publish-and-scan job to pass, confirm the repository-linked GHCR package remains
+private, and perform the one-time read-only Linode login plus digest pull/inspection.
+Do not change the healthy production release merely to test the pull. Use the digest
+for the next approved release, then close `FW-PROD-006` and resume the bounded
 `FW-PAY-003` replay evidence work. Keep paid external alerting and coordinated secret
 rotation deferred under the accepted `FW-PROD-002`/`FW-PROD-003` budget boundary.

@@ -83,6 +83,7 @@ jobs:
           DJANGO_DEBUG: "False"
 
   container:
+    if: ${{ github.event_name != 'push' || github.ref != 'refs/heads/main' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -90,3 +91,73 @@ jobs:
           persist-credentials: false
       - name: Build production image
         run: docker build --tag jsk-savings:${{ github.sha }} .
+      - name: Scan production image for fixable critical vulnerabilities
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: jsk-savings:${{ github.sha }}
+          scanners: vuln
+          severity: CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+          format: table
+
+  publish-container:
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    needs: django
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    env:
+      IMAGE_REPOSITORY: ghcr.io/${{ github.repository }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and publish the merged production image
+        id: build
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: .
+          platforms: linux/amd64
+          push: true
+          tags: ${{ env.IMAGE_REPOSITORY }}:${{ github.sha }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+      - name: Scan the published digest for fixable critical vulnerabilities
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        env:
+          TRIVY_USERNAME: ${{ github.actor }}
+          TRIVY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          image-ref: ${{ env.IMAGE_REPOSITORY }}@${{ steps.build.outputs.digest }}
+          scanners: vuln
+          severity: CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+          format: table
+      - name: Record immutable production image identity
+        env:
+          IMAGE_DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          case "$IMAGE_DIGEST" in
+            sha256:*) ;;
+            *) echo "Build did not return an immutable image digest" >&2; exit 1 ;;
+          esac
+          {
+            echo "### Published production candidate"
+            echo
+            echo "- Commit: \`${GITHUB_SHA}\`"
+            echo "- Image tag: \`${IMAGE_REPOSITORY}:${GITHUB_SHA}\`"
+            echo "- Deploy digest: \`${IMAGE_REPOSITORY}@${IMAGE_DIGEST}\`"
+            echo "- Critical vulnerability gate: passed"
+          } >> "$GITHUB_STEP_SUMMARY"
