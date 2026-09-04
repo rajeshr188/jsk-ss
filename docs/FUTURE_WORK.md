@@ -119,6 +119,16 @@ recorded limitations are not lost.
 
 ## Eligibility and customer communication
 
+- **FW-ENROL-001 — Roll out customer enrolment interest requests:** ADR-0012 and
+  migration `schemes.0020` implement a disabled-by-default, authenticated,
+  non-binding request for one public plan and exact-grade offering. The request
+  snapshots the displayed offer, creates no financial state, and reaches an owner
+  queue where current terms must be confirmed before the existing enrolment service
+  creates exactly one linked agreement. Complete protected-main review and the
+  disabled-state production gates, then exercise one controlled request, owner
+  conversion, customer visibility, notification, and integrity-check journey before
+  enabling it generally. Electronic signatures, KYC/document uploads, SMS OTP, and
+  unattended enrolment remain out of scope.
 - **FW-ELIG-002 — Observe the first genuine reminder delivery:** The configurable
   email audiences, immutable reminder/attempt evidence, bounded retries, aggregate
   command, owner view, additive `schemes.0019` migration, and hardened systemd
@@ -128,8 +138,9 @@ recorded limitations are not lost.
   financial or redemption event for this observation. This does not block other
   isolated development.
 - **FW-AUTH-003 — Keep login separate from enrolment:** Contribution access must remain
-  disabled until an owner creates a valid `SchemeAccount`; a public login must never
-  imply financial enrolment.
+  disabled until an owner creates a valid `SchemeAccount`; a public login or
+  enrolment-interest request must never imply financial enrolment. Close this item
+  with the production acceptance evidence for `FW-ENROL-001`.
 
 ## Rates, media, and catalogue
 

@@ -1,0 +1,11 @@
+Hello{% if audience == 'customer' %} {{ enrolment_request.customer.full_name }}{% endif %},
+
+{% if audience == 'owner' %}A customer submitted a non-binding request for {{ enrolment_request.plan_name_snapshot }} — {{ enrolment_request.metal_grade.display_name }}. Review the request before creating any agreement.
+{% elif event == 'enrolled' %}Your {{ enrolment_request.plan_name_snapshot }} agreement has been created after showroom review. Sign in to see the recorded agreement. Payment is available only under its recorded terms and current payment controls.
+{% elif event == 'declined' %}The showroom has reviewed and declined your request. No scheme account or payment access was created. Contact the showroom if you need clarification.
+{% elif event == 'expired' %}Your request is no longer active. No scheme account or payment access was created. You may review the currently available plans and submit a new request.
+{% else %}We received your non-binding request for {{ enrolment_request.plan_name_snapshot }} — {{ enrolment_request.metal_grade.display_name }}. This is not enrolment and does not create payment access. The showroom will contact you and review the current terms before any agreement is created.
+{% endif %}
+Open the request: {{ action_url }}
+
+Jai Sri Krishna Jewellery

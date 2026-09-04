@@ -1,0 +1,45 @@
+{% extends '_base.html' %}
+
+{% block title %}My enrolment requests | Jai Sri Krishna Jewellery{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <p class="page-eyebrow">Customer dashboard</p>
+    <h1>My enrolment requests</h1>
+    <p class="page-subtitle">Track non-binding requests sent to the showroom.</p>
+  </div>
+  <div class="page-actions">
+    {% if requests_enabled %}<a class="btn btn-jsk" href="{% url 'pricing' %}">Browse plans</a>{% endif %}
+    <a class="btn btn-outline-dark" href="{% url 'schemes:my_schemes' %}">My schemes</a>
+  </div>
+</div>
+
+<div class="row g-3">
+  {% for enrolment_request in enrolment_requests %}
+  <div class="col-12">
+    <article class="card">
+      <div class="card-body p-4 d-flex flex-wrap justify-content-between align-items-start gap-3">
+        <div>
+          <p class="page-eyebrow mb-1">{{ enrolment_request.plan_name_snapshot }}</p>
+          <h2 class="h5 mb-1">{{ enrolment_request.metal_grade.display_name }}</h2>
+          <div class="text-secondary">Requested {{ enrolment_request.created_at|date:"d M Y, h:i A" }} · ₹{{ enrolment_request.requested_contribution_amount|floatformat:2 }} · {{ enrolment_request.requested_months }} months</div>
+        </div>
+        <div class="text-end">
+          <span class="badge text-bg-secondary mb-2">{{ enrolment_request.effective_status_label }}</span>
+          <div><a class="btn btn-sm btn-outline-dark" href="{% url 'schemes:my_enrolment_request_detail' enrolment_request.pk %}">View request</a></div>
+        </div>
+      </div>
+    </article>
+  </div>
+  {% empty %}
+  <div class="col-12">
+    <div class="card empty-state">
+      <h2 class="h4">No enrolment requests</h2>
+      <p>You have not asked the showroom to review a savings plan yet.</p>
+      {% if requests_enabled %}<div><a class="btn btn-jsk" href="{% url 'pricing' %}">Browse available plans</a></div>{% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

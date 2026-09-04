@@ -64,6 +64,31 @@ urlpatterns = [
         name="customer_enroll",
     ),
     path(
+        "owner/enrolment-requests/",
+        views.owner_enrolment_request_list,
+        name="owner_enrolment_request_list",
+    ),
+    path(
+        "owner/enrolment-requests/<uuid:request_id>/",
+        views.owner_enrolment_request_detail,
+        name="owner_enrolment_request_detail",
+    ),
+    path(
+        "owner/enrolment-requests/<uuid:request_id>/enrol/",
+        views.owner_enrolment_request_enroll,
+        name="owner_enrolment_request_enroll",
+    ),
+    path(
+        "owner/enrolment-requests/<uuid:request_id>/decline/",
+        views.owner_enrolment_request_decline,
+        name="owner_enrolment_request_decline",
+    ),
+    path(
+        "owner/enrolment-requests/<uuid:request_id>/expire/",
+        views.owner_enrolment_request_expire,
+        name="owner_enrolment_request_expire",
+    ),
+    path(
         "owner/customers/<int:customer_id>/invitation/resend/",
         views.customer_invitation_resend,
         name="customer_invitation_resend",
@@ -98,6 +123,26 @@ urlpatterns = [
         name="scheme_statement",
     ),
     path("mine/", views.my_schemes, name="my_schemes"),
+    path(
+        "plans/<int:plan_id>/request/",
+        views.scheme_enrolment_request_create,
+        name="scheme_enrolment_request_create",
+    ),
+    path(
+        "mine/enrolment-requests/",
+        views.my_enrolment_requests,
+        name="my_enrolment_requests",
+    ),
+    path(
+        "mine/enrolment-requests/<uuid:request_id>/",
+        views.my_enrolment_request_detail,
+        name="my_enrolment_request_detail",
+    ),
+    path(
+        "mine/enrolment-requests/<uuid:request_id>/withdraw/",
+        views.my_enrolment_request_withdraw,
+        name="my_enrolment_request_withdraw",
+    ),
     path("mine/<str:scheme_number>/", views.my_scheme_detail, name="my_scheme_detail"),
     path(
         "mine/<str:scheme_number>/pay/",

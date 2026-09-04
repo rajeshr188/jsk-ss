@@ -1,0 +1,40 @@
+{% extends '_base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Create agreement from request | Jai Sri Krishna Jewellery{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <p class="page-eyebrow">Final owner review</p>
+    <h1>Create agreement for {{ enrolment_request.customer.full_name }}</h1>
+    <p class="page-subtitle">The agreement snapshots the current plan terms; the earlier request remains non-binding evidence.</p>
+  </div>
+  <div class="page-actions"><a class="btn btn-outline-dark" href="{% url 'schemes:owner_enrolment_request_detail' enrolment_request.pk %}">Back to request</a></div>
+</div>
+
+{% if not offer_is_current %}<div class="alert alert-danger"><strong>Conversion blocked.</strong> The offer changed or closed. Ask the customer to review the current public offer and submit again.</div>{% endif %}
+<div class="row g-4">
+  <div class="col-lg-7">
+    <form method="post" class="card form-card" novalidate>
+      {% csrf_token %}
+      {{ form|crispy }}
+      <button class="btn btn-jsk" type="submit"{% if not offer_is_current %} disabled{% endif %}>Create savings agreement</button>
+    </form>
+  </div>
+  <div class="col-lg-5">
+    <div class="card">
+      <div class="card-body p-4">
+        <h2 class="h4">Customer preference</h2>
+        <dl class="row mb-0">
+          <dt class="col-6">Plan</dt><dd class="col-6">{{ enrolment_request.plan_name_snapshot }}</dd>
+          <dt class="col-6">Grade</dt><dd class="col-6">{{ enrolment_request.metal_grade.display_name }}</dd>
+          <dt class="col-6">Contribution</dt><dd class="col-6">₹{{ enrolment_request.requested_contribution_amount|floatformat:2 }}</dd>
+          <dt class="col-6">Duration</dt><dd class="col-6">{{ enrolment_request.requested_months }} months</dd>
+        </dl>
+        <p class="small text-secondary mt-3 mb-0">For variable plans, the requested amount is a preference and does not change the agreement's recorded range.</p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

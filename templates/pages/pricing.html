@@ -38,6 +38,17 @@
           <dt class="col-5">Standard duration</dt><dd class="col-7">{{ plan.default_months }} months</dd>
           <dt class="col-5">Minimum duration</dt><dd class="col-7">{{ plan.minimum_months }} months</dd>
         </dl>
+        {% if customer_enrolment_requests_enabled %}
+        <div class="d-flex flex-wrap gap-2 mt-4">
+          {% url 'schemes:scheme_enrolment_request_create' plan.pk as request_url %}
+          {% if user.is_authenticated and user.role == 'CUSTOMER' %}
+          <a class="btn btn-jsk" href="{{ request_url }}">Request enrolment</a>
+          {% elif not user.is_authenticated %}
+          <a class="btn btn-jsk" href="{% url 'account_login' %}?next={{ request_url|urlencode }}">Sign in to request enrolment</a>
+          {% if public_customer_registration_enabled %}<a class="btn btn-outline-dark" href="{% url 'customer_registration' %}">Request customer access</a>{% endif %}
+          {% endif %}
+        </div>
+        {% endif %}
       </div>
     </article>
   </div>
@@ -50,11 +61,15 @@
   <div class="card-body p-4 p-lg-5">
     <p class="page-eyebrow">Getting started</p>
     <h2 class="h3">How to join and contribute</h2>
-    <p>Enrolment is completed at the showroom after you review and accept the applicable terms. The store then creates your customer login. Online payment is available only after enrolment and only for amounts allowed by your recorded plan.</p>
+    <p>An approved customer login may submit a non-binding request for a displayed plan and metal grade. The request does not create a savings agreement or payment access. The showroom contacts you, reviews the current terms, and separately creates the agreement. You may also contact or visit us instead. Online payment is available only after enrolment and only for amounts allowed by your recorded plan.</p>
     <p>The current Jai Sri Krishna Jewellery Scheme Rate for your selected grade is shown and locked before payment starts. After verification, your INR contribution is converted to a recorded quantity of that exact grade. A later Scheme Rate does not change quantities already credited.</p>
     <p>Once the plan becomes eligible, the accumulated metal quantity may be applied toward jewellery or an eligible matching-metal coin at our showroom. It cannot be withdrawn as cash through this website.</p>
     <div class="d-flex flex-wrap gap-2">
+      {% if customer_enrolment_requests_enabled and user.is_authenticated and user.role == 'CUSTOMER' %}
+      <a class="btn btn-jsk" href="{% url 'schemes:my_enrolment_requests' %}">My enrolment requests</a>
+      {% else %}
       <a class="btn btn-jsk" href="{% url 'contact' %}">Contact us to enrol</a>
+      {% endif %}
       {% if user.is_authenticated %}
       <a class="btn btn-outline-dark" href="{% url 'schemes:post_login' %}">Open my dashboard</a>
       {% else %}

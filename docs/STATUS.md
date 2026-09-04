@@ -2,15 +2,14 @@
 
 ## Current milestone
 
-`FW-AUTH-002` is production-accepted under ADR-0011. Release
-`613e2f7363a67ea6d588273f54bcddb628f9549a` deployed the additive `accounts.0004`
-migration behind a closed flag, passed the disabled-state gates, and then enabled the
-staged public application. Direct allauth signup remains closed. A controlled
-replacement-verification/rejection journey created no login, while a separately
-approved request required manual mobile confirmation, created the existing customer
-profile and password invitation, and created no scheme or payment access. Aggregate
-integrity and secret-log checks passed. The first genuine `FW-ELIG-002` Postmark
-observation remains separate and pending.
+`FW-ENROL-001` is implemented on `agent/enrolment-interest-requests` under ADR-0012
+and awaits review, protected-main CI, and disabled-first production rollout. An
+approved customer can record non-binding interest in one publicly listed plan and
+exact-grade offering; only an owner can convert a current request through the existing
+enrolment service after confirming current terms. The feature defaults off and the
+request creates no agreement, payment permission, rate lock, allocation, eligibility,
+or liability. `FW-AUTH-002` remains production-accepted on release
+`613e2f7363a67ea6d588273f54bcddb628f9549a`, and direct allauth signup remains closed.
 
 ## Completed
 
@@ -318,6 +317,12 @@ observation remains separate and pending.
 
 ## In progress
 
+- `FW-ENROL-001` has an additive `schemes.0020` migration, immutable offer/request
+  evidence, one-pending-request database enforcement, 30-day expiry, customer
+  withdrawal/status views, transactional email notices, an owner review/decision/
+  conversion queue, audit events, a no-mutation integrity command, and fail-closed
+  settings. The complete 332-test regression suite passes; production remains unchanged
+  until the flag-off migration and controlled acceptance sequence is approved.
 - `FW-ELIG-002` awaits only the first naturally occurring reminder-specific Postmark
   acceptance and matching owner delivery record. Its deployed zero-candidate run is
   correct evidence that no message is invented merely to satisfy a rollout smoke.
@@ -545,8 +550,9 @@ observation remains separate and pending.
 
 ## Next recommended step
 
-Observe the first genuine `FW-ELIG-002` reminder acceptance and matching owner
-delivery record without manufacturing an eligibility event. If active development is
-preferred while waiting, resume the isolated, no-mutation `FW-PAY-003` webhook
-recovery evidence exercises. Keep the accepted `FW-PROD-002`/`FW-PROD-003` budget
-deferrals separate.
+Commit the reviewed `FW-ENROL-001` feature branch and open a PR against protected
+`main`. After CI publishes the reviewed image, deploy
+`schemes.0020` with `CUSTOMER_ENROLMENT_REQUESTS_ENABLED=False`, pass the documented
+integrity and financial gates, then perform one controlled request-to-agreement
+journey before enabling the feature generally. The first genuine `FW-ELIG-002`
+reminder observation remains independent and must not be manufactured.

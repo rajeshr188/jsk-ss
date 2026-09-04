@@ -403,6 +403,317 @@ class SchemeAccount(models.Model):
         return f"{self.scheme_number} — {self.customer.full_name}"
 
 
+class SchemeEnrolmentRequest(models.Model):
+    class Status(models.TextChoices):
+        PENDING_OWNER_REVIEW = "PENDING_OWNER_REVIEW", "Pending owner review"
+        WITHDRAWN = "WITHDRAWN", "Withdrawn"
+        DECLINED = "DECLINED", "Declined"
+        EXPIRED = "EXPIRED", "Expired"
+        ENROLLED = "ENROLLED", "Enrolled"
+
+    TERMINAL_STATUSES = {
+        Status.WITHDRAWN,
+        Status.DECLINED,
+        Status.EXPIRED,
+        Status.ENROLLED,
+    }
+    SNAPSHOT_FIELDS = (
+        "customer_id",
+        "plan_id",
+        "metal_grade_id",
+        "plan_name_snapshot",
+        "plan_code_snapshot",
+        "requested_contribution_amount",
+        "requested_months",
+        "customer_message",
+        "amount_rule_snapshot",
+        "frequency_rule_snapshot",
+        "fixed_contribution_amount_snapshot",
+        "minimum_contribution_snapshot",
+        "maximum_contribution_snapshot",
+        "minimum_months_snapshot",
+        "default_months_snapshot",
+        "allow_post_eligibility_contributions_snapshot",
+        "disclosure_version",
+        "disclosure_accepted_at",
+        "expires_at",
+    )
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    customer = models.ForeignKey(
+        Customer,
+        on_delete=models.PROTECT,
+        related_name="enrolment_requests",
+    )
+    plan = models.ForeignKey(
+        SchemePlan,
+        on_delete=models.PROTECT,
+        related_name="enrolment_requests",
+    )
+    metal_grade = models.ForeignKey(
+        MetalGrade,
+        on_delete=models.PROTECT,
+        related_name="enrolment_requests",
+    )
+    plan_name_snapshot = models.CharField(max_length=120)
+    plan_code_snapshot = models.CharField(max_length=30)
+    requested_contribution_amount = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+    )
+    requested_months = models.PositiveSmallIntegerField(
+        validators=[MinValueValidator(12)],
+    )
+    customer_message = models.TextField(blank=True)
+    amount_rule_snapshot = models.CharField(
+        max_length=10,
+        choices=SchemePlan.AmountRule.choices,
+    )
+    frequency_rule_snapshot = models.CharField(
+        max_length=20,
+        choices=SchemePlan.FrequencyRule.choices,
+    )
+    fixed_contribution_amount_snapshot = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        null=True,
+        blank=True,
+    )
+    minimum_contribution_snapshot = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+    )
+    maximum_contribution_snapshot = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        null=True,
+        blank=True,
+    )
+    minimum_months_snapshot = models.PositiveSmallIntegerField()
+    default_months_snapshot = models.PositiveSmallIntegerField()
+    allow_post_eligibility_contributions_snapshot = models.BooleanField()
+    disclosure_version = models.CharField(max_length=30)
+    disclosure_accepted_at = models.DateTimeField()
+    status = models.CharField(
+        max_length=24,
+        choices=Status.choices,
+        default=Status.PENDING_OWNER_REVIEW,
+    )
+    expires_at = models.DateTimeField()
+    scheme_account = models.OneToOneField(
+        SchemeAccount,
+        on_delete=models.PROTECT,
+        related_name="enrolment_request",
+        null=True,
+        blank=True,
+    )
+    decided_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name="decided_scheme_enrolment_requests",
+        null=True,
+        blank=True,
+    )
+    decided_by_label = models.CharField(max_length=254, blank=True)
+    decision_reason = models.TextField(blank=True)
+    decided_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at", "-pk"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["customer", "plan", "metal_grade"],
+                condition=models.Q(status="PENDING_OWNER_REVIEW"),
+                name="enrol_request_unique_pending_offering",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(requested_months__gte=12),
+                name="enrol_request_months_gte_12",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(
+                    requested_months__gte=models.F("minimum_months_snapshot")
+                ),
+                name="enrol_request_months_gte_minimum",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(minimum_contribution_snapshot__gt=Decimal("0")),
+                name="enrol_request_minimum_positive",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(maximum_contribution_snapshot__isnull=True)
+                    | models.Q(
+                        maximum_contribution_snapshot__gte=models.F(
+                            "minimum_contribution_snapshot"
+                        )
+                    )
+                ),
+                name="enrol_request_maximum_valid",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(
+                        requested_contribution_amount__gte=models.F(
+                            "minimum_contribution_snapshot"
+                        )
+                    )
+                    & (
+                        models.Q(maximum_contribution_snapshot__isnull=True)
+                        | models.Q(
+                            requested_contribution_amount__lte=models.F(
+                                "maximum_contribution_snapshot"
+                            )
+                        )
+                    )
+                ),
+                name="enrol_request_amount_within_offer",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(
+                        amount_rule_snapshot="FIXED",
+                        fixed_contribution_amount_snapshot__isnull=False,
+                        requested_contribution_amount=models.F(
+                            "fixed_contribution_amount_snapshot"
+                        ),
+                    )
+                    | models.Q(
+                        amount_rule_snapshot="VARIABLE",
+                        fixed_contribution_amount_snapshot__isnull=True,
+                    )
+                ),
+                name="enrol_request_amount_rule_valid",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(
+                        status="PENDING_OWNER_REVIEW",
+                        scheme_account__isnull=True,
+                        decided_by__isnull=True,
+                        decided_by_label="",
+                        decision_reason="",
+                        decided_at__isnull=True,
+                    )
+                    | (
+                        models.Q(
+                            status__in=["WITHDRAWN", "DECLINED", "EXPIRED"],
+                            scheme_account__isnull=True,
+                            decided_at__isnull=False,
+                        )
+                        & ~models.Q(decided_by_label="")
+                        & ~models.Q(decision_reason="")
+                    )
+                    | (
+                        models.Q(
+                            status="ENROLLED",
+                            scheme_account__isnull=False,
+                            decided_at__isnull=False,
+                        )
+                        & ~models.Q(decided_by_label="")
+                        & ~models.Q(decision_reason="")
+                    )
+                ),
+                name="enrol_request_lifecycle_shape_valid",
+            ),
+            models.CheckConstraint(
+                condition=~models.Q(disclosure_version=""),
+                name="enrol_request_disclosure_required",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    ~models.Q(plan_name_snapshot="")
+                    & ~models.Q(plan_code_snapshot="")
+                ),
+                name="enrol_request_plan_identity",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(
+                    expires_at__gt=models.F("disclosure_accepted_at")
+                ),
+                name="enrol_request_expiry_after_consent",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=["status", "expires_at"],
+                name="enrol_req_status_expiry_idx",
+            ),
+            models.Index(
+                fields=["customer", "created_at"],
+                name="enrol_req_customer_time_idx",
+            ),
+        ]
+
+    @property
+    def effective_status(self):
+        if (
+            self.status == self.Status.PENDING_OWNER_REVIEW
+            and self.expires_at <= timezone.now()
+        ):
+            return self.Status.EXPIRED
+        return self.status
+
+    @property
+    def effective_status_label(self):
+        return self.Status(self.effective_status).label
+
+    def clean(self):
+        super().clean()
+        errors = {}
+        if self.metal_grade_id and self.plan_id:
+            if self.metal_grade.metal not in {
+                SchemeAccount.SavingsMode.GOLD,
+                SchemeAccount.SavingsMode.SILVER,
+            }:
+                errors["metal_grade"] = "Select a supported gold or silver grade."
+        if self.scheme_account_id:
+            account = self.scheme_account
+            if account.customer_id != self.customer_id:
+                errors["scheme_account"] = "The linked account must belong to this customer."
+            elif account.plan_id != self.plan_id:
+                errors["scheme_account"] = "The linked account must use the requested plan."
+            elif account.metal_grade_id != self.metal_grade_id:
+                errors["scheme_account"] = "The linked account must use the requested grade."
+        if (
+            self.expires_at
+            and self.disclosure_accepted_at
+            and self.expires_at <= self.disclosure_accepted_at
+        ):
+            errors["expires_at"] = "Expiry must be after disclosure acceptance."
+        if errors:
+            raise ValidationError(errors)
+
+    def save(self, *args, **kwargs):
+        if self.pk:
+            stored = type(self).objects.filter(pk=self.pk).first()
+            if stored is not None:
+                if stored.status in self.TERMINAL_STATUSES:
+                    raise ValidationError("Terminal enrolment requests are immutable.")
+                changed_snapshots = [
+                    field
+                    for field in self.SNAPSHOT_FIELDS
+                    if getattr(stored, field) != getattr(self, field)
+                ]
+                if changed_snapshots:
+                    raise ValidationError(
+                        "Submitted enrolment request details and offer snapshots are immutable."
+                    )
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Enrolment request evidence cannot be deleted.")
+
+    def __str__(self):
+        return (
+            f"{self.customer.full_name} — {self.plan_name_snapshot} — "
+            f"{self.metal_grade.display_name}"
+        )
+
+
 class GatewayMode(models.TextChoices):
     TEST = "test", "Test"
     LIVE = "live", "Live"
@@ -1528,6 +1839,26 @@ class SchemeReminderDeliveryAttempt(models.Model):
 class AuditEvent(models.Model):
     class Action(models.TextChoices):
         CUSTOMER_ENROLMENT = "CUSTOMER_ENROLMENT", "Customer enrolment"
+        ENROLMENT_REQUEST_SUBMITTED = (
+            "ENROLMENT_REQUEST_SUBMITTED",
+            "Enrolment request submitted",
+        )
+        ENROLMENT_REQUEST_WITHDRAWN = (
+            "ENROLMENT_REQUEST_WITHDRAWN",
+            "Enrolment request withdrawn",
+        )
+        ENROLMENT_REQUEST_DECLINED = (
+            "ENROLMENT_REQUEST_DECLINED",
+            "Enrolment request declined",
+        )
+        ENROLMENT_REQUEST_EXPIRED = (
+            "ENROLMENT_REQUEST_EXPIRED",
+            "Enrolment request expired",
+        )
+        ENROLMENT_REQUEST_ENROLLED = (
+            "ENROLMENT_REQUEST_ENROLLED",
+            "Enrolment request enrolled",
+        )
         SCHEME_CHANGE = "SCHEME_CHANGE", "Scheme change"
         MANUAL_PAYMENT_CORRECTION = (
             "MANUAL_PAYMENT_CORRECTION",

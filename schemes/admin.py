@@ -14,6 +14,7 @@ from .models import (
     Redemption,
     RedemptionReversal,
     SchemeAccount,
+    SchemeEnrolmentRequest,
     SchemePlan,
     SchemePlanOffering,
     SchemeReminder,
@@ -121,6 +122,41 @@ class SchemeAccountAdmin(admin.ModelAdmin):
 
     def get_readonly_fields(self, request, obj=None):
         return tuple(field.name for field in self.model._meta.fields)
+
+
+@admin.register(SchemeEnrolmentRequest)
+class SchemeEnrolmentRequestAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "customer",
+        "plan_name_snapshot",
+        "metal_grade",
+        "requested_contribution_amount",
+        "requested_months",
+        "status",
+        "created_at",
+        "expires_at",
+    )
+    list_filter = ("status", "metal_grade", "created_at", "expires_at")
+    search_fields = (
+        "id",
+        "customer__customer_number",
+        "customer__full_name",
+        "customer__email",
+        "plan__name",
+        "plan_name_snapshot",
+        "plan_code_snapshot",
+        "scheme_account__scheme_number",
+    )
+    readonly_fields = tuple(
+        field.name for field in SchemeEnrolmentRequest._meta.fields
+    )
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 @admin.register(Contribution)

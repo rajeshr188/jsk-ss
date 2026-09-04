@@ -8,9 +8,13 @@ import uuid
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.core.exceptions import ImproperlyConfigured, ValidationError
-from django.http import Http404, HttpResponse, JsonResponse
+from django.core.exceptions import (
+    ImproperlyConfigured,
+    PermissionDenied,
+    ValidationError,
+)
 from django.db import transaction
+from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -20,17 +24,24 @@ from django.views.decorators.csrf import csrf_exempt
 from accounts.models import CustomUser
 from accounts.services import issue_customer_invitation, send_customer_invitation
 
+from .enrolment_notifications import (
+    send_enrolment_request_decision,
+    send_enrolment_request_received,
+)
 from .forms import (
     AuditReasonForm,
     ContributionForm,
     CustomerCreateForm,
     EnrolmentForm,
+    EnrolmentRequestConversionForm,
+    EnrolmentRequestDecisionForm,
     InStoreCashContributionForm,
     InStoreCashContributionReversalForm,
     PaymentOperationsForm,
     RedemptionForm,
     RedemptionReversalForm,
     SchemeRatePublishForm,
+    SchemeEnrolmentRequestForm,
     SchemePlanChangeForm,
     SchemePlanForm,
     WebhookRecoveryForm,
@@ -44,6 +55,7 @@ from .models import (
     WebhookProcessingAttempt,
     Redemption,
     SchemeAccount,
+    SchemeEnrolmentRequest,
     SchemePlan,
     SchemeRate,
 )
@@ -64,6 +76,8 @@ from .selectors import (
     get_contribution_receipt_summary,
     get_customer_scheme_account,
     get_customer_scheme_summary,
+    get_customer_enrolment_request,
+    get_customer_enrolment_requests,
     get_latest_customer_invitation,
     get_current_scheme_rate,
     get_current_scheme_rates,
@@ -73,11 +87,13 @@ from .selectors import (
     get_owner_audit_events,
     get_owner_contributions,
     get_owner_customers,
+    get_owner_enrolment_requests,
     get_owner_liability_summary,
     get_owner_exception_queue,
     get_pending_payment_exposure,
     get_owner_redemptions,
     get_owner_scheme_reminders,
+    get_pending_enrolment_request_count,
     get_redemption_eligibility_summary,
     get_redemption_history,
     get_scheme_statement,
@@ -88,8 +104,11 @@ from .services import (
     cash_scheme_activity_is_enabled,
     create_invited_customer,
     complete_redemption,
+    decide_scheme_enrolment_request,
     enroll_customer,
+    enroll_customer_from_request,
     confirm_razorpay_contribution,
+    enrolment_request_offer_is_current,
     initiate_razorpay_contribution,
     in_store_cash_contributions_are_enabled,
     preview_in_store_cash_contribution,
@@ -98,11 +117,13 @@ from .services import (
     publish_scheme_rate,
     record_in_store_cash_contribution,
     record_scheme_plan_change,
+    submit_scheme_enrolment_request,
     reverse_redemption,
     reverse_in_store_cash_contribution,
     retry_metal_allocation,
     reconcile_razorpay_webhook,
     update_payment_operations_control,
+    withdraw_scheme_enrolment_request,
     WebhookTransientProcessingError,
 )
 
@@ -159,6 +180,7 @@ def owner_dashboard(request):
             not item["availability"].allowed
             for item in payment_availability.values()
         ),
+        "pending_enrolment_request_count": get_pending_enrolment_request_count(),
     }
     return render(request, "schemes/owner_dashboard.html", context)
 
@@ -842,6 +864,294 @@ def customer_enroll(request, customer_id):
     )
 
 
+def _customer_for_request_user(user):
+    if user.role != CustomUser.Role.CUSTOMER or not user.is_active:
+        raise PermissionDenied
+    try:
+        return user.customer_profile
+    except Customer.DoesNotExist as error:
+        raise PermissionDenied from error
+
+
+def _add_service_errors(form, error):
+    if hasattr(error, "message_dict"):
+        for field, field_errors in error.message_dict.items():
+            for field_error in field_errors:
+                form.add_error(field if field in form.fields else None, field_error)
+    else:
+        for field_error in error.messages:
+            form.add_error(None, field_error)
+
+
+@login_required
+def scheme_enrolment_request_create(request, plan_id):
+    if not settings.CUSTOMER_ENROLMENT_REQUESTS_ENABLED:
+        raise Http404
+    customer = _customer_for_request_user(request.user)
+    plan = get_object_or_404(
+        SchemePlan.objects.prefetch_related("metal_offerings__metal_grade"),
+        pk=plan_id,
+        active=True,
+        publicly_listed=True,
+    )
+    form = SchemeEnrolmentRequestForm(request.POST or None, plan=plan)
+    if request.method == "POST" and form.is_valid():
+        try:
+            submission = submit_scheme_enrolment_request(
+                customer=customer,
+                plan=plan,
+                metal_grade=form.cleaned_data["metal_grade"],
+                requested_contribution_amount=form.cleaned_data[
+                    "requested_contribution_amount"
+                ],
+                requested_months=form.cleaned_data["requested_months"],
+                customer_message=form.cleaned_data["customer_message"],
+                actor=request.user,
+            )
+        except ValidationError as error:
+            _add_service_errors(form, error)
+        else:
+            if submission.created:
+                delivery = send_enrolment_request_received(
+                    enrolment_request=submission.enrolment_request,
+                    base_url=request.build_absolute_uri("/").rstrip("/"),
+                )
+                if delivery.customer_accepted:
+                    messages.success(
+                        request,
+                        "Your request was recorded. The email provider accepted your acknowledgement.",
+                    )
+                else:
+                    messages.warning(
+                        request,
+                        "Your request was recorded, but its acknowledgement email could not be sent.",
+                    )
+                if not delivery.owner_recipient_count:
+                    messages.warning(
+                        request,
+                        "The request is safely recorded, but no active owner email recipient is configured.",
+                    )
+                elif not delivery.owner_accepted_count:
+                    messages.warning(
+                        request,
+                        "The request is safely recorded, but owner email notification failed.",
+                    )
+            else:
+                messages.info(
+                    request,
+                    "A pending request already exists for this plan and metal grade.",
+                )
+            return redirect(
+                "schemes:my_enrolment_request_detail",
+                request_id=submission.enrolment_request.pk,
+            )
+    return render(
+        request,
+        "schemes/enrolment_request_form.html",
+        {"plan": plan, "form": form},
+    )
+
+
+@login_required
+def my_enrolment_requests(request):
+    _customer_for_request_user(request.user)
+    return render(
+        request,
+        "schemes/my_enrolment_requests.html",
+        {
+            "enrolment_requests": get_customer_enrolment_requests(request.user),
+            "requests_enabled": settings.CUSTOMER_ENROLMENT_REQUESTS_ENABLED,
+        },
+    )
+
+
+@login_required
+def my_enrolment_request_detail(request, request_id):
+    _customer_for_request_user(request.user)
+    enrolment_request = get_customer_enrolment_request(request.user, request_id)
+    if enrolment_request is None:
+        raise Http404
+    return render(
+        request,
+        "schemes/my_enrolment_request_detail.html",
+        {
+            "enrolment_request": enrolment_request,
+            "offer_is_current": enrolment_request_offer_is_current(
+                enrolment_request
+            ),
+        },
+    )
+
+
+@login_required
+@require_POST
+def my_enrolment_request_withdraw(request, request_id):
+    _customer_for_request_user(request.user)
+    enrolment_request = get_customer_enrolment_request(request.user, request_id)
+    if enrolment_request is None:
+        raise Http404
+    try:
+        enrolment_request = withdraw_scheme_enrolment_request(
+            enrolment_request=enrolment_request,
+            actor=request.user,
+        )
+    except ValidationError as error:
+        messages.error(request, " ".join(error.messages))
+    else:
+        if enrolment_request.status == SchemeEnrolmentRequest.Status.WITHDRAWN:
+            messages.success(request, "Your enrolment request was withdrawn.")
+        else:
+            messages.info(request, "The request had already reached its expiry date.")
+    return redirect("schemes:my_enrolment_request_detail", request_id=request_id)
+
+
+@owner_required
+def owner_enrolment_request_list(request):
+    return render(
+        request,
+        "schemes/owner_enrolment_request_list.html",
+        {"enrolment_requests": get_owner_enrolment_requests()},
+    )
+
+
+@owner_required
+def owner_enrolment_request_detail(request, request_id):
+    enrolment_request = get_object_or_404(
+        get_owner_enrolment_requests(),
+        pk=request_id,
+    )
+    return render(
+        request,
+        "schemes/owner_enrolment_request_detail.html",
+        {
+            "enrolment_request": enrolment_request,
+            "offer_is_current": enrolment_request_offer_is_current(enrolment_request),
+            "decision_form": EnrolmentRequestDecisionForm(),
+        },
+    )
+
+
+def _owner_request_decision(request, request_id, status):
+    enrolment_request = get_object_or_404(
+        get_owner_enrolment_requests(),
+        pk=request_id,
+    )
+    form = EnrolmentRequestDecisionForm(request.POST)
+    if form.is_valid():
+        try:
+            enrolment_request = decide_scheme_enrolment_request(
+                enrolment_request=enrolment_request,
+                status=status,
+                actor=request.user,
+                reason=form.cleaned_data["reason"],
+            )
+        except ValidationError as error:
+            _add_service_errors(form, error)
+        else:
+            delivery = send_enrolment_request_decision(
+                enrolment_request=enrolment_request,
+                base_url=request.build_absolute_uri("/").rstrip("/"),
+            )
+            message = f"Request marked {enrolment_request.get_status_display().lower()}."
+            if delivery.customer_accepted:
+                messages.success(
+                    request,
+                    f"{message} The email provider accepted the customer notice.",
+                )
+            else:
+                messages.warning(
+                    request,
+                    f"{message} The customer notice could not be sent.",
+                )
+            return redirect("schemes:owner_enrolment_request_list")
+    return render(
+        request,
+        "schemes/owner_enrolment_request_detail.html",
+        {
+            "enrolment_request": enrolment_request,
+            "offer_is_current": enrolment_request_offer_is_current(enrolment_request),
+            "decision_form": form,
+        },
+        status=400,
+    )
+
+
+@owner_required
+@require_POST
+def owner_enrolment_request_decline(request, request_id):
+    return _owner_request_decision(
+        request,
+        request_id,
+        SchemeEnrolmentRequest.Status.DECLINED,
+    )
+
+
+@owner_required
+@require_POST
+def owner_enrolment_request_expire(request, request_id):
+    return _owner_request_decision(
+        request,
+        request_id,
+        SchemeEnrolmentRequest.Status.EXPIRED,
+    )
+
+
+@owner_required
+def owner_enrolment_request_enroll(request, request_id):
+    enrolment_request = get_object_or_404(
+        get_owner_enrolment_requests(),
+        pk=request_id,
+    )
+    form = EnrolmentRequestConversionForm(
+        request.POST or None,
+        enrolment_request=enrolment_request,
+    )
+    if request.method == "POST" and form.is_valid():
+        try:
+            account, created = enroll_customer_from_request(
+                enrolment_request=enrolment_request,
+                actor=request.user,
+                current_terms_confirmed=form.cleaned_data["current_terms_confirmed"],
+                start_date=form.cleaned_data["start_date"],
+                agreed_months=form.cleaned_data["agreed_months"],
+                reason=form.cleaned_data["audit_reason"],
+            )
+        except ValidationError as error:
+            _add_service_errors(form, error)
+        else:
+            if created:
+                enrolment_request.refresh_from_db()
+                delivery = send_enrolment_request_decision(
+                    enrolment_request=enrolment_request,
+                    base_url=request.build_absolute_uri("/").rstrip("/"),
+                )
+                if delivery.customer_accepted:
+                    messages.success(
+                        request,
+                        f"Scheme {account.scheme_number} created; the email provider accepted the customer notice.",
+                    )
+                else:
+                    messages.warning(
+                        request,
+                        f"Scheme {account.scheme_number} was created, but the customer notice could not be sent.",
+                    )
+            else:
+                messages.info(request, f"Scheme {account.scheme_number} already exists.")
+            return redirect(
+                "schemes:owner_enrolment_request_detail",
+                request_id=request_id,
+            )
+    return render(
+        request,
+        "schemes/enrolment_request_conversion.html",
+        {
+            "enrolment_request": enrolment_request,
+            "offer_is_current": enrolment_request_offer_is_current(enrolment_request),
+            "form": form,
+        },
+    )
+
+
 @owner_required
 def plan_list(request):
     return render(request, "schemes/plan_list.html", {"plans": SchemePlan.objects.all()})
@@ -916,6 +1226,10 @@ def my_schemes(request):
             "mock_payment_enabled": mock_payment_is_enabled(),
             "payment_gateway_enabled": payment_gateway_is_configured(),
             "cash_scheme_activity_enabled": cash_scheme_activity_is_enabled(),
+            "enrolment_requests": get_customer_enrolment_requests(request.user),
+            "enrolment_requests_enabled": (
+                settings.CUSTOMER_ENROLMENT_REQUESTS_ENABLED
+            ),
         },
     )
 
