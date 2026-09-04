@@ -2252,6 +2252,46 @@ end-to-end exactly-once delivery cannot be claimed. Treat a suspected duplicate 
 communication incident, preserve provider and local evidence, and do not edit the
 financial record.
 
+#### Production rollout evidence — 2026-09-04
+
+- The operator recorded the 2026-09-04 12:00 PM IST managed PostgreSQL recovery
+  point. The pre-release baseline was six customers, eight scheme accounts, zero
+  pending Razorpay contributions, zero cash principal or earned bonus,
+  `0.078407` g `GOLD_22K_916`, `0.329272` g `GOLD_24K_9999`, and zero
+  `SILVER_999`. Payment operations were open with zero pending orders; financial-
+  exception, Razorpay Live-readiness, exact-grade, in-store-cash, and provider dry-
+  run reconciliation checks all reported `status=ok`.
+- PR `#42` merged release `94cf3927a7138cf735da733c6ae68a8cce785cff`.
+  Protected-`main` run `33862547971` passed tests, deployment/static checks, image
+  publication, and its fixable-critical-vulnerability gate, producing
+  `ghcr.io/rajeshr188/jsk-savings@sha256:8270e175b9f4789dc12f83b9b41f504b0b3dcd5814a1b82f904aa61116623a7e`.
+  The Linode pulled that exact digest without credentials or an on-host build. With
+  432 MiB available memory, the reviewed plan contained only
+  `schemes.0019_scheme_reminders`; it applied successfully and every Scheme migration
+  through `0019` reported applied.
+- Release `94cf3927...` became healthy on the immutable digest. Its disabled dry-run
+  reported zero candidates, two owner recipients, zero invalid customer recipients,
+  zero sends, and no retry failures. All pre-release financial/provider gates
+  remained green. The first installed systemd unit exited `125` before Django ran:
+  `ProtectHome=true` hid per-user Docker state, the Compose subcommand was not
+  resolved, and Docker rejected `--env-file`. No email or database mutation occurred.
+- PR `#43` corrected that boundary without weakening `ProtectHome`: the unit uses a
+  systemd-owned empty `DOCKER_CONFIG` and `docker exec` against the stable
+  `jsk-savings-web-1` container. Protected-`main` run `33865158341` passed 294 tests,
+  deployment/static checks, publication, and the vulnerability gate, producing
+  release `c889ee6906a8bddd4c7852955025efe42ffa5752` at
+  `ghcr.io/rajeshr188/jsk-savings@sha256:88eea68169da2ea04f9f104358ecb69ec929989b15f5e447825ab0f0bd806c33`.
+  The Linode again pulled and deployed the exact digest without building. The
+  corrected service exited successfully while fail-closed and explicitly reported
+  that no email was sent; public Live/Ready returned `status=ok` with the exact
+  hotfix release.
+- This is the first application release deployed from the protected-`main` public
+  GHCR artifact, closing `FW-PROD-006`. The reminder implementation, schema, command,
+  owner view, and hardened scheduler boundary are accepted. Because there was no
+  legitimate candidate, `FW-ELIG-002` retains one non-blocking first-use observation:
+  confirm the first naturally occurring reminder is accepted by Postmark and appears
+  in the owner delivery view. Do not manufacture a financial or redemption event.
+
 ### Live reconciliation, payment-error refund, and dispute boundary
 
 - **Daily reconciliation:** compare Razorpay Live captured payments against the owner
