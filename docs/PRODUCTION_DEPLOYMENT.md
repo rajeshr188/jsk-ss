@@ -882,7 +882,7 @@ image. A runtime `collectstatic` job is neither required nor desired.
 ### One-time GHCR pull access on the Linode
 
 The first successful protected-`main` workflow creates or updates the repository-
-linked `ghcr.io/rajeshr188/jsk-ss` package. Confirm in GitHub Packages that it is
+linked `ghcr.io/rajeshr188/jsk-savings` package. Confirm in GitHub Packages that it is
 linked to this repository and remains private. The workflow publishes with its
 short-lived `GITHUB_TOKEN`; no long-lived publishing credential is required.
 
@@ -898,7 +898,7 @@ echo
 printf '%s' "$JSK_GHCR_READ_TOKEN" | \
   docker login ghcr.io -u rajeshr188 --password-stdin
 unset JSK_GHCR_READ_TOKEN
-docker pull ghcr.io/rajeshr188/jsk-ss@sha256:<approved-manifest-digest>
+docker pull ghcr.io/rajeshr188/jsk-savings@sha256:<approved-manifest-digest>
 ```
 
 Protect the `deploy` account because Docker retains its registry credential for
@@ -1037,7 +1037,7 @@ The production target is the CI-published GHCR image built once from the merged
 commit, scanned, and promoted by immutable digest, for example:
 
 ```dotenv
-APP_IMAGE=ghcr.io/rajeshr188/jsk-ss@sha256:<approved-manifest-digest>
+APP_IMAGE=ghcr.io/rajeshr188/jsk-savings@sha256:<approved-manifest-digest>
 APP_RELEASE=<full-merged-commit-sha>
 ```
 
@@ -1046,7 +1046,7 @@ production digest in the release evidence. A digest pins exact image content; a 
 alone can be moved.
 
 The Actions summary from the successful protected-`main` run is the handoff record.
-Copy its exact `ghcr.io/rajeshr188/jsk-ss@sha256:...` value; never derive a digest from
+Copy its exact `ghcr.io/rajeshr188/jsk-savings@sha256:...` value; never derive a digest from
 a tag by assumption and never deploy a red or incomplete workflow run.
 
 There is no serving-host build fallback. Do not run `docker build`, Buildx, or a
@@ -1096,7 +1096,7 @@ For a registry release, there is no on-host build. Pull and inspect the approved
 digest before editing any release identity:
 
 ```bash
-export JSK_CANDIDATE_IMAGE='ghcr.io/rajeshr188/jsk-ss@sha256:<approved-manifest-digest>'
+export JSK_CANDIDATE_IMAGE='ghcr.io/rajeshr188/jsk-savings@sha256:<approved-manifest-digest>'
 docker pull "$JSK_CANDIDATE_IMAGE"
 docker image inspect "$JSK_CANDIDATE_IMAGE" --format '{{json .RepoDigests}}'
 ```

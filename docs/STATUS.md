@@ -308,9 +308,11 @@ shift the date; there is no early grace or later expiry.
   deploy digest in the Actions summary. The production guide now prohibits an
   on-host build, requires capacity preflight and sequential candidate checks, and
   documents a least-privilege read-only Linode pull credential. The first merged
-  publication and scan passed; completion still requires private-package review and
-  the first authenticated Linode digest pull. The currently healthy production
-  release is unchanged.
+  publication and scan passed, but an anonymous manifest probe proved the existing
+  `jsk-ss` package was public. It is not approved for deployment; the corrected
+  workflow targets a new `jsk-savings` package whose private visibility and first
+  authenticated Linode digest pull remain completion gates. The currently healthy
+  production release is unchanged.
 - `FW-PAY-003` retains two no-mutation recovery evidence exercises: an isolated
   Test-mode review/dry-run/apply case and an idempotent replay of an already-processed
   Live capture. External alerting and coordinated secret rotation remain separately
@@ -469,7 +471,10 @@ shift the date; there is no early grace or later expiry.
   `e78c2b20f013298186b7c742a18ba4d99658d164`, passed the published-digest critical-
   vulnerability gate, and produced
   `ghcr.io/rajeshr188/jsk-ss@sha256:9778089354d7110c8ea04f8ba2d8b4f6098e7d771e24329d0aeac441ae8faf3d`;
-  private-package review and Linode pull proof remain.
+  an anonymous pull then proved that existing package was public, so that digest is
+  retained as CI evidence but is explicitly not approved for deployment. The
+  publisher now targets the new private-by-default `jsk-savings` package; its private
+  pull and Linode pull proof remain.
 - The Linode production Compose model passes `docker compose config --quiet`, and
   Caddy 2.11.4 validates the exact apex-domain, `www` redirect, masked JSON access
   log, and release-label configuration. The financial heartbeat shell script passes

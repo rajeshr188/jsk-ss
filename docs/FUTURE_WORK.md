@@ -29,9 +29,12 @@ recorded limitations are not lost.
   its full commit SHA, scanned, and handed off by immutable digest. Closure requires
   review of the linked private package, read-only Linode registry login, successful
   digest pull/inspection, and a later production release deployed without an on-host
-  build; the first protected-`main` publication and scan passed on 2026-09-04. The
-  memory/disk preflight is mandatory; external capacity alert activation remains
-  under `FW-PROD-002`.
+  build. The first protected-`main` publication and scan passed on 2026-09-04, but an
+  anonymous probe proved the pre-existing `jsk-ss` package was public and therefore
+  ineligible for production promotion. The workflow now targets the new private-by-
+  default `jsk-savings` package; its private pull proof remains required. The memory/
+  disk preflight is mandatory; external capacity alert activation remains under
+  `FW-PROD-002`.
 - **FW-PROD-002 — Activate and exercise external observability:** Caddy already
   provides masked structured logs, release-labelled health endpoints, and the
   repository includes a five-minute financial-exception heartbeat. Configure the
