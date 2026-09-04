@@ -248,19 +248,10 @@ audited secret manager. Before financial go-live, select the controlled secret s
 access policy, backup, and rotation process that will be authoritative for these
 values; root access to the Compute Instance can read container environment variables.
 
-`APP_IMAGE` must name the approved image. Prefer a private registry digest. Until the
-GitHub billing lock is resolved and registry publishing exists, a staging-only image
-can be built from the checked-out approved commit and tagged locally:
-
-```bash
-docker build --pull --tag "jsk-savings:${JSK_RELEASE_SHA}" .
-```
-
-Set `APP_IMAGE` to `jsk-savings:` followed by the approved commit and set
-`APP_RELEASE` to that same full commit.
-Record `docker image inspect` output. Do not call a locally rebuilt image the promoted
-production artifact; real go-live still requires green CI and an approved immutable
-registry digest.
+`APP_IMAGE` must name the approved private GHCR digest and `APP_RELEASE` must name its
+matching full merged commit. Complete the read-only GHCR login described below, pull
+the digest from the successful protected-`main` Actions summary, and record
+`docker image inspect` output. Never run an image build on this serving host.
 
 ### Validate and start the Linode deployment
 
@@ -853,9 +844,13 @@ request body with the webhook signature.
 
 ## Build and release artifacts
 
-CI is the release gate. It currently uses PostgreSQL 16 to apply migrations, checks
-migration drift, runs Django checks and the full regression suite, runs deploy checks,
-collects static files, and independently builds the image.
+CI is the release gate. It uses PostgreSQL 16 to apply migrations, checks migration
+drift, runs Django checks and the full regression suite, runs deploy checks, collects
+static files, and builds the production image. Pull requests and non-`main` pushes
+build and scan a local CI image without registry credentials. After an approved
+change reaches protected `main`, a separate least-privilege job builds the merged
+commit once, pushes only its full-commit tag to GHCR, scans the published digest, and
+records the immutable deploy reference in the GitHub Actions job summary.
 
 For a release candidate:
 
@@ -865,23 +860,51 @@ uv sync --frozen
 uv run --env-file .env python manage.py makemigrations --check --dry-run
 uv run --env-file .env python manage.py check
 uv run --env-file .env python manage.py test
-docker build --pull --tag <registry>/jsk-savings:<commit-sha> .
+docker build --pull --tag jsk-savings:local-check .
 ```
 
 Run tests only against a disposable CI/test database. Never let Django create or
 destroy a test database beside production data.
 
-After the build:
+After the merged build:
 
 1. Record the source commit, CI run, image tag, and immutable image digest.
-2. Scan the final image and its locked Python dependencies using the organization's
-   approved scanners; triage findings before promotion.
-3. Push the image once. Do not rebuild separately for staging and production.
+2. Require the published-digest critical-vulnerability gate to pass and review the
+   scanner output before promotion.
+3. Publish only the full-commit tag. Do not publish or deploy a mutable `latest` tag,
+   and do not rebuild separately for staging and production.
 4. Set `APP_RELEASE` to the recorded commit or digest-derived identifier.
 5. Promote the exact same image digest through staging and production.
 
 Static files are collected in the builder stage and served by WhiteNoise from the
 image. A runtime `collectstatic` job is neither required nor desired.
+
+### One-time GHCR pull access on the Linode
+
+The first successful protected-`main` workflow creates or updates the repository-
+linked `ghcr.io/rajeshr188/jsk-ss` package. Confirm in GitHub Packages that it is
+linked to this repository and remains private. The workflow publishes with its
+short-lived `GITHUB_TOKEN`; no long-lived publishing credential is required.
+
+Create a separate GitHub package-read credential for the `deploy` account with only
+`read:packages` access. Do not grant package write/delete access, do not reuse the
+account password, and do not store this credential in `.env.production` or pass it
+to Django. In the `deploy` user's SSH session, enter it without echoing it:
+
+```bash
+umask 077
+read -rsp "GHCR read token: " JSK_GHCR_READ_TOKEN
+echo
+printf '%s' "$JSK_GHCR_READ_TOKEN" | \
+  docker login ghcr.io -u rajeshr188 --password-stdin
+unset JSK_GHCR_READ_TOKEN
+docker pull ghcr.io/rajeshr188/jsk-ss@sha256:<approved-manifest-digest>
+```
+
+Protect the `deploy` account because Docker retains its registry credential for
+future pulls. If the package is intentionally made public later, anonymous pulls are
+possible, but that visibility change requires separate review because an application
+image contains the packaged source and dependencies.
 
 ## Repository change to Linode deployment workflow
 
@@ -1010,8 +1033,8 @@ feature branch; build and deploy the exact merged 40-character commit SHA.
 
 ### 4. Build once and identify the release immutably
 
-The production target is a CI-published GHCR image built once from the merged commit,
-scanned, and promoted by immutable digest, for example:
+The production target is the CI-published GHCR image built once from the merged
+commit, scanned, and promoted by immutable digest, for example:
 
 ```dotenv
 APP_IMAGE=ghcr.io/rajeshr188/jsk-ss@sha256:<approved-manifest-digest>
@@ -1022,25 +1045,33 @@ Record the commit, CI run, image digest, scan result, migration plan, and previo
 production digest in the release evidence. A digest pins exact image content; a tag
 alone can be moved.
 
-Until registry publishing exists, the only permitted substitute is a staging-only
-build performed on the Linode from the exact detached commit:
+The Actions summary from the successful protected-`main` run is the handoff record.
+Copy its exact `ghcr.io/rajeshr188/jsk-ss@sha256:...` value; never derive a digest from
+a tag by assumption and never deploy a red or incomplete workflow run.
+
+There is no serving-host build fallback. Do not run `docker build`, Buildx, or a
+language dependency build on the 1 GiB production Compute Instance. Release-layer
+export plus an immediate one-off candidate container exhausted its 961 MiB RAM and
+496 MiB swap on 2026-09-04 and caused an origin outage. If GitHub Actions is
+unavailable, use a reviewed separate builder to build the exact merged commit, scan
+it, push it to the same private registry, and record its digest before deployment;
+otherwise defer the release.
+
+Before every production pull or candidate command, record capacity and confirm the
+previous image remains pullable:
 
 ```bash
-docker build --pull --tag "jsk-savings:${JSK_RELEASE_SHA}" .
-docker image inspect "jsk-savings:${JSK_RELEASE_SHA}"
+free -h
+swapon --show
+df -h / /var/lib/docker
+docker stats --no-stream
 ```
 
-Do not rebuild separately for staging and real production because the resulting
-artifact would no longer be the one that passed the gate.
-
-Before any on-host fallback build, record `free -h`, `swapon --show`, `df -h /`, and
-current container memory. Do not build on the production Compute Instance while it
-serves traffic when the host has only 1 GiB RAM; release-layer export plus an
-immediate one-off candidate container exhausted that topology on 2026-09-04 despite
-496 MiB swap and caused an origin outage. Use a CI-published immutable registry
-digest, a separate builder, or a reviewed temporary resize. A successfully built
-local image should be reused after recovery, never rebuilt reflexively. Run
-candidate one-off checks sequentially and recheck available memory between them.
+Stop when memory or disk headroom is materially below the last accepted release
+baseline. Run one-off candidate checks sequentially, remove each temporary container
+on completion, and repeat the capacity check between them. External threshold and
+notification testing remains tracked under `FW-PROD-002`; this preflight does not
+claim that deferred alerting is complete.
 
 ### 5. Prepare the Linode release
 
@@ -1061,10 +1092,19 @@ git checkout --detach "$JSK_RELEASE_SHA"
 test "$(git rev-parse HEAD)" = "$JSK_RELEASE_SHA"
 ```
 
-For a registry release, pull the recorded digest. For the staging-only fallback,
-build the local tag shown above. Edit only the two release identity values in the
-protected server environment; do not replace the file from the example and thereby
-erase production secrets:
+For a registry release, there is no on-host build. Pull and inspect the approved
+digest before editing any release identity:
+
+```bash
+export JSK_CANDIDATE_IMAGE='ghcr.io/rajeshr188/jsk-ss@sha256:<approved-manifest-digest>'
+docker pull "$JSK_CANDIDATE_IMAGE"
+docker image inspect "$JSK_CANDIDATE_IMAGE" --format '{{json .RepoDigests}}'
+```
+
+If authentication, manifest verification, architecture selection, or the pull
+fails, stop without changing `.env.production`. Otherwise edit only the two release
+identity values in the protected server environment; do not replace the file from
+the example and thereby erase production secrets:
 
 ```bash
 nano .env.production

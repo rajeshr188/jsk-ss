@@ -23,11 +23,14 @@ recorded limitations are not lost.
 
 ## Production operations
 
-- **FW-PROD-006 — Eliminate production-host image builds:** The 1 GiB Linode suffered
-  an OOM origin outage when an on-host Docker build was followed immediately by a
-  candidate container. Publish and deploy a CI-built immutable registry digest, or
-  use a separate builder/reviewed temporary resize. Add a memory/swap preflight and
-  capacity alert under `FW-PROD-002`; do not repeat builds on the serving host.
+- **FW-PROD-006 — Prove the first registry-backed release:** Repository implementation
+  now separates unprivileged pull-request image validation from protected-`main`
+  publication. The merged commit is built once in CI, published to private GHCR under
+  its full commit SHA, scanned, and handed off by immutable digest. Closure requires
+  one green protected-`main` publication, review of the linked private package,
+  read-only Linode registry login, successful digest pull/inspection, and a later
+  production release deployed without an on-host build. The memory/disk preflight is
+  mandatory; external capacity alert activation remains under `FW-PROD-002`.
 - **FW-PROD-002 — Activate and exercise external observability:** Caddy already
   provides masked structured logs, release-labelled health endpoints, and the
   repository includes a five-minute financial-exception heartbeat. Configure the
