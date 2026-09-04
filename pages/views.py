@@ -80,6 +80,13 @@ class PricingPageView(ListView):
             "name", "code"
         )
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["customer_enrolment_requests_enabled"] = (
+            settings.CUSTOMER_ENROLMENT_REQUESTS_ENABLED
+        )
+        return context
+
 
 class TermsPageView(TemplateView):
     template_name = "pages/terms.html"

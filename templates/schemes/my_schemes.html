@@ -9,6 +9,10 @@
     <h1>My schemes</h1>
     <p class="page-subtitle">Your current Jai Sri Krishna Jewellery savings agreements and outstanding entitlements.</p>
   </div>
+  <div class="page-actions">
+    <a class="btn btn-outline-dark" href="{% url 'schemes:my_enrolment_requests' %}">My enrolment requests</a>
+    {% if enrolment_requests_enabled %}<a class="btn btn-jsk" href="{% url 'pricing' %}">Browse plans</a>{% endif %}
+  </div>
 </div>
 
 <div class="row g-4">
@@ -51,7 +55,21 @@
     </div>
   </div></article></div>
   {% empty %}
-  <div class="col-12"><div class="card empty-state"><h2 class="h4">No schemes yet</h2><p>No savings scheme has been enrolled for this login. Please contact Jai Sri Krishna Jewellery for assistance.</p><div><a class="btn btn-jsk" href="{% url 'contact' %}">Contact the showroom</a></div></div></div>
+  <div class="col-12"><div class="card empty-state"><h2 class="h4">No schemes yet</h2><p>No savings agreement has been created for this login. An enrolment request does not permit payment until the showroom reviews the current terms and creates an agreement.</p><div class="d-flex flex-wrap justify-content-center gap-2">{% if enrolment_requests_enabled %}<a class="btn btn-jsk" href="{% url 'pricing' %}">Browse available plans</a>{% endif %}<a class="btn btn-outline-dark" href="{% url 'contact' %}">Contact the showroom</a></div></div></div>
   {% endfor %}
 </div>
+
+{% if enrolment_requests %}
+<section class="mt-5" aria-labelledby="request-summary-heading">
+  <div class="section-heading"><div><h2 id="request-summary-heading">Recent enrolment requests</h2><p>Requests are expressions of interest, not savings agreements.</p></div><a class="btn btn-sm btn-outline-dark" href="{% url 'schemes:my_enrolment_requests' %}">View all</a></div>
+  <div class="list-group">
+    {% for enrolment_request in enrolment_requests|slice:":3" %}
+    <a class="list-group-item list-group-item-action d-flex flex-wrap justify-content-between gap-2" href="{% url 'schemes:my_enrolment_request_detail' enrolment_request.pk %}">
+      <span><strong>{{ enrolment_request.plan_name_snapshot }}</strong> · {{ enrolment_request.metal_grade.display_name }}</span>
+      <span class="badge text-bg-secondary">{{ enrolment_request.effective_status_label }}</span>
+    </a>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
 {% endblock %}

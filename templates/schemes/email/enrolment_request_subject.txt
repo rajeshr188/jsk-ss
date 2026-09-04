@@ -1,0 +1,1 @@
+{% if audience == 'owner' %}New scheme enrolment request{% elif event == 'enrolled' %}Your scheme enrolment is complete{% elif event == 'declined' %}Update on your scheme enrolment request{% elif event == 'expired' %}Your scheme enrolment request has expired{% else %}We received your scheme enrolment request{% endif %}

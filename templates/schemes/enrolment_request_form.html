@@ -1,0 +1,38 @@
+{% extends '_base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Request {{ plan.name }} | Jai Sri Krishna Jewellery{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <p class="page-eyebrow">Non-binding interest</p>
+    <h1>Request enrolment in {{ plan.name }}</h1>
+    <p class="page-subtitle">Tell the showroom which available grade, contribution amount, and duration you prefer.</p>
+  </div>
+  <div class="page-actions"><a class="btn btn-outline-dark" href="{% url 'pricing' %}">Back to plans</a></div>
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-7">
+    <form method="post" class="card form-card" novalidate>
+      {% csrf_token %}
+      {{ form|crispy }}
+      <button class="btn btn-jsk" type="submit">Submit enrolment request</button>
+    </form>
+  </div>
+  <div class="col-lg-5">
+    <div class="card">
+      <div class="card-body p-4">
+        <h2 class="h4">What happens next</h2>
+        <ol class="mb-0">
+          <li>The showroom reviews this request and contacts you.</li>
+          <li>You review the current plan terms together.</li>
+          <li>Only the showroom can create the savings agreement.</li>
+          <li>Payment becomes available only after that agreement exists.</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

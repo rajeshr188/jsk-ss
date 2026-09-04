@@ -23,6 +23,7 @@ from .models import (
     SchemeRate,
     Redemption,
     SchemeAccount,
+    SchemeEnrolmentRequest,
     SchemeReminder,
 )
 
@@ -300,6 +301,51 @@ def get_latest_customer_invitation(customer):
 
 def get_customer_scheme_account(user, scheme_number):
     return get_customer_scheme_summary(user).filter(scheme_number=scheme_number).first()
+
+
+def get_customer_enrolment_requests(user):
+    return SchemeEnrolmentRequest.objects.filter(
+        customer__user=user,
+    ).select_related(
+        "customer",
+        "plan",
+        "metal_grade",
+        "scheme_account",
+    ).order_by(
+        "-created_at",
+        "-pk",
+    )
+
+
+def get_customer_enrolment_request(user, request_id):
+    return get_customer_enrolment_requests(user).filter(pk=request_id).first()
+
+
+def get_owner_enrolment_requests():
+    return SchemeEnrolmentRequest.objects.select_related(
+        "customer__user",
+        "plan",
+        "metal_grade",
+        "scheme_account",
+        "decided_by",
+    ).order_by(
+        Case(
+            When(
+                status=SchemeEnrolmentRequest.Status.PENDING_OWNER_REVIEW,
+                then=Value(0),
+            ),
+            default=Value(1),
+        ),
+        "-created_at",
+        "-pk",
+    )
+
+
+def get_pending_enrolment_request_count():
+    return SchemeEnrolmentRequest.objects.filter(
+        status=SchemeEnrolmentRequest.Status.PENDING_OWNER_REVIEW,
+        expires_at__gt=timezone.now(),
+    ).count()
 
 
 def get_current_scheme_rate(metal_grade, at=None):
@@ -1027,7 +1073,7 @@ def get_completed_redemptions_for_date(*, as_of):
     )
 
 
-def get_scheme_reminder_owner_emails():
+def get_owner_notification_emails():
     user_model = get_user_model()
     emails = user_model.objects.filter(
         is_active=True,
@@ -1047,6 +1093,10 @@ def get_scheme_reminder_owner_emails():
         if normalized:
             deduplicated.setdefault(normalized, normalized)
     return tuple(deduplicated.values())
+
+
+def get_scheme_reminder_owner_emails():
+    return get_owner_notification_emails()
 
 
 def get_owner_scheme_reminders():

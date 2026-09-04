@@ -474,6 +474,26 @@ if PUBLIC_CUSTOMER_REGISTRATION_ENABLED and not (
     raise ImproperlyConfigured(
         "Public customer registration requires nonblank Terms and Privacy versions"
     )
+CUSTOMER_ENROLMENT_REQUESTS_ENABLED = env_bool(
+    "CUSTOMER_ENROLMENT_REQUESTS_ENABLED"
+)
+CUSTOMER_ENROLMENT_REQUEST_EXPIRY_DAYS = env_int(
+    "CUSTOMER_ENROLMENT_REQUEST_EXPIRY_DAYS",
+    30,
+    minimum=1,
+    maximum=90,
+)
+CUSTOMER_ENROLMENT_REQUEST_DISCLOSURE_VERSION = os.getenv(
+    "CUSTOMER_ENROLMENT_REQUEST_DISCLOSURE_VERSION",
+    "2026-09-04",
+).strip()
+if (
+    CUSTOMER_ENROLMENT_REQUESTS_ENABLED
+    and not CUSTOMER_ENROLMENT_REQUEST_DISCLOSURE_VERSION
+):
+    raise ImproperlyConfigured(
+        "Customer enrolment requests require a nonblank disclosure version"
+    )
 
 # https://docs.djangoproject.com/en/dev/ref/settings/#csrf-trusted-origins
 CSRF_TRUSTED_ORIGINS = env_list(

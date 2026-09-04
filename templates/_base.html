@@ -58,7 +58,7 @@
           {% if user.is_authenticated %}
             {% if user.is_superuser or user.role == 'OWNER' %}
             <li class="nav-item"><a class="nav-link{% if current_url == 'owner_dashboard' %} active{% endif %}"{% if current_url == 'owner_dashboard' %} aria-current="page"{% endif %} href="{% url 'schemes:owner_dashboard' %}">Dashboard</a></li>
-            <li class="nav-item"><a class="nav-link{% if current_url == 'customer_list' or current_url == 'customer_detail' or current_url == 'customer_add' or current_url == 'customer_enroll' %} active{% endif %}" href="{% url 'schemes:customer_list' %}">Customers</a></li>
+            <li class="nav-item"><a class="nav-link{% if current_url == 'customer_list' or current_url == 'customer_detail' or current_url == 'customer_add' or current_url == 'customer_enroll' or current_url == 'owner_enrolment_request_list' or current_url == 'owner_enrolment_request_detail' or current_url == 'owner_enrolment_request_enroll' %} active{% endif %}" href="{% url 'schemes:customer_list' %}">Customers</a></li>
             <li class="nav-item dropdown">
               <a class="nav-link dropdown-toggle{% if current_url == 'payment_operations' or current_url == 'scheme_rates' or current_url == 'plan_list' or current_url == 'plan_add' or current_url == 'plan_edit' or current_url == 'contribution_list' or current_url == 'redemption_eligibility' or current_url == 'redemption_list' or current_url == 'exception_queue' or current_url == 'reminder_delivery_log' or current_url == 'audit_log' %} active{% endif %}" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">Operations</a>
               <ul class="dropdown-menu">
@@ -76,7 +76,7 @@
               </ul>
             </li>
             {% else %}
-            <li class="nav-item"><a class="nav-link{% if current_url == 'my_schemes' or current_url == 'my_scheme_detail' %} active{% endif %}" href="{% url 'schemes:my_schemes' %}">My schemes</a></li>
+            <li class="nav-item"><a class="nav-link{% if current_url == 'my_schemes' or current_url == 'my_scheme_detail' or current_url == 'scheme_enrolment_request_create' or current_url == 'my_enrolment_requests' or current_url == 'my_enrolment_request_detail' %} active{% endif %}" href="{% url 'schemes:my_schemes' %}">My schemes</a></li>
             {% endif %}
           {% endif %}
         </ul>

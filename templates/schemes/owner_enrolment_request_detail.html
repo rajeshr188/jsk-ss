@@ -1,0 +1,66 @@
+{% extends '_base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Review enrolment request | Jai Sri Krishna Jewellery{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <p class="page-eyebrow">Owner review</p>
+    <h1>{{ enrolment_request.customer.full_name }}</h1>
+    <p class="page-subtitle">{{ enrolment_request.plan_name_snapshot }} · {{ enrolment_request.metal_grade.display_name }}</p>
+  </div>
+  <div class="page-actions">
+    <a class="btn btn-outline-dark" href="{% url 'schemes:owner_enrolment_request_list' %}">All requests</a>
+    <a class="btn btn-outline-dark" href="{% url 'schemes:customer_detail' enrolment_request.customer.pk %}">Customer record</a>
+  </div>
+</div>
+
+{% if not offer_is_current and enrolment_request.status == 'PENDING_OWNER_REVIEW' %}
+<div class="alert alert-warning"><strong>The public offer changed or closed.</strong> Do not silently substitute terms. Close this request and ask the customer to review the current offer.</div>
+{% endif %}
+
+<div class="row g-4">
+  <div class="col-lg-7">
+    <div class="card">
+      <div class="card-body p-4">
+        <div class="d-flex justify-content-between gap-3">
+          <h2 class="h4">Recorded request</h2>
+          <span class="badge text-bg-secondary align-self-start">{{ enrolment_request.effective_status_label }}</span>
+        </div>
+        <dl class="row mb-0">
+          <dt class="col-sm-5">Customer</dt><dd class="col-sm-7">{{ enrolment_request.customer.customer_number }} · {{ enrolment_request.customer.email }} · {{ enrolment_request.customer.mobile_number }}</dd>
+          <dt class="col-sm-5">Plan at request</dt><dd class="col-sm-7">{{ enrolment_request.plan_name_snapshot }} ({{ enrolment_request.plan_code_snapshot }})</dd>
+          <dt class="col-sm-5">Preferred contribution</dt><dd class="col-sm-7">₹{{ enrolment_request.requested_contribution_amount|floatformat:2 }}</dd>
+          <dt class="col-sm-5">Preferred duration</dt><dd class="col-sm-7">{{ enrolment_request.requested_months }} months</dd>
+          <dt class="col-sm-5">Offer frequency</dt><dd class="col-sm-7">{{ enrolment_request.get_frequency_rule_snapshot_display }}</dd>
+          <dt class="col-sm-5">Submitted</dt><dd class="col-sm-7">{{ enrolment_request.created_at|date:"d M Y, h:i A" }}</dd>
+          <dt class="col-sm-5">Valid until</dt><dd class="col-sm-7">{{ enrolment_request.expires_at|date:"d M Y, h:i A" }}</dd>
+          {% if enrolment_request.customer_message %}<dt class="col-sm-5">Customer message</dt><dd class="col-sm-7">{{ enrolment_request.customer_message|linebreaksbr }}</dd>{% endif %}
+          {% if enrolment_request.decision_reason %}<dt class="col-sm-5">Decision</dt><dd class="col-sm-7">{{ enrolment_request.decision_reason }}<div class="small text-secondary">{{ enrolment_request.decided_by_label }} · {{ enrolment_request.decided_at|date:"d M Y, h:i A" }}</div></dd>{% endif %}
+          {% if enrolment_request.scheme_account %}<dt class="col-sm-5">Created scheme</dt><dd class="col-sm-7"><a href="{% url 'schemes:customer_detail' enrolment_request.customer.pk %}">{{ enrolment_request.scheme_account.scheme_number }}</a></dd>{% endif %}
+        </dl>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-5">
+    {% if enrolment_request.status == 'PENDING_OWNER_REVIEW' %}
+      {% if enrolment_request.effective_status != 'EXPIRED' and offer_is_current %}
+      <div class="card form-card mb-3">
+        <h2 class="h4">Create agreement</h2>
+        <p>This opens the final owner-controlled enrolment form. The request itself grants no payment access.</p>
+        <a class="btn btn-jsk" href="{% url 'schemes:owner_enrolment_request_enroll' enrolment_request.pk %}">Review current terms and enrol</a>
+      </div>
+      {% endif %}
+      <form method="post" action="{% if enrolment_request.effective_status == 'EXPIRED' %}{% url 'schemes:owner_enrolment_request_expire' enrolment_request.pk %}{% else %}{% url 'schemes:owner_enrolment_request_decline' enrolment_request.pk %}{% endif %}" class="card form-card">
+        {% csrf_token %}
+        <h2 class="h4">{% if enrolment_request.effective_status == 'EXPIRED' %}Record expiry{% else %}Decline request{% endif %}</h2>
+        {{ decision_form|crispy }}
+        <button class="btn btn-outline-danger" type="submit">{% if enrolment_request.effective_status == 'EXPIRED' %}Mark expired{% else %}Decline request{% endif %}</button>
+      </form>
+    {% else %}
+    <div class="card"><div class="card-body p-4"><h2 class="h4">Decision recorded</h2><p class="mb-0">This request is closed and retained for audit.</p></div></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -18,6 +18,7 @@
 - [x] Post-MVP modularity — Exact-grade metal contracts, rates, allocations, and redemptions
 
 - [x] `FW-AUTH-002` — Staged public customer registration with owner approval
+- [ ] `FW-ENROL-001` — Non-binding customer enrolment requests with owner conversion
 
 Milestones are vertical increments. Each must leave migrations, tests, system checks, user flows, and canonical documentation coherent before the next begins.
 

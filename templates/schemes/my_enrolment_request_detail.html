@@ -1,0 +1,64 @@
+{% extends '_base.html' %}
+
+{% block title %}Enrolment request | Jai Sri Krishna Jewellery{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <p class="page-eyebrow">Non-binding interest</p>
+    <h1>{{ enrolment_request.plan_name_snapshot }}</h1>
+    <p class="page-subtitle">This request does not itself create a savings agreement or payment access.</p>
+  </div>
+  <div class="page-actions"><a class="btn btn-outline-dark" href="{% url 'schemes:my_enrolment_requests' %}">All requests</a></div>
+</div>
+
+{% if enrolment_request.status == 'PENDING_OWNER_REVIEW' and not offer_is_current %}
+<div class="alert alert-warning">
+  <strong>The displayed offer has changed or closed.</strong>
+  Withdraw this request, review the current plans, and submit a new request if you still wish to proceed.
+</div>
+{% endif %}
+
+<div class="row g-4">
+  <div class="col-lg-7">
+    <div class="card">
+      <div class="card-body p-4">
+        <div class="d-flex justify-content-between gap-3">
+          <h2 class="h4">Request details</h2>
+          <span class="badge text-bg-secondary align-self-start">{{ enrolment_request.effective_status_label }}</span>
+        </div>
+        <dl class="row mb-0">
+          <dt class="col-sm-5">Metal grade</dt><dd class="col-sm-7">{{ enrolment_request.metal_grade.display_name }}</dd>
+          <dt class="col-sm-5">Preferred contribution</dt><dd class="col-sm-7">₹{{ enrolment_request.requested_contribution_amount|floatformat:2 }}</dd>
+          <dt class="col-sm-5">Preferred duration</dt><dd class="col-sm-7">{{ enrolment_request.requested_months }} months</dd>
+          <dt class="col-sm-5">Submitted</dt><dd class="col-sm-7">{{ enrolment_request.created_at|date:"d M Y, h:i A" }}</dd>
+          <dt class="col-sm-5">Valid until</dt><dd class="col-sm-7">{{ enrolment_request.expires_at|date:"d M Y, h:i A" }}</dd>
+          {% if enrolment_request.customer_message %}<dt class="col-sm-5">Your message</dt><dd class="col-sm-7">{{ enrolment_request.customer_message|linebreaksbr }}</dd>{% endif %}
+          {% if enrolment_request.decision_reason %}<dt class="col-sm-5">Decision note</dt><dd class="col-sm-7">{{ enrolment_request.decision_reason }}</dd>{% endif %}
+          {% if enrolment_request.scheme_account %}<dt class="col-sm-5">Scheme</dt><dd class="col-sm-7"><a href="{% url 'schemes:my_scheme_detail' enrolment_request.scheme_account.scheme_number %}">{{ enrolment_request.scheme_account.scheme_number }}</a></dd>{% endif %}
+        </dl>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-5">
+    <div class="card">
+      <div class="card-body p-4">
+        <h2 class="h4">Status</h2>
+        {% if enrolment_request.status == 'ENROLLED' %}
+        <p>The showroom created your savings agreement. Open the linked scheme to review its recorded terms.</p>
+        {% elif enrolment_request.effective_status == 'EXPIRED' %}
+        <p>This request is no longer active. No scheme or payment permission was created.</p>
+        {% elif enrolment_request.status == 'PENDING_OWNER_REVIEW' %}
+        <p>The showroom will contact you before any agreement is created.</p>
+        <form method="post" action="{% url 'schemes:my_enrolment_request_withdraw' enrolment_request.pk %}">
+          {% csrf_token %}
+          <button class="btn btn-outline-danger" type="submit">Withdraw request</button>
+        </form>
+        {% else %}
+        <p>This request is closed. No payment permission exists unless a linked scheme is shown.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

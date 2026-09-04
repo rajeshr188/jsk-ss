@@ -36,6 +36,7 @@ from .models import (
     Redemption,
     RedemptionReversal,
     SchemeAccount,
+    SchemeEnrolmentRequest,
     SchemePlan,
     SchemePlanOffering,
 )
@@ -90,6 +91,12 @@ class InStoreCashContributionPreview:
     contribution_period: date
     scheme_rate: SchemeRate
     quantity: Decimal
+
+
+@dataclass(frozen=True)
+class EnrolmentRequestSubmission:
+    enrolment_request: SchemeEnrolmentRequest
+    created: bool
 
 
 class WebhookTransientProcessingError(Exception):
@@ -418,6 +425,389 @@ def enroll_customer(
         },
     )
     return account
+
+
+def _validate_customer_actor(*, customer, actor):
+    user_model = get_user_model()
+    if (
+        actor is None
+        or not actor.is_active
+        or actor.role != user_model.Role.CUSTOMER
+        or customer.user_id != actor.pk
+    ):
+        raise ValidationError("Only the active customer may perform this action.")
+
+
+def _normalize_requested_contribution(*, plan, amount):
+    try:
+        normalized = Decimal(str(amount)).quantize(MONEY_QUANTUM)
+    except (InvalidOperation, TypeError, ValueError):
+        raise ValidationError(
+            {"requested_contribution_amount": "Enter a valid contribution amount."}
+        ) from None
+    if not normalized.is_finite() or normalized <= 0:
+        raise ValidationError(
+            {"requested_contribution_amount": "Enter a positive contribution amount."}
+        )
+    if Decimal(str(amount)) != normalized:
+        raise ValidationError(
+            {
+                "requested_contribution_amount": (
+                    "Contribution amounts support at most 2 decimal places."
+                )
+            }
+        )
+    if plan.amount_rule == SchemePlan.AmountRule.FIXED:
+        if normalized != plan.fixed_contribution_amount:
+            raise ValidationError(
+                {
+                    "requested_contribution_amount": (
+                        "This plan uses the displayed fixed contribution amount."
+                    )
+                }
+            )
+    elif normalized < plan.minimum_contribution or (
+        plan.maximum_contribution is not None
+        and normalized > plan.maximum_contribution
+    ):
+        raise ValidationError(
+            {
+                "requested_contribution_amount": (
+                    "Choose an amount within the plan's displayed range."
+                )
+            }
+        )
+    return normalized
+
+
+def enrolment_request_offer_is_current(enrolment_request):
+    plan = enrolment_request.plan
+    if not plan.active or not plan.publicly_listed:
+        return False
+    if not SchemePlanOffering.objects.filter(
+        plan=plan,
+        metal_grade=enrolment_request.metal_grade,
+        active=True,
+    ).exists():
+        return False
+    return all(
+        [
+            enrolment_request.amount_rule_snapshot == plan.amount_rule,
+            enrolment_request.plan_name_snapshot == plan.name,
+            enrolment_request.plan_code_snapshot == plan.code,
+            enrolment_request.frequency_rule_snapshot == plan.frequency_rule,
+            enrolment_request.fixed_contribution_amount_snapshot
+            == plan.fixed_contribution_amount,
+            enrolment_request.minimum_contribution_snapshot
+            == plan.minimum_contribution,
+            enrolment_request.maximum_contribution_snapshot
+            == plan.maximum_contribution,
+            enrolment_request.minimum_months_snapshot == plan.minimum_months,
+            enrolment_request.default_months_snapshot == plan.default_months,
+            enrolment_request.allow_post_eligibility_contributions_snapshot
+            == plan.allow_contributions_after_eligibility,
+        ]
+    )
+
+
+def _request_audit_details(enrolment_request):
+    return {
+        "enrolment_request_id": str(enrolment_request.pk),
+        "customer_number": enrolment_request.customer.customer_number,
+        "plan_code": enrolment_request.plan_code_snapshot,
+        "metal_grade": enrolment_request.metal_grade.code,
+        "requested_contribution_amount": str(
+            enrolment_request.requested_contribution_amount
+        ),
+        "requested_months": enrolment_request.requested_months,
+        "disclosure_version": enrolment_request.disclosure_version,
+    }
+
+
+def _decide_enrolment_request(*, enrolment_request, status, actor, reason):
+    normalized_reason = reason.strip()
+    if not normalized_reason:
+        raise ValidationError({"reason": "Enter a reason for this action."})
+    enrolment_request.status = status
+    enrolment_request.decided_by = actor
+    enrolment_request.decided_by_label = _actor_label(actor)
+    enrolment_request.decision_reason = normalized_reason
+    enrolment_request.decided_at = timezone.now()
+    enrolment_request.save()
+    return enrolment_request
+
+
+@transaction.atomic
+def submit_scheme_enrolment_request(
+    *,
+    customer,
+    plan,
+    metal_grade,
+    requested_contribution_amount,
+    requested_months,
+    customer_message,
+    actor,
+):
+    if not settings.CUSTOMER_ENROLMENT_REQUESTS_ENABLED:
+        raise ValidationError("Online enrolment requests are currently unavailable.")
+    customer = Customer.objects.select_for_update().select_related("user").get(
+        pk=customer.pk
+    )
+    _validate_customer_actor(customer=customer, actor=actor)
+    plan = SchemePlan.objects.get(pk=plan.pk)
+    metal_grade = MetalGrade.objects.get(pk=metal_grade.pk)
+    plan.full_clean()
+    if not plan.active or not plan.publicly_listed:
+        raise ValidationError({"plan": "This plan is not open for online requests."})
+    if not SchemePlanOffering.objects.filter(
+        plan=plan,
+        metal_grade=metal_grade,
+        active=True,
+    ).exists():
+        raise ValidationError(
+            {"metal_grade": "This metal grade is not currently offered by the plan."}
+        )
+
+    now = timezone.now()
+    expired_requests = SchemeEnrolmentRequest.objects.select_for_update().filter(
+        customer=customer,
+        plan=plan,
+        metal_grade=metal_grade,
+        status=SchemeEnrolmentRequest.Status.PENDING_OWNER_REVIEW,
+        expires_at__lte=now,
+    )
+    for expired_request in expired_requests:
+        _decide_enrolment_request(
+            enrolment_request=expired_request,
+            status=SchemeEnrolmentRequest.Status.EXPIRED,
+            actor=None,
+            reason="The request validity period ended before a replacement submission.",
+        )
+        record_audit_event(
+            action=AuditEvent.Action.ENROLMENT_REQUEST_EXPIRED,
+            actor=None,
+            reason=expired_request.decision_reason,
+            scheme_plan=expired_request.plan,
+            details=_request_audit_details(expired_request),
+        )
+
+    existing = SchemeEnrolmentRequest.objects.filter(
+        customer=customer,
+        plan=plan,
+        metal_grade=metal_grade,
+        status=SchemeEnrolmentRequest.Status.PENDING_OWNER_REVIEW,
+    ).first()
+    if existing is not None:
+        return EnrolmentRequestSubmission(existing, False)
+
+    try:
+        requested_months = int(requested_months)
+    except (TypeError, ValueError):
+        raise ValidationError(
+            {"requested_months": "Enter a valid preferred duration."}
+        ) from None
+    if requested_months < plan.minimum_months:
+        raise ValidationError(
+            {
+                "requested_months": (
+                    f"This plan requires at least {plan.minimum_months} months."
+                )
+            }
+        )
+    normalized_amount = _normalize_requested_contribution(
+        plan=plan,
+        amount=requested_contribution_amount,
+    )
+    normalized_message = str(customer_message or "").strip()
+    if len(normalized_message) > 1000:
+        raise ValidationError(
+            {"customer_message": "Keep the showroom message within 1000 characters."}
+        )
+    enrolment_request = SchemeEnrolmentRequest(
+        customer=customer,
+        plan=plan,
+        metal_grade=metal_grade,
+        plan_name_snapshot=plan.name,
+        plan_code_snapshot=plan.code,
+        requested_contribution_amount=normalized_amount,
+        requested_months=requested_months,
+        customer_message=normalized_message,
+        amount_rule_snapshot=plan.amount_rule,
+        frequency_rule_snapshot=plan.frequency_rule,
+        fixed_contribution_amount_snapshot=plan.fixed_contribution_amount,
+        minimum_contribution_snapshot=plan.minimum_contribution,
+        maximum_contribution_snapshot=plan.maximum_contribution,
+        minimum_months_snapshot=plan.minimum_months,
+        default_months_snapshot=plan.default_months,
+        allow_post_eligibility_contributions_snapshot=(
+            plan.allow_contributions_after_eligibility
+        ),
+        disclosure_version=settings.CUSTOMER_ENROLMENT_REQUEST_DISCLOSURE_VERSION,
+        disclosure_accepted_at=now,
+        expires_at=now
+        + timedelta(days=settings.CUSTOMER_ENROLMENT_REQUEST_EXPIRY_DAYS),
+    )
+    enrolment_request.save()
+    record_audit_event(
+        action=AuditEvent.Action.ENROLMENT_REQUEST_SUBMITTED,
+        actor=actor,
+        reason="Customer submitted a non-binding enrolment interest request.",
+        scheme_plan=plan,
+        details=_request_audit_details(enrolment_request),
+    )
+    return EnrolmentRequestSubmission(enrolment_request, True)
+
+
+@transaction.atomic
+def withdraw_scheme_enrolment_request(*, enrolment_request, actor):
+    enrolment_request = (
+        SchemeEnrolmentRequest.objects.select_for_update()
+        .select_related("customer__user", "plan", "metal_grade")
+        .get(pk=enrolment_request.pk)
+    )
+    _validate_customer_actor(customer=enrolment_request.customer, actor=actor)
+    if enrolment_request.status != SchemeEnrolmentRequest.Status.PENDING_OWNER_REVIEW:
+        raise ValidationError("Only a pending request can be withdrawn.")
+    status = SchemeEnrolmentRequest.Status.WITHDRAWN
+    reason = "Customer withdrew the enrolment interest request."
+    action = AuditEvent.Action.ENROLMENT_REQUEST_WITHDRAWN
+    if enrolment_request.expires_at <= timezone.now():
+        status = SchemeEnrolmentRequest.Status.EXPIRED
+        reason = "The request validity period ended before withdrawal."
+        action = AuditEvent.Action.ENROLMENT_REQUEST_EXPIRED
+    _decide_enrolment_request(
+        enrolment_request=enrolment_request,
+        status=status,
+        actor=actor if status == SchemeEnrolmentRequest.Status.WITHDRAWN else None,
+        reason=reason,
+    )
+    record_audit_event(
+        action=action,
+        actor=actor if status == SchemeEnrolmentRequest.Status.WITHDRAWN else None,
+        reason=reason,
+        scheme_plan=enrolment_request.plan,
+        details=_request_audit_details(enrolment_request),
+    )
+    return enrolment_request
+
+
+@transaction.atomic
+def decide_scheme_enrolment_request(*, enrolment_request, status, actor, reason):
+    _validate_owner(actor)
+    if status not in {
+        SchemeEnrolmentRequest.Status.DECLINED,
+        SchemeEnrolmentRequest.Status.EXPIRED,
+    }:
+        raise ValidationError("Select a supported enrolment request decision.")
+    enrolment_request = (
+        SchemeEnrolmentRequest.objects.select_for_update()
+        .select_related("customer__user", "plan", "metal_grade")
+        .get(pk=enrolment_request.pk)
+    )
+    if enrolment_request.status != SchemeEnrolmentRequest.Status.PENDING_OWNER_REVIEW:
+        raise ValidationError("Only a pending request can be reviewed.")
+    if (
+        enrolment_request.expires_at <= timezone.now()
+        and status != SchemeEnrolmentRequest.Status.EXPIRED
+    ):
+        raise ValidationError("This request has expired; record it as expired.")
+    _decide_enrolment_request(
+        enrolment_request=enrolment_request,
+        status=status,
+        actor=actor,
+        reason=reason,
+    )
+    action = (
+        AuditEvent.Action.ENROLMENT_REQUEST_DECLINED
+        if status == SchemeEnrolmentRequest.Status.DECLINED
+        else AuditEvent.Action.ENROLMENT_REQUEST_EXPIRED
+    )
+    record_audit_event(
+        action=action,
+        actor=actor,
+        reason=enrolment_request.decision_reason,
+        scheme_plan=enrolment_request.plan,
+        details=_request_audit_details(enrolment_request),
+    )
+    return enrolment_request
+
+
+@transaction.atomic
+def enroll_customer_from_request(
+    *,
+    enrolment_request,
+    actor,
+    current_terms_confirmed,
+    start_date,
+    agreed_months,
+    reason,
+):
+    _validate_owner(actor)
+    enrolment_request = (
+        SchemeEnrolmentRequest.objects.select_for_update()
+        .select_related("customer__user", "metal_grade")
+        .get(pk=enrolment_request.pk)
+    )
+    if enrolment_request.status == SchemeEnrolmentRequest.Status.ENROLLED:
+        return enrolment_request.scheme_account, False
+    if enrolment_request.status != SchemeEnrolmentRequest.Status.PENDING_OWNER_REVIEW:
+        raise ValidationError("Only a pending request can become an agreement.")
+    current_plan = SchemePlan.objects.select_for_update().get(
+        pk=enrolment_request.plan_id
+    )
+    SchemePlanOffering.objects.select_for_update().filter(
+        plan=current_plan,
+        metal_grade=enrolment_request.metal_grade,
+    ).first()
+    enrolment_request.plan = current_plan
+    user_model = get_user_model()
+    if (
+        not enrolment_request.customer.user.is_active
+        or enrolment_request.customer.user.role != user_model.Role.CUSTOMER
+    ):
+        raise ValidationError(
+            "The customer login is no longer active and eligible for conversion."
+        )
+    if enrolment_request.expires_at <= timezone.now():
+        raise ValidationError(
+            "This request has expired. Record expiry and ask the customer to submit again."
+        )
+    if not current_terms_confirmed:
+        raise ValidationError(
+            "Confirm that the current terms were reviewed with the customer."
+        )
+    if not enrolment_request_offer_is_current(enrolment_request):
+        raise ValidationError(
+            "The public offer changed or closed. Do not silently substitute terms; "
+            "ask the customer to review the current offer and submit again."
+        )
+    account = enroll_customer(
+        customer=enrolment_request.customer,
+        plan=enrolment_request.plan,
+        metal_grade=enrolment_request.metal_grade,
+        start_date=start_date,
+        agreed_months=agreed_months,
+        performed_by=actor,
+        reason=reason,
+    )
+    enrolment_request.scheme_account = account
+    _decide_enrolment_request(
+        enrolment_request=enrolment_request,
+        status=SchemeEnrolmentRequest.Status.ENROLLED,
+        actor=actor,
+        reason=reason,
+    )
+    details = _request_audit_details(enrolment_request)
+    details["scheme_number"] = account.scheme_number
+    record_audit_event(
+        action=AuditEvent.Action.ENROLMENT_REQUEST_ENROLLED,
+        actor=actor,
+        reason=enrolment_request.decision_reason,
+        scheme_plan=enrolment_request.plan,
+        scheme_account=account,
+        details=details,
+    )
+    return account, True
 
 
 def contribution_period_for(value):

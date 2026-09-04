@@ -1313,6 +1313,95 @@ approved and one rejected application. Neither Caddy nor application logs contai
 the verification path or a raw token. This closes `FW-AUTH-002`; disabling the flag
 remains the immediate rollback for the public entry point.
 
+#### Customer enrolment-interest rollout (`schemes.0020`)
+
+`FW-ENROL-001` is a separate step after customer access approval. Keep request
+creation closed while applying and validating the additive migration:
+
+```dotenv
+CUSTOMER_ENROLMENT_REQUESTS_ENABLED=False
+CUSTOMER_ENROLMENT_REQUEST_EXPIRY_DAYS=30
+CUSTOMER_ENROLMENT_REQUEST_DISCLOSURE_VERSION=2026-09-04
+```
+
+The disclosure version identifies the exact non-binding acknowledgement shown to the
+customer. Change it when that acknowledgement materially changes. Before deployment,
+record the rollback image/release, a current Managed PostgreSQL recovery point, host
+capacity, and the standard customer/account/liability baseline. Payment pausing is not
+required because this migration does not alter contributions, rates, allocations,
+balances, or existing agreements; operators may still pause if the broader release
+contains financial changes.
+
+Review the candidate migration plan and require only
+`schemes.0020_scheme_enrolment_requests`. It adds the request table and audit-action
+choices; it does not backfill or rewrite any customer, scheme account, contribution,
+rate, allocation, redemption, or liability:
+
+```bash
+docker compose --env-file .env.production -f compose.production.yml \
+  run --rm --no-deps web python manage.py check --deploy --fail-level ERROR
+docker compose --env-file .env.production -f compose.production.yml \
+  run --rm --no-deps web python manage.py showmigrations schemes
+docker compose --env-file .env.production -f compose.production.yml \
+  run --rm --no-deps web python manage.py migrate --plan
+docker compose --env-file .env.production -f compose.production.yml \
+  run --rm --no-deps web python manage.py migrate --noinput
+```
+
+Require `schemes.0020` to be `[X]`. Recreate only `web`; this phase adds no public
+token route and requires no Caddy change:
+
+```bash
+docker compose --env-file .env.production -f compose.production.yml \
+  up -d --force-recreate --no-deps web
+docker compose --env-file .env.production -f compose.production.yml ps
+docker compose --env-file .env.production -f compose.production.yml \
+  exec -T web python manage.py check_scheme_enrolment_requests
+```
+
+Require a healthy candidate, the expected release, `status=ok enabled=false`, both
+HTTPS health endpoints returning 200, and all applicable payment-operations,
+financial-exception, Razorpay Live-readiness, exact-grade, in-store cash, and
+abandoned-order dry-run gates remaining green. With the flag false, the owner may
+open **Customers → Enrolment requests** to inspect the empty/historical queue, but the
+public plans page must show no request button and a direct new-request URL must return
+404. Existing request history remains viewable if the feature is disabled later.
+
+Activation is a separate configuration decision. Confirm at least one active,
+publicly listed plan has the intended active exact-grade offerings, its displayed INR
+amount/duration terms have been reviewed, customer and owner email delivery works,
+and the disclosure version is current. Set
+`CUSTOMER_ENROLMENT_REQUESTS_ENABLED=True`, validate Compose, and recreate only
+`web`. Then use a legitimate approved customer profile to prove:
+
+1. The customer selects one public plan, exact metal grade, preferred INR
+   contribution, preferred duration, and accepts the non-binding disclosure.
+2. Exactly one pending request and one submission audit event are recorded. No
+   `SchemeAccount`, contribution, Razorpay order, Scheme Rate lock, allocation, or
+   liability is created by submission, and a repeat submission returns the same
+   pending request.
+3. The email provider accepts the customer acknowledgement and owner notification;
+   both messages state that the request is not an agreement or payment permission.
+4. The owner queue displays the request and current-offer check. Conversion is
+   blocked if the plan/offering changed or the request expired.
+5. After the owner actually reviews the current plan, grade, start date, amount rule,
+   and duration with the customer, explicit confirmation creates exactly one ordinary
+   snapshotted `SchemeAccount`, links it to the retained request, and sends the
+   completion notice. Repeating conversion creates no second account.
+6. The customer sees the linked scheme and only then receives the existing payment
+   action subject to rates and payment controls. Run
+   `check_scheme_enrolment_requests` again and require `status=ok`.
+
+Also exercise withdrawal or decline in a non-production environment; do not create a
+false production request merely to fill every terminal state. A request is not an
+electronic signature, KYC decision, payment mandate, or proof that an email was read.
+
+If activation behaves unexpectedly, set the flag to `False`, validate Compose, and
+recreate only `web`. This immediately prevents new submissions while preserving the
+owner queue and all request/audit evidence. Do not delete request rows or reverse the
+additive migration. The previous application image can run against the extended
+schema, but suspend use of the new queue until the corrected release is restored.
+
 Before applying `schemes.0010_manual_scheme_rates`, confirm the old architecture has
 no verified metal payment without an allocation and no open metal Razorpay order.
 This deliberately includes both `PAID` and `PAID_UNALLOCATED`: an interrupted legacy

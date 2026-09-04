@@ -3,6 +3,7 @@ from decimal import Decimal
 
 from django import forms
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 
 from .models import (
     InStoreCashContributionReversal,
@@ -176,6 +177,140 @@ class EnrolmentForm(forms.Form):
                 f"This plan requires at least {plan.minimum_months} months.",
             )
         return cleaned
+
+
+class SchemeEnrolmentRequestForm(forms.Form):
+    metal_grade = forms.ModelChoiceField(
+        queryset=MetalGrade.objects.none(),
+        label="Metal grade",
+    )
+    requested_contribution_amount = forms.DecimalField(
+        label="Preferred contribution amount",
+        max_digits=14,
+        decimal_places=2,
+        min_value=Decimal("0.01"),
+    )
+    requested_months = forms.IntegerField(
+        label="Preferred duration",
+        min_value=12,
+        help_text="This preference is reviewed before an agreement is created.",
+    )
+    customer_message = forms.CharField(
+        label="Message for the showroom",
+        required=False,
+        max_length=1000,
+        widget=forms.Textarea(attrs={"rows": 3}),
+    )
+    disclosure_accepted = forms.BooleanField(
+        label=(
+            "I understand this is a non-binding request. It does not create a scheme "
+            "account or payment access, and the showroom must review the current terms "
+            "with me before enrolment."
+        ),
+    )
+
+    def __init__(self, *args, plan, **kwargs):
+        self.plan = plan
+        super().__init__(*args, **kwargs)
+        self.fields["metal_grade"].queryset = MetalGrade.objects.filter(
+            plan_offerings__plan=plan,
+            plan_offerings__active=True,
+        ).order_by("display_order", "code")
+        self.fields["requested_months"].min_value = plan.minimum_months
+        self.fields["requested_months"].initial = plan.default_months
+        if plan.amount_rule == SchemePlan.AmountRule.FIXED:
+            self.fields["requested_contribution_amount"].initial = (
+                plan.fixed_contribution_amount
+            )
+            self.fields["requested_contribution_amount"].disabled = True
+            self.fields["requested_contribution_amount"].help_text = (
+                "This plan uses the displayed fixed contribution amount."
+            )
+        else:
+            self.fields["requested_contribution_amount"].initial = (
+                plan.minimum_contribution
+            )
+            if plan.maximum_contribution is None:
+                self.fields["requested_contribution_amount"].help_text = (
+                    f"Choose ₹{plan.minimum_contribution:.2f} or more."
+                )
+            else:
+                self.fields["requested_contribution_amount"].help_text = (
+                    f"Choose ₹{plan.minimum_contribution:.2f}–"
+                    f"₹{plan.maximum_contribution:.2f}."
+                )
+
+    def clean(self):
+        cleaned = super().clean()
+        grade = cleaned.get("metal_grade")
+        amount = cleaned.get("requested_contribution_amount")
+        months = cleaned.get("requested_months")
+        if grade and not SchemePlanOffering.objects.filter(
+            plan=self.plan,
+            metal_grade=grade,
+            active=True,
+        ).exists():
+            self.add_error("metal_grade", "This grade is no longer offered.")
+        if amount is not None:
+            if self.plan.amount_rule == SchemePlan.AmountRule.FIXED:
+                if amount != self.plan.fixed_contribution_amount:
+                    self.add_error(
+                        "requested_contribution_amount",
+                        "Use the displayed fixed contribution amount.",
+                    )
+            elif amount < self.plan.minimum_contribution or (
+                self.plan.maximum_contribution is not None
+                and amount > self.plan.maximum_contribution
+            ):
+                self.add_error(
+                    "requested_contribution_amount",
+                    "Choose an amount within the displayed range.",
+                )
+        if months is not None and months < self.plan.minimum_months:
+            self.add_error(
+                "requested_months",
+                f"This plan requires at least {self.plan.minimum_months} months.",
+            )
+        return cleaned
+
+
+class EnrolmentRequestDecisionForm(forms.Form):
+    reason = forms.CharField(
+        label="Decision reason",
+        max_length=500,
+        widget=forms.Textarea(attrs={"rows": 3}),
+        help_text="Retained with the request and immutable audit record.",
+    )
+
+
+class EnrolmentRequestConversionForm(EnrolmentForm):
+    current_terms_confirmed = forms.BooleanField(
+        label=(
+            "I reviewed the current plan, grade, amount, duration, and start date "
+            "with the customer."
+        ),
+    )
+
+    def __init__(self, *args, enrolment_request, **kwargs):
+        self.enrolment_request = enrolment_request
+        initial = kwargs.setdefault("initial", {})
+        initial.setdefault("plan", enrolment_request.plan)
+        initial.setdefault("metal_grade", enrolment_request.metal_grade)
+        initial.setdefault("start_date", timezone.localdate())
+        initial.setdefault("agreed_months", enrolment_request.requested_months)
+        super().__init__(*args, **kwargs)
+        self.fields["plan"].queryset = SchemePlan.objects.filter(
+            pk=enrolment_request.plan_id
+        )
+        self.fields["metal_grade"].queryset = MetalGrade.objects.filter(
+            pk=enrolment_request.metal_grade_id
+        )
+        self.fields["plan"].disabled = True
+        self.fields["metal_grade"].disabled = True
+        self.fields["audit_reason"].label = "Confirmation and enrolment reason"
+        self.fields["audit_reason"].help_text = (
+            "Record how the current terms were confirmed with the customer."
+        )
 
 
 class ContributionForm(forms.Form):

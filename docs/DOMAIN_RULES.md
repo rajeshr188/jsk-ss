@@ -37,6 +37,19 @@ This is the canonical source for stable business rules.
 - **SCH-009:** Existing pre-grade Gold contracts remain `GOLD_24K_9999` and existing
   Silver contracts remain `SILVER_999`. They are never numerically converted or
   relabelled as `GOLD_22K_916`.
+- **SCH-010:** An authenticated customer may submit a non-binding interest request
+  only for an active, publicly listed plan and active exact-grade offering. A request
+  creates no scheme account, payment permission, rate lock, allocation, eligibility,
+  or liability.
+- **SCH-011:** Plan name/code and material public offer terms are snapshotted as request evidence. If
+  those terms or the selected offering change before review, the request cannot be
+  silently converted; the customer must review the current offer and submit again.
+- **SCH-012:** Only an active owner may convert a pending request after recording that
+  the current terms were reviewed with the customer. Conversion atomically calls the
+  existing enrolment service, links exactly one `SchemeAccount`, and is idempotent.
+- **SCH-013:** Only one pending request may exist per customer, plan, and exact metal
+  grade. Customers may withdraw; owners may decline or expire with a reason; terminal
+  request and decision evidence is retained.
 - **CON-001:** Amount rules (`FIXED`/`VARIABLE`) and frequency rules (`ONCE_PER_MONTH`/`FLEXIBLE`) are independent.
 - **CON-002:** Monthly periods use deterministic calendar keys such as `2026-08`, never rolling 30-day windows.
 - **CON-003:** `ONCE_PER_MONTH` permits one successfully paid contribution per scheme account and calendar month. Both `PAID` and `PAID_UNALLOCATED` consume the opportunity; `PENDING`, `FAILED`, `ABANDONED`, and corrected `REVERSED` records do not.
