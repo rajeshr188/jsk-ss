@@ -2,17 +2,15 @@
 
 ## Current milestone
 
-`FW-AUTH-002` is implemented fail-closed on `agent/public-signup-approval` under
-ADR-0011. Direct allauth signup remains closed. The new staged request records a
-complete proposed profile and versioned consent, verifies email without storing the
-raw token, waits for owner approval/manual mobile confirmation, and only then creates
-the existing customer profile plus password-setup invitation. It never creates a
-scheme or grants payment access. Public enablement remains off pending review, merge,
-disabled rollout of additive `accounts.0004`, and controlled production acceptance.
-The first genuine `FW-ELIG-002` Postmark observation remains separate and does not
-block this work. The local migration and aggregate integrity check pass, the complete
-313-test Django suite passes, and a final 48-test authentication/owner-flow rerun
-passes after the last secret-log and duplicate-mobile safeguards.
+`FW-AUTH-002` is production-accepted under ADR-0011. Release
+`613e2f7363a67ea6d588273f54bcddb628f9549a` deployed the additive `accounts.0004`
+migration behind a closed flag, passed the disabled-state gates, and then enabled the
+staged public application. Direct allauth signup remains closed. A controlled
+replacement-verification/rejection journey created no login, while a separately
+approved request required manual mobile confirmation, created the existing customer
+profile and password invitation, and created no scheme or payment access. Aggregate
+integrity and secret-log checks passed. The first genuine `FW-ELIG-002` Postmark
+observation remains separate and pending.
 
 ## Completed
 
@@ -311,15 +309,15 @@ passes after the last secret-log and duplicate-mobile safeguards.
   environment, release, schema, or database mutation had occurred. Reboot restored
   the old release, and the retained candidate was then deployed sequentially without
   rebuilding. Future serving-host builds are prohibited under `FW-PROD-006`.
+- `FW-AUTH-002` completed production rollout and controlled acceptance on 2026-09-04
+  in release `613e2f7363a67ea6d588273f54bcddb628f9549a`. Direct allauth signup remains
+  closed; the public route creates only a staged application. Email confirmation,
+  replacement-token invalidation, owner rejection without account creation, manual
+  mobile confirmation, approval/invitation, customer password setup, login with zero
+  schemes, and Caddy/application token-log exclusions were exercised successfully.
 
 ## In progress
 
-- `FW-AUTH-002` is code-complete and locally verified behind a disabled feature flag:
-  complete proposed profile data, versioned Terms/Privacy consent, one-time
-  digest-only email verification, explicit awaiting-owner state, owner-only
-  approval/rejection and manual mobile confirmation, generic duplicate/throttle
-  responses, database-backed abuse limits, and invitation handoff without automatic
-  scheme enrolment. Protected-main review and controlled production acceptance remain.
 - `FW-ELIG-002` awaits only the first naturally occurring reminder-specific Postmark
   acceptance and matching owner delivery record. Its deployed zero-candidate run is
   correct evidence that no message is invented merely to satisfy a rollout smoke.
@@ -392,12 +390,14 @@ passes after the last secret-log and duplicate-mobile safeguards.
   forfeiture, tax treatment, or expected-future-contribution projection.
 - Bonus liability reads are calculated per cash account; aggregate optimization is
   deferred until measured account volume requires it.
-- Plan-specific early-discontinuation pricing, open public self-registration, and
-  partial-settlement policy are not yet defined. Email reminders are implemented but
-  production rollout remains pending; SMS/WhatsApp, inbox-delivery/read proof,
+- Plan-specific early-discontinuation pricing, direct automatic account signup, and
+  partial-settlement policy are not defined. Staged public applications are active,
+  but login creation still requires owner approval and financial enrolment remains a
+  separate owner action. Email reminders are deployed, but the first genuine delivery
+  observation remains pending; SMS/WhatsApp, inbox-delivery/read proof,
   automatic multi-day catch-up, and end-to-end exactly-once SMTP delivery are not
-  claimed. Owner-invitation onboarding is deployed; public self-registration remains
-  intentionally closed.
+  claimed. Owner-invitation onboarding remains available alongside the staged public
+  application.
 - The production catalogue is active and its deployment, authorization, content,
   browser, and R2 smoke gates pass. There is still no isolated media backup/restore
   proof. Retain approved source photographs outside R2; production must not rely on
@@ -545,10 +545,8 @@ passes after the last secret-log and duplicate-mobile safeguards.
 
 ## Next recommended step
 
-Complete the `FW-AUTH-002` regression and deployment checks, review the additive
-`accounts.0004` migration and ADR-0011, then open a PR against protected `main`.
-Deploy the merged image with `PUBLIC_CUSTOMER_REGISTRATION_ENABLED=False`; only after
-the owner queue, Caddy secret-path exclusion, email verification, approval,
-invitation, login-without-scheme, and aggregate integrity check pass should public
-enablement be considered. Keep the first genuine `FW-ELIG-002` delivery observation,
-`FW-PAY-003`, and the accepted `FW-PROD-002`/`FW-PROD-003` budget deferrals separate.
+Observe the first genuine `FW-ELIG-002` reminder acceptance and matching owner
+delivery record without manufacturing an eligibility event. If active development is
+preferred while waiting, resume the isolated, no-mutation `FW-PAY-003` webhook
+recovery evidence exercises. Keep the accepted `FW-PROD-002`/`FW-PROD-003` budget
+deferrals separate.

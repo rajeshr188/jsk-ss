@@ -125,16 +125,8 @@ recorded limitations are not lost.
   execution boundary are deployed. A zero-candidate production run correctly sent
   nothing. Formal closure now requires the first naturally occurring reminder to be
   accepted by Postmark and appear in the owner delivery view; do not manufacture a
-  financial or redemption event for this observation. This does not block isolated
-  `FW-AUTH-002` development.
-- **FW-AUTH-002 — Accept staged public customer registration in production:** The
-  implementation keeps allauth signup closed and adds a disabled-by-default access
-  application with complete proposed profile, versioned consent, digest-only email
-  verification, generic duplicate responses, database-backed abuse limits, explicit
-  owner review/manual mobile confirmation, and the existing password invitation on
-  approval. Merge and deploy `accounts.0004` with the flag disabled, verify the owner
-  queue and secret-log boundary, then run one controlled application-to-invitation
-  journey before separately approving public enablement.
+  financial or redemption event for this observation. This does not block other
+  isolated development.
 - **FW-AUTH-003 — Keep login separate from enrolment:** Contribution access must remain
   disabled until an owner creates a valid `SchemeAccount`; a public login must never
   imply financial enrolment.
@@ -165,7 +157,7 @@ Completed implementation and rollout details are intentionally not repeated here
   `FW-AUDIT-001`, `FW-DOC-001`, `FW-DOC-002`, `FW-DOC-003`, `FW-PRODUCT-001`,
   `FW-PAY-001`, `FW-PAY-002`, `FW-PAY-004`, `FW-PAY-005`, `FW-PAY-006`,
   `FW-PRICE-001`, `FW-RATE-001`, and `FW-RATE-002`.
-- **Authentication and eligibility:** `FW-AUTH-001`, `FW-ELIG-001`.
+- **Authentication and eligibility:** `FW-AUTH-001`, `FW-AUTH-002`, `FW-ELIG-001`.
 - **CMS, media, and catalogue:** `FW-CMS-001`, `FW-CMS-002`, `FW-CMS-003`,
   `FW-MEDIA-001`, `FW-CATALOG-001`, `FW-CATALOG-002`, `FW-CATALOG-003`, and
   `FW-CATALOG-004`.
