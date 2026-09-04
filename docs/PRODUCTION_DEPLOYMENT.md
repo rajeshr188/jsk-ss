@@ -1285,6 +1285,34 @@ be added later as defence in depth. If behavior is unexpected, set
 application records for review. Do not reverse the additive migration or delete
 registration evidence merely to disable the public form.
 
+Production acceptance was completed on 2026-09-04. Protected-main CI run
+`33872481777` passed the complete test/deploy/static gates, published and scanned
+release `613e2f7363a67ea6d588273f54bcddb628f9549a`, and recorded immutable image
+`ghcr.io/rajeshr188/jsk-savings@sha256:59543c618c533c96d2a3c048569d24d80ad12b47bd560a97e73157af4ea1e0a2`.
+The retained rollback was release `c889ee6906a8bddd4c7852955025efe42ffa5752`
+at digest `sha256:88eea68169da2ea04f9f104358ecb69ec929989b15f5e447825ab0f0bd806c33`,
+and the managed PostgreSQL recovery point was 2026-09-04 5:00 PM IST.
+
+The reviewed plan contained only `accounts.0004`; it applied successfully. The web
+and Caddy services became healthy with the public flag disabled, the aggregate check
+reported `status=ok enabled=false`, `/accounts/register/` returned 404, and allauth
+signup remained closed. Financial exceptions, Razorpay Live readiness, payment
+operations, exact-grade metal, in-store cash, abandoned-order dry-run, and reminder
+dry-run checks all remained green. The operator then confirmed Site 1, policy
+versions, Postmark delivery, and the effective Caddy exclusion before enabling the
+flag. The public route returned 200 and the aggregate check reported
+`status=ok enabled=true` with all approval-integrity counters at zero.
+
+Controlled production journeys proved that a replacement verification invalidated
+the earlier URL, email verification required the explicit CSRF-protected confirmation,
+and rejection created no login. Approval required a recorded reason and manual mobile
+confirmation, created one customer plus the existing password invitation, and created
+zero scheme accounts. Password setup and customer login succeeded with no payment
+action before separate enrolment. The final operator confirmation recorded one
+approved and one rejected application. Neither Caddy nor application logs contained
+the verification path or a raw token. This closes `FW-AUTH-002`; disabling the flag
+remains the immediate rollback for the public entry point.
+
 Before applying `schemes.0010_manual_scheme_rates`, confirm the old architecture has
 no verified metal payment without an allocation and no open metal Razorpay order.
 This deliberately includes both `PAID` and `PAID_UNALLOCATED`: an interrupted legacy
