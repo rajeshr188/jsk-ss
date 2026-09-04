@@ -2,12 +2,12 @@
 
 ## Current milestone
 
-`FW-ELIG-001` is implemented locally. Contractual eligibility now has one explicit
-exact-calendar policy across enrolment, contribution, bonus, effective status,
-forecast, and redemption paths: month-end clamping is deterministic; weekends,
-public holidays, showroom closure, schedules, and payment pauses do not shift the
-date; there is no early grace or later expiry. The change adds no schema migration
-and awaits CI and production rollout.
+`FW-ELIG-001` completed production rollout and acceptance on 2026-09-04 in release
+`50bfd3673c57dff51b46238094bcad899a36c8fa`. Contractual eligibility now has one
+explicit exact-calendar policy across enrolment, contribution, bonus, effective
+status, forecast, and redemption paths: month-end clamping is deterministic;
+weekends, public holidays, showroom closure, schedules, and payment pauses do not
+shift the date; there is no early grace or later expiry.
 
 ## Completed
 
@@ -291,11 +291,17 @@ and awaits CI and production rollout.
   `0.068180` g. The immutable receipt, one audit event, statement, owner ledger, and
   CSV reconciled; cash, financial-exception, exact-grade, and Razorpay Live-readiness
   checks remained green.
+- `FW-ELIG-001` completed production rollout and acceptance on 2026-09-04 in release
+  `50bfd3673c57dff51b46238094bcad899a36c8fa`. Its no-op migration plan, exact-calendar
+  production probes, public Terms wording, unchanged eight-account financial
+  baseline, and all financial/provider gates passed. The on-host build caused a
+  recoverable OOM origin outage before cutover on the 1 GiB Compute Instance; no
+  environment, release, schema, or database mutation had occurred. Reboot restored
+  the old release, and the retained candidate was then deployed sequentially without
+  rebuilding. Future serving-host builds are prohibited under `FW-PROD-006`.
 
 ## In progress
 
-- `FW-ELIG-001` awaits CI and a normal no-migration application rollout. Customer and
-  owner wording now separates entitlement eligibility from showroom availability.
 - `FW-PAY-003` retains two no-mutation recovery evidence exercises: an isolated
   Test-mode review/dry-run/apply case and an idempotent replay of an already-processed
   Live capture. External alerting and coordinated secret rotation remain separately
@@ -316,7 +322,7 @@ and awaits CI and production rollout.
   CA are in place, SSH access is verified, Docker is installed, and the owned domain
   returns liveness and PostgreSQL readiness `200` through Caddy-managed HTTPS;
   paid external alert exercises remain deferred.
-- Production release `315f836ac0717fbaaf2d8d90268471ac1670e5b1` is healthy with
+- Production release `50bfd3673c57dff51b46238094bcad899a36c8fa` is healthy with
   migrations through `schemes.0018_in_store_cash_contributions`,
   `catalog.0001_initial`, `pages.0001_initial`,
   and `accounts.0003_customerinvitation_and_more`
@@ -486,8 +492,8 @@ and awaits CI and production rollout.
 
 ## Next recommended step
 
-Resume the bounded `FW-PAY-003` evidence work: replay one already-processed Live
-`payment.captured` event through Razorpay Dashboard and prove that an `ALREADY_FINAL`
-attempt is appended without creating another contribution entitlement or allocation.
-Keep paid external alerting and coordinated secret rotation deferred under the
-already accepted `FW-PROD-002`/`FW-PROD-003` budget boundary.
+Complete `FW-PROD-006` before the next application release: publish the CI-built
+image to an immutable registry digest (or use a separate builder) so the 1 GiB
+production host never builds an image while serving traffic. Then resume the bounded
+`FW-PAY-003` replay evidence work. Keep paid external alerting and coordinated secret
+rotation deferred under the accepted `FW-PROD-002`/`FW-PROD-003` budget boundary.

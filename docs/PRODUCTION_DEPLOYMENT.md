@@ -1033,6 +1033,15 @@ docker image inspect "jsk-savings:${JSK_RELEASE_SHA}"
 Do not rebuild separately for staging and real production because the resulting
 artifact would no longer be the one that passed the gate.
 
+Before any on-host fallback build, record `free -h`, `swapon --show`, `df -h /`, and
+current container memory. Do not build on the production Compute Instance while it
+serves traffic when the host has only 1 GiB RAM; release-layer export plus an
+immediate one-off candidate container exhausted that topology on 2026-09-04 despite
+496 MiB swap and caused an origin outage. Use a CI-published immutable registry
+digest, a separate builder, or a reviewed temporary resize. A successfully built
+local image should be reused after recovery, never rebuilt reflexively. Run
+candidate one-off checks sequentially and recheck available memory between them.
+
 ### 5. Prepare the Linode release
 
 Open a planned change window. Record the current `APP_IMAGE`, `APP_RELEASE`, container
@@ -2023,6 +2032,54 @@ the flag and payment initiation paused during unresolved financial incidents.
   Application-only rollback to the old image is no longer write-safe after `0018`;
   any recovery must keep payments paused and reconcile all activity after the
   recorded recovery point before restoring the database and old image together.
+
+### FW-ELIG-001 exact-calendar eligibility rollout
+
+ADR-0010 changes no stored schema or existing agreement date. Deploy it through the
+normal immutable-image path, require a no-op migration plan, and compare customer,
+account, pending-payment, paid-unallocated, and exact-grade liability totals before
+and after replacement. Verify the public Terms wording plus these deployed policy
+boundaries: the day before is ineligible, the exact date is eligible, eligibility
+does not expire, month-end clamps to the destination month's final day, and a weekend
+date is not shifted. Reaching eligibility must not mutate stored account status.
+
+#### Completed production rollout evidence — 2026-09-04
+
+- PR `#36` passed both Django and container CI triggers and merged as release
+  `50bfd3673c57dff51b46238094bcad899a36c8fa`. The Linode image
+  `jsk-savings:50bfd3673c57dff51b46238094bcad899a36c8fa` has digest
+  `sha256:c18d89243ad753e9eeca519cb1bc164ae25176051731e25834fe61639b9f0a43`;
+  rollback image/release `315f836ac0717fbaaf2d8d90268471ac1670e5b1` remained present.
+- Pre-release checks reported six customers, eight scheme accounts, zero pending
+  Razorpay contributions, zero paid-unallocated contributions, `0.078407` g
+  `GOLD_22K_916`, `0.329272` g `GOLD_24K_9999`, and zero `SILVER_999`.
+  Financial-exception, Razorpay Live-readiness, exact-grade, in-store-cash,
+  payment-operations, and provider dry-run reconciliation gates were green.
+- The candidate deploy check passed with only two non-blocking staged-HSTS warnings,
+  and the migration plan contained no operations. No migration or database mutation
+  occurred. The latest previously recorded managed recovery point was 2026-09-03
+  4:00 PM IST; it predates the first in-store receipt and was not treated as a safe
+  financial restore point. This no-schema release retained application-image rollback
+  as the recovery path.
+- The first on-host build completed, but starting the immediate candidate preflight
+  exhausted the 961 MiB RAM / 496 MiB swap Compute Instance. The kernel OOM killer
+  terminated a process, SSH and HTTPS stopped responding, and Cloudflare reported an
+  origin host error. At that point `.env.production`, running release, database, and
+  schema were unchanged. A controlled host reboot restored healthy release
+  `315f836a`; the candidate image and rollback image both survived. The deploy user
+  lacked permission to read the root-only previous-boot kernel journal.
+- After recovery, the existing candidate was reused without rebuilding. Each
+  candidate gate ran sequentially with 418–431 MiB available; only the two release
+  identity lines were changed, the web container was replaced rather than overlapped,
+  and validated Caddy was recreated after web became healthy.
+- Independent Live/Ready requests returned `200` with release `50bfd367...`; static
+  CSS and the public exact-calendar Terms paragraph returned `200`. Post-release
+  financial/provider gates remained green and the full baseline matched exactly.
+  All eight stored agreements matched `start_date + agreed_months`; deployed probes
+  confirmed day-before false, exact-day true, ten-years-later true, leap-year clamp
+  `2024-02-29`, and unshifted Sunday `2026-09-06`. Recent logs contained no release
+  failure; one routine WordPress-probe `404` and Caddy's known HTTP/3 receive-buffer
+  notice required no action.
 
 ### Live reconciliation, payment-error refund, and dispute boundary
 
