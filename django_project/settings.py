@@ -39,6 +39,28 @@ def env_list(name, default=""):
     return [item.strip() for item in os.getenv(name, default).split(",") if item.strip()]
 
 
+def env_int_list(name, default, *, minimum=None, maximum=None, max_items=None):
+    raw_items = env_list(name, default)
+    values = []
+    for raw_item in raw_items:
+        try:
+            value = int(raw_item)
+        except ValueError as exc:
+            raise ImproperlyConfigured(
+                f"{name} must be a comma-separated list of integers"
+            ) from exc
+        if minimum is not None and value < minimum:
+            raise ImproperlyConfigured(f"{name} values must be at least {minimum}")
+        if maximum is not None and value > maximum:
+            raise ImproperlyConfigured(f"{name} values must be at most {maximum}")
+        values.append(value)
+    if len(values) != len(set(values)):
+        raise ImproperlyConfigured(f"{name} must not contain duplicate values")
+    if max_items is not None and len(values) > max_items:
+        raise ImproperlyConfigured(f"{name} may contain at most {max_items} values")
+    return tuple(values)
+
+
 def postgres_database_from_url(url):
     parsed = urlparse(url)
     if parsed.scheme not in {"postgres", "postgresql"}:
@@ -311,6 +333,75 @@ if EMAIL_USE_TLS and EMAIL_USE_SSL:
     raise ImproperlyConfigured("EMAIL_USE_TLS and EMAIL_USE_SSL cannot both be enabled")
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "noreply@jskjewellery.local")
 SERVER_EMAIL = os.getenv("SERVER_EMAIL", DEFAULT_FROM_EMAIL)
+
+# Transactional scheme reminders are scheduled externally through the
+# send_scheme_reminders management command. Every audience can be disabled
+# independently, while the master switch defaults off for controlled rollout.
+SCHEME_REMINDERS_ENABLED = env_bool("SCHEME_REMINDERS_ENABLED", False)
+SCHEME_REMINDER_ELIGIBILITY_DAYS = env_int_list(
+    "SCHEME_REMINDER_ELIGIBILITY_DAYS",
+    "30,7,1",
+    minimum=1,
+    maximum=90,
+    max_items=10,
+)
+SCHEME_REMINDER_CUSTOMER_ELIGIBILITY = env_bool(
+    "SCHEME_REMINDER_CUSTOMER_ELIGIBILITY", True
+)
+SCHEME_REMINDER_OWNER_ELIGIBILITY = env_bool(
+    "SCHEME_REMINDER_OWNER_ELIGIBILITY", True
+)
+SCHEME_REMINDER_OWNER_ALLOCATION_EXCEPTIONS = env_bool(
+    "SCHEME_REMINDER_OWNER_ALLOCATION_EXCEPTIONS", True
+)
+SCHEME_REMINDER_CUSTOMER_REDEMPTIONS = env_bool(
+    "SCHEME_REMINDER_CUSTOMER_REDEMPTIONS", True
+)
+SCHEME_REMINDER_OWNER_REDEMPTIONS = env_bool(
+    "SCHEME_REMINDER_OWNER_REDEMPTIONS", True
+)
+SCHEME_REMINDER_RETRY_LIMIT = env_int(
+    "SCHEME_REMINDER_RETRY_LIMIT", 3, minimum=1, maximum=10
+)
+SCHEME_REMINDER_BASE_URL = os.getenv(
+    "SCHEME_REMINDER_BASE_URL", WAGTAILADMIN_BASE_URL
+).strip().rstrip("/")
+if (
+    SCHEME_REMINDER_CUSTOMER_ELIGIBILITY
+    or SCHEME_REMINDER_OWNER_ELIGIBILITY
+) and not SCHEME_REMINDER_ELIGIBILITY_DAYS:
+    raise ImproperlyConfigured(
+        "SCHEME_REMINDER_ELIGIBILITY_DAYS cannot be empty while eligibility "
+        "reminders are enabled"
+    )
+if SCHEME_REMINDERS_ENABLED and not any(
+    [
+        SCHEME_REMINDER_CUSTOMER_ELIGIBILITY,
+        SCHEME_REMINDER_OWNER_ELIGIBILITY,
+        SCHEME_REMINDER_OWNER_ALLOCATION_EXCEPTIONS,
+        SCHEME_REMINDER_CUSTOMER_REDEMPTIONS,
+        SCHEME_REMINDER_OWNER_REDEMPTIONS,
+    ]
+):
+    raise ImproperlyConfigured(
+        "SCHEME_REMINDERS_ENABLED requires at least one reminder audience"
+    )
+if not SCHEME_REMINDER_BASE_URL.startswith(("http://", "https://")):
+    raise ImproperlyConfigured(
+        "SCHEME_REMINDER_BASE_URL must be an absolute HTTP or HTTPS URL"
+    )
+if not DEBUG and not SCHEME_REMINDER_BASE_URL.startswith("https://"):
+    raise ImproperlyConfigured(
+        "SCHEME_REMINDER_BASE_URL must use HTTPS outside development"
+    )
+if (
+    not DEBUG
+    and SCHEME_REMINDERS_ENABLED
+    and urlparse(SCHEME_REMINDER_BASE_URL).hostname not in ALLOWED_HOSTS
+):
+    raise ImproperlyConfigured(
+        "SCHEME_REMINDER_BASE_URL host must be present in ALLOWED_HOSTS"
+    )
 
 # django-debug-toolbar
 # https://django-debug-toolbar.readthedocs.io/en/latest/installation.html

@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 
+from django.contrib.auth import get_user_model
 from django.db.models import Case, Count, DecimalField, F, OuterRef, Q, Subquery, Sum, Value, When
 from django.db.models.functions import Coalesce
 from django.utils import timezone
@@ -22,6 +23,7 @@ from .models import (
     SchemeRate,
     Redemption,
     SchemeAccount,
+    SchemeReminder,
 )
 
 
@@ -975,4 +977,84 @@ def get_redemption_eligibility_summary(as_of=None):
             > 90
         ),
         redeemed=redeemed,
+    )
+
+
+def get_upcoming_eligibility_accounts(*, as_of, lead_days):
+    target_dates = [as_of + timedelta(days=days) for days in lead_days]
+    return SchemeAccount.objects.filter(
+        eligible_from__in=target_dates,
+    ).exclude(
+        status=SchemeAccount.Status.REDEEMED,
+    ).select_related(
+        "customer",
+        "customer__user",
+        "plan",
+        "metal_grade",
+    ).order_by(
+        "eligible_from",
+        "scheme_number",
+    )
+
+
+def get_allocation_exception_contributions():
+    return Contribution.objects.filter(
+        status=Contribution.Status.PAID_UNALLOCATED,
+    ).select_related(
+        "scheme_account",
+        "scheme_account__customer",
+        "scheme_account__customer__user",
+        "scheme_account__metal_grade",
+    ).order_by(
+        "allocation_attempted_at",
+        "pk",
+    )
+
+
+def get_completed_redemptions_for_date(*, as_of):
+    return Redemption.objects.filter(
+        status=Redemption.Status.COMPLETED,
+        completed_at__date=as_of,
+        reversal__isnull=True,
+    ).select_related(
+        "scheme_account",
+        "scheme_account__customer",
+        "scheme_account__customer__user",
+        "scheme_account__metal_grade",
+    ).order_by(
+        "completed_at",
+        "pk",
+    )
+
+
+def get_scheme_reminder_owner_emails():
+    user_model = get_user_model()
+    emails = user_model.objects.filter(
+        is_active=True,
+    ).filter(
+        Q(role=user_model.Role.OWNER) | Q(is_superuser=True),
+    ).exclude(
+        email="",
+    ).order_by(
+        "pk",
+    ).values_list(
+        "email",
+        flat=True,
+    )
+    deduplicated = {}
+    for email in emails:
+        normalized = email.strip().lower()
+        if normalized:
+            deduplicated.setdefault(normalized, normalized)
+    return tuple(deduplicated.values())
+
+
+def get_owner_scheme_reminders():
+    return SchemeReminder.objects.select_related(
+        "scheme_account",
+        "scheme_account__customer",
+        "contribution",
+        "redemption",
+    ).prefetch_related(
+        "delivery_attempts",
     )

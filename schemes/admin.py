@@ -16,6 +16,8 @@ from .models import (
     SchemeAccount,
     SchemePlan,
     SchemePlanOffering,
+    SchemeReminder,
+    SchemeReminderDeliveryAttempt,
     WebhookProcessingAttempt,
 )
 
@@ -421,6 +423,61 @@ class RedemptionReversalAdmin(admin.ModelAdmin):
         "processed_by",
         "reversed_at",
         "created_at",
+    )
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(SchemeReminder)
+class SchemeReminderAdmin(admin.ModelAdmin):
+    list_display = (
+        "kind",
+        "audience",
+        "recipient_email",
+        "scheme_account",
+        "event_date",
+        "delivery_status",
+        "created_at",
+    )
+    list_filter = ("kind", "audience", "event_date")
+    search_fields = (
+        "recipient_email",
+        "scheme_account__scheme_number",
+        "scheme_account__customer__full_name",
+        "contribution__gateway_reference",
+        "redemption__redemption_number",
+    )
+    readonly_fields = tuple(field.name for field in SchemeReminder._meta.fields)
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(SchemeReminderDeliveryAttempt)
+class SchemeReminderDeliveryAttemptAdmin(admin.ModelAdmin):
+    list_display = (
+        "reminder",
+        "outcome",
+        "backend",
+        "accepted_count",
+        "error_code",
+        "attempted_at",
+    )
+    list_filter = ("outcome", "attempted_at")
+    search_fields = (
+        "reminder__recipient_email",
+        "reminder__scheme_account__scheme_number",
+        "error_code",
+    )
+    readonly_fields = tuple(
+        field.name for field in SchemeReminderDeliveryAttempt._meta.fields
     )
 
     def has_add_permission(self, request):

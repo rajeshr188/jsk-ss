@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<body>
+  <p>{% if audience == 'CUSTOMER' %}Hello {{ customer_name }},{% else %}Hello,{% endif %}</p>
+  {% if kind == 'UPCOMING_ELIGIBILITY' %}
+    {% if audience == 'CUSTOMER' %}
+      <p>Your savings scheme <strong>{{ scheme_number }}</strong> becomes eligible for redemption on <strong>{{ eligible_from|date:"d M Y" }}</strong>.</p>
+      <p>Reaching this date does not automatically close or redeem your scheme. Please visit our Vellore showroom when you are ready to select jewellery.</p>
+    {% else %}
+      <p>Scheme <strong>{{ scheme_number }}</strong> for {{ customer_name }} becomes eligible for redemption on <strong>{{ eligible_from|date:"d M Y" }}</strong> (in {{ eligibility_lead_days }} day{{ eligibility_lead_days|pluralize }}).</p>
+      <p>Eligibility does not automatically close or redeem the account.</p>
+    {% endif %}
+  {% elif kind == 'ALLOCATION_EXCEPTION' %}
+    <p>Contribution <strong>{{ contribution_id }}</strong> for scheme <strong>{{ scheme_number }}</strong> is a verified payment awaiting metal allocation.</p>
+    <p>Review the exception and use the existing controlled allocation-retry workflow. This reminder does not alter the contribution or entitlement.</p>
+  {% else %}
+    {% if audience == 'CUSTOMER' %}
+      <p>Redemption <strong>{{ redemption_number }}</strong> for scheme <strong>{{ scheme_number }}</strong> was recorded on <strong>{{ redemption_completed_at|date:"d M Y" }}</strong>.</p>
+      <p>You can review the retained scheme history using the link below.</p>
+    {% else %}
+      <p>Redemption <strong>{{ redemption_number }}</strong> for {{ customer_name }} under scheme <strong>{{ scheme_number }}</strong> was recorded on <strong>{{ redemption_completed_at|date:"d M Y" }}</strong>.</p>
+      <p>Review the immutable redemption ledger using the link below.</p>
+    {% endif %}
+  {% endif %}
+  <p><a href="{{ action_url }}">Review scheme information</a></p>
+  <p><small>This is a transactional service message from Jai Sri Krishna Jewellery. Email-provider acceptance is recorded as delivery evidence, but it does not prove that this message was received or read.</small></p>
+</body>
+</html>

@@ -1,0 +1,57 @@
+{% extends '_base.html' %}
+
+{% block title %}Reminder deliveries | Jai Sri Krishna Jewellery{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <p class="page-eyebrow">Customer communication</p>
+    <h1>Reminder deliveries</h1>
+    <p class="page-subtitle">Provider-acceptance evidence for eligibility, allocation-exception, and redemption emails.</p>
+  </div>
+</div>
+
+{% if reminders_enabled %}
+<div class="alert alert-success" role="status">Scheduled reminder sending is enabled. Eligibility notices are configured for {{ eligibility_days|join:', ' }} days before the contractual date.</div>
+{% else %}
+<div class="alert alert-warning" role="status">Scheduled reminder sending is disabled. Dry-run review remains available from the management command.</div>
+{% endif %}
+
+<div class="alert alert-info" role="note">Accepted by the email provider does not prove that the recipient received or read the message. Reminder processing never changes payments, metal allocations, eligibility, or redemptions.</div>
+
+<div class="table-responsive">
+  <table class="table align-middle">
+    <thead>
+      <tr>
+        <th scope="col">Created</th>
+        <th scope="col">Reminder</th>
+        <th scope="col">Audience</th>
+        <th scope="col">Recipient</th>
+        <th scope="col">Customer / scheme</th>
+        <th scope="col">Event date</th>
+        <th scope="col">Delivery state</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for reminder in reminders %}
+      <tr>
+        <td>{{ reminder.created_at|date:'d M Y, g:i A' }}</td>
+        <td>{{ reminder.get_kind_display }}</td>
+        <td>{{ reminder.get_audience_display }}</td>
+        <td>{{ reminder.recipient_email }}</td>
+        <td>{{ reminder.scheme_account.customer.full_name }}<br><small>{{ reminder.scheme_account.scheme_number }}</small></td>
+        <td>{{ reminder.event_date|date:'d M Y' }}</td>
+        <td>
+          {{ reminder.delivery_status }}
+          {% with attempt=reminder.latest_delivery_attempt %}
+            {% if attempt %}<br><small>{{ attempt.attempted_at|date:'d M Y, g:i A' }}{% if attempt.error_code %} · {{ attempt.error_code }}{% endif %}</small>{% endif %}
+          {% endwith %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="7" class="text-center text-muted py-4">No reminder delivery records yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
