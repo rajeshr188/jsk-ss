@@ -2,14 +2,12 @@
 
 ## Current milestone
 
-`FW-ENROL-001` is implemented on `agent/enrolment-interest-requests` under ADR-0012
-and awaits review, protected-main CI, and disabled-first production rollout. An
-approved customer can record non-binding interest in one publicly listed plan and
-exact-grade offering; only an owner can convert a current request through the existing
-enrolment service after confirming current terms. The feature defaults off and the
-request creates no agreement, payment permission, rate lock, allocation, eligibility,
-or liability. `FW-AUTH-002` remains production-accepted on release
-`613e2f7363a67ea6d588273f54bcddb628f9549a`, and direct allauth signup remains closed.
+`FW-ENROL-001` and its `FW-AUTH-003` login-versus-enrolment boundary are
+production-accepted on release `bfbdad86c49855ffc5c9965d0848a657a62cf938` under
+ADR-0012. An approved customer can record non-binding interest in one public plan and
+exact-grade offering; only an owner can create the independently reviewed agreement.
+The accepted submission created no account, payment permission, rate lock, allocation,
+eligibility, or liability. Direct allauth signup remains closed.
 
 ## Completed
 
@@ -314,15 +312,20 @@ or liability. `FW-AUTH-002` remains production-accepted on release
   replacement-token invalidation, owner rejection without account creation, manual
   mobile confirmation, approval/invitation, customer password setup, login with zero
   schemes, and Caddy/application token-log exclusions were exercised successfully.
+- `FW-ENROL-001` and `FW-AUTH-003` completed production rollout and controlled
+  acceptance on 2026-09-04 in release
+  `bfbdad86c49855ffc5c9965d0848a657a62cf938`. Migration
+  `schemes.0020_scheme_enrolment_requests` was the only planned operation and was
+  applied from the recorded 8:00 PM IST recovery point with the feature disabled.
+  After activation, one legitimate request recorded one submission audit and no
+  agreement, contribution, Razorpay order, rate lock, allocation, or liability. Owner
+  confirmation created exactly one linked `GOLD_22K_916` agreement
+  (`JSK-311D2A62`), retained zero contributions, sent the customer completion email,
+  and remained idempotent at nine total accounts and one enrolment audit. Enrolment,
+  financial-exception, Live-readiness, and exact-grade checks stayed green.
 
 ## In progress
 
-- `FW-ENROL-001` has an additive `schemes.0020` migration, immutable offer/request
-  evidence, one-pending-request database enforcement, 30-day expiry, customer
-  withdrawal/status views, transactional email notices, an owner review/decision/
-  conversion queue, audit events, a no-mutation integrity command, and fail-closed
-  settings. The complete 332-test regression suite passes; production remains unchanged
-  until the flag-off migration and controlled acceptance sequence is approved.
 - `FW-ELIG-002` awaits only the first naturally occurring reminder-specific Postmark
   acceptance and matching owner delivery record. Its deployed zero-candidate run is
   correct evidence that no message is invented merely to satisfy a rollout smoke.
@@ -346,10 +349,10 @@ or liability. `FW-AUTH-002` remains production-accepted on release
   CA are in place, SSH access is verified, Docker is installed, and the owned domain
   returns liveness and PostgreSQL readiness `200` through Caddy-managed HTTPS;
   paid external alert exercises remain deferred.
-- Production release `50bfd3673c57dff51b46238094bcad899a36c8fa` is healthy with
-  migrations through `schemes.0018_in_store_cash_contributions`,
+- Production release `bfbdad86c49855ffc5c9965d0848a657a62cf938` is healthy with
+  migrations through `schemes.0020_scheme_enrolment_requests`,
   `catalog.0001_initial`, `pages.0001_initial`,
-  and `accounts.0003_customerinvitation_and_more`
+  and `accounts.0004_customerregistrationattempt_customerregistration`
   applied, zero reported financial exceptions, successful live/ready checks, valid
   catalogue authorization, working R2 media, published reviewed products, and public
   Jewellery links in the primary and footer navigation. Its production metal-only
@@ -550,9 +553,7 @@ or liability. `FW-AUTH-002` remains production-accepted on release
 
 ## Next recommended step
 
-Commit the reviewed `FW-ENROL-001` feature branch and open a PR against protected
-`main`. After CI publishes the reviewed image, deploy
-`schemes.0020` with `CUSTOMER_ENROLMENT_REQUESTS_ENABLED=False`, pass the documented
-integrity and financial gates, then perform one controlled request-to-agreement
-journey before enabling the feature generally. The first genuine `FW-ELIG-002`
-reminder observation remains independent and must not be manufactured.
+Commit and merge the `FW-ENROL-001` production evidence. The next actionable
+fund-safety item is the two remaining no-mutation `FW-PAY-003` Razorpay recovery
+exercises. The first genuine `FW-ELIG-002` reminder observation remains independent
+and must not be manufactured.
