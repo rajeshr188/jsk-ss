@@ -18,6 +18,7 @@
     </fieldset>
     <fieldset class="form-section">
       <legend>Agreement schedule and record</legend>
+      <p class="form-section-description">The contractual eligibility date uses exact calendar months from the start date. A weekend, public holiday, showroom closure, or payment pause does not shift it.</p>
       {{ form.start_date|as_crispy_field }}
       {{ form.agreed_months|as_crispy_field }}
       {{ form.audit_reason|as_crispy_field }}

@@ -2,13 +2,12 @@
 
 ## Current milestone
 
-`FW-PAY-006` completed production rollout and acceptance on 2026-09-03. Showroom
-cash is now an owner-recorded payment channel for an existing exact-grade metal
-scheme, not a CASH savings product. The two-step receipt confirmation uses the
-current Scheme Rate and existing payment controls; immutable receipt/reversal
-ledgers, a terminal `REVERSED` contribution state, customer documents, CSV evidence,
-daily reconciliation, and a non-mutating integrity command preserve the financial
-trail.
+`FW-ELIG-001` is implemented locally. Contractual eligibility now has one explicit
+exact-calendar policy across enrolment, contribution, bonus, effective status,
+forecast, and redemption paths: month-end clamping is deterministic; weekends,
+public holidays, showroom closure, schedules, and payment pauses do not shift the
+date; there is no early grace or later expiry. The change adds no schema migration
+and awaits CI and production rollout.
 
 ## Completed
 
@@ -295,6 +294,8 @@ trail.
 
 ## In progress
 
+- `FW-ELIG-001` awaits CI and a normal no-migration application rollout. Customer and
+  owner wording now separates entitlement eligibility from showroom availability.
 - `FW-PAY-003` retains two no-mutation recovery evidence exercises: an isolated
   Test-mode review/dry-run/apply case and an idempotent replay of an already-processed
   Live capture. External alerting and coordinated secret rotation remain separately
@@ -364,8 +365,8 @@ trail.
   forfeiture, tax treatment, or expected-future-contribution projection.
 - Bonus liability reads are calculated per cash account; aggregate optimization is
   deferred until measured account volume requires it.
-- Plan-specific early-discontinuation pricing, payment-order expiry, eligibility
-  reminders, open public self-registration, and partial-settlement policy are not yet
+- Plan-specific early-discontinuation pricing, eligibility reminders, open public
+  self-registration, and partial-settlement policy are not yet
   defined. Owner-invitation onboarding is deployed; public self-registration remains
   intentionally closed.
 - The production catalogue is active and its deployment, authorization, content,
@@ -386,7 +387,10 @@ trail.
   migrations are applied to production PostgreSQL.
 - Local and production PostgreSQL 16 migrations are applied through
   `schemes.0018_in_store_cash_contributions`.
-- 280 tests pass, including in-store cash preview/confirmation, owner authorization,
+- 285 tests pass, including exact-calendar eligibility month-end clamping,
+  weekend/calendar-marker non-adjustment, exact-day activation without early grace,
+  non-expiring eligibility, calendar-day forecast distance, in-store cash
+  preview/confirmation, owner authorization,
   payment-control and pending-Razorpay blocking, exact-rate locking, idempotency,
   durable allocation, bounded append-only correction, active-balance removal, daily
   reconciliation, receipt/statement visibility, and provider-channel migration,

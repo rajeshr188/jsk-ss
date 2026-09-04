@@ -1,4 +1,3 @@
-import calendar
 import hashlib
 import secrets
 from dataclasses import dataclass
@@ -14,6 +13,11 @@ from django.utils import timezone
 from accounts.services import issue_customer_invitation
 
 from .bonuses import CASH_BONUS_POLICY_VERSION
+from .eligibility import (
+    add_calendar_months,
+    calculate_eligibility_date,
+    is_redemption_eligible,
+)
 from .models import (
     AuditEvent,
     Contribution,
@@ -279,14 +283,6 @@ def _reference(prefix, model, field_name):
     raise RuntimeError(f"Could not generate a unique {field_name}")
 
 
-def add_calendar_months(value, months):
-    month_index = value.month - 1 + months
-    year = value.year + month_index // 12
-    month = month_index % 12 + 1
-    day = min(value.day, calendar.monthrange(year, month)[1])
-    return date(year, month, day)
-
-
 @transaction.atomic
 def create_customer(*, full_name, email, mobile_number, address="", password=None):
     user_model = get_user_model()
@@ -387,7 +383,10 @@ def enroll_customer(
         plan=plan,
         start_date=start_date,
         agreed_months=agreed_months,
-        eligible_from=add_calendar_months(start_date, agreed_months),
+        eligible_from=calculate_eligibility_date(
+            start_date=start_date,
+            agreed_months=agreed_months,
+        ),
         savings_mode=savings_mode,
         metal_grade=metal_grade,
         amount_rule_snapshot=plan.amount_rule,
@@ -496,10 +495,10 @@ def validate_contribution_allowed(
         raise ValidationError("A redeemed scheme cannot receive contributions.")
     if contribution_date < scheme_account.start_date:
         raise ValidationError("Contributions cannot be made before the scheme start date.")
-    if (
-        contribution_date >= scheme_account.eligible_from
-        and not scheme_account.allow_post_eligibility_contributions_snapshot
-    ):
+    if is_redemption_eligible(
+        eligible_from=scheme_account.eligible_from,
+        as_of=contribution_date,
+    ) and not scheme_account.allow_post_eligibility_contributions_snapshot:
         raise ValidationError("This scheme does not allow contributions after eligibility.")
 
     normalized_amount = validate_contribution_amount(scheme_account, amount)
@@ -1833,7 +1832,10 @@ def complete_redemption(
 
     if account.status == SchemeAccount.Status.REDEEMED:
         raise ValidationError("This scheme has already been fully redeemed.")
-    if timezone.localdate() < account.eligible_from:
+    if not is_redemption_eligible(
+        eligible_from=account.eligible_from,
+        as_of=timezone.localdate(),
+    ):
         raise ValidationError("This scheme is not yet eligible for redemption.")
     outstanding = get_outstanding_entitlement(account)
     if outstanding <= 0:

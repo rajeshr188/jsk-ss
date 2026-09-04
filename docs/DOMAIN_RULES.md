@@ -192,8 +192,22 @@ authorize new production CASH enrolments or contributions under `SCH-007`.
 
 ## Redemption and financial invariants
 
+- **ELIG-001:** Contractual eligibility is `start_date + agreed_months` in exact
+  calendar months. If the corresponding day does not exist in the destination month,
+  the destination month's final day applies.
+- **ELIG-002:** Eligibility begins on `eligible_from` in the India-local calendar.
+  There is no early-redemption grace period and eligibility does not expire while an
+  entitlement remains unredeemed.
+- **ELIG-003:** Weekends, public holidays, showroom closures, store hours,
+  contribution schedules, and manual or automatic payment pauses never shift
+  `eligible_from`. They may delay in-person fulfilment until the showroom next opens.
+- **ELIG-004:** Eligibility forecasts use ordinary calendar-day bands. Post-
+  eligibility contributions remain governed only by the agreement's snapshotted
+  contribution setting.
 - **RED-001 / FIN-006:** A customer cannot redeem more than the outstanding entitlement.
-- **RED-002:** Before redemption, effective status is derived in the India-local calendar: before `eligible_from` is `ACTIVE / NOT YET ELIGIBLE`; on or after `eligible_from` is `REDEMPTION_ELIGIBLE`.
+- **RED-002:** Before redemption, effective status is derived under ELIG-001 through
+  ELIG-004: before `eligible_from` is `ACTIVE / NOT YET ELIGIBLE`; on or after
+  `eligible_from` is `REDEMPTION_ELIGIBLE`.
 - **RED-003:** Reaching `eligible_from` never closes an account, mutates its stored status, or creates a redemption. Only a completed redemption may make it `REDEEMED`.
 - **RED-004:** Owner forecast bands are exclusive: eligible now, days 1–30, days 31–60, and days 61–90. Redeemed accounts are excluded from every open-account band.
 - **RED-005:** A completed redemption is an immutable, owner-recorded financial event. Contributions, allocations, and earlier redemptions remain visible.
