@@ -1,0 +1,12 @@
+{% extends '_base.html' %}
+
+{% block title %}Verification unavailable | Jai Sri Krishna Jewellery{% endblock %}
+
+{% block content %}
+<div class="auth-shell"><div class="card auth-card">
+  <p class="page-eyebrow">Customer access</p>
+  <h1>Verification unavailable</h1>
+  <p class="text-secondary">This verification link is invalid, expired, or has already been used. Contact the showroom if you need help.</p>
+  <div class="d-grid gap-2 mt-4"><a class="btn btn-jsk" href="{% url 'contact' %}">Contact the showroom</a></div>
+</div></div>
+{% endblock %}

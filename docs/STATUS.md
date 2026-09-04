@@ -2,14 +2,17 @@
 
 ## Current milestone
 
-`FW-PROD-006` completed production acceptance on 2026-09-04 in release
-`c889ee6906a8bddd4c7852955025efe42ffa5752`: the Linode pulled and deployed the exact
-public-GHCR digest produced and vulnerability-scanned by protected `main`, with no
-serving-host build. `FW-ELIG-002` is operational on the same release with migration
-`schemes.0019_scheme_reminders` applied and its hardened systemd execution boundary
-passing. The first genuine reminder-specific Postmark acceptance remains an
-operational observation because the controlled production run had zero candidates;
-it does not block beginning fail-closed `FW-AUTH-002` design.
+`FW-AUTH-002` is implemented fail-closed on `agent/public-signup-approval` under
+ADR-0011. Direct allauth signup remains closed. The new staged request records a
+complete proposed profile and versioned consent, verifies email without storing the
+raw token, waits for owner approval/manual mobile confirmation, and only then creates
+the existing customer profile plus password-setup invitation. It never creates a
+scheme or grants payment access. Public enablement remains off pending review, merge,
+disabled rollout of additive `accounts.0004`, and controlled production acceptance.
+The first genuine `FW-ELIG-002` Postmark observation remains separate and does not
+block this work. The local migration and aggregate integrity check pass, the complete
+313-test Django suite passes, and a final 48-test authentication/owner-flow rerun
+passes after the last secret-log and duplicate-mobile safeguards.
 
 ## Completed
 
@@ -311,6 +314,12 @@ it does not block beginning fail-closed `FW-AUTH-002` design.
 
 ## In progress
 
+- `FW-AUTH-002` is code-complete and locally verified behind a disabled feature flag:
+  complete proposed profile data, versioned Terms/Privacy consent, one-time
+  digest-only email verification, explicit awaiting-owner state, owner-only
+  approval/rejection and manual mobile confirmation, generic duplicate/throttle
+  responses, database-backed abuse limits, and invitation handoff without automatic
+  scheme enrolment. Protected-main review and controlled production acceptance remain.
 - `FW-ELIG-002` awaits only the first naturally occurring reminder-specific Postmark
   acceptance and matching owner delivery record. Its deployed zero-candidate run is
   correct evidence that no message is invented merely to satisfy a rollout smoke.
@@ -536,10 +545,10 @@ it does not block beginning fail-closed `FW-AUTH-002` design.
 
 ## Next recommended step
 
-Record this production evidence through protected `main`, then start `FW-AUTH-002`
-on a fresh feature branch. First define the registration, verification, consent,
-duplicate-identity, abuse-control, awaiting-owner-approval, rejection, and audit
-contract. Public signup must remain disabled by default, must never create a
-`SchemeAccount`, and must not grant payment access. Keep the first genuine
-`FW-ELIG-002` delivery observation, `FW-PAY-003`, and the accepted
-`FW-PROD-002`/`FW-PROD-003` budget deferrals separate.
+Complete the `FW-AUTH-002` regression and deployment checks, review the additive
+`accounts.0004` migration and ADR-0011, then open a PR against protected `main`.
+Deploy the merged image with `PUBLIC_CUSTOMER_REGISTRATION_ENABLED=False`; only after
+the owner queue, Caddy secret-path exclusion, email verification, approval,
+invitation, login-without-scheme, and aggregate integrity check pass should public
+enablement be considered. Keep the first genuine `FW-ELIG-002` delivery observation,
+`FW-PAY-003`, and the accepted `FW-PROD-002`/`FW-PROD-003` budget deferrals separate.

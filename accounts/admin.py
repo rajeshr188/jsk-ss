@@ -2,7 +2,11 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 
 from .forms import CustomUserCreationForm, CustomUserChangeForm
-from .models import CustomUser
+from .models import (
+    CustomUser,
+    CustomerRegistration,
+    CustomerRegistrationAttempt,
+)
 
 
 class CustomUserAdmin(UserAdmin):
@@ -23,3 +27,41 @@ class CustomUserAdmin(UserAdmin):
 
 
 admin.site.register(CustomUser, CustomUserAdmin)
+
+
+@admin.register(CustomerRegistration)
+class CustomerRegistrationAdmin(admin.ModelAdmin):
+    list_display = (
+        "email",
+        "mobile_number",
+        "status",
+        "submitted_at",
+        "email_verified_at",
+        "reviewed_at",
+    )
+    list_filter = ("status",)
+    search_fields = ("full_name", "email", "mobile_number")
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def get_readonly_fields(self, request, obj=None):
+        return tuple(field.name for field in self.model._meta.fields)
+
+
+@admin.register(CustomerRegistrationAttempt)
+class CustomerRegistrationAttemptAdmin(admin.ModelAdmin):
+    list_display = ("attempted_at", "outcome")
+    list_filter = ("outcome",)
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def get_readonly_fields(self, request, obj=None):
+        return tuple(field.name for field in self.model._meta.fields)

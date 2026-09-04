@@ -127,9 +127,14 @@ recorded limitations are not lost.
   accepted by Postmark and appear in the owner delivery view; do not manufacture a
   financial or redemption event for this observation. This does not block isolated
   `FW-AUTH-002` development.
-- **FW-AUTH-002 — Design safe public signup before enabling it:** Add complete customer
-  profile creation, email/mobile verification, duplicate handling, consent capture,
-  abuse controls, and an explicit awaiting-owner-approval state.
+- **FW-AUTH-002 — Accept staged public customer registration in production:** The
+  implementation keeps allauth signup closed and adds a disabled-by-default access
+  application with complete proposed profile, versioned consent, digest-only email
+  verification, generic duplicate responses, database-backed abuse limits, explicit
+  owner review/manual mobile confirmation, and the existing password invitation on
+  approval. Merge and deploy `accounts.0004` with the flag disabled, verify the owner
+  queue and secret-log boundary, then run one controlled application-to-invitation
+  journey before separately approving public enablement.
 - **FW-AUTH-003 — Keep login separate from enrolment:** Contribution access must remain
   disabled until an owner creates a valid `SchemeAccount`; a public login must never
   imply financial enrolment.
@@ -167,7 +172,7 @@ Completed implementation and rollout details are intentionally not repeated here
 
 Use [Project status](STATUS.md) for the completed capability summary, the
 [production runbook](PRODUCTION_DEPLOYMENT.md) for release evidence, and ADR-0003
-through ADR-0010 for the corresponding durable architecture decisions.
+through ADR-0011 for the corresponding durable architecture decisions.
 
 ## Historical milestone ledger
 

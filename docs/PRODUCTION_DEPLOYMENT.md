@@ -622,6 +622,14 @@ EMAIL_TIMEOUT=10
 DEFAULT_FROM_EMAIL=Jai Sri Krishna Jewellery <noreply@example.com>
 SERVER_EMAIL=errors@example.com
 
+CUSTOMER_INVITATION_EXPIRY_HOURS=72
+PUBLIC_CUSTOMER_REGISTRATION_ENABLED=False
+PUBLIC_REGISTRATION_EMAIL_EXPIRY_HOURS=24
+PUBLIC_REGISTRATION_ATTEMPTS_PER_HOUR=5
+PUBLIC_REGISTRATION_ATTEMPT_RETENTION_HOURS=24
+PUBLIC_REGISTRATION_TERMS_VERSION=2026-09-04
+PUBLIC_REGISTRATION_PRIVACY_VERSION=2026-09-04
+
 PAYMENT_GATEWAY=razorpay
 RAZORPAY_MODE=test
 RAZORPAY_KEY_ID=<rzp_test_key-id>
@@ -675,6 +683,10 @@ Configuration rules:
   Enable subdomains and preload only after every affected hostname is permanently
   HTTPS-capable and the domain owner accepts the long-lived consequences.
 - `EMAIL_USE_TLS` and `EMAIL_USE_SSL` are mutually exclusive.
+- Keep `PUBLIC_CUSTOMER_REGISTRATION_ENABLED=False` through the schema rollout and
+  owner-only checks. The version values must identify the exact Terms and Privacy
+  pages shown with the consent checkbox. Enabling this staged request never opens
+  direct allauth signup and never creates a scheme automatically.
 - Keep `PAYMENT_GATEWAY=razorpay` while pausing new payments so callbacks and signed
   webhooks remain available. Use the audited owner Payment Operations page for normal
   or volatility closure, or `PAYMENT_INITIATION_KILL_SWITCH=True` as the environment
@@ -1209,6 +1221,69 @@ edge-log exclusions remained enabled.
 If the candidate must be rolled back after this additive migration, the previous image
 can run against the extended schema. Its old owner form would again ask for temporary
 passwords, so suspend customer creation until the corrected candidate is restored.
+
+#### Staged public-registration rollout (`accounts.0004`)
+
+Keep the new public entry point closed for the migration and first verification:
+
+```dotenv
+PUBLIC_CUSTOMER_REGISTRATION_ENABLED=False
+PUBLIC_REGISTRATION_EMAIL_EXPIRY_HOURS=24
+PUBLIC_REGISTRATION_ATTEMPTS_PER_HOUR=5
+PUBLIC_REGISTRATION_ATTEMPT_RETENTION_HOURS=24
+PUBLIC_REGISTRATION_TERMS_VERSION=2026-09-04
+PUBLIC_REGISTRATION_PRIVACY_VERSION=2026-09-04
+```
+
+The version values are audit identifiers for the exact public Terms and Privacy copy;
+change them whenever either consent-bearing page materially changes. Review the
+candidate plan and require it to contain only
+`accounts.0004_customerregistrationattempt_customerregistration`. This migration adds
+isolated application and rate-limit-evidence tables; the previous image ignores them,
+so it is backward-compatible while the feature flag is false.
+
+Apply the migration once using the approved candidate image. Recreate `web`, then
+recreate Caddy because the candidate `deploy/Caddyfile` adds the public verification
+token path to the edge-log exclusion. With the flag still false, verify:
+
+```bash
+docker compose --env-file .env.production -f compose.production.yml \
+  exec -T web python manage.py showmigrations accounts
+docker compose --env-file .env.production -f compose.production.yml \
+  exec -T web python manage.py check_public_customer_registrations
+```
+
+Require migration `accounts.0004` to be `[X]`, aggregate command `status=ok`, and
+`enabled=false`. Confirm the owner can open **Customers → Registration requests**,
+while an unauthenticated request to `/accounts/register/` returns 404 and ordinary
+allauth `/accounts/signup/` still says direct signup is closed.
+
+Public activation is a separate, reversible configuration decision. Before changing
+the flag, confirm Postmark delivery, the owned `SITE_ID=1` name/domain, current policy
+versions, and that Caddy's effective configuration excludes
+`/accounts/registrations/verify/*`. Set the flag to `True`, validate Compose, and
+recreate only `web`; Caddy already contains the required rule. Use one controlled,
+previously unused email and mobile number to prove:
+
+1. The application response is generic and the direct, untracked verification email
+   is accepted by Postmark.
+2. Opening the link does not verify it; the CSRF-protected confirmation does, after
+   which the owner queue shows `Awaiting owner approval`.
+3. Approval is impossible without the owner confirming the mobile check and entering
+   a reason. Rejection creates no login.
+4. Approval creates one customer with no usable password and sends the existing
+   password-setup invitation, but creates zero scheme accounts.
+5. After password setup the customer can sign in and sees the explicit no-schemes
+   state with no payment action. Enrolment remains a separate owner operation.
+6. `check_public_customer_registrations` still reports `status=ok`, and neither Caddy
+   nor application logs contain the verification token.
+
+Do not test throttling by flooding production. Its database-backed per-source and
+per-identity boundary is covered by CI; Cloudflare rate limiting or a challenge can
+be added later as defence in depth. If behavior is unexpected, set
+`PUBLIC_CUSTOMER_REGISTRATION_ENABLED=False`, recreate `web`, and retain the
+application records for review. Do not reverse the additive migration or delete
+registration evidence merely to disable the public form.
 
 Before applying `schemes.0010_manual_scheme_rates`, confirm the old architecture has
 no verified metal payment without an allocation and no open metal Razorpay order.

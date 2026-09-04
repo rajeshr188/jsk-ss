@@ -1,0 +1,40 @@
+{% extends '_base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Request customer access | Jai Sri Krishna Jewellery{% endblock %}
+{% block meta_description %}Request a Jai Sri Krishna Jewellery customer login for owner review. A request is not a scheme enrolment.{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center"><div class="col-lg-8">
+  <div class="page-header"><div>
+    <p class="page-eyebrow">Customer access</p>
+    <h1>Request customer access</h1>
+    <p class="page-subtitle">Submit your details, verify your email, and wait for showroom review.</p>
+  </div></div>
+  <div class="alert alert-info" role="note">
+    This request does not enrol you in a savings scheme and does not enable payments. Scheme enrolment is a separate showroom process after approval.
+  </div>
+  <form method="post" class="card form-card" novalidate>
+    {% csrf_token %}
+    {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+    <fieldset class="form-section">
+      <legend>Your details</legend>
+      <p class="form-section-description">Use contact details that the showroom can verify with you.</p>
+      {{ form.full_name|as_crispy_field }}
+      {{ form.email|as_crispy_field }}
+      {{ form.mobile_number|as_crispy_field }}
+      {{ form.address|as_crispy_field }}
+    </fieldset>
+    <fieldset class="form-section">
+      <legend>Consent</legend>
+      <p class="form-section-description">Read the <a href="{% url 'terms' %}" target="_blank" rel="noopener">Terms and conditions</a> and <a href="{% url 'privacy' %}" target="_blank" rel="noopener">Privacy policy</a> before continuing.</p>
+      {{ form.accept_policies|as_crispy_field }}
+    </fieldset>
+    <div class="d-none" aria-hidden="true">{{ form.website }}</div>
+    <div class="form-actions d-flex flex-wrap gap-2">
+      <button class="btn btn-jsk" type="submit">Submit access request</button>
+      <a class="btn btn-outline-dark" href="{% url 'account_login' %}">Existing customer login</a>
+    </div>
+  </form>
+</div></div>
+{% endblock %}

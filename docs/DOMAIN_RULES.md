@@ -6,12 +6,15 @@ This is the canonical source for stable business rules.
 
 - **AUTH-001:** A login account is not itself an active savings agreement; only a valid `SchemeAccount` represents enrolment.
 - **AUTH-002:** Owners create customer login/profile records and issue a time-limited, one-time password-setup invitation; owners and staff must never choose or transmit a temporary customer password.
-- **AUTH-003:** Future public registration must create a complete customer profile, verify identity/contact data as configured, and remain awaiting owner approval until enrolment.
-- **AUTH-004:** No publicly registered but unenrolled customer may contribute. Reopening allauth signup alone is insufficient.
+- **AUTH-003:** Public registration is a separate, feature-gated access application, not allauth signup. It records a complete proposed customer profile and versioned policy consent but creates no user, customer, scheme, password, or financial entitlement before review.
+- **AUTH-004:** The applicant must verify control of the email address through a bounded one-time token and then remain `AWAITING_OWNER_APPROVAL`. An active owner must confirm the mobile number and record a reason before approval or rejection.
 - **AUTH-005:** Only an active owner may issue or replace a customer invitation. Issuing a replacement revokes every older unused invitation for that customer; an account with a usable password must use password reset instead.
 - **AUTH-006:** Invitation secrets are random, stored only as one-way digests, expire within the configured bounded lifetime, and are accepted at most once. Secret-bearing responses are not cacheable, their URL paths are withheld from Referer headers, and their request paths are excluded from edge access logs. The origin-only referrer policy must still permit Django to validate same-origin password submissions.
 - **AUTH-007:** Email-provider acceptance is delivery evidence, not proof that the customer received or used the message. Invitation acceptance establishes login access only and never creates a `SchemeAccount`, contribution, or financial entitlement.
 - **AUTH-008:** Nonblank login emails are unique case-insensitively. Historical duplicates must be investigated and resolved deliberately without automatically deleting, merging, or reassigning customer or financial records.
+- **AUTH-009:** Public registration responses do not disclose existing email, mobile, application, or throttle state. Per-source and per-identity database-backed limits and a honeypot provide the baseline abuse boundary; retained attempt identifiers are one-way digests.
+- **AUTH-010:** Approval rechecks identity conflicts, atomically creates the existing customer login/profile, and issues the existing owner-controlled password-setup invitation. Approval never creates a `SchemeAccount`; only a separate owner enrolment grants contribution access.
+- **AUTH-011:** Public email-verification paths are direct and untracked, excluded from edge access logs, redacted from application logs, non-cacheable, and mutated only by a CSRF-protected confirmation POST.
 
 ## Scheme and contribution rules
 

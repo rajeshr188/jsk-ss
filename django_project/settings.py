@@ -172,6 +172,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "accounts.context_processors.public_customer_registration",
                 "catalog.context_processors.public_catalogue_navigation",
             ],
         },
@@ -438,6 +439,41 @@ CUSTOMER_INVITATION_EXPIRY_HOURS = env_int(
     minimum=1,
     maximum=168,
 )
+PUBLIC_CUSTOMER_REGISTRATION_ENABLED = env_bool(
+    "PUBLIC_CUSTOMER_REGISTRATION_ENABLED"
+)
+PUBLIC_REGISTRATION_EMAIL_EXPIRY_HOURS = env_int(
+    "PUBLIC_REGISTRATION_EMAIL_EXPIRY_HOURS",
+    24,
+    minimum=1,
+    maximum=72,
+)
+PUBLIC_REGISTRATION_ATTEMPTS_PER_HOUR = env_int(
+    "PUBLIC_REGISTRATION_ATTEMPTS_PER_HOUR",
+    5,
+    minimum=1,
+    maximum=20,
+)
+PUBLIC_REGISTRATION_ATTEMPT_RETENTION_HOURS = env_int(
+    "PUBLIC_REGISTRATION_ATTEMPT_RETENTION_HOURS",
+    24,
+    minimum=2,
+    maximum=168,
+)
+PUBLIC_REGISTRATION_TERMS_VERSION = os.getenv(
+    "PUBLIC_REGISTRATION_TERMS_VERSION",
+    "2026-09-04",
+).strip()
+PUBLIC_REGISTRATION_PRIVACY_VERSION = os.getenv(
+    "PUBLIC_REGISTRATION_PRIVACY_VERSION",
+    "2026-09-04",
+).strip()
+if PUBLIC_CUSTOMER_REGISTRATION_ENABLED and not (
+    PUBLIC_REGISTRATION_TERMS_VERSION and PUBLIC_REGISTRATION_PRIVACY_VERSION
+):
+    raise ImproperlyConfigured(
+        "Public customer registration requires nonblank Terms and Privacy versions"
+    )
 
 # https://docs.djangoproject.com/en/dev/ref/settings/#csrf-trusted-origins
 CSRF_TRUSTED_ORIGINS = env_list(
