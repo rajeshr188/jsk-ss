@@ -303,15 +303,15 @@ shift the date; there is no early grace or later expiry.
 ## In progress
 
 - `FW-PROD-006` repository implementation publishes only a successful protected-
-  `main` image to private GHCR under its full commit SHA, scans both review images and
+  `main` image to public GHCR under its full commit SHA, scans both review images and
   the published digest for fixable critical vulnerabilities, and records the exact
-  deploy digest in the Actions summary. The production guide now prohibits an
-  on-host build, requires capacity preflight and sequential candidate checks, and
-  documents a least-privilege read-only Linode pull credential. The first merged
-  publication and scan passed, but an anonymous manifest probe proved the existing
-  `jsk-ss` package was public. It is not approved for deployment; the corrected
-  workflow targets a new `jsk-savings` package whose private visibility and first
-  authenticated Linode digest pull remain completion gates. The currently healthy
+  deploy digest in the Actions summary. The owner accepted public image visibility on
+  2026-09-04 because the source repository is public, runtime secrets are excluded
+  from the image, and this avoids a persistent GitHub credential on the Linode. An
+  isolated anonymous Linode pull and digest inspection passed for the `jsk-savings`
+  package. The production guide still prohibits on-host builds and requires capacity,
+  immutable-digest, migration, and health gates. Closure awaits the next approved
+  production release deployed from its CI-published digest; the currently healthy
   production release is unchanged.
 - `FW-PAY-003` retains two no-mutation recovery evidence exercises: an isolated
   Test-mode review/dry-run/apply case and an idempotent replay of an already-processed
@@ -470,11 +470,14 @@ shift the date; there is no early grace or later expiry.
   the workflow locally. The first protected-`main` run `33848413888` built merge
   `e78c2b20f013298186b7c742a18ba4d99658d164`, passed the published-digest critical-
   vulnerability gate, and produced
-  `ghcr.io/rajeshr188/jsk-ss@sha256:9778089354d7110c8ea04f8ba2d8b4f6098e7d771e24329d0aeac441ae8faf3d`;
-  an anonymous pull then proved that existing package was public, so that digest is
-  retained as CI evidence but is explicitly not approved for deployment. The
-  publisher now targets the new private-by-default `jsk-savings` package; its private
-  pull and Linode pull proof remain.
+  `ghcr.io/rajeshr188/jsk-ss@sha256:9778089354d7110c8ea04f8ba2d8b4f6098e7d771e24329d0aeac441ae8faf3d`.
+  The publisher now targets the repository-linked public `jsk-savings` package. Main
+  run `33850511585` built merge `db577e19d015615972347f3546247a4b32df0369`,
+  passed the published-digest critical-vulnerability gate, and produced
+  `ghcr.io/rajeshr188/jsk-savings@sha256:30df12ac108ce90504c9c33e18e79d2c1c3d304e77e2d8cc9f64339bd5c86c54`.
+  On 2026-09-04 the Linode pulled and inspected that digest with an empty temporary
+  Docker configuration, proving anonymous access; production remained healthy and
+  unchanged on release `50bfd3673c57dff51b46238094bcad899a36c8fa`.
 - The Linode production Compose model passes `docker compose config --quiet`, and
   Caddy 2.11.4 validates the exact apex-domain, `www` redirect, masked JSON access
   log, and release-label configuration. The financial heartbeat shell script passes
@@ -513,10 +516,9 @@ shift the date; there is no early grace or later expiry.
 
 ## Next recommended step
 
-Open and merge the `FW-PROD-006` implementation through protected `main`, require its
-publish-and-scan job to pass, confirm the repository-linked GHCR package remains
-private, and perform the one-time read-only Linode login plus digest pull/inspection.
-Do not change the healthy production release merely to test the pull. Use the digest
-for the next approved release, then close `FW-PROD-006` and resume the bounded
-`FW-PAY-003` replay evidence work. Keep paid external alerting and coordinated secret
-rotation deferred under the accepted `FW-PROD-002`/`FW-PROD-003` budget boundary.
+Merge this public-GHCR boundary record through protected `main`. For the next approved
+application release, deploy the exact CI-published `jsk-savings` digest without
+building on the Linode, retain the normal recovery, migration, reconciliation, and
+health evidence, then close `FW-PROD-006`. Afterward resume the bounded `FW-PAY-003`
+replay evidence work. Keep paid external alerting and coordinated secret rotation
+deferred under the accepted `FW-PROD-002`/`FW-PROD-003` budget boundary.

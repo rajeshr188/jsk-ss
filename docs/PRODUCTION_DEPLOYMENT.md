@@ -248,10 +248,12 @@ audited secret manager. Before financial go-live, select the controlled secret s
 access policy, backup, and rotation process that will be authoritative for these
 values; root access to the Compute Instance can read container environment variables.
 
-`APP_IMAGE` must name the approved private GHCR digest and `APP_RELEASE` must name its
-matching full merged commit. Complete the read-only GHCR login described below, pull
-the digest from the successful protected-`main` Actions summary, and record
-`docker image inspect` output. Never run an image build on this serving host.
+`APP_IMAGE` must name the approved public GHCR digest and `APP_RELEASE` must name its
+matching full merged commit. Pull the digest from the successful protected-`main`
+Actions summary and record `docker image inspect` output. Public pull access removes
+the need to persist a GitHub credential on the Linode; it does not relax digest,
+review, scanning, or release-evidence requirements. Never run an image build on this
+serving host.
 
 ### Validate and start the Linode deployment
 
@@ -879,32 +881,39 @@ After the merged build:
 Static files are collected in the builder stage and served by WhiteNoise from the
 image. A runtime `collectstatic` job is neither required nor desired.
 
-### One-time GHCR pull access on the Linode
+### Public GHCR pull access on the Linode
 
-The first successful protected-`main` workflow creates or updates the repository-
-linked `ghcr.io/rajeshr188/jsk-savings` package. Confirm in GitHub Packages that it is
-linked to this repository and remains private. The workflow publishes with its
-short-lived `GITHUB_TOKEN`; no long-lived publishing credential is required.
+The protected-`main` workflow creates or updates the repository-linked public package
+`ghcr.io/rajeshr188/jsk-savings`. Public visibility is an accepted boundary because
+the source repository is already public and the production image contains packaged
+source and dependencies, not runtime secrets. `.dockerignore` excludes `.env` files,
+deployment secrets, documentation, tests, and local media from the build context.
+Production credentials remain runtime-only values supplied by `.env.production` and
+Compose file-backed secrets.
 
-Create a separate GitHub package-read credential for the `deploy` account with only
-`read:packages` access. Do not grant package write/delete access, do not reuse the
-account password, and do not store this credential in `.env.production` or pass it
-to Django. In the `deploy` user's SSH session, enter it without echoing it:
+Do not create or store a GitHub Personal Access Token on the Linode for this public
+package. Prove anonymous access with an empty, temporary Docker client configuration,
+then pull and inspect the exact digest from the successful protected-`main` Actions
+summary:
 
 ```bash
-umask 077
-read -rsp "GHCR read token: " JSK_GHCR_READ_TOKEN
-echo
-printf '%s' "$JSK_GHCR_READ_TOKEN" | \
-  docker login ghcr.io -u rajeshr188 --password-stdin
-unset JSK_GHCR_READ_TOKEN
-docker pull ghcr.io/rajeshr188/jsk-savings@sha256:<approved-manifest-digest>
+test ! -e /tmp/jsk-ghcr-anonymous
+mkdir -m 700 /tmp/jsk-ghcr-anonymous
+DOCKER_CONFIG=/tmp/jsk-ghcr-anonymous \
+  docker pull ghcr.io/rajeshr188/jsk-savings@sha256:<approved-manifest-digest>
+rmdir /tmp/jsk-ghcr-anonymous
+docker image inspect \
+  ghcr.io/rajeshr188/jsk-savings@sha256:<approved-manifest-digest> \
+  --format '{{json .RepoDigests}}'
 ```
 
-Protect the `deploy` account because Docker retains its registry credential for
-future pulls. If the package is intentionally made public later, anonymous pulls are
-possible, but that visibility change requires separate review because an application
-image contains the packaged source and dependencies.
+The first anonymous Linode pull passed on 2026-09-04 for digest
+`ghcr.io/rajeshr188/jsk-savings@sha256:30df12ac108ce90504c9c33e18e79d2c1c3d304e77e2d8cc9f64339bd5c86c54`.
+The production environment and running containers were not changed; the web service
+remained healthy on release `50bfd3673c57dff51b46238094bcad899a36c8fa`.
+GitHub does not support changing a public Container registry package back to private.
+If private registry access is required in future, publish a separately named private
+package and treat its host credential as a reviewed credential-management change.
 
 ## Repository change to Linode deployment workflow
 
@@ -2483,6 +2492,7 @@ not a completed control.
 - [Docker Compose file-backed secrets](https://docs.docker.com/reference/compose-file/services/#secrets)
 - [Docker image pulls by digest](https://docs.docker.com/reference/cli/docker/image/pull/#pull-an-image-by-digest-immutable-identifier)
 - [GitHub protected branches and required checks](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches)
+- [GitHub package access and visibility](https://docs.github.com/en/packages/learn-github-packages/configuring-a-packages-access-control-and-visibility)
 - [Gunicorn control-socket settings](https://github.com/benoitc/gunicorn/blob/master/docs/content/reference/settings.md#control)
 - [PostgreSQL backup and restore](https://www.postgresql.org/docs/current/backup.html)
 - [PostgreSQL `pg_dump`](https://www.postgresql.org/docs/current/app-pgdump.html)
