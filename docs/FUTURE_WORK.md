@@ -119,16 +119,6 @@ recorded limitations are not lost.
 
 ## Eligibility and customer communication
 
-- **FW-ENROL-001 — Roll out customer enrolment interest requests:** ADR-0012 and
-  migration `schemes.0020` implement a disabled-by-default, authenticated,
-  non-binding request for one public plan and exact-grade offering. The request
-  snapshots the displayed offer, creates no financial state, and reaches an owner
-  queue where current terms must be confirmed before the existing enrolment service
-  creates exactly one linked agreement. Complete protected-main review and the
-  disabled-state production gates, then exercise one controlled request, owner
-  conversion, customer visibility, notification, and integrity-check journey before
-  enabling it generally. Electronic signatures, KYC/document uploads, SMS OTP, and
-  unattended enrolment remain out of scope.
 - **FW-ELIG-002 — Observe the first genuine reminder delivery:** The configurable
   email audiences, immutable reminder/attempt evidence, bounded retries, aggregate
   command, owner view, additive `schemes.0019` migration, and hardened systemd
@@ -137,10 +127,6 @@ recorded limitations are not lost.
   accepted by Postmark and appear in the owner delivery view; do not manufacture a
   financial or redemption event for this observation. This does not block other
   isolated development.
-- **FW-AUTH-003 — Keep login separate from enrolment:** Contribution access must remain
-  disabled until an owner creates a valid `SchemeAccount`; a public login or
-  enrolment-interest request must never imply financial enrolment. Close this item
-  with the production acceptance evidence for `FW-ENROL-001`.
 
 ## Rates, media, and catalogue
 
@@ -168,14 +154,15 @@ Completed implementation and rollout details are intentionally not repeated here
   `FW-AUDIT-001`, `FW-DOC-001`, `FW-DOC-002`, `FW-DOC-003`, `FW-PRODUCT-001`,
   `FW-PAY-001`, `FW-PAY-002`, `FW-PAY-004`, `FW-PAY-005`, `FW-PAY-006`,
   `FW-PRICE-001`, `FW-RATE-001`, and `FW-RATE-002`.
-- **Authentication and eligibility:** `FW-AUTH-001`, `FW-AUTH-002`, `FW-ELIG-001`.
+- **Authentication and eligibility:** `FW-AUTH-001`, `FW-AUTH-002`, `FW-AUTH-003`,
+  `FW-ELIG-001`, and `FW-ENROL-001`.
 - **CMS, media, and catalogue:** `FW-CMS-001`, `FW-CMS-002`, `FW-CMS-003`,
   `FW-MEDIA-001`, `FW-CATALOG-001`, `FW-CATALOG-002`, `FW-CATALOG-003`, and
   `FW-CATALOG-004`.
 
 Use [Project status](STATUS.md) for the completed capability summary, the
 [production runbook](PRODUCTION_DEPLOYMENT.md) for release evidence, and ADR-0003
-through ADR-0011 for the corresponding durable architecture decisions.
+through ADR-0012 for the corresponding durable architecture decisions.
 
 ## Historical milestone ledger
 

@@ -1402,6 +1402,21 @@ owner queue and all request/audit evidence. Do not delete request rows or revers
 additive migration. The previous application image can run against the extended
 schema, but suspend use of the new queue until the corrected release is restored.
 
+Production acceptance completed on 2026-09-04 in release
+`bfbdad86c49855ffc5c9965d0848a657a62cf938`, using immutable image digest
+`sha256:3d634e2c6c4149c94b7f82aaaee2e5b60c0b1db0821203e1f8d65d95205bf394` and the
+recorded 8:00 PM IST Managed PostgreSQL recovery point. The rollback release was
+`613e2f7363a67ea6d588273f54bcddb628f9549a`. The additive migration was applied as
+the only planned operation with request creation disabled; the empty-queue,
+integrity, financial, provider, exact-grade, and HTTPS health gates passed before
+activation. One legitimate customer then submitted a `GOLD_22K_916`, INR 5000.00,
+12-month interest request. It retained one submission audit while account count,
+pending Razorpay orders, and all liabilities remained at baseline. Owner review of
+current terms created exactly one linked agreement (`JSK-311D2A62`) with zero
+contributions, delivered the completion email, and an idempotency check retained nine
+total scheme accounts and one enrolment audit. This closes `FW-ENROL-001` and the
+`FW-AUTH-003` separation between login, interest, and financial enrolment.
+
 Before applying `schemes.0010_manual_scheme_rates`, confirm the old architecture has
 no verified metal payment without an allocation and no open metal Razorpay order.
 This deliberately includes both `PAID` and `PAID_UNALLOCATED`: an interrupted legacy
