@@ -9,6 +9,7 @@ from django.utils import timezone
 from accounts.models import CustomerInvitation
 
 from .bonuses import cash_bonus_policy_for_account
+from .eligibility import eligibility_days_until, is_redemption_eligible
 from .models import (
     AuditEvent,
     Contribution,
@@ -705,7 +706,10 @@ def get_cash_bonus_summary(scheme_account, as_of=None):
     contract_qualifies = policy.contract_qualifies(scheme_account.agreed_months)
     earned_bonus = Decimal("0.00")
     projected_bonus = Decimal("0.00")
-    if contract_qualifies and as_of >= scheme_account.eligible_from:
+    if contract_qualifies and is_redemption_eligible(
+        eligible_from=scheme_account.eligible_from,
+        as_of=as_of,
+    ):
         local_timezone = timezone.get_current_timezone()
         cutoff = timezone.make_aware(
             datetime.combine(
@@ -911,9 +915,6 @@ def get_owner_activity_summary(as_of=None):
 
 def get_redemption_eligibility_summary(as_of=None):
     as_of = as_of or timezone.localdate()
-    day_30 = as_of + timedelta(days=30)
-    day_60 = as_of + timedelta(days=60)
-    day_90 = as_of + timedelta(days=90)
     open_accounts = list(
         SchemeAccount.objects.exclude(status=SchemeAccount.Status.REDEEMED)
         .select_related("customer", "plan", "metal_grade")
@@ -927,25 +928,51 @@ def get_redemption_eligibility_summary(as_of=None):
     return RedemptionEligibilitySummary(
         as_of=as_of,
         eligible_now=tuple(
-            account for account in open_accounts if account.eligible_from <= as_of
+            account
+            for account in open_accounts
+            if is_redemption_eligible(
+                eligible_from=account.eligible_from,
+                as_of=as_of,
+            )
         ),
         next_30_days=tuple(
             account
             for account in open_accounts
-            if as_of < account.eligible_from <= day_30
+            if 1
+            <= eligibility_days_until(
+                eligible_from=account.eligible_from,
+                as_of=as_of,
+            )
+            <= 30
         ),
         next_60_days=tuple(
             account
             for account in open_accounts
-            if day_30 < account.eligible_from <= day_60
+            if 31
+            <= eligibility_days_until(
+                eligible_from=account.eligible_from,
+                as_of=as_of,
+            )
+            <= 60
         ),
         next_90_days=tuple(
             account
             for account in open_accounts
-            if day_60 < account.eligible_from <= day_90
+            if 61
+            <= eligibility_days_until(
+                eligible_from=account.eligible_from,
+                as_of=as_of,
+            )
+            <= 90
         ),
         later=tuple(
-            account for account in open_accounts if account.eligible_from > day_90
+            account
+            for account in open_accounts
+            if eligibility_days_until(
+                eligible_from=account.eligible_from,
+                as_of=as_of,
+            )
+            > 90
         ),
         redeemed=redeemed,
     )

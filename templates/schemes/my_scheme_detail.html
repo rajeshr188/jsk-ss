@@ -26,13 +26,13 @@
 {% if scheme_account.effective_status == 'REDEMPTION_ELIGIBLE' %}
 <div class="alert alert-success" role="alert">
   This scheme became eligible for redemption on {{ scheme_account.eligible_from|date:'d M Y' }}.
-  It remains open until the store completes a redemption.
+  It remains open until the store completes a redemption. Visit during showroom opening hours to arrange fulfilment.
 </div>
 {% elif scheme_account.effective_status == 'REDEEMED' %}
 <div class="alert alert-secondary" role="alert">This scheme has been redeemed.</div>
 {% else %}
 <div class="alert alert-info" role="alert">
-  Redemption eligibility begins on {{ scheme_account.eligible_from|date:'d M Y' }}.
+  Redemption eligibility begins on {{ scheme_account.eligible_from|date:'d M Y' }}. This exact calendar date is not shifted by weekends, public holidays, or showroom closure.
 </div>
 {% endif %}
 

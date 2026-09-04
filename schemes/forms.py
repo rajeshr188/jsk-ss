@@ -129,8 +129,19 @@ class EnrolmentForm(forms.Form):
         queryset=MetalGrade.objects.none(),
         label="Metal grade",
     )
-    start_date = forms.DateField(widget=forms.DateInput(attrs={"type": "date"}))
-    agreed_months = forms.IntegerField(min_value=12)
+    start_date = forms.DateField(
+        widget=forms.DateInput(attrs={"type": "date"}),
+        help_text=(
+            "Eligibility is calculated from this date using exact calendar months."
+        ),
+    )
+    agreed_months = forms.IntegerField(
+        min_value=12,
+        help_text=(
+            "Weekends, public holidays, showroom hours, and payment pauses do not "
+            "shift the eligibility date."
+        ),
+    )
     audit_reason = forms.CharField(
         label="Reason for enrolment",
         widget=forms.Textarea(attrs={"rows": 2}),

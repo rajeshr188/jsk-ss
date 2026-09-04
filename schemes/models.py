@@ -7,6 +7,8 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils import timezone
 
+from .eligibility import is_redemption_eligible
+
 from .bonuses import CASH_BONUS_POLICY_VERSION
 
 
@@ -378,7 +380,10 @@ class SchemeAccount(models.Model):
     def effective_status(self):
         if self.status == self.Status.REDEEMED:
             return self.Status.REDEEMED
-        if timezone.localdate() >= self.eligible_from:
+        if is_redemption_eligible(
+            eligible_from=self.eligible_from,
+            as_of=timezone.localdate(),
+        ):
             return self.Status.REDEMPTION_ELIGIBLE
         return self.Status.ACTIVE
 

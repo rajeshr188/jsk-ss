@@ -3,14 +3,92 @@ from decimal import Decimal
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
-from django.test import TestCase, override_settings
+from django.test import SimpleTestCase, TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
+from schemes.eligibility import (
+    calculate_eligibility_date,
+    eligibility_days_until,
+    is_redemption_eligible,
+)
 from schemes.models import SchemeAccount, SchemePlan
 from schemes.selectors import get_redemption_eligibility_summary
 from schemes.services import create_customer, enroll_customer
 from schemes.tests.grade_helpers import enrolment_grade_kwargs
+
+
+class ExactCalendarEligibilityPolicyTests(SimpleTestCase):
+    def test_month_end_is_clamped_in_common_and_leap_years(self):
+        self.assertEqual(
+            calculate_eligibility_date(
+                start_date=date(2025, 1, 31),
+                agreed_months=1,
+            ),
+            date(2025, 2, 28),
+        )
+        self.assertEqual(
+            calculate_eligibility_date(
+                start_date=date(2024, 1, 31),
+                agreed_months=1,
+            ),
+            date(2024, 2, 29),
+        )
+
+    def test_weekend_and_calendar_marker_dates_are_not_shifted(self):
+        sunday = calculate_eligibility_date(
+            start_date=date(2025, 9, 6),
+            agreed_months=12,
+        )
+        self.assertEqual(sunday, date(2026, 9, 6))
+        self.assertEqual(sunday.weekday(), 6)
+        self.assertEqual(
+            calculate_eligibility_date(
+                start_date=date(2025, 8, 15),
+                agreed_months=12,
+            ),
+            date(2026, 8, 15),
+        )
+
+    def test_exact_date_is_eligible_without_early_grace(self):
+        eligible_from = date(2026, 9, 4)
+        self.assertFalse(
+            is_redemption_eligible(
+                eligible_from=eligible_from,
+                as_of=date(2026, 9, 3),
+            )
+        )
+        self.assertTrue(
+            is_redemption_eligible(
+                eligible_from=eligible_from,
+                as_of=eligible_from,
+            )
+        )
+
+    def test_eligibility_does_not_expire(self):
+        self.assertTrue(
+            is_redemption_eligible(
+                eligible_from=date(2026, 9, 4),
+                as_of=date(2036, 9, 4),
+            )
+        )
+
+    def test_forecast_distance_uses_calendar_days(self):
+        as_of = date(2026, 9, 4)
+        self.assertEqual(
+            eligibility_days_until(
+                eligible_from=date(2026, 10, 4),
+                as_of=as_of,
+            ),
+            30,
+        )
+        self.assertEqual(
+            eligibility_days_until(
+                eligible_from=date(2026, 9, 3),
+                as_of=as_of,
+            ),
+            -1,
+        )
 
 
 def make_eligibility_fixture():
@@ -166,6 +244,7 @@ class RedemptionEligibilityViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Eligible now")
         self.assertContains(response, "Next 30 days")
+        self.assertContains(response, "Exact calendar dates indicate entitlement eligibility")
         self.assertContains(response, self.eligible.scheme_number)
         self.assertContains(response, self.upcoming.scheme_number)
         self.assertContains(response, self.customer.full_name, count=2)
@@ -183,5 +262,6 @@ class RedemptionEligibilityViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Redemption eligible")
         self.assertContains(response, "remains open until the store completes a redemption")
+        self.assertContains(response, "Visit during showroom opening hours")
         self.eligible.refresh_from_db()
         self.assertEqual(self.eligible.status, SchemeAccount.Status.ACTIVE)
