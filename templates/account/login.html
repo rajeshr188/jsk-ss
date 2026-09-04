@@ -16,6 +16,6 @@
     </form>
     <div class="text-center small mt-3"><a href="{% url 'account_reset_password' %}">Forgot your password?</a></div>
   </div>
-  <p class="text-center small text-secondary mt-3 mb-0">New customers are enrolled at the showroom. Public signup is not available.</p>
+  <p class="text-center small text-secondary mt-3 mb-0">A login does not create a savings scheme. {% if public_customer_registration_enabled %}<a href="{% url 'customer_registration' %}">Request customer access</a> or visit the showroom.{% else %}New customer access is arranged through the showroom.{% endif %}</p>
 </div>
 {% endblock content %}

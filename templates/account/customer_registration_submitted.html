@@ -1,0 +1,16 @@
+{% extends '_base.html' %}
+
+{% block title %}Request received | Jai Sri Krishna Jewellery{% endblock %}
+
+{% block content %}
+<div class="auth-shell"><div class="card auth-card">
+  <p class="page-eyebrow">Customer access</p>
+  <h1>Check your email</h1>
+  <p class="text-secondary">If the details can be used for a new request, we have sent a verification link. Existing, duplicate, or rate-limited requests receive the same response for account security.</p>
+  <p class="text-secondary">After email verification, the showroom must review your request. Approval does not enrol you in a scheme.</p>
+  <div class="d-grid gap-2 mt-4">
+    <a class="btn btn-jsk" href="{% url 'home' %}">Return home</a>
+    <a class="btn btn-outline-dark" href="{% url 'contact' %}">Contact the showroom</a>
+  </div>
+</div></div>
+{% endblock %}

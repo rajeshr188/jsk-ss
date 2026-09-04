@@ -1,0 +1,9 @@
+Hello {{ customer_name }},
+
+Confirm your email address for your Jai Sri Krishna Jewellery customer-access request:
+
+{{ verification_url }}
+
+This link expires at {{ expires_at }}. Verifying your email sends the request for showroom review. It does not enrol you in a savings scheme or enable payments.
+
+If you did not submit this request, ignore this message or contact the showroom.

@@ -1,0 +1,16 @@
+{% extends '_base.html' %}
+
+{% block title %}Verify your email | Jai Sri Krishna Jewellery{% endblock %}
+
+{% block content %}
+<div class="auth-shell"><div class="card auth-card">
+  <p class="page-eyebrow">Customer access</p>
+  <h1>Verify your email</h1>
+  <p class="text-secondary">Confirm that you requested customer access. This will place the request in the showroom owner's review queue; it will not create a scheme account.</p>
+  <form method="post" class="d-grid gap-2 mt-4">
+    {% csrf_token %}
+    <button class="btn btn-jsk" type="submit">Verify email</button>
+    <a class="btn btn-outline-dark" href="{% url 'home' %}">Cancel</a>
+  </form>
+</div></div>
+{% endblock %}

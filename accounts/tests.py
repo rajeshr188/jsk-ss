@@ -48,7 +48,7 @@ class AuthenticationSmokeTests(TestCase):
     def test_public_signup_is_closed(self):
         response = self.client.get(reverse("account_signup"))
         self.assertContains(response, "Sign Up Closed")
-        self.assertContains(response, "Public signup is not available")
+        self.assertContains(response, "Direct signup is not available")
         self.assertContains(response, 'class="auth-shell"')
 
     def test_password_reset_token_response_is_not_cacheable_or_path_referrable(self):
@@ -275,6 +275,19 @@ class SensitiveAuthLoggingTests(TestCase):
         self.assertNotIn(reset_token, redacted)
         self.assertIn("/accounts/invitations/[REDACTED]/", redacted)
         self.assertIn("/accounts/password/reset/key/[REDACTED]/", redacted)
+
+        registration_token = "raw-registration-verification-secret"
+        registration_message = (
+            "/accounts/registrations/verify/"
+            "8b5e3b5a-240d-49da-9446-b2d22ac534ce/"
+            f"{registration_token}/"
+        )
+        registration_redacted = redact_sensitive_auth_paths(registration_message)
+        self.assertNotIn(registration_token, registration_redacted)
+        self.assertIn(
+            "/accounts/registrations/verify/[REDACTED]/",
+            registration_redacted,
+        )
 
     def test_logging_filter_redacts_formatted_record_arguments(self):
         raw_token = "raw-secret-in-log-argument"

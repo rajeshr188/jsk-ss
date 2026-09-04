@@ -100,7 +100,10 @@
           </ul>
         </div>
         {% else %}
-        <a href="{% url 'account_login' %}" class="btn btn-sm btn-light px-3">Customer login</a>
+        <div class="d-flex flex-wrap gap-2">
+          {% if public_customer_registration_enabled %}<a href="{% url 'customer_registration' %}" class="btn btn-sm btn-outline-light px-3">Request access</a>{% endif %}
+          <a href="{% url 'account_login' %}" class="btn btn-sm btn-light px-3">Customer login</a>
+        </div>
         {% endif %}
       </div>
     </div>

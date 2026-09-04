@@ -1,0 +1,27 @@
+{% extends '_base.html' %}
+
+{% block title %}Registration requests | Jai Sri Krishna Jewellery{% endblock %}
+
+{% block content %}
+<div class="page-header"><div>
+  <p class="page-eyebrow">Customer access</p>
+  <h1>Registration requests</h1>
+  <p class="page-subtitle">Review verified applicants without treating login access as scheme enrolment.</p>
+</div><div class="page-actions"><a class="btn btn-outline-dark" href="{% url 'schemes:customer_list' %}">Customers</a></div></div>
+
+<div class="table-responsive"><table class="table align-middle">
+  <thead><tr><th scope="col">Applicant</th><th scope="col">Submitted</th><th scope="col">Status</th><th scope="col"><span class="visually-hidden">Action</span></th></tr></thead>
+  <tbody>
+    {% for application in applications %}
+    <tr>
+      <td><strong>{{ application.full_name }}</strong><br><small class="text-muted">{{ application.email }}</small></td>
+      <td>{{ application.submitted_at|date:"d M Y, h:i A" }}</td>
+      <td>{{ application.lifecycle_status }}</td>
+      <td class="text-end"><a class="btn btn-sm btn-outline-dark" href="{% url 'customer_registration_detail' application.pk %}">Review</a></td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="4"><div class="empty-state"><h2 class="h5">No registration requests</h2><p class="mb-0">New public requests will appear here after the feature is enabled.</p></div></td></tr>
+    {% endfor %}
+  </tbody>
+</table></div>
+{% endblock %}

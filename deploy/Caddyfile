@@ -18,7 +18,7 @@ jaishrikrishnajewellery.com {
 		}
 	}
 	log_append release {env.APP_RELEASE}
-	@sensitiveAuthPaths path /accounts/password/reset/key/* /accounts/invitations/*
+	@sensitiveAuthPaths path /accounts/password/reset/key/* /accounts/invitations/* /accounts/registrations/verify/*
 	log_skip @sensitiveAuthPaths
 	reverse_proxy web:8000
 }

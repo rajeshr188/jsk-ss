@@ -1,0 +1,13 @@
+{% extends '_base.html' %}
+
+{% block title %}Email verified | Jai Sri Krishna Jewellery{% endblock %}
+
+{% block content %}
+<div class="auth-shell"><div class="card auth-card">
+  <p class="page-eyebrow">Customer access</p>
+  <h1>Email verified</h1>
+  <p class="text-secondary">Your request is awaiting showroom review. If approved, you will receive a separate, time-limited link to set your password.</p>
+  <p class="text-secondary">Approval creates login access only. A savings scheme is created separately at the showroom after its terms are reviewed.</p>
+  <div class="d-grid gap-2 mt-4"><a class="btn btn-jsk" href="{% url 'home' %}">Return home</a></div>
+</div></div>
+{% endblock %}

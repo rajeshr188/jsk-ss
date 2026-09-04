@@ -1,0 +1,55 @@
+{% extends '_base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Registration review | Jai Sri Krishna Jewellery{% endblock %}
+
+{% block content %}
+<div class="page-header"><div>
+  <p class="page-eyebrow">Customer access</p>
+  <h1>Registration review</h1>
+  <p class="page-subtitle">{{ application.full_name }} · {{ application.lifecycle_status }}</p>
+</div><div class="page-actions"><a class="btn btn-outline-dark" href="{% url 'customer_registration_list' %}">All requests</a></div></div>
+
+<div class="row g-4">
+  <div class="col-lg-7"><div class="card"><div class="card-body p-4">
+    <h2 class="h4">Applicant details</h2>
+    <dl class="row mb-0">
+      <dt class="col-sm-4">Full name</dt><dd class="col-sm-8">{{ application.full_name }}</dd>
+      <dt class="col-sm-4">Email</dt><dd class="col-sm-8">{{ application.email }}</dd>
+      <dt class="col-sm-4">Mobile</dt><dd class="col-sm-8">{{ application.mobile_number }}</dd>
+      <dt class="col-sm-4">Address</dt><dd class="col-sm-8">{{ application.address|linebreaksbr }}</dd>
+      <dt class="col-sm-4">Submitted</dt><dd class="col-sm-8">{{ application.submitted_at|date:"d M Y, h:i A" }}</dd>
+      <dt class="col-sm-4">Email verified</dt><dd class="col-sm-8">{% if application.email_verified_at %}{{ application.email_verified_at|date:"d M Y, h:i A" }}{% else %}Not yet{% endif %}</dd>
+      <dt class="col-sm-4">Email delivery</dt><dd class="col-sm-8">{% if application.email_sent_at %}Accepted by email provider at {{ application.email_sent_at|date:"d M Y, h:i A" }}{% elif application.delivery_failed_at %}Failed ({{ application.delivery_error }}){% else %}Not recorded{% endif %}</dd>
+      <dt class="col-sm-4">Consent evidence</dt><dd class="col-sm-8">Terms {{ application.terms_version }} and Privacy {{ application.privacy_version }} at {{ application.consent_accepted_at|date:"d M Y, h:i A" }}</dd>
+    </dl>
+  </div></div></div>
+
+  <div class="col-lg-5">
+    {% if application.status == 'PENDING_EMAIL_VERIFICATION' %}
+    <div class="card form-card"><h2 class="h4">Email verification pending</h2><p>The owner cannot approve this request until the applicant verifies the email address.</p>
+      <form method="post" action="{% url 'customer_registration_resend_verification' application.pk %}">{% csrf_token %}<button class="btn btn-outline-dark" type="submit">Send replacement verification</button></form>
+    </div>
+    {% elif application.status == 'AWAITING_OWNER_APPROVAL' %}
+    <form method="post" action="{% url 'customer_registration_approve' application.pk %}" class="card form-card mb-4" novalidate>
+      {% csrf_token %}<h2 class="h4">Approve</h2>
+      <p class="small text-secondary">Approval creates the customer profile and sends a password-setup invitation. It does not create a scheme.</p>
+      {{ approval_form|crispy }}
+      <button class="btn btn-jsk" type="submit">Approve and invite</button>
+    </form>
+    <form method="post" action="{% url 'customer_registration_reject' application.pk %}" class="card form-card" novalidate>
+      {% csrf_token %}<h2 class="h4">Reject</h2>
+      {{ rejection_form|crispy }}
+      <button class="btn btn-outline-danger" type="submit">Reject request</button>
+    </form>
+    {% elif application.status == 'EXPIRED' %}
+    <div class="card"><div class="card-body p-4"><h2 class="h4">Email verification expired</h2><p class="mb-0">This unverified request was superseded by a later submission and cannot be approved.</p></div></div>
+    {% else %}
+    <div class="card"><div class="card-body p-4"><h2 class="h4">Decision recorded</h2>
+      {% if application.reviewed_at %}<dl class="row mb-0"><dt class="col-5">Reviewed by</dt><dd class="col-7">{{ application.reviewed_by_label }}</dd><dt class="col-5">Reviewed at</dt><dd class="col-7">{{ application.reviewed_at|date:"d M Y, h:i A" }}</dd><dt class="col-5">Reason</dt><dd class="col-7">{{ application.review_reason }}</dd></dl>{% endif %}
+      {% if application.approved_user %}<a class="btn btn-outline-dark mt-3" href="{% url 'schemes:customer_detail' application.approved_user.customer_profile.pk %}">Open customer record</a>{% endif %}
+    </div></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
