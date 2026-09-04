@@ -27,10 +27,11 @@ recorded limitations are not lost.
   now separates unprivileged pull-request image validation from protected-`main`
   publication. The merged commit is built once in CI, published to private GHCR under
   its full commit SHA, scanned, and handed off by immutable digest. Closure requires
-  one green protected-`main` publication, review of the linked private package,
-  read-only Linode registry login, successful digest pull/inspection, and a later
-  production release deployed without an on-host build. The memory/disk preflight is
-  mandatory; external capacity alert activation remains under `FW-PROD-002`.
+  review of the linked private package, read-only Linode registry login, successful
+  digest pull/inspection, and a later production release deployed without an on-host
+  build; the first protected-`main` publication and scan passed on 2026-09-04. The
+  memory/disk preflight is mandatory; external capacity alert activation remains
+  under `FW-PROD-002`.
 - **FW-PROD-002 — Activate and exercise external observability:** Caddy already
   provides masked structured logs, release-labelled health endpoints, and the
   repository includes a five-minute financial-exception heartbeat. Configure the

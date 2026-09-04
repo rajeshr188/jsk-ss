@@ -307,9 +307,10 @@ shift the date; there is no early grace or later expiry.
   the published digest for fixable critical vulnerabilities, and records the exact
   deploy digest in the Actions summary. The production guide now prohibits an
   on-host build, requires capacity preflight and sequential candidate checks, and
-  documents a least-privilege read-only Linode pull credential. Completion still
-  requires a green merged publication and the first authenticated Linode digest
-  pull; the currently healthy production release is unchanged.
+  documents a least-privilege read-only Linode pull credential. The first merged
+  publication and scan passed; completion still requires private-package review and
+  the first authenticated Linode digest pull. The currently healthy production
+  release is unchanged.
 - `FW-PAY-003` retains two no-mutation recovery evidence exercises: an isolated
   Test-mode review/dry-run/apply case and an idempotent replay of an already-processed
   Live capture. External alerting and coordinated secret rotation remain separately
@@ -459,11 +460,16 @@ shift the date; there is no early grace or later expiry.
 - The corrected `jsk-savings:deployment-guide-check` image builds successfully and a
   disposable liveness smoke returns `200` with the expected release; Gunicorn 25.3
   starts without attempting a control socket on the read-only application filesystem.
-- GitHub Actions CI is defined with SHA-pinned checkout, Docker, and scanner actions,
-  PostgreSQL 16, migrations, drift/system/deploy checks, the 285-test regression
-  suite, static collection, unprivileged review-image builds, and a protected-`main`-
-  only GHCR publisher with an immutable digest output. Actionlint 1.7.12 validates
-  the workflow locally; registry publication and pull proof require the merged run.
+- GitHub Actions CI is defined with SHA-pinned checkout, Node-24-compatible Docker,
+  and scanner actions, PostgreSQL 16, migrations, drift/system/deploy checks, the
+  285-test regression suite, static collection, unprivileged review-image builds,
+  and a GHCR publisher restricted to protected `main`, with an immutable digest
+  output. Actionlint 1.7.12 validates
+  the workflow locally. The first protected-`main` run `33848413888` built merge
+  `e78c2b20f013298186b7c742a18ba4d99658d164`, passed the published-digest critical-
+  vulnerability gate, and produced
+  `ghcr.io/rajeshr188/jsk-ss@sha256:9778089354d7110c8ea04f8ba2d8b4f6098e7d771e24329d0aeac441ae8faf3d`;
+  private-package review and Linode pull proof remain.
 - The Linode production Compose model passes `docker compose config --quiet`, and
   Caddy 2.11.4 validates the exact apex-domain, `www` redirect, masked JSON access
   log, and release-label configuration. The financial heartbeat shell script passes
