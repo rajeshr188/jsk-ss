@@ -392,6 +392,43 @@ authorize new production CASH enrolments or contributions under `SCH-007`.
   dedicated Editorial media collection, and remain subject to `FW-MEDIA-002` source-
   original retention until isolated media backup and restore proof exists.
 
+## Mobile distribution boundaries
+
+- **MOB-001:** The first mobile distribution is an installable PWA and customer-only
+  Android Trusted Web Activity over the canonical HTTPS origin. It reuses Django
+  sessions and CSRF and introduces no mobile API or authentication token.
+- **MOB-002:** Django services and PostgreSQL remain the sole source of truth. A mobile
+  surface may display server responses but never calculates, stores, or submits an
+  authoritative rate lock, metal allocation, balance, eligibility result, payment
+  result, redemption, or liability independently.
+- **MOB-003:** The Android surface exposes no owner, staff, rate-publication,
+  registration/enrolment approval, showroom-cash, redemption-recording, audit, or
+  payment-operations control. Those remain web-only authorized workflows.
+- **MOB-004:** Service-worker caching is allowlisted. Authentication, registration and
+  invitation tokens, customer/scheme data, rates, contributions, payments, receipts,
+  statements, eligibility, OAuth callbacks, health responses, and owner/admin content
+  are network-only and are never served as cached truth.
+- **MOB-005:** Razorpay secrets and confirmation authority remain server-side. Mobile
+  browser or native callbacks never create entitlement; existing signature, captured-
+  payment, signed-webhook, idempotency, expiry, pause, and exact-grade allocation rules
+  apply unchanged.
+- **MOB-006:** Google authorization may not run in a developer-controlled embedded
+  WebView. TWA/browser login preserves the explicit approved-customer connection and
+  stable-subject rules in `AUTH-012` through `AUTH-016`.
+- **MOB-007:** Android code, signing, scanning, and release artifacts live in a separate
+  repository and CI boundary and are never built on the production serving host. This
+  repository owns the canonical web content and exact Digital Asset Links statement.
+- **MOB-008:** Offline behavior may state that connectivity is required and display
+  reviewed static public assets only. It never queues a financial mutation or labels
+  a cached amount, rate, entitlement, payment, or eligibility decision as current.
+- **MOB-009:** Public store release requires reviewed organization ownership, privacy
+  and support identity, financial/Data Safety declarations, and discoverable in-app
+  and external account-deletion requests. Deletion handling must disclose and justify
+  any retained immutable financial records rather than silently erasing history.
+- **MOB-010:** A native Android/iOS client or versioned customer API requires a new ADR
+  covering authentication and revocation, authorization, idempotency, rate limiting,
+  secure storage, provider SDKs, threat modeling, compatibility, and release operations.
+
 ## Precision
 
 Money uses 2 decimal places. Contribution and cash-redemption input with more than 2

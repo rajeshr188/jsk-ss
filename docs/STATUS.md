@@ -2,14 +2,13 @@
 
 ## Current milestone
 
-`FW-AUTH-004` is production-accepted on release
-`77141d0caa447028802ff1ec7166fad4fd198d8c` under ADR-0013. Google is an optional,
-explicitly linked credential for an already-approved active customer; it is not a
-registration, approval, profile, scheme-enrolment, or financial workflow. One
-controlled customer connection and Google login passed while password/reset fallback,
-privileged-user exclusion, zero token retention, and all financial boundaries remained
-intact. The previously accepted `FW-ENROL-001` and `FW-AUTH-003` boundaries are
-unchanged.
+ADR-0014 accepts a PWA and customer-only Android Trusted Web Activity as the first
+mobile distribution path. `FW-MOBILE-001` through `FW-MOBILE-005` now track store and
+product readiness, a network-safe PWA, a separately built Android shell, a controlled
+pilot, and an evidence-based native/API decision. No PWA, service worker, Android
+project, mobile API, provider integration, or production change has been implemented.
+The production-accepted `FW-AUTH-004`, `FW-ENROL-001`, and all financial boundaries
+remain unchanged.
 
 ## Completed
 
@@ -343,6 +342,11 @@ unchanged.
 
 ## In progress
 
+- `FW-MOBILE-001` is the next mobile planning gate under ADR-0014. It must settle the
+  customer MVP and measures, permanent package/signing ownership, Play organization
+  account, financial and Data Safety declarations, account-deletion/retention flow,
+  target API, and device/browser test matrix before PWA or Android implementation.
+  The accepted first release remains customer-only and adds no mobile API.
 - `FW-ELIG-002` awaits only the first naturally occurring reminder-specific Postmark
   acceptance and matching owner delivery record. Its deployed zero-candidate run is
   correct evidence that no message is invented merely to satisfy a rollout smoke.
@@ -379,6 +383,10 @@ unchanged.
 
 ## Known limitations
 
+- There is currently no installable PWA, service worker, Android application, mobile
+  API, App/Deep Link association, push notification, biometric mobile credential, or
+  iOS App Store client. ADR-0014 deliberately requires a policy-ready PWA/TWA pilot
+  before any native/API commitment; all mobile access today is the responsive website.
 - Google sign-in is limited to explicitly linked approved customers. Owners, staff,
   and superusers retain password authentication, and provider-assisted registration,
   additional social providers, and customer self-service unlink are intentionally
@@ -586,7 +594,8 @@ unchanged.
 
 ## Next recommended step
 
-Commit and merge the `FW-AUTH-004` production evidence. The next actionable fund-
-safety item is the two remaining no-mutation `FW-PAY-003` Razorpay recovery exercises.
-The first genuine `FW-ELIG-002` reminder observation remains independent and must not
-be manufactured.
+Review and merge the ADR-0014 mobile roadmap documentation. Then complete
+`FW-MOBILE-001` as a no-code product/store-readiness phase before beginning the
+network-safe PWA foundation. The independent fund-safety priority remains the two
+no-mutation `FW-PAY-003` Razorpay recovery exercises, and the first genuine
+`FW-ELIG-002` reminder observation must not be manufactured.
