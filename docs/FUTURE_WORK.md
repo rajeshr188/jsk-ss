@@ -119,6 +119,27 @@ recorded limitations are not lost.
 
 ## Eligibility and customer communication
 
+- **FW-AUTH-004 — Roll out linked-customer Google sign-in:** ADR-0013 and the
+  repository implementation keep Google separate from staged registration, owner
+  approval, and scheme enrolment. Before closing this item:
+
+  - [x] Add the restricted allauth adapter, server-side environment configuration,
+    fail-closed switch, customer UI, integrity command, callback log exclusion, and
+    regression tests.
+  - [ ] Configure a production Google Web OAuth client with the exact owned-domain
+    callback and minimum identity scopes.
+  - [ ] Apply the additive allauth `socialaccount` migrations while the feature is
+    disabled and pass `check_customer_google_login`.
+  - [ ] Connect one controlled approved customer, prove password fallback and Google
+    login, and verify no user, customer, scheme, contribution, allocation, or token
+    record was created unexpectedly.
+  - [ ] Enable the public button only after the controlled proof and retain rollout
+    evidence.
+
+  Customer self-service unlink, owner/staff social login, additional providers, and
+  provider-assisted registration remain outside this phase. An audited unlink is a
+  future decision if operational experience requires it.
+
 - **FW-ELIG-002 — Observe the first genuine reminder delivery:** The configurable
   email audiences, immutable reminder/attempt evidence, bounded retries, aggregate
   command, owner view, additive `schemes.0019` migration, and hardened systemd
@@ -162,7 +183,7 @@ Completed implementation and rollout details are intentionally not repeated here
 
 Use [Project status](STATUS.md) for the completed capability summary, the
 [production runbook](PRODUCTION_DEPLOYMENT.md) for release evidence, and ADR-0003
-through ADR-0012 for the corresponding durable architecture decisions.
+through ADR-0013 for the corresponding durable architecture decisions.
 
 ## Historical milestone ledger
 

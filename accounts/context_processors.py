@@ -7,3 +7,9 @@ def public_customer_registration(request):
             settings.PUBLIC_CUSTOMER_REGISTRATION_ENABLED
         )
     }
+
+
+def customer_google_login(request):
+    return {
+        "customer_google_login_enabled": settings.CUSTOMER_GOOGLE_LOGIN_ENABLED,
+    }

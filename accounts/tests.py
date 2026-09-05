@@ -289,6 +289,16 @@ class SensitiveAuthLoggingTests(TestCase):
             registration_redacted,
         )
 
+        oauth_code = "short-lived-google-authorization-code"
+        oauth_message = f"/accounts/google/login/callback/?code={oauth_code}&state=secret"
+        oauth_redacted = redact_sensitive_auth_paths(oauth_message)
+        self.assertNotIn(oauth_code, oauth_redacted)
+        self.assertNotIn("state=secret", oauth_redacted)
+        self.assertIn(
+            "/accounts/google/login/callback/[REDACTED]/",
+            oauth_redacted,
+        )
+
     def test_logging_filter_redacts_formatted_record_arguments(self):
         raw_token = "raw-secret-in-log-argument"
         record = logging.LogRecord(

@@ -1,0 +1,41 @@
+{% extends '_base.html' %}
+{% load socialaccount %}
+
+{% block title %}Google sign-in | Jai Sri Krishna Jewellery{% endblock %}
+
+{% block content %}
+<div class="auth-shell">
+  <div class="card auth-card">
+    <p class="page-eyebrow">Account security</p>
+    <h1>Google sign-in</h1>
+    {% if form.non_field_errors %}
+      <div class="alert alert-danger" role="alert">
+        {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+      </div>
+    {% endif %}
+    {% if user.role != 'CUSTOMER' or user.is_staff or user.is_superuser %}
+      <div class="alert alert-secondary mb-0">Google sign-in is available only for approved customer accounts.</div>
+    {% elif not customer_google_login_enabled %}
+      <div class="alert alert-secondary mb-0">Google sign-in is temporarily unavailable. Your password login remains available.</div>
+    {% else %}
+      {% get_social_accounts user as social_accounts %}
+      {% if social_accounts.google %}
+        <div class="alert alert-success" role="status">
+          Google is connected to <strong>{{ user.email }}</strong>.
+        </div>
+        <p class="text-secondary mb-0">You can now use Continue with Google on the customer login page. Password login and password reset remain available.</p>
+        <hr>
+        <p class="small text-secondary mb-0">Online removal is intentionally unavailable in this first release so identity history cannot be silently erased. Contact the showroom if this Google account may be compromised.</p>
+      {% else %}
+        <p class="text-secondary">Connect the Google account whose verified email exactly matches <strong>{{ user.email }}</strong>.</p>
+        {% provider_login_url "google" process="connect" as google_connect_url %}
+        <form method="post" action="{{ google_connect_url }}">
+          {% csrf_token %}
+          <button class="btn btn-jsk w-100" type="submit">Connect Google account</button>
+        </form>
+        <p class="small text-secondary mt-3 mb-0">This adds a sign-in method only. It does not change your customer approval, profile, scheme enrolment, or financial records.</p>
+      {% endif %}
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

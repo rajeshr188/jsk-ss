@@ -449,4 +449,5 @@ class PublicRegistrationSecretBoundaryTests(SimpleTestCase):
         contents = caddyfile.read_text(encoding="utf-8")
 
         self.assertIn("/accounts/registrations/verify/*", contents)
+        self.assertIn("/accounts/google/login/callback/", contents)
         self.assertIn("log_skip @sensitiveAuthPaths", contents)

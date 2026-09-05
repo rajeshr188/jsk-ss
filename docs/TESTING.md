@@ -13,7 +13,10 @@ Authentication regressions cover closed public signup, owner-only digest-backed
 customer invitations, bounded expiry and one-time acceptance, resend supersession,
 provider failure/retry, direct untracked email links, token-response privacy headers,
 edge/access-log exclusion, Django warning/error token redaction, case-insensitive
-login-email uniqueness, and login/enrolment separation.
+login-email uniqueness, login/enrolment separation, closed social signup, exact-email
+customer-initiated Google linking, privileged/inactive-user rejection, no email-based
+auto-linking, feature-switch containment, password fallback, callback log exclusion,
+and zero provider-token retention.
 
 Current regressions cover amount/frequency enforcement, failed-payment entitlement, confirmation/allocation idempotency, Razorpay mode/key matching, mode history migration, cross-mode order/callback/webhook rejection, Live checkout disclosure, readiness blocking, order/API/HMAC boundaries, duplicate callbacks and webhooks, owner-only Scheme Rate publication, publication validation/warnings, GOLD/SILVER no-rate payment blocking with unaffected CASH orders, pre-order rate locking, durable verified-metal-payment recovery, exact metal calculation, historical-rate stability, paid-unallocated recovery from the original lock, production-shaped `schemes.0009` to `0010` history backfill and blocker behavior, customer isolation, owner liability reconciliation, current-exposure rounding, India-local activity periods, eligibility status and exact 30/60/90-day boundaries, versioned cash-bonus snapshots, projection-versus-earned boundaries, eligibility cutoff, half-up bonus rounding, principal/bonus redemption allocation, redemption idempotency and precision, partial/full settlement, over-redemption prevention, denomination separation, immutable audit/reversal history, exception classification, reversal liability restoration, stable receipt numbering, unallocated-document disclosure, statement source filtering, document/export access control, CSV denomination/formula safety, and database constraints.
 
@@ -25,6 +28,11 @@ Razorpay tests likewise replace the HTTPS boundary with deterministic order and 
 
 - Owner login and logout
 - Password-reset request renders and sends through the configured backend
+- With Google disabled, confirm no social action appears and password login still works
+- With a controlled Google client, connect only from an approved customer session,
+  then prove Google login and the original password/reset fallbacks independently
+- Attempt an unconnected/mismatched Google identity and confirm no user is created or
+  disclosed; run `check_customer_google_login` and confirm zero stored social tokens
 - Create a customer as owner, verify the customer chooses their own password from the
   direct owned-domain invitation link, and confirm no scheme account was created
 - Resend an unused invitation, verify the old link is unavailable, and confirm an

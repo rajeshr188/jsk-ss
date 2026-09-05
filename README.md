@@ -53,6 +53,9 @@ Alternatively, set `DJANGO_SECRET_KEY` and run `docker compose up --build`; Comp
 | `R2_SIGNED_URL_EXPIRY_SECONDS` | no | Lifetime of private original/document URLs; defaults to `900` seconds |
 | `DEFAULT_FROM_EMAIL` | no | Sender for authentication emails |
 | `CUSTOMER_INVITATION_EXPIRY_HOURS` | no | Customer login invitation lifetime; defaults to `72`, bounded to `1`–`168` hours |
+| `PUBLIC_CUSTOMER_REGISTRATION_ENABLED` | onboarding rollout | Default-off staged access application; it never opens direct allauth signup or creates a scheme |
+| `CUSTOMER_GOOGLE_LOGIN_ENABLED` | social-auth rollout | Default-off Google credential for an already-approved customer; disabling it preserves password login |
+| `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET` | Google OAuth | Server-side Web OAuth credentials; both must be set together and the secret must never reach frontend code |
 | `EMAIL_BACKEND` | production | Delivery backend; deploy checks reject console, dummy, and in-memory backends |
 | `EMAIL_HOST`, `EMAIL_PORT` | SMTP | SMTP server and port |
 | `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD` | SMTP | SMTP credentials; password remains server-side |
@@ -106,8 +109,13 @@ selected. New and migrated plans default to private. Review every customer-facin
 field before publishing a plan, and use the owner plan list to confirm its public
 status. Existing enrolments retain their snapshotted terms when a public plan changes.
 
-Public self-registration remains closed. Prospective customers contact the showroom
-for enrolment, while enrolled customers sign in to access the contribution checkout.
+Direct allauth signup remains closed. The optional staged public registration flow
+records an access application, verifies email, and requires owner approval before the
+existing password-setup invitation creates usable access. A login still does not
+create a scheme: customers submit a separate non-binding enrolment request and only
+an owner may convert it into an agreement. Google, when enabled, is merely an
+additional credential that an approved customer explicitly connects after password
+login.
 The policy pages describe showroom pickup only and a manual payment-error refund
 process; the application does not yet initiate Razorpay refunds automatically.
 

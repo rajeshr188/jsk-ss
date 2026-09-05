@@ -2814,6 +2814,127 @@ Dependency updates must change and review `uv.lock`; do not run an unlocked upgr
 inside a production build. Rebuild regularly with current trusted base-image patches,
 then promote the resulting immutable digest through the normal release process.
 
+## `FW-AUTH-004` Google linked-credential rollout
+
+ADR-0013 permits Google only as an explicitly connected sign-in method for an
+already-approved customer. It does not open social signup, match an unconnected
+Google identity to a user by email, approve a registration, or create a scheme. Keep
+the feature disabled until every step below passes.
+
+### Google configuration
+
+Use a production-owned Google Cloud project and create an **External** Web application
+OAuth client. Configure the consent/branding screen with the owned homepage, support
+email, privacy policy, and terms. Request only the `profile` and `email` identity
+scopes used by django-allauth. Google recommends separate testing and production
+projects; a project in Testing is restricted to its configured test users.
+
+Register this exact authorized redirect URI, including scheme and trailing slash:
+
+```text
+https://jaishrikrishnajewellery.com/accounts/google/login/callback/
+```
+
+Do not register an IP address, HTTP production callback, wildcard, `/accounts/login/`,
+or the `www` hostname unless the application is intentionally changed to generate
+that exact callback. Google requires the requested redirect URI to exactly equal a
+registered URI.
+
+### Disabled schema rollout
+
+Take and record the managed PostgreSQL recovery point and the current immutable image
+and release. Add the credentials to `/opt/jsk/app/.env.production`; never put the
+secret in Git, a browser variable, a template, or a command transcript:
+
+```dotenv
+CUSTOMER_GOOGLE_LOGIN_ENABLED=False
+GOOGLE_OAUTH_CLIENT_ID=replace-with-google-web-client-id
+GOOGLE_OAUTH_CLIENT_SECRET=replace-with-google-web-client-secret
+PUBLIC_REGISTRATION_TERMS_VERSION=2026-09-05
+PUBLIC_REGISTRATION_PRIVACY_VERSION=2026-09-05
+```
+
+Promote the approved registry digest through the normal release workflow. Before
+migration, review the additive allauth plan:
+
+```bash
+cd /opt/jsk/app
+docker compose --env-file .env.production -f compose.production.yml \
+  run --rm --no-deps web python manage.py check --deploy --fail-level ERROR
+docker compose --env-file .env.production -f compose.production.yml \
+  run --rm --no-deps web python manage.py showmigrations socialaccount
+docker compose --env-file .env.production -f compose.production.yml \
+  run --rm --no-deps web python manage.py migrate --plan
+```
+
+The expected new schema is django-allauth's additive `socialaccount` migration chain.
+Apply it, recreate `web`, then recreate Caddy so the OAuth callback log exclusion is
+active:
+
+```bash
+docker compose --env-file .env.production -f compose.production.yml \
+  run --rm --no-deps web python manage.py migrate --noinput
+docker compose --env-file .env.production -f compose.production.yml \
+  up -d --force-recreate --no-deps web
+docker compose --env-file .env.production -f compose.production.yml \
+  exec -T caddy caddy validate --config /etc/caddy/Caddyfile
+docker compose --env-file .env.production -f compose.production.yml \
+  up -d --force-recreate --no-deps caddy
+docker compose --env-file .env.production -f compose.production.yml \
+  exec -T web python manage.py check_customer_google_login
+```
+
+The integrity command must report `status=ok`, `enabled=false`, zero database Google
+applications, zero stored tokens, and no invalid identity links. Confirm
+`/accounts/login/` has no Google action and `/accounts/signup/` still reports direct
+signup closed.
+
+### Controlled connection and enablement
+
+Record baseline counts for `CustomUser`, `Customer`, `SchemeAccount`, `Contribution`,
+`MetalAllocation`, `SocialAccount`, and `SocialToken`. Set
+`CUSTOMER_GOOGLE_LOGIN_ENABLED=True`, validate Compose, and recreate only `web`.
+Use one approved, active, non-staff customer whose local email is verified and whose
+Google verified email matches it exactly:
+
+1. Sign in with the existing password.
+2. Open **Account → Google sign-in** and connect Google.
+3. Sign out and use **Continue with Google**.
+4. Sign out again and prove the original password still works.
+5. Request a password-reset email and confirm the owned-domain fallback remains usable.
+6. Attempt Google login with an unconnected test identity and confirm only the generic
+   instruction to sign in by password appears; no local account is created or revealed.
+
+Run:
+
+```bash
+docker compose --env-file .env.production -f compose.production.yml \
+  exec -T web python manage.py check_customer_google_login
+docker compose --env-file .env.production -f compose.production.yml \
+  exec -T web python manage.py check_auth_email_integrity
+docker compose --env-file .env.production -f compose.production.yml \
+  exec -T web python manage.py check_financial_exceptions
+docker compose --env-file .env.production -f compose.production.yml \
+  exec -T web python manage.py check_graded_metal_rates
+```
+
+Expect one additional `SocialAccount`, zero `SocialToken` rows, and no change caused
+by linking in users, customers, schemes, contributions, allocations, redemptions, or
+liabilities. Confirm Caddy access logs contain no
+`/accounts/google/login/callback/` entry and application logs contain no OAuth
+authorization code. Retain only aggregate evidence; never record the client secret,
+OAuth code, state value, cookie, or provider subject identifier.
+
+If any check fails, set `CUSTOMER_GOOGLE_LOGIN_ENABLED=False`, recreate `web`, and
+continue password login while investigating. Do not reverse the additive allauth
+migrations or delete a binding to make counts pass. A compromised individual must be
+deactivated until reviewed; a safe audited unlink workflow is outside this phase.
+
+Rotate the Google client secret as its own credential class: create a replacement in
+Google, update the server environment, recreate `web`, prove a controlled login, then
+delete the old secret. Disabling the feature is the immediate containment action if a
+coordinated overlap is unavailable.
+
 ## Go-live sign-off
 
 The target full-production checklist remains below. Live acceptance does not mark
@@ -2862,6 +2983,9 @@ not a completed control.
 - [Docker image pulls by digest](https://docs.docker.com/reference/cli/docker/image/pull/#pull-an-image-by-digest-immutable-identifier)
 - [GitHub protected branches and required checks](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches)
 - [GitHub package access and visibility](https://docs.github.com/en/packages/learn-github-packages/configuring-a-packages-access-control-and-visibility)
+- [Google OAuth for web server applications](https://developers.google.com/identity/protocols/oauth2/web-server)
+- [Google OAuth app audience and testing](https://support.google.com/cloud/answer/15549945)
+- [Google OAuth app branding](https://support.google.com/cloud/answer/15549049)
 - [Gunicorn control-socket settings](https://github.com/benoitc/gunicorn/blob/master/docs/content/reference/settings.md#control)
 - [PostgreSQL backup and restore](https://www.postgresql.org/docs/current/backup.html)
 - [PostgreSQL `pg_dump`](https://www.postgresql.org/docs/current/app-pgdump.html)

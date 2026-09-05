@@ -19,6 +19,7 @@
 
 - [x] `FW-AUTH-002` — Staged public customer registration with owner approval
 - [x] `FW-ENROL-001` — Non-binding customer enrolment requests with owner conversion
+- [ ] `FW-AUTH-004` — Google as an explicitly linked approved-customer credential
 
 Milestones are vertical increments. Each must leave migrations, tests, system checks, user flows, and canonical documentation coherent before the next begins.
 

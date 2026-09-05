@@ -109,6 +109,8 @@ INSTALLED_APPS = [
     # Third-party
     "allauth",
     "allauth.account",
+    "allauth.socialaccount",
+    "allauth.socialaccount.providers.google",
     "crispy_forms",
     "crispy_bootstrap5",
     "wagtail.contrib.forms",
@@ -173,6 +175,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "accounts.context_processors.public_customer_registration",
+                "accounts.context_processors.customer_google_login",
                 "catalog.context_processors.public_catalogue_navigation",
             ],
         },
@@ -433,6 +436,39 @@ ACCOUNT_LOGIN_METHODS = {"email"}
 ACCOUNT_SIGNUP_FIELDS = ["email*", "password1*"]
 ACCOUNT_UNIQUE_EMAIL = True
 ACCOUNT_ADAPTER = "accounts.adapters.AccountAdapter"
+ACCOUNT_REAUTHENTICATION_REQUIRED = True
+SOCIALACCOUNT_ADAPTER = "accounts.adapters.SocialAccountAdapter"
+SOCIALACCOUNT_AUTO_SIGNUP = False
+SOCIALACCOUNT_EMAIL_AUTHENTICATION = False
+SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = False
+SOCIALACCOUNT_STORE_TOKENS = False
+SOCIALACCOUNT_LOGIN_ON_GET = False
+CUSTOMER_GOOGLE_LOGIN_ENABLED = env_bool("CUSTOMER_GOOGLE_LOGIN_ENABLED")
+GOOGLE_OAUTH_CLIENT_ID = os.getenv("GOOGLE_OAUTH_CLIENT_ID", "").strip()
+GOOGLE_OAUTH_CLIENT_SECRET = os.getenv("GOOGLE_OAUTH_CLIENT_SECRET", "").strip()
+if bool(GOOGLE_OAUTH_CLIENT_ID) != bool(GOOGLE_OAUTH_CLIENT_SECRET):
+    raise ImproperlyConfigured(
+        "GOOGLE_OAUTH_CLIENT_ID and GOOGLE_OAUTH_CLIENT_SECRET must be set together"
+    )
+if CUSTOMER_GOOGLE_LOGIN_ENABLED and not (
+    GOOGLE_OAUTH_CLIENT_ID and GOOGLE_OAUTH_CLIENT_SECRET
+):
+    raise ImproperlyConfigured(
+        "Customer Google login requires GOOGLE_OAUTH_CLIENT_ID and "
+        "GOOGLE_OAUTH_CLIENT_SECRET"
+    )
+SOCIALACCOUNT_PROVIDERS = {
+    "google": {
+        "SCOPE": ["profile", "email"],
+        "AUTH_PARAMS": {"access_type": "online", "prompt": "select_account"},
+    }
+}
+if GOOGLE_OAUTH_CLIENT_ID and GOOGLE_OAUTH_CLIENT_SECRET:
+    SOCIALACCOUNT_PROVIDERS["google"]["APP"] = {
+        "client_id": GOOGLE_OAUTH_CLIENT_ID,
+        "secret": GOOGLE_OAUTH_CLIENT_SECRET,
+        "key": "",
+    }
 CUSTOMER_INVITATION_EXPIRY_HOURS = env_int(
     "CUSTOMER_INVITATION_EXPIRY_HOURS",
     72,
@@ -462,11 +498,11 @@ PUBLIC_REGISTRATION_ATTEMPT_RETENTION_HOURS = env_int(
 )
 PUBLIC_REGISTRATION_TERMS_VERSION = os.getenv(
     "PUBLIC_REGISTRATION_TERMS_VERSION",
-    "2026-09-04",
+    "2026-09-05",
 ).strip()
 PUBLIC_REGISTRATION_PRIVACY_VERSION = os.getenv(
     "PUBLIC_REGISTRATION_PRIVACY_VERSION",
-    "2026-09-04",
+    "2026-09-05",
 ).strip()
 if PUBLIC_CUSTOMER_REGISTRATION_ENABLED and not (
     PUBLIC_REGISTRATION_TERMS_VERSION and PUBLIC_REGISTRATION_PRIVACY_VERSION
