@@ -20,6 +20,8 @@ recorded limitations are not lost.
    their business rules are approved.
 4. Add catalogue and pricing enhancements without coupling CMS state to financial
    contracts.
+5. Validate mobile demand through a policy-ready PWA/TWA pilot before accepting a
+   native API, duplicated financial presentation, or cross-platform framework.
 
 ## Production operations
 
@@ -153,6 +155,46 @@ recorded limitations are not lost.
   enrolment terms. Define deletion/unpublish fallbacks, accessibility, approval, and
   historical-enrolment behavior first.
 
+## Mobile distribution
+
+- **FW-MOBILE-001 — Complete mobile product and store readiness:** ADR-0014 accepts a
+  PWA/TWA-first, customer-only pilot without a new API. Confirm the initial customer
+  journeys and success measures; reserve the permanent package identifier; establish
+  the business-owned Google Play organization account and signing ownership; review
+  the app name and savings-not-investment wording; classify the Financial features
+  declaration; draft accurate Data Safety answers; and approve an account-deletion
+  request/retention workflow that preserves justified financial history. Record the
+  Android support floor, current target-API requirement, browser/device matrix, and
+  store-review evidence before implementation is called release-ready.
+- **FW-MOBILE-002 — Add a network-safe installable PWA foundation:** Add the manifest,
+  reviewed icons/theme, installability metadata, narrowly allowlisted service worker,
+  static offline explanation, and mobile interaction/accessibility refinements.
+  Authenticated, identity, scheme, rate, payment, receipt, statement, eligibility,
+  OAuth, health, and owner routes must remain network-only. Test installability,
+  upgrades, cache deletion, slow/offline recovery, CSRF, Google login, Razorpay return,
+  payment expiry, and operational pauses on representative Android browsers.
+- **FW-MOBILE-003 — Build the customer-only Android TWA:** Create a separately owned
+  Android repository and CI release pipeline; choose the permanent package and Play
+  signing identity; publish exact Digital Asset Links from the canonical domain; and
+  expose only the existing customer experience. Do not add a mobile API, owner tools,
+  embedded WebView OAuth, application secrets, direct database access, or on-host
+  Android builds. Validate browser fallback, App Links, Google OAuth, Razorpay/UPI
+  handoff and return, process death, updates, accessibility, and release signing.
+- **FW-MOBILE-004 — Run a bounded Play and customer pilot:** Start with Play Internal
+  Testing and approximately five to ten legitimate customers. Pass password and linked-
+  Google login, unconnected-identity rejection, registration/enrolment boundaries,
+  Razorpay Test checkout, one approved low-value Live reconciliation, cancellation,
+  expiry, payment pause, receipt, statement, and no-secret log checks. Retain only
+  aggregate activation, conversion, contribution completion, failure/cancellation,
+  repeat-use, crash, and support evidence before broader distribution.
+- **FW-MOBILE-005 — Decide whether a native/API client is justified:** After a stable
+  pilot, compare observed limitations with native push, biometrics/passkeys, richer
+  navigation, offline non-authoritative documents, and iOS demand. A positive decision
+  requires a new ADR for a versioned customer API, mobile auth/revocation, native
+  Razorpay, idempotency, rate limiting, secure storage, threat modeling, and client
+  release operations. Evaluate Flutter only for a justified near-term shared Android/
+  iOS client; otherwise evaluate Kotlin/Compose for an Android-only native phase.
+
 ## Completed item index
 
 Completed implementation and rollout details are intentionally not repeated here:
@@ -171,7 +213,7 @@ Completed implementation and rollout details are intentionally not repeated here
 
 Use [Project status](STATUS.md) for the completed capability summary, the
 [production runbook](PRODUCTION_DEPLOYMENT.md) for release evidence, and ADR-0003
-through ADR-0013 for the corresponding durable architecture decisions.
+through ADR-0014 for the corresponding durable architecture decisions.
 
 ## Historical milestone ledger
 
