@@ -2,12 +2,13 @@
 
 ## Current milestone
 
-`FW-ENROL-001` and its `FW-AUTH-003` login-versus-enrolment boundary are
-production-accepted on release `bfbdad86c49855ffc5c9965d0848a657a62cf938` under
-ADR-0012. An approved customer can record non-binding interest in one public plan and
-exact-grade offering; only an owner can create the independently reviewed agreement.
-The accepted submission created no account, payment permission, rate lock, allocation,
-eligibility, or liability. Direct allauth signup remains closed.
+`FW-AUTH-004` is repository-complete under ADR-0013. Google is an optional,
+explicitly linked credential for an already-approved active customer; it is not a
+registration, approval, profile, scheme-enrolment, or financial workflow. The local
+additive allauth migrations and complete 349-test regression suite pass. Production
+remains disabled pending OAuth configuration, migration, and a controlled
+account-linking proof. The previously accepted `FW-ENROL-001` and `FW-AUTH-003`
+boundaries remain unchanged.
 
 ## Completed
 
@@ -77,6 +78,11 @@ eligibility, or liability. Direct allauth signup remains closed.
   the first naturally occurring provider acceptance remains to be observed under
   `FW-ELIG-002`.
 - Future public-signup requirements documented under `AUTH-*` domain rules.
+- A disabled-by-default Google linked-credential foundation under ADR-0013: explicit
+  connection by a locally authenticated approved customer, exact provider-verified
+  email match, stable-subject login only after binding, privileged/inactive-user and
+  social-signup rejection, password fallback, no OAuth token retention, callback log
+  exclusion, configuration/integrity checks, and reviewed privacy/terms disclosures.
 - Razorpay test-mode order creation and customer Standard Checkout flow.
 - Explicit fail-closed Razorpay `test`/`live` configuration: the declared mode must
   match the API key prefix, and missing, unknown, or mixed-mode settings are rejected.

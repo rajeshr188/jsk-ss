@@ -94,6 +94,9 @@
                   <hr class="dropdown-divider">
                 </li>
                 <li><a class="dropdown-item" href="{% url 'account_change_password' %}">Change password</a></li>
+                {% if customer_google_login_enabled and user.role == 'CUSTOMER' and not user.is_staff and not user.is_superuser %}
+                <li><a class="dropdown-item" href="{% url 'socialaccount_connections' %}">Google sign-in</a></li>
+                {% endif %}
                 <li><a class="dropdown-item" href="{% url 'account_logout' %}">Sign out</a></li>
               </ul>
             </li>

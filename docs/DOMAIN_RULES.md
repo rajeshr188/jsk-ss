@@ -15,6 +15,11 @@ This is the canonical source for stable business rules.
 - **AUTH-009:** Public registration responses do not disclose existing email, mobile, application, or throttle state. Per-source and per-identity database-backed limits and a honeypot provide the baseline abuse boundary; retained attempt identifiers are one-way digests.
 - **AUTH-010:** Approval rechecks identity conflicts, atomically creates the existing customer login/profile, and issues the existing owner-controlled password-setup invitation. Approval never creates a `SchemeAccount`; only a separate owner enrolment grants contribution access.
 - **AUTH-011:** Public email-verification paths are direct and untracked, excluded from edge access logs, redacted from application logs, non-cacheable, and mutated only by a CSRF-protected confirmation POST.
+- **AUTH-012:** Google is an optional credential for an already-approved customer. It never creates or approves a user, customer profile, scheme agreement, payment permission, or financial entitlement.
+- **AUTH-013:** Only an active, non-privileged customer with a usable password and verified local email may explicitly connect Google after local authentication. The provider must assert the same verified email at connection time.
+- **AUTH-014:** An unconnected provider identity is never authenticated or automatically linked by email. Subsequent Google login uses only the explicitly bound provider subject and still requires an active eligible customer.
+- **AUTH-015:** Password login and reset remain available, provider tokens are not stored, and the fail-closed Google switch may disable social login independently. OAuth callback responses are non-cacheable and omitted from edge access logs.
+- **AUTH-016:** Customer self-service unlink is unavailable until an append-oriented, authorized correction workflow is defined. A suspected compromise requires customer deactivation or the global Google kill switch while the binding is reviewed.
 
 ## Scheme and contribution rules
 
