@@ -2,13 +2,14 @@
 
 ## Current milestone
 
-`FW-AUTH-004` is repository-complete under ADR-0013. Google is an optional,
+`FW-AUTH-004` is production-accepted on release
+`77141d0caa447028802ff1ec7166fad4fd198d8c` under ADR-0013. Google is an optional,
 explicitly linked credential for an already-approved active customer; it is not a
-registration, approval, profile, scheme-enrolment, or financial workflow. The local
-additive allauth migrations and complete 349-test regression suite pass. Production
-remains disabled pending OAuth configuration, migration, and a controlled
-account-linking proof. The previously accepted `FW-ENROL-001` and `FW-AUTH-003`
-boundaries remain unchanged.
+registration, approval, profile, scheme-enrolment, or financial workflow. One
+controlled customer connection and Google login passed while password/reset fallback,
+privileged-user exclusion, zero token retention, and all financial boundaries remained
+intact. The previously accepted `FW-ENROL-001` and `FW-AUTH-003` boundaries are
+unchanged.
 
 ## Completed
 
@@ -329,6 +330,16 @@ boundaries remain unchanged.
   (`JSK-311D2A62`), retained zero contributions, sent the customer completion email,
   and remained idempotent at nine total accounts and one enrolment audit. Enrolment,
   financial-exception, Live-readiness, and exact-grade checks stayed green.
+- `FW-AUTH-004` completed disabled-first production rollout and controlled acceptance
+  on 2026-09-05 in release `77141d0caa447028802ff1ec7166fad4fd198d8c` from the
+  recorded 10:00 AM IST PostgreSQL recovery point. All six additive `socialaccount`
+  migrations applied before activation. One approved active non-staff customer linked
+  a matching verified Google identity and retained Google, password, and reset access;
+  owner/administrator connection remained unavailable. The aggregate baseline stayed
+  at eight users, seven customers, nine accounts, fifteen contributions, and six
+  allocations; exactly one `SocialAccount` and zero `SocialToken` records existed.
+  Authentication, financial-exception, and exact-grade integrity checks and both
+  HTTPS health endpoints passed.
 
 ## In progress
 
@@ -355,10 +366,11 @@ boundaries remain unchanged.
   CA are in place, SSH access is verified, Docker is installed, and the owned domain
   returns liveness and PostgreSQL readiness `200` through Caddy-managed HTTPS;
   paid external alert exercises remain deferred.
-- Production release `bfbdad86c49855ffc5c9965d0848a657a62cf938` is healthy with
+- Production release `77141d0caa447028802ff1ec7166fad4fd198d8c` is healthy with
   migrations through `schemes.0020_scheme_enrolment_requests`,
   `catalog.0001_initial`, `pages.0001_initial`,
-  and `accounts.0004_customerregistrationattempt_customerregistration`
+  `accounts.0004_customerregistrationattempt_customerregistration`, and
+  `socialaccount.0006_alter_socialaccount_extra_data`
   applied, zero reported financial exceptions, successful live/ready checks, valid
   catalogue authorization, working R2 media, published reviewed products, and public
   Jewellery links in the primary and footer navigation. Its production metal-only
@@ -367,6 +379,12 @@ boundaries remain unchanged.
 
 ## Known limitations
 
+- Google sign-in is limited to explicitly linked approved customers. Owners, staff,
+  and superusers retain password authentication, and provider-assisted registration,
+  additional social providers, and customer self-service unlink are intentionally
+  unavailable. A suspected compromised binding requires customer deactivation or
+  global Google-login disablement until the separately tracked audited recovery design
+  is implemented under `FW-AUTH-005`.
 - The application intentionally does not derive one grade's Scheme Rate from another.
   Every offered grade needs its own owner-published current rate; that fail-closed
   behavior can temporarily block contributions for only the missing grade.
@@ -429,8 +447,12 @@ boundaries remain unchanged.
   static collection, and an applied-migration check. Wagtail, taggit, and catalogue
   migrations are applied to production PostgreSQL.
 - Local and production PostgreSQL 16 migrations are applied through
-  `schemes.0019_scheme_reminders`.
-- 294 tests pass, including exact-calendar eligibility month-end clamping,
+  `schemes.0020_scheme_enrolment_requests` and
+  `socialaccount.0006_alter_socialaccount_extra_data`.
+- 349 tests pass, including controlled Google credential linking, social-signup and
+  privileged-user rejection, stable-subject login, verified-email matching, password
+  fallback, zero token retention, callback log protection, exact-calendar eligibility
+  month-end clamping,
   weekend/calendar-marker non-adjustment, exact-day activation without early grace,
   non-expiring eligibility, calendar-day forecast distance, in-store cash
   preview/confirmation, owner authorization,
@@ -493,7 +515,7 @@ boundaries remain unchanged.
   starts without attempting a control socket on the read-only application filesystem.
 - GitHub Actions CI is defined with SHA-pinned checkout, Node-24-compatible Docker,
   and scanner actions, PostgreSQL 16, migrations, drift/system/deploy checks, the
-  294-test regression suite, static collection, unprivileged review-image builds,
+  349-test regression suite, static collection, unprivileged review-image builds,
   and a GHCR publisher restricted to protected `main`, with an immutable digest
   output. Actionlint 1.7.12 validates
   the workflow locally. The first protected-`main` run `33848413888` built merge
@@ -521,6 +543,11 @@ boundaries remain unchanged.
   `33865158341` passed the 294-test, deploy, static, publish, and critical-
   vulnerability gates and produced
   `ghcr.io/rajeshr188/jsk-savings@sha256:88eea68169da2ea04f9f104358ecb69ec929989b15f5e447825ab0f0bd806c33`.
+  PR `#49` merged `FW-AUTH-004` as
+  `77141d0caa447028802ff1ec7166fad4fd198d8c`; protected-`main` run
+  `33948122224` passed the 349-test, deploy, static, publish, and fixable-critical-
+  vulnerability gates and produced
+  `ghcr.io/rajeshr188/jsk-savings@sha256:7e2f95e53333791ede60007f0a059377938574e63d574a55fb4da7fe48c63681`.
 - The Linode production Compose model passes `docker compose config --quiet`, and
   Caddy 2.11.4 validates the exact apex-domain, `www` redirect, masked JSON access
   log, and release-label configuration. The financial heartbeat shell script passes
@@ -559,7 +586,7 @@ boundaries remain unchanged.
 
 ## Next recommended step
 
-Commit and merge the `FW-ENROL-001` production evidence. The next actionable
-fund-safety item is the two remaining no-mutation `FW-PAY-003` Razorpay recovery
-exercises. The first genuine `FW-ELIG-002` reminder observation remains independent
-and must not be manufactured.
+Commit and merge the `FW-AUTH-004` production evidence. The next actionable fund-
+safety item is the two remaining no-mutation `FW-PAY-003` Razorpay recovery exercises.
+The first genuine `FW-ELIG-002` reminder observation remains independent and must not
+be manufactured.

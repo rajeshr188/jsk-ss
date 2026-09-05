@@ -119,26 +119,14 @@ recorded limitations are not lost.
 
 ## Eligibility and customer communication
 
-- **FW-AUTH-004 — Roll out linked-customer Google sign-in:** ADR-0013 and the
-  repository implementation keep Google separate from staged registration, owner
-  approval, and scheme enrolment. Before closing this item:
-
-  - [x] Add the restricted allauth adapter, server-side environment configuration,
-    fail-closed switch, customer UI, integrity command, callback log exclusion, and
-    regression tests.
-  - [ ] Configure a production Google Web OAuth client with the exact owned-domain
-    callback and minimum identity scopes.
-  - [ ] Apply the additive allauth `socialaccount` migrations while the feature is
-    disabled and pass `check_customer_google_login`.
-  - [ ] Connect one controlled approved customer, prove password fallback and Google
-    login, and verify no user, customer, scheme, contribution, allocation, or token
-    record was created unexpectedly.
-  - [ ] Enable the public button only after the controlled proof and retain rollout
-    evidence.
-
-  Customer self-service unlink, owner/staff social login, additional providers, and
-  provider-assisted registration remain outside this phase. An audited unlink is a
-  future decision if operational experience requires it.
+- **FW-AUTH-005 — Define audited Google credential recovery:** Customer self-service
+  unlink, owner/staff social login, additional providers, and provider-assisted
+  registration remain outside the accepted `FW-AUTH-004` boundary. If operational
+  experience requires removal or replacement of a linked Google identity, first
+  define an owner-authorized, append-oriented recovery workflow that preserves the
+  binding history, verifies the customer through an independent channel, and cannot
+  silently weaken password fallback. Until then, deactivating the affected customer
+  and disabling Google login are the containment controls.
 
 - **FW-ELIG-002 — Observe the first genuine reminder delivery:** The configurable
   email audiences, immutable reminder/attempt evidence, bounded retries, aggregate
@@ -176,7 +164,7 @@ Completed implementation and rollout details are intentionally not repeated here
   `FW-PAY-001`, `FW-PAY-002`, `FW-PAY-004`, `FW-PAY-005`, `FW-PAY-006`,
   `FW-PRICE-001`, `FW-RATE-001`, and `FW-RATE-002`.
 - **Authentication and eligibility:** `FW-AUTH-001`, `FW-AUTH-002`, `FW-AUTH-003`,
-  `FW-ELIG-001`, and `FW-ENROL-001`.
+  `FW-AUTH-004`, `FW-ELIG-001`, and `FW-ENROL-001`.
 - **CMS, media, and catalogue:** `FW-CMS-001`, `FW-CMS-002`, `FW-CMS-003`,
   `FW-MEDIA-001`, `FW-CATALOG-001`, `FW-CATALOG-002`, `FW-CATALOG-003`, and
   `FW-CATALOG-004`.

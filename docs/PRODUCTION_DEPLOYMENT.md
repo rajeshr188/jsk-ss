@@ -2930,6 +2930,28 @@ continue password login while investigating. Do not reverse the additive allauth
 migrations or delete a binding to make counts pass. A compromised individual must be
 deactivated until reviewed; a safe audited unlink workflow is outside this phase.
 
+### Production acceptance evidence
+
+`FW-AUTH-004` completed its disabled-first rollout and controlled acceptance on
+2026-09-05 in release `77141d0caa447028802ff1ec7166fad4fd198d8c`, published as
+`ghcr.io/rajeshr188/jsk-savings@sha256:7e2f95e53333791ede60007f0a059377938574e63d574a55fb4da7fe48c63681`.
+The recorded PostgreSQL recovery point was 2026-09-05 10:00 AM IST; rollback remained
+release `bfbdad86c49855ffc5c9965d0848a657a62cf938` and image
+`ghcr.io/rajeshr188/jsk-savings@sha256:3d634e2c6c4149c94b7f82aaaee2e5b60c0b1db0821203e1f8d65d95205bf394`.
+All six additive `socialaccount` migrations applied with the feature disabled. The
+disabled integrity check reported no links, stored tokens, database provider apps, or
+invalid identities; live and ready health checks and the authentication, financial,
+and exact-grade integrity gates passed.
+
+After activation, one approved active non-staff customer explicitly connected a
+matching verified Google identity, signed in through Google, and retained successful
+password and password-reset fallback. Owner/administrator Google connection remained
+unavailable by design. Aggregate before/after evidence remained eight users, seven
+customers, nine scheme accounts, fifteen contributions, and six allocations; only
+the intended single `SocialAccount` was added and `SocialToken` remained zero. No
+OAuth secret, authorization code, state value, cookie, or provider subject identifier
+is retained in this evidence.
+
 Rotate the Google client secret as its own credential class: create a replacement in
 Google, update the server environment, recreate `web`, prove a controlled login, then
 delete the old secret. Disabling the feature is the immediate containment action if a
