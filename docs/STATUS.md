@@ -3,12 +3,17 @@
 ## Current milestone
 
 ADR-0014 accepts a PWA and customer-only Android Trusted Web Activity as the first
-mobile distribution path. `FW-MOBILE-001` through `FW-MOBILE-005` now track store and
-product readiness, a network-safe PWA, a separately built Android shell, a controlled
-pilot, and an evidence-based native/API decision. No PWA, service worker, Android
-project, mobile API, provider integration, or production change has been implemented.
-The production-accepted `FW-AUTH-004`, `FW-ENROL-001`, and all financial boundaries
-remain unchanged.
+mobile distribution path. The no-code `FW-MOBILE-001` audit now records the proposed
+permanent app identity, customer scope, store wording, Financial features and Data
+Safety drafts, deletion/retention design gate, support matrix, review-account rules,
+and pilot acceptance measures in `docs/MOBILE_RELEASE_READINESS.md`. The owner
+approved `com.jaishrikrishnajewellery.savings` as the permanent package identifier on
+5 September 2026. Play organization/reservation, qualified policy/retention, deletion
+implementation, and final Data Safety gates remain open. No PWA, service worker,
+Android project, mobile API, provider integration, or production change has been
+implemented. The
+production-accepted `FW-AUTH-004`, `FW-ENROL-001`, and all financial boundaries remain
+unchanged.
 
 ## Completed
 
@@ -342,11 +347,15 @@ remain unchanged.
 
 ## In progress
 
-- `FW-MOBILE-001` is the next mobile planning gate under ADR-0014. It must settle the
-  customer MVP and measures, permanent package/signing ownership, Play organization
-  account, financial and Data Safety declarations, account-deletion/retention flow,
-  target API, and device/browser test matrix before PWA or Android implementation.
-  The accepted first release remains customer-only and adds no mobile API.
+- `FW-MOBILE-001` has completed its repository-side no-code audit. The proposed
+  package is `com.jaishrikrishnajewellery.savings`; the initial product support floor
+  is Android 10/API 29 with a current TWA-capable browser, while new Play submissions
+  currently target Android 16/API 36. The owner approved that package and store
+  identity on 5 September 2026. The remaining manual gates are reserving it under
+  verified organization Play/signing ownership, qualified review of the Financial
+  features classification and record-retention basis, an implemented account-deletion
+  request path, and final dependency-level Data Safety review. The first release
+  remains customer-only and adds no mobile API.
 - `FW-ELIG-002` awaits only the first naturally occurring reminder-specific Postmark
   acceptance and matching owner delivery record. Its deployed zero-candidate run is
   correct evidence that no message is invented merely to satisfy a rollout smoke.
@@ -594,8 +603,12 @@ remain unchanged.
 
 ## Next recommended step
 
-Review and merge the ADR-0014 mobile roadmap documentation. Then complete
-`FW-MOBILE-001` as a no-code product/store-readiness phase before beginning the
-network-safe PWA foundation. The independent fund-safety priority remains the two
-no-mutation `FW-PAY-003` Razorpay recovery exercises, and the first genuine
-`FW-ELIG-002` reminder observation must not be manufactured.
+Create and verify the business-owned Play organization account, reserve the approved
+`com.jaishrikrishnajewellery.savings` package, and record signing/recovery roles. In
+parallel, obtain the qualified Financial features/retention review and scope the
+dedicated account-deletion workflow recorded by `FW-MOBILE-001`. The network-safe
+`FW-MOBILE-002` PWA foundation may begin after the product/package approval, but no
+public store release may bypass the remaining policy/deletion gates. The independent
+fund-safety priority remains the two no-mutation `FW-PAY-003` Razorpay recovery
+exercises, and the first genuine `FW-ELIG-002` reminder observation must not be
+manufactured.

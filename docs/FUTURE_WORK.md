@@ -165,7 +165,14 @@ recorded limitations are not lost.
   declaration; draft accurate Data Safety answers; and approve an account-deletion
   request/retention workflow that preserves justified financial history. Record the
   Android support floor, current target-API requirement, browser/device matrix, and
-  store-review evidence before implementation is called release-ready.
+  store-review evidence before implementation is called release-ready. The canonical
+  readiness record is `docs/MOBILE_RELEASE_READINESS.md`. Product, package, wording,
+  declaration, data, deletion, reviewer-account, test-matrix, and pilot defaults are
+  now drafted there. The owner approved the permanent package/store identity as
+  `com.jaishrikrishnajewellery.savings` on 5 September 2026. Completion remains
+  blocked on reserving it under verified Play organization ownership, qualified
+  financial classification and retention review, an implemented deletion-request
+  workflow, and a release-candidate Data Safety review.
 - **FW-MOBILE-002 — Add a network-safe installable PWA foundation:** Add the manifest,
   reviewed icons/theme, installability metadata, narrowly allowlisted service worker,
   static offline explanation, and mobile interaction/accessibility refinements.
