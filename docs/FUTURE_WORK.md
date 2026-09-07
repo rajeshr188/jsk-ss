@@ -121,17 +121,16 @@ recorded limitations are not lost.
 
 ## Privacy and identity lifecycle
 
-- **FW-PRIV-001 — Implement verified customer account deletion:** ADR-0015 proposes a
-  staged public/authenticated request, one-time verification, immediate containment,
-  owner-approved data disposition, irreversible anonymization for data without a
-  continuing purpose, explicit completion-with-retention for justified financial or
-  legal records, provider follow-up, and append-only privacy actions. Before accepting
-  or implementing the ADR, confirm its 24-hour/7-day/30-day service targets, owner-only
-  authorization, qualified category-by-category retention matrix, and customer
-  communication for outstanding entitlements. Public Play release remains blocked
-  until the workflow, policy page, deletion URL, integrity checks, synthetic rollout,
-  and production evidence are complete. Never cascade-delete `CustomUser`, `Customer`,
-  or financial records.
+- **FW-PRIV-001B — Complete verified customer account deletion:** ADR-0015 is accepted,
+  and `FW-PRIV-001A` supplies a disabled public/authenticated request, one-time
+  verification, immediate access containment, owner queue, reasoned hold, provider
+  notice evidence, and aggregate integrity check. The owner accepted the
+  24-hour/7-day/30-day service targets and entitlement-preserving communication.
+  Obtain the qualified category-by-category retention matrix before adding any
+  irreversible anonymization or completion action. Public Play release remains
+  blocked until the completion workflow, policy/deletion URL, synthetic rollout, and
+  production evidence are complete. Never cascade-delete `CustomUser`, `Customer`, or
+  financial records.
 
 ## Eligibility and customer communication
 

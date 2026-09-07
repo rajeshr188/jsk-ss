@@ -2,8 +2,14 @@
 
 ## Status
 
-Proposed. No application behavior is authorized by this document until the owner
-accepts the decision and the required legal/accounting retention review is recorded.
+Accepted for staged implementation on 7 September 2026. The owner accepted the
+24-hour verification, seven-day owner-review, and 30-day removable-data service
+targets; owner-only review authority; entitlement-preserving containment; and plain-
+language `COMPLETED_WITH_RETENTION` communication. The additive request,
+verification, containment, owner-queue, and integrity foundation may be implemented
+behind a disabled flag. Irreversible anonymization, completion decisions, production
+enablement, and a public-store deletion claim remain blocked until the qualified
+legal/accounting retention matrix is recorded.
 
 ## Context
 
@@ -221,18 +227,26 @@ are approved and production-accepted. `FW-MOBILE-002` PWA work may proceed after
 own gate, but neither the TWA public release nor its Data Safety form may claim account
 deletion before this workflow is live and tested.
 
-## Owner and professional decisions still required
+## Recorded owner decisions and remaining professional gate
 
-1. Confirm the 24-hour verification, seven-day owner-review, and 30-day removable-data
-   service targets.
-2. Confirm that only active owners may decide and execute requests in the first phase.
-3. Obtain a qualified written retention matrix for registration/consent, scheme
+The owner confirmed on 7 September 2026 that:
+
+1. The 24-hour verification, seven-day owner-review, and 30-day removable-data
+   targets are accepted as service targets rather than statutory claims.
+2. Only active owners may record review decisions or execute later completion actions
+   in the first release.
+3. Deletion must not forfeit an entitlement; a customer whose account is completed
+   with retention must receive a plain-language explanation of the retained categories,
+   purpose, next review date, and support route.
+
+The remaining gate is to obtain a qualified written retention matrix for registration/consent, scheme
    agreements, contributions/provider evidence, receipts/statements, redemptions,
    disputes/refunds, audit/security logs, communications, exports/manual records, and
    backups—including the rule that starts each retention period and any legal hold.
-4. Confirm the customer communication wording for open entitlements and
-   `COMPLETED_WITH_RETENTION` outcomes.
-5. Approve development as `FW-PRIV-001` only after decisions 1–4 are recorded.
+Until that matrix is recorded, the application must expose no anonymization,
+`APPROVED`, `COMPLETED`, or `COMPLETED_WITH_RETENTION` mutation. The foundation may
+only accept and verify requests, contain access, preserve financial processing, and
+let an owner append a reasoned hold with a next review date.
 
 ## References
 

@@ -14,10 +14,10 @@ package/signing registration, qualified policy/retention, deletion implementatio
 and final Data Safety gates remain open. No PWA, service worker, Android project,
 mobile API, provider integration, or production change has been implemented. The
 production-accepted `FW-AUTH-004`, `FW-ENROL-001`, and all financial boundaries remain
-unchanged. ADR-0015 now proposes, but does not yet authorize, a verified account-
-deletion workflow that contains login access, preserves entitlements and financial
-history, anonymizes data without a continuing purpose, and records justified bounded
-retention explicitly.
+unchanged. ADR-0015 is accepted for staged implementation. `FW-PRIV-001A` now adds a
+disabled verified-request, access-containment, owner-hold, and integrity foundation
+without any anonymization/completion mutation. The qualified retention matrix,
+`FW-PRIV-001B`, production enablement, and public-store deletion claim remain open.
 
 ## Completed
 
@@ -361,11 +361,17 @@ retention explicitly.
   qualified review of the Financial features classification and record-retention
   basis, an implemented account-deletion request path, and final dependency-level
   Data Safety review. The first release remains customer-only and adds no mobile API.
-- `FW-PRIV-001` is proposed under ADR-0015 and has no implementation. Owner acceptance
-  is pending for the 24-hour verification, seven-day review, and 30-day removable-data
-  service targets; owner-only authorization; customer communication; and a qualified
-  category-by-category retention matrix. The current `PROTECT` financial graph and
-  customer login behavior remain unchanged.
+- ADR-0015 was owner-accepted on 7 September 2026 with 24-hour verification,
+  seven-day owner-review, and 30-day removable-data service targets; owner-only review;
+  and entitlement-preserving retained-record communication. `FW-PRIV-001A` is
+  implemented on `agent/account-deletion-foundation` behind
+  `CUSTOMER_ACCOUNT_DELETION_ENABLED=False`: non-enumerating public intake, recent-
+  authentication customer intake, digest-only verification, session/Google/invitation
+  containment, append-only actions and holds, an owner queue, direct untracked notices,
+  protected token paths, and `check_customer_account_deletions`. No completion or
+  anonymization mutation exists. `FW-PRIV-001B` and production enablement remain
+  blocked on the qualified category-by-category retention matrix and a synthetic
+  rollout.
 - `FW-ELIG-002` awaits only the first naturally occurring reminder-specific Postmark
   acceptance and matching owner delivery record. Its deployed zero-candidate run is
   correct evidence that no message is invented merely to satisfy a rollout smoke.
@@ -476,7 +482,7 @@ retention explicitly.
 - Local and production PostgreSQL 16 migrations are applied through
   `schemes.0020_scheme_enrolment_requests` and
   `socialaccount.0006_alter_socialaccount_extra_data`.
-- 349 tests pass, including controlled Google credential linking, social-signup and
+- 362 tests pass, including controlled Google credential linking, social-signup and
   privileged-user rejection, stable-subject login, verified-email matching, password
   fallback, zero token retention, callback log protection, exact-calendar eligibility
   month-end clamping,
@@ -618,8 +624,9 @@ profile, create the draft Play app record, and record owner/recovery roles. Do n
 claim the approved `com.jaishrikrishnajewellery.savings` package is reserved until it
 is registered/bound to the reviewed signing identity during `FW-MOBILE-003`. In
 parallel, obtain the qualified Financial features/retention review and scope the
-dedicated account-deletion workflow proposed by ADR-0015/`FW-PRIV-001`. Review and
-accept or amend the five owner/professional decisions in ADR-0015 before code work.
+dedicated account-deletion workflow accepted in ADR-0015. Review `FW-PRIV-001A`, keep
+its feature flag disabled, and obtain the qualified retention matrix before designing
+`FW-PRIV-001B` anonymization or any production enablement.
 The network-safe
 `FW-MOBILE-002` PWA foundation may begin after the product/package approval, but no
 public store release may bypass the remaining policy/deletion gates. The independent

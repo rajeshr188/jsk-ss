@@ -5,9 +5,12 @@ from dataclasses import dataclass
 from datetime import timedelta
 
 from allauth.account.models import EmailAddress
+from allauth.socialaccount.models import SocialAccount
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.contrib.auth import SESSION_KEY
 from django.contrib.auth.password_validation import validate_password
+from django.contrib.sessions.models import Session
 from django.core.exceptions import ValidationError
 from django.core.mail import EmailMultiAlternatives
 from django.db import IntegrityError, transaction
@@ -17,6 +20,10 @@ from django.utils import timezone
 from django.utils.crypto import constant_time_compare
 
 from .models import (
+    CustomerAccountDeletionAction,
+    CustomerAccountDeletionAttempt,
+    CustomerAccountDeletionDecision,
+    CustomerAccountDeletionRequest,
     CustomerInvitation,
     CustomerRegistration,
     CustomerRegistrationAttempt,
@@ -31,9 +38,19 @@ class InvalidCustomerRegistration(ValidationError):
     pass
 
 
+class InvalidCustomerAccountDeletion(ValidationError):
+    pass
+
+
 @dataclass(frozen=True)
 class CustomerRegistrationSubmission:
     application: CustomerRegistration | None
+    raw_token: str | None
+
+
+@dataclass(frozen=True)
+class CustomerAccountDeletionSubmission:
+    deletion_request: CustomerAccountDeletionRequest | None
     raw_token: str | None
 
 
@@ -563,3 +580,504 @@ def accept_customer_invitation(*, invitation_id, raw_token, new_password):
         revoked_at__isnull=True,
     ).exclude(pk=invitation.pk).update(revoked_at=timezone.now())
     return user
+
+
+def _deletion_actor_label(actor, fallback):
+    return _actor_label(actor) if actor is not None else fallback
+
+
+def _append_deletion_action(
+    *, deletion_request, action, actor=None, actor_label="System", details=None
+):
+    return CustomerAccountDeletionAction.objects.create(
+        request=deletion_request,
+        action=action,
+        actor=actor,
+        actor_label=_deletion_actor_label(actor, actor_label),
+        details=details or {},
+    )
+
+
+def deletion_request_is_verifiable(deletion_request, raw_token):
+    return bool(
+        raw_token
+        and deletion_request.status
+        == CustomerAccountDeletionRequest.Status.PENDING_VERIFICATION
+        and deletion_request.verification_expires_at > timezone.now()
+        and constant_time_compare(
+            deletion_request.verification_token_digest,
+            _token_digest(raw_token),
+        )
+    )
+
+
+def _record_deletion_attempt(*, email_digest, source_ip_digest, outcome):
+    CustomerAccountDeletionAttempt.objects.create(
+        email_digest=email_digest,
+        source_ip_digest=source_ip_digest,
+        outcome=outcome,
+    )
+
+
+@transaction.atomic
+def submit_customer_account_deletion(*, email, source_ip):
+    """Accept a public request without disclosing whether the identity exists."""
+
+    from schemes.models import Customer
+
+    user_model = get_user_model()
+    normalized_email = user_model.objects.normalize_email(email).strip().lower()
+    normalized_source = (source_ip or "unknown").strip().lower()
+    email_digest = _identity_digest(normalized_email)
+    source_ip_digest = _identity_digest(normalized_source)
+    now = timezone.now()
+    attempt_cutoff = now - timedelta(hours=1)
+    retention_cutoff = now - timedelta(
+        hours=settings.CUSTOMER_ACCOUNT_DELETION_ATTEMPT_RETENTION_HOURS
+    )
+    CustomerAccountDeletionAttempt.objects.filter(
+        attempted_at__lt=retention_cutoff
+    ).delete()
+
+    recent_attempts = CustomerAccountDeletionAttempt.objects.filter(
+        attempted_at__gte=attempt_cutoff
+    )
+    if (
+        recent_attempts.filter(email_digest=email_digest).count()
+        >= settings.CUSTOMER_ACCOUNT_DELETION_ATTEMPTS_PER_HOUR
+        or recent_attempts.filter(source_ip_digest=source_ip_digest).count()
+        >= settings.CUSTOMER_ACCOUNT_DELETION_ATTEMPTS_PER_HOUR
+    ):
+        return CustomerAccountDeletionSubmission(None, None)
+
+    CustomerAccountDeletionRequest.objects.filter(
+        status=CustomerAccountDeletionRequest.Status.PENDING_VERIFICATION,
+        verification_expires_at__lte=now,
+    ).update(
+        status=CustomerAccountDeletionRequest.Status.EXPIRED,
+        closed_at=now,
+    )
+
+    customer = (
+        Customer.objects.select_related("user")
+        .filter(
+            email__iexact=normalized_email,
+            user__email__iexact=normalized_email,
+            user__role=user_model.Role.CUSTOMER,
+            user__is_active=True,
+            user__is_staff=False,
+            user__is_superuser=False,
+        )
+        .first()
+    )
+    if customer is None:
+        _record_deletion_attempt(
+            email_digest=email_digest,
+            source_ip_digest=source_ip_digest,
+            outcome=CustomerAccountDeletionAttempt.Outcome.IGNORED,
+        )
+        return CustomerAccountDeletionSubmission(None, None)
+
+    existing = (
+        CustomerAccountDeletionRequest.objects.select_for_update()
+        .filter(
+            customer=customer,
+            status__in=CustomerAccountDeletionRequest.OPEN_STATUSES,
+        )
+        .first()
+    )
+    if existing is not None and existing.status != existing.Status.PENDING_VERIFICATION:
+        _record_deletion_attempt(
+            email_digest=email_digest,
+            source_ip_digest=source_ip_digest,
+            outcome=CustomerAccountDeletionAttempt.Outcome.IGNORED,
+        )
+        return CustomerAccountDeletionSubmission(None, None)
+    if (
+        existing is not None
+        and existing.verification_email_sent_at is not None
+        and existing.verification_delivery_failed_at is None
+    ):
+        _record_deletion_attempt(
+            email_digest=email_digest,
+            source_ip_digest=source_ip_digest,
+            outcome=CustomerAccountDeletionAttempt.Outcome.IGNORED,
+        )
+        return CustomerAccountDeletionSubmission(None, None)
+
+    raw_token = secrets.token_urlsafe(32)
+    expires_at = now + timedelta(
+        hours=settings.CUSTOMER_ACCOUNT_DELETION_EMAIL_EXPIRY_HOURS
+    )
+    if existing is None:
+        try:
+            deletion_request = CustomerAccountDeletionRequest.objects.create(
+                customer=customer,
+                requested_email=normalized_email,
+                email_digest=email_digest,
+                source_ip_digest=source_ip_digest,
+                verification_token_digest=_token_digest(raw_token),
+                source=CustomerAccountDeletionRequest.Source.PUBLIC,
+                policy_version=settings.CUSTOMER_ACCOUNT_DELETION_POLICY_VERSION,
+                verification_expires_at=expires_at,
+            )
+        except IntegrityError:
+            _record_deletion_attempt(
+                email_digest=email_digest,
+                source_ip_digest=source_ip_digest,
+                outcome=CustomerAccountDeletionAttempt.Outcome.IGNORED,
+            )
+            return CustomerAccountDeletionSubmission(None, None)
+        replacement = False
+    else:
+        deletion_request = existing
+        deletion_request.verification_token_digest = _token_digest(raw_token)
+        deletion_request.verification_expires_at = expires_at
+        deletion_request.verification_email_sent_at = None
+        deletion_request.verification_delivery_failed_at = None
+        deletion_request.verification_delivery_error = ""
+        deletion_request.source_ip_digest = source_ip_digest
+        deletion_request.save(
+            update_fields=[
+                "verification_token_digest",
+                "verification_expires_at",
+                "verification_email_sent_at",
+                "verification_delivery_failed_at",
+                "verification_delivery_error",
+                "source_ip_digest",
+            ]
+        )
+        replacement = True
+
+    _append_deletion_action(
+        deletion_request=deletion_request,
+        action=CustomerAccountDeletionAction.Action.REQUESTED,
+        actor_label="Public deletion request",
+        details={"source": "PUBLIC", "replacement": replacement},
+    )
+    _record_deletion_attempt(
+        email_digest=email_digest,
+        source_ip_digest=source_ip_digest,
+        outcome=CustomerAccountDeletionAttempt.Outcome.CREATED,
+    )
+    return CustomerAccountDeletionSubmission(deletion_request, raw_token)
+
+
+def send_customer_account_deletion_verification(
+    *, deletion_request, raw_token, verification_url
+):
+    deletion_request = CustomerAccountDeletionRequest.objects.get(
+        pk=deletion_request.pk
+    )
+    if not deletion_request_is_verifiable(deletion_request, raw_token):
+        raise InvalidCustomerAccountDeletion(
+            "This account-deletion verification is no longer available."
+        )
+
+    context = {
+        "verification_url": verification_url,
+        "expires_at": deletion_request.verification_expires_at,
+    }
+    subject = " ".join(
+        render_to_string(
+            "account/email/customer_deletion_verification_subject.txt", context
+        ).splitlines()
+    ).strip()
+    text_body = render_to_string(
+        "account/email/customer_deletion_verification_message.txt", context
+    ).strip()
+    html_body = render_to_string(
+        "account/email/customer_deletion_verification_message.html", context
+    ).strip()
+    message = EmailMultiAlternatives(
+        subject=subject,
+        body=text_body,
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        to=[deletion_request.requested_email],
+        headers={
+            "X-PM-TrackLinks": "None",
+            "X-PM-TrackOpens": "false",
+            "X-PM-Tag": "customer-account-deletion-verification",
+        },
+    )
+    message.attach_alternative(html_body, "text/html")
+    try:
+        accepted_count = message.send(fail_silently=False)
+        if accepted_count != 1:
+            raise RuntimeError("The email backend did not accept the verification email.")
+    except Exception as error:
+        CustomerAccountDeletionRequest.objects.filter(pk=deletion_request.pk).update(
+            verification_delivery_failed_at=timezone.now(),
+            verification_delivery_error=type(error).__name__[:100],
+        )
+        _append_deletion_action(
+            deletion_request=deletion_request,
+            action=CustomerAccountDeletionAction.Action.VERIFICATION_EMAIL_FAILED,
+            actor_label="Email backend",
+            details={"error_type": type(error).__name__[:100]},
+        )
+        return False
+
+    CustomerAccountDeletionRequest.objects.filter(pk=deletion_request.pk).update(
+        verification_email_sent_at=timezone.now(),
+        verification_delivery_failed_at=None,
+        verification_delivery_error="",
+    )
+    _append_deletion_action(
+        deletion_request=deletion_request,
+        action=CustomerAccountDeletionAction.Action.VERIFICATION_EMAIL_ACCEPTED,
+        actor_label="Email backend",
+        details={"accepted_count": 1},
+    )
+    return True
+
+
+def _revoke_user_sessions(user):
+    session_keys = []
+    for session in Session.objects.filter(expire_date__gt=timezone.now()).iterator():
+        try:
+            authenticated_user_id = session.get_decoded().get(SESSION_KEY)
+        except Exception:
+            continue
+        if str(authenticated_user_id) == str(user.pk):
+            session_keys.append(session.session_key)
+    if session_keys:
+        Session.objects.filter(session_key__in=session_keys).delete()
+    return len(session_keys)
+
+
+@transaction.atomic
+def _verify_and_contain_customer_account(
+    *, deletion_request_id, raw_token=None, authenticated_user=None
+):
+    deletion_request = (
+        CustomerAccountDeletionRequest.objects.select_for_update()
+        .select_related("customer__user")
+        .get(pk=deletion_request_id)
+    )
+    user = deletion_request.customer.user
+    if authenticated_user is None:
+        if not deletion_request_is_verifiable(deletion_request, raw_token):
+            raise InvalidCustomerAccountDeletion(
+                "This account-deletion verification is no longer available."
+            )
+        actor = None
+        actor_label = "Verified customer email"
+    else:
+        if authenticated_user.pk != user.pk or not authenticated_user.is_active:
+            raise InvalidCustomerAccountDeletion(
+                "This account is not eligible for authenticated deletion."
+            )
+        if deletion_request.source != deletion_request.Source.AUTHENTICATED:
+            raise InvalidCustomerAccountDeletion("The deletion-request source changed.")
+        actor = authenticated_user
+        actor_label = "Authenticated customer"
+
+    now = timezone.now()
+    deletion_request.status = deletion_request.Status.VERIFIED
+    deletion_request.verified_at = now
+    deletion_request.save(update_fields=["status", "verified_at"])
+    _append_deletion_action(
+        deletion_request=deletion_request,
+        action=CustomerAccountDeletionAction.Action.VERIFIED,
+        actor=actor,
+        actor_label=actor_label,
+        details={"source": deletion_request.source},
+    )
+
+    revoked_sessions = _revoke_user_sessions(user)
+    _append_deletion_action(
+        deletion_request=deletion_request,
+        action=CustomerAccountDeletionAction.Action.SESSIONS_REVOKED,
+        actor=actor,
+        actor_label=actor_label,
+        details={"count": revoked_sessions},
+    )
+
+    removed_google_links, _ = SocialAccount.objects.filter(
+        user=user,
+        provider="google",
+    ).delete()
+    _append_deletion_action(
+        deletion_request=deletion_request,
+        action=CustomerAccountDeletionAction.Action.GOOGLE_LINK_REMOVED,
+        actor=actor,
+        actor_label=actor_label,
+        details={"count": removed_google_links},
+    )
+
+    CustomerInvitation.objects.filter(
+        user=user,
+        accepted_at__isnull=True,
+        revoked_at__isnull=True,
+    ).update(revoked_at=now)
+    user.is_active = False
+    user.save(update_fields=["is_active"])
+
+    deletion_request.status = deletion_request.Status.CONTAINED
+    deletion_request.contained_at = now
+    deletion_request.owner_review_due_at = now + timedelta(
+        days=settings.CUSTOMER_ACCOUNT_DELETION_OWNER_REVIEW_DAYS
+    )
+    deletion_request.save(
+        update_fields=["status", "contained_at", "owner_review_due_at"]
+    )
+    _append_deletion_action(
+        deletion_request=deletion_request,
+        action=CustomerAccountDeletionAction.Action.CONTAINED,
+        actor=actor,
+        actor_label=actor_label,
+        details={"login_disabled": True},
+    )
+    return deletion_request
+
+
+@transaction.atomic
+def request_authenticated_customer_account_deletion(*, user, source_ip):
+    from schemes.models import Customer
+
+    user_model = get_user_model()
+    if (
+        not user.is_active
+        or user.role != user_model.Role.CUSTOMER
+        or user.is_staff
+        or user.is_superuser
+    ):
+        raise InvalidCustomerAccountDeletion(
+            "Only an active customer can request account deletion."
+        )
+    customer = Customer.objects.select_for_update().get(user=user)
+    existing = CustomerAccountDeletionRequest.objects.filter(
+        customer=customer,
+        status__in=CustomerAccountDeletionRequest.OPEN_STATUSES,
+    ).first()
+    if existing is not None:
+        raise InvalidCustomerAccountDeletion(
+            "An account-deletion request is already under review."
+        )
+
+    now = timezone.now()
+    raw_token = secrets.token_urlsafe(32)
+    deletion_request = CustomerAccountDeletionRequest.objects.create(
+        customer=customer,
+        requested_email=user.email.strip().lower(),
+        email_digest=_identity_digest(user.email.strip().lower()),
+        source_ip_digest=_identity_digest((source_ip or "unknown").strip().lower()),
+        verification_token_digest=_token_digest(raw_token),
+        source=CustomerAccountDeletionRequest.Source.AUTHENTICATED,
+        policy_version=settings.CUSTOMER_ACCOUNT_DELETION_POLICY_VERSION,
+        verification_expires_at=now,
+    )
+    _append_deletion_action(
+        deletion_request=deletion_request,
+        action=CustomerAccountDeletionAction.Action.REQUESTED,
+        actor=user,
+        details={"source": "AUTHENTICATED", "replacement": False},
+    )
+    return _verify_and_contain_customer_account(
+        deletion_request_id=deletion_request.pk,
+        authenticated_user=user,
+    )
+
+
+def verify_and_contain_customer_account(*, deletion_request_id, raw_token):
+    return _verify_and_contain_customer_account(
+        deletion_request_id=deletion_request_id,
+        raw_token=raw_token,
+    )
+
+
+def send_customer_account_deletion_notice(*, deletion_request, notice_kind):
+    allowed_kinds = {"contained", "awaiting_settlement"}
+    if notice_kind not in allowed_kinds:
+        raise ValidationError("Unknown account-deletion notice kind.")
+    context = {
+        "notice_kind": notice_kind,
+        "review_due_at": deletion_request.owner_review_due_at,
+    }
+    subject = " ".join(
+        render_to_string(
+            "account/email/customer_deletion_notice_subject.txt", context
+        ).splitlines()
+    ).strip()
+    text_body = render_to_string(
+        "account/email/customer_deletion_notice_message.txt", context
+    ).strip()
+    html_body = render_to_string(
+        "account/email/customer_deletion_notice_message.html", context
+    ).strip()
+    message = EmailMultiAlternatives(
+        subject=subject,
+        body=text_body,
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        to=[deletion_request.requested_email],
+        headers={
+            "X-PM-TrackLinks": "None",
+            "X-PM-TrackOpens": "false",
+            "X-PM-Tag": "customer-account-deletion-notice",
+        },
+    )
+    message.attach_alternative(html_body, "text/html")
+    try:
+        accepted_count = message.send(fail_silently=False)
+        if accepted_count != 1:
+            raise RuntimeError("The email backend did not accept the deletion notice.")
+    except Exception as error:
+        _append_deletion_action(
+            deletion_request=deletion_request,
+            action=CustomerAccountDeletionAction.Action.NOTICE_FAILED,
+            actor_label="Email backend",
+            details={"kind": notice_kind, "error_type": type(error).__name__[:100]},
+        )
+        return False
+    _append_deletion_action(
+        deletion_request=deletion_request,
+        action=CustomerAccountDeletionAction.Action.NOTICE_ACCEPTED,
+        actor_label="Email backend",
+        details={"kind": notice_kind, "accepted_count": 1},
+    )
+    return True
+
+
+@transaction.atomic
+def record_customer_account_deletion_hold(
+    *, deletion_request, actor, reason, retained_categories, review_due_at
+):
+    user_model = get_user_model()
+    if not actor.is_active or not (
+        actor.is_superuser or actor.role == user_model.Role.OWNER
+    ):
+        raise PermissionError("Only an active owner can review deletion requests.")
+    locked = CustomerAccountDeletionRequest.objects.select_for_update().get(
+        pk=deletion_request.pk
+    )
+    if locked.status not in {
+        locked.Status.CONTAINED,
+        locked.Status.AWAITING_SETTLEMENT,
+    }:
+        raise InvalidCustomerAccountDeletion(
+            "Only a contained request can be placed under reviewed retention."
+        )
+    if review_due_at <= timezone.now():
+        raise ValidationError("The next review must be in the future.")
+
+    decision = CustomerAccountDeletionDecision.objects.create(
+        request=locked,
+        outcome=CustomerAccountDeletionDecision.Outcome.AWAITING_SETTLEMENT,
+        reason=reason.strip(),
+        retained_categories=retained_categories.strip(),
+        review_due_at=review_due_at,
+        policy_version=locked.policy_version,
+        decided_by=actor,
+        decided_by_label=_actor_label(actor),
+    )
+    locked.status = locked.Status.AWAITING_SETTLEMENT
+    locked.owner_review_due_at = review_due_at
+    locked.save(update_fields=["status", "owner_review_due_at"])
+    _append_deletion_action(
+        deletion_request=locked,
+        action=CustomerAccountDeletionAction.Action.OWNER_HOLD_RECORDED,
+        actor=actor,
+        details={"decision_id": decision.pk},
+    )
+    return locked, decision

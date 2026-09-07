@@ -176,6 +176,7 @@ TEMPLATES = [
                 "django.contrib.messages.context_processors.messages",
                 "accounts.context_processors.public_customer_registration",
                 "accounts.context_processors.customer_google_login",
+                "accounts.context_processors.customer_account_deletion",
                 "catalog.context_processors.public_catalogue_navigation",
             ],
         },
@@ -509,6 +510,50 @@ if PUBLIC_CUSTOMER_REGISTRATION_ENABLED and not (
 ):
     raise ImproperlyConfigured(
         "Public customer registration requires nonblank Terms and Privacy versions"
+    )
+CUSTOMER_ACCOUNT_DELETION_ENABLED = env_bool(
+    "CUSTOMER_ACCOUNT_DELETION_ENABLED"
+)
+CUSTOMER_ACCOUNT_DELETION_EMAIL_EXPIRY_HOURS = env_int(
+    "CUSTOMER_ACCOUNT_DELETION_EMAIL_EXPIRY_HOURS",
+    24,
+    minimum=1,
+    maximum=72,
+)
+CUSTOMER_ACCOUNT_DELETION_ATTEMPTS_PER_HOUR = env_int(
+    "CUSTOMER_ACCOUNT_DELETION_ATTEMPTS_PER_HOUR",
+    5,
+    minimum=1,
+    maximum=20,
+)
+CUSTOMER_ACCOUNT_DELETION_ATTEMPT_RETENTION_HOURS = env_int(
+    "CUSTOMER_ACCOUNT_DELETION_ATTEMPT_RETENTION_HOURS",
+    24,
+    minimum=2,
+    maximum=168,
+)
+CUSTOMER_ACCOUNT_DELETION_OWNER_REVIEW_DAYS = env_int(
+    "CUSTOMER_ACCOUNT_DELETION_OWNER_REVIEW_DAYS",
+    7,
+    minimum=1,
+    maximum=30,
+)
+CUSTOMER_ACCOUNT_DELETION_COMPLETION_TARGET_DAYS = env_int(
+    "CUSTOMER_ACCOUNT_DELETION_COMPLETION_TARGET_DAYS",
+    30,
+    minimum=1,
+    maximum=90,
+)
+CUSTOMER_ACCOUNT_DELETION_POLICY_VERSION = os.getenv(
+    "CUSTOMER_ACCOUNT_DELETION_POLICY_VERSION",
+    "",
+).strip()
+if (
+    CUSTOMER_ACCOUNT_DELETION_ENABLED
+    and not CUSTOMER_ACCOUNT_DELETION_POLICY_VERSION
+):
+    raise ImproperlyConfigured(
+        "Customer account deletion requires a qualified retention-policy version"
     )
 CUSTOMER_ENROLMENT_REQUESTS_ENABLED = env_bool(
     "CUSTOMER_ENROLMENT_REQUESTS_ENABLED"

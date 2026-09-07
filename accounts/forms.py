@@ -88,3 +88,46 @@ class CustomerRegistrationRejectionForm(forms.Form):
         max_length=500,
         widget=forms.Textarea(attrs={"rows": 3}),
     )
+
+
+class CustomerAccountDeletionPublicForm(forms.Form):
+    email = forms.EmailField(max_length=254)
+    website = forms.CharField(
+        required=False,
+        widget=forms.TextInput(
+            attrs={"autocomplete": "off", "tabindex": "-1"}
+        ),
+    )
+
+    def clean_email(self):
+        return self.cleaned_data["email"].strip().lower()
+
+
+class CustomerAccountDeletionAuthenticatedForm(forms.Form):
+    confirm = forms.BooleanField(
+        label=(
+            "I understand that my login will be disabled immediately while the "
+            "showroom reviews deletion and any records that must be retained."
+        )
+    )
+
+
+class CustomerAccountDeletionHoldForm(forms.Form):
+    reason = forms.CharField(
+        label="Reason for continued review or retention",
+        max_length=1000,
+        widget=forms.Textarea(attrs={"rows": 3}),
+    )
+    retained_categories = forms.CharField(
+        label="Record categories currently retained",
+        max_length=1000,
+        widget=forms.Textarea(attrs={"rows": 3}),
+        help_text=(
+            "Use plain language, for example: scheme agreement, contribution "
+            "receipts, metal entitlement, or open provider review."
+        ),
+    )
+    review_due_at = forms.DateTimeField(
+        label="Next review date and time",
+        widget=forms.DateTimeInput(attrs={"type": "datetime-local"}),
+    )

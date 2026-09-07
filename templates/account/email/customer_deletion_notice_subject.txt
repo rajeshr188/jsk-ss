@@ -1,0 +1,1 @@
+{% if notice_kind == "contained" %}Your account deletion request is under review{% else %}Update on your account deletion request{% endif %}

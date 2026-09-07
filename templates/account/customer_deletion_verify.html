@@ -1,0 +1,9 @@
+{% extends "_base.html" %}
+{% block title %}Verify account deletion | Jai Sri Krishna Jewellery{% endblock %}
+{% block content %}
+<div class="row justify-content-center"><div class="col-lg-7"><div class="card shadow-sm"><div class="card-body p-4 p-lg-5">
+  <h1 class="h2">Verify your deletion request</h1>
+  <div class="alert alert-danger" role="alert">Continuing will immediately disable your login and stop new customer-initiated transactions. Existing entitlements and captured-payment processing remain protected while the owner reviews the request.</div>
+  <form method="post">{% csrf_token %}<button class="btn btn-danger" type="submit">Verify and disable my login</button></form>
+</div></div></div></div>
+{% endblock %}
