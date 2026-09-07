@@ -2957,6 +2957,63 @@ Google, update the server environment, recreate `web`, prove a controlled login,
 delete the old secret. Disabling the feature is the immediate containment action if a
 coordinated overlap is unavailable.
 
+## `FW-PRIV-001A` account-deletion foundation rollout
+
+ADR-0015 permits an additive, disabled-first request and containment foundation while
+the qualified retention matrix remains open. This phase has no anonymization or
+completion mutation and must not be described to Google Play or customers as a live,
+completed deletion facility.
+
+Add the bounded settings to `/opt/jsk/app/.env.production` without inventing a policy
+version:
+
+```dotenv
+CUSTOMER_ACCOUNT_DELETION_ENABLED=False
+CUSTOMER_ACCOUNT_DELETION_EMAIL_EXPIRY_HOURS=24
+CUSTOMER_ACCOUNT_DELETION_ATTEMPTS_PER_HOUR=5
+CUSTOMER_ACCOUNT_DELETION_ATTEMPT_RETENTION_HOURS=24
+CUSTOMER_ACCOUNT_DELETION_OWNER_REVIEW_DAYS=7
+CUSTOMER_ACCOUNT_DELETION_COMPLETION_TARGET_DAYS=30
+CUSTOMER_ACCOUNT_DELETION_POLICY_VERSION=
+```
+
+After recording the recovery point, rollback image/release, financial baseline, and
+capacity, promote the registry digest and inspect the additive plan:
+
+```bash
+docker compose --env-file .env.production -f compose.production.yml \
+  run --rm --no-deps web python manage.py check --deploy --fail-level ERROR
+docker compose --env-file .env.production -f compose.production.yml \
+  run --rm --no-deps web python manage.py showmigrations accounts
+docker compose --env-file .env.production -f compose.production.yml \
+  run --rm --no-deps web python manage.py migrate --plan
+```
+
+The expected application change is `accounts.0005_customer_account_deletion_foundation`
+and its request, bounded-attempt, decision, and append-only action tables. Apply it,
+recreate `web`, validate/recreate Caddy for the deletion-token log exclusion, and run:
+
+```bash
+docker compose --env-file .env.production -f compose.production.yml \
+  run --rm --no-deps web python manage.py migrate --noinput
+docker compose --env-file .env.production -f compose.production.yml \
+  up -d --force-recreate --no-deps web
+docker compose --env-file .env.production -f compose.production.yml \
+  exec -T caddy caddy validate --config /etc/caddy/Caddyfile
+docker compose --env-file .env.production -f compose.production.yml \
+  up -d --force-recreate --no-deps caddy
+docker compose --env-file .env.production -f compose.production.yml \
+  exec -T web python manage.py check_customer_account_deletions
+```
+
+Expect `status=ok`, `enabled=false`, and zero deletion requests/actions. Both deletion
+entry points and their navigation links must remain unavailable. Re-run the existing
+authentication and financial integrity commands and live/ready checks. Stop there:
+`CUSTOMER_ACCOUNT_DELETION_POLICY_VERSION` must remain blank and the feature must not
+be enabled until `FW-PRIV-001B` supplies the qualified matrix, irreversible service,
+policy wording, provider procedures, synthetic no-history and retained-history tests,
+and a separately approved production runbook.
+
 ## Go-live sign-off
 
 The target full-production checklist remains below. Live acceptance does not mark

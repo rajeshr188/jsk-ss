@@ -119,3 +119,38 @@ def customer_google_login_configuration(app_configs, **kwargs):
             )
         )
     return issues
+
+
+@register(Tags.security, deploy=True)
+def customer_account_deletion_configuration(app_configs, **kwargs):
+    if not settings.CUSTOMER_ACCOUNT_DELETION_ENABLED:
+        return []
+    issues = []
+    if settings.ACCOUNT_ADAPTER != "accounts.adapters.AccountAdapter":
+        issues.append(
+            Error(
+                "Account deletion requires the controlled account adapter.",
+                hint="Keep ACCOUNT_ADAPTER=accounts.adapters.AccountAdapter.",
+                id="jsk.E026",
+            )
+        )
+    if not settings.ACCOUNT_REAUTHENTICATION_REQUIRED:
+        issues.append(
+            Error(
+                "Authenticated deletion requests require recent authentication.",
+                hint="Keep ACCOUNT_REAUTHENTICATION_REQUIRED=True.",
+                id="jsk.E027",
+            )
+        )
+    if not settings.CUSTOMER_ACCOUNT_DELETION_POLICY_VERSION:
+        issues.append(
+            Error(
+                "Account deletion requires an approved retention-policy version.",
+                hint=(
+                    "Record the qualified matrix and set "
+                    "CUSTOMER_ACCOUNT_DELETION_POLICY_VERSION."
+                ),
+                id="jsk.E028",
+            )
+        )
+    return issues

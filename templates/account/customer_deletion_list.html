@@ -1,0 +1,11 @@
+{% extends "_base.html" %}
+{% block title %}Account deletion requests | Jai Sri Krishna Jewellery{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4"><div><p class="text-uppercase small fw-semibold text-secondary mb-1">Owner privacy queue</p><h1 class="h2 mb-0">Account deletion requests</h1></div></div>
+<div class="alert alert-warning" role="note">This release supports verified containment and reviewed holds only. Irreversible anonymization is unavailable until the qualified retention matrix is recorded and the completion phase is reviewed.</div>
+{% if deletion_requests %}
+<div class="table-responsive"><table class="table align-middle"><thead><tr><th scope="col">Requested</th><th scope="col">Customer</th><th scope="col">Status</th><th scope="col">Review due</th><th scope="col">Financial context</th><th scope="col"></th></tr></thead><tbody>
+{% for item in deletion_requests %}<tr><td>{{ item.requested_at }}</td><td>{{ item.customer.customer_number }}<br><span class="small text-secondary">{{ item.customer.full_name }}</span></td><td>{{ item.get_status_display }}</td><td>{{ item.owner_review_due_at|default:"—" }}</td><td>{{ item.scheme_account_count }} scheme{{ item.scheme_account_count|pluralize }}, {{ item.contribution_count }} contribution{{ item.contribution_count|pluralize }}{% if item.pending_provider_count %}<br><span class="text-danger">{{ item.pending_provider_count }} pending provider order{{ item.pending_provider_count|pluralize }}</span>{% endif %}</td><td><a class="btn btn-sm btn-outline-dark" href="{% url 'customer_account_deletion_detail' item.pk %}">Review</a></td></tr>{% endfor %}
+</tbody></table></div>
+{% else %}<div class="card"><div class="card-body"><p class="mb-0">No contained account-deletion requests require review.</p></div></div>{% endif %}
+{% endblock %}

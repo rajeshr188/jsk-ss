@@ -1,0 +1,11 @@
+{% extends "_base.html" %}
+{% load crispy_forms_tags %}
+{% block title %}Review deletion request | Jai Sri Krishna Jewellery{% endblock %}
+{% block content %}
+<div class="mb-4"><a href="{% url 'customer_account_deletion_list' %}">← Account deletion requests</a><h1 class="h2 mt-2">Review deletion request</h1></div>
+<div class="row g-4"><div class="col-lg-7"><div class="card shadow-sm"><div class="card-body">
+  <dl class="row mb-0"><dt class="col-sm-4">Customer</dt><dd class="col-sm-8">{{ deletion_request.customer.customer_number }} — {{ deletion_request.customer.full_name }}</dd><dt class="col-sm-4">Status</dt><dd class="col-sm-8">{{ deletion_request.get_status_display }}</dd><dt class="col-sm-4">Requested</dt><dd class="col-sm-8">{{ deletion_request.requested_at }}</dd><dt class="col-sm-4">Review due</dt><dd class="col-sm-8">{{ deletion_request.owner_review_due_at }}</dd><dt class="col-sm-4">Scheme accounts</dt><dd class="col-sm-8">{{ deletion_request.scheme_account_count }}</dd><dt class="col-sm-4">Contributions</dt><dd class="col-sm-8">{{ deletion_request.contribution_count }}</dd><dt class="col-sm-4">Pending provider orders</dt><dd class="col-sm-8">{{ deletion_request.pending_provider_count }}</dd></dl>
+</div></div>
+<div class="card shadow-sm mt-4"><div class="card-body"><h2 class="h4">Append-only actions</h2><ul class="list-group list-group-flush">{% for action in deletion_request.actions.all %}<li class="list-group-item px-0"><strong>{{ action.get_action_display }}</strong><br><span class="small text-secondary">{{ action.created_at }} · {{ action.actor_label }}</span></li>{% empty %}<li class="list-group-item px-0">No actions recorded.</li>{% endfor %}</ul></div></div></div>
+<div class="col-lg-5"><div class="card border-warning"><div class="card-body"><h2 class="h4">Record continued review</h2><p class="small">Use this for an open entitlement, provider state, dispute, or records awaiting the qualified retention decision. It does not anonymize data.</p><form method="post" action="{% url 'customer_account_deletion_hold' deletion_request.pk %}" novalidate>{% csrf_token %}{{ hold_form|crispy }}<button class="btn btn-warning" type="submit">Record hold and review date</button></form></div></div></div></div>
+{% endblock %}

@@ -42,7 +42,7 @@ Excluded from the first mobile release:
 | Item | Proposed value | Gate |
 | --- | --- | --- |
 | Play app name | Jai Sri Krishna Jewellery | Confirm in Play Console |
-| Android package | `com.jaishrikrishnajewellery.savings` | Owner approved 5 September 2026; reserve by creating the Play app and do not change later |
+| Android package | `com.jaishrikrishnajewellery.savings` | Owner approved 5 September 2026; bind it to the approved signing identity through Play package registration/first signed artifact and do not change later |
 | Publisher | Jai Sri Krishna Jewellery | Must match the verified organization identity |
 | Canonical origin | `https://jaishrikrishnajewellery.com` | Already production-owned; reverify before TWA work |
 | Initial market | India | Confirm before store setup |
@@ -52,9 +52,12 @@ Excluded from the first mobile release:
 | Repository | Separate business-controlled Android repository | Create during `FW-MOBILE-003`, not on Linode |
 
 The business owner approved this permanent package identifier on 5 September 2026.
-It is approved but not yet reserved; reservation occurs only when the app is created
-in the organization Play Console account. Do not create another production package
-or silently change this identifier during Android implementation.
+It is approved but not yet registered or bound to a signing identity. Creating a
+draft app entry in Play Console does not prove ownership of this package. Complete
+the current Play package-registration flow with the approved public signing
+certificate, or allow the verified Play flow to register it with the first correctly
+signed artifact, during `FW-MOBILE-003`. Do not create another production package,
+publish an independently signed build first, or silently change this identifier.
 
 ## Store listing copy draft
 
@@ -103,7 +106,58 @@ Google Play organization account. Before development begins, record evidence tha
 - no signing key, service-account credential, OAuth secret, or Play credential is
   stored in this Django repository or on the Linode serving host.
 
-Current status: **owner evidence not yet supplied.**
+Current status: **the owner confirmed on 7 September 2026 that the organization's
+D-U-N-S number is available.** The number itself must remain in the private Play/
+payments verification flow and must not be committed. Play organization identity,
+payments-profile matching, contact verification, recovery, roles, and signing
+ownership evidence are not yet supplied.
+
+### Manual Play account and draft-app sequence
+
+Perform these steps only through the official Google Play Console while signed in to
+an owner-controlled business Google account:
+
+1. Check the Dun & Bradstreet record first. Its legal organization name and address
+   must exactly match the organization payments profile; the public developer name
+   may still be `Jai Sri Krishna Jewellery`.
+2. Protect the owner Google account with two-step verification and owner-controlled
+   recovery methods. Do not use the developer's personal Google account as the sole
+   business owner and do not share a password.
+3. Start Play Console registration and select **Organization**, not Personal. Link or
+   create the organization Google Payments profile and enter the D-U-N-S number only
+   in that private flow.
+4. Supply the organization website, phone, authorized-representative identity, and
+   any requested organization documents. Verify the contact email and phone. Use
+   supported unmodified documents whose names and addresses match the payments/Dun &
+   Bradstreet records.
+5. Use `Jai Sri Krishna Jewellery` as the public developer name. Use the business
+   website and monitored business support details; expect organization developer
+   contact details to be displayed publicly.
+6. Complete the registration payment and every identity/contact verification task,
+   then wait until Play Console shows the developer identity as verified. Do not
+   interpret a submitted or pending state as verification.
+7. From **Home → Create app**, choose an English (India) default language, app name
+   `Jai Sri Krishna Jewellery`, **App**, **Free**, and
+   `admin@jaishrikrishnajewellery.com` as the support email. Review the declarations
+   and Play App Signing terms before accepting them.
+8. Keep the new app as a draft. Do not upload an empty/placeholder AAB or APK merely
+   to occupy the package name, do not begin production review, and do not complete
+   policy declarations with guessed answers.
+9. In **Users and permissions**, invite the developer through a separate Google
+   identity only after the owner account is verified. Grant app-specific and release
+   permissions needed for the work; avoid account-wide Admin and financial-data
+   permissions unless a later task proves they are necessary.
+10. Record only non-secret evidence in this document: organization/identity verified,
+    payments-profile match confirmed, public developer name, recovery ownership,
+    role review completed, and draft app created. Never record the D-U-N-S number,
+    identity documents, payment profile identifiers, recovery codes, credentials, or
+    signing private keys.
+
+Creating the draft Play app is a useful account-readiness milestone but does not bind
+the approved Android package. Package registration now involves the package name and
+the public certificate of the signing identity. That step belongs with the deliberate
+signing setup in `FW-MOBILE-003`; current Play package-registration requirements must
+be rechecked immediately before doing it.
 
 ## Financial-features declaration draft
 
@@ -263,7 +317,9 @@ decide whether native Android/API cost and future iOS development are justified.
 - [x] Android support floor, target API and device/browser matrix recorded.
 - [x] Reviewer-account and pilot acceptance requirements recorded.
 - [x] Business owner approved the permanent package identifier and store identity on 5 September 2026.
-- [ ] Verified organization Play account, D-U-N-S, recovery and role evidence recorded.
+- [x] Business owner confirmed the organization D-U-N-S prerequisite is available on 7 September 2026; the number is not stored here.
+- [ ] Verified organization Play account, matching payments profile, recovery and role evidence recorded.
+- [ ] Approved package registered/bound to the reviewed signing identity.
 - [ ] Qualified financial classification and retention review completed.
 - [ ] Dedicated deletion workflow implemented, tested, and reflected in public policy.
 - [ ] Release-candidate Data Safety answers reviewed against every dependency/provider.
@@ -279,5 +335,6 @@ public release may pass while any of the final five gates remains open.
 - [Play Data Safety guidance](https://support.google.com/googleplay/android-developer/answer/10787469)
 - [Play reviewer sign-in requirements](https://support.google.com/googleplay/android-developer/answer/15748846)
 - [Play target API requirements](https://support.google.com/googleplay/android-developer/answer/11926878)
+- [Registering Android package names](https://support.google.com/googleplay/android-developer/answer/16761053)
 - [Trusted Web Activity overview](https://developer.android.com/develop/ui/views/layout/webapps/trusted-web-activities)
 - [ADR-0014](decisions/ADR-0014-pwa-twa-first-mobile-distribution.md)

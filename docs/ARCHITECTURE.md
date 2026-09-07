@@ -82,6 +82,16 @@ bypass the edge filter and retain the raw token.
 Nonblank `CustomUser.email` values are unique case-insensitively;
 the deployment preflight stops rather than guessing how to combine historical users.
 
+ADR-0015 adds a separate, fail-closed account-deletion workflow. A public request is
+enumeration-resistant and email-verified; an authenticated customer request requires
+recent local reauthentication. Verification invokes an explicit atomic containment
+service that disables the login, revokes sessions and Google linkage, supersedes
+unused invitations, and appends privacy actions while leaving the protected customer
+and financial graph intact. The owner queue is a selector over current requests and
+financial context. Its first phase can append only a reasoned hold and review date;
+anonymization and completion services do not exist until a qualified retention matrix
+is approved.
+
 Wagtail authorization is independent of application roles. Dedicated Editorial and
 Catalogue groups scope page and media access to their respective content; neither an
 application `OWNER` role nor membership in one CMS area grants access to the other.

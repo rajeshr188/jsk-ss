@@ -1,0 +1,27 @@
+{% extends "_base.html" %}
+{% load crispy_forms_tags %}
+{% block title %}Request account deletion | Jai Sri Krishna Jewellery{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+    <div class="card shadow-sm">
+      <div class="card-body p-4 p-lg-5">
+        <p class="text-uppercase small fw-semibold text-secondary mb-2">Privacy request</p>
+        <h1 class="h2">Request account deletion</h1>
+        <p>Enter the email used for your customer account. If it matches an eligible account, we will send a one-time verification link.</p>
+        <div class="alert alert-warning" role="note">
+          Verification disables login and new customer-initiated transactions while the showroom reviews the request. It does not cancel a payment already captured, erase an outstanding metal entitlement, or silently remove records that must be retained for settlement, accounting, dispute, fraud-prevention, or legal purposes.
+        </div>
+        <p>We aim to review a verified request within seven calendar days and complete removable-data work within 30 calendar days. If records must remain longer, we will explain the categories, purpose, and next review date.</p>
+        <form method="post" novalidate>
+          {% csrf_token %}
+          {{ form.email|as_crispy_field }}
+          <div class="visually-hidden" aria-hidden="true">{{ form.website|as_crispy_field }}</div>
+          <button class="btn btn-danger" type="submit">Send verification link</button>
+        </form>
+        <p class="small text-secondary mt-4 mb-0">Need help? Contact <a href="mailto:admin@jaishrikrishnajewellery.com">admin@jaishrikrishnajewellery.com</a> or call <a href="tel:+919489481436">9489481436</a>.</p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

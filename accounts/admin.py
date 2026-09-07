@@ -4,6 +4,10 @@ from django.contrib.auth.admin import UserAdmin
 from .forms import CustomUserCreationForm, CustomUserChangeForm
 from .models import (
     CustomUser,
+    CustomerAccountDeletionAction,
+    CustomerAccountDeletionAttempt,
+    CustomerAccountDeletionDecision,
+    CustomerAccountDeletionRequest,
     CustomerRegistration,
     CustomerRegistrationAttempt,
 )
@@ -65,3 +69,38 @@ class CustomerRegistrationAttemptAdmin(admin.ModelAdmin):
 
     def get_readonly_fields(self, request, obj=None):
         return tuple(field.name for field in self.model._meta.fields)
+
+
+class ReadOnlyAccountDeletionAdmin(admin.ModelAdmin):
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(CustomerAccountDeletionRequest)
+class CustomerAccountDeletionRequestAdmin(ReadOnlyAccountDeletionAdmin):
+    list_display = ("id", "customer", "source", "status", "requested_at")
+    list_filter = ("source", "status")
+
+
+@admin.register(CustomerAccountDeletionDecision)
+class CustomerAccountDeletionDecisionAdmin(ReadOnlyAccountDeletionAdmin):
+    list_display = ("request", "outcome", "decided_by_label", "decided_at")
+    list_filter = ("outcome",)
+
+
+@admin.register(CustomerAccountDeletionAction)
+class CustomerAccountDeletionActionAdmin(ReadOnlyAccountDeletionAdmin):
+    list_display = ("request", "action", "actor_label", "created_at")
+    list_filter = ("action",)
+
+
+@admin.register(CustomerAccountDeletionAttempt)
+class CustomerAccountDeletionAttemptAdmin(ReadOnlyAccountDeletionAdmin):
+    list_display = ("attempted_at", "outcome")
+    list_filter = ("outcome",)

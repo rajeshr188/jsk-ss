@@ -6,6 +6,7 @@ SENSITIVE_AUTH_PATH_PREFIXES = (
     "/accounts/password/reset/key/",
     "/accounts/invitations/",
     "/accounts/registrations/verify/",
+    "/accounts/deletion/verify/",
     "/accounts/google/login/callback/",
 )
 

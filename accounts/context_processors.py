@@ -13,3 +13,11 @@ def customer_google_login(request):
     return {
         "customer_google_login_enabled": settings.CUSTOMER_GOOGLE_LOGIN_ENABLED,
     }
+
+
+def customer_account_deletion(request):
+    return {
+        "customer_account_deletion_enabled": (
+            settings.CUSTOMER_ACCOUNT_DELETION_ENABLED
+        ),
+    }

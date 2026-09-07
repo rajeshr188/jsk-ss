@@ -1,0 +1,3 @@
+{% if notice_kind == "contained" %}Your customer login has been disabled and your account deletion request is now under owner review. New customer-initiated transactions are blocked. Existing entitlements and captured-payment processing remain protected. The current review target is {{ review_due_at }}.{% else %}The showroom recorded that your deletion request requires continued review. This may relate to an existing entitlement, payment/provider state, dispute, or records retained for an approved purpose. The next review is due by {{ review_due_at }}.{% endif %}
+
+For a statement, entitlement settlement, or support, contact admin@jaishrikrishnajewellery.com or 9489481436.

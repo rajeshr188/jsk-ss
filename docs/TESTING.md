@@ -16,7 +16,10 @@ edge/access-log exclusion, Django warning/error token redaction, case-insensitiv
 login-email uniqueness, login/enrolment separation, closed social signup, exact-email
 customer-initiated Google linking, privileged/inactive-user rejection, no email-based
 auto-linking, feature-switch containment, password fallback, callback log exclusion,
-and zero provider-token retention.
+zero provider-token retention, deletion-request enumeration resistance, digest-only
+one-time deletion verification, CSRF/cache/referrer/log protection, session and Google
+credential revocation, owner-only review, financial-record preservation, disabled-
+flag hiding, and aggregate deletion-integrity reporting.
 
 Current regressions cover amount/frequency enforcement, failed-payment entitlement, confirmation/allocation idempotency, Razorpay mode/key matching, mode history migration, cross-mode order/callback/webhook rejection, Live checkout disclosure, readiness blocking, order/API/HMAC boundaries, duplicate callbacks and webhooks, owner-only Scheme Rate publication, publication validation/warnings, GOLD/SILVER no-rate payment blocking with unaffected CASH orders, pre-order rate locking, durable verified-metal-payment recovery, exact metal calculation, historical-rate stability, paid-unallocated recovery from the original lock, production-shaped `schemes.0009` to `0010` history backfill and blocker behavior, customer isolation, owner liability reconciliation, current-exposure rounding, India-local activity periods, eligibility status and exact 30/60/90-day boundaries, versioned cash-bonus snapshots, projection-versus-earned boundaries, eligibility cutoff, half-up bonus rounding, principal/bonus redemption allocation, redemption idempotency and precision, partial/full settlement, over-redemption prevention, denomination separation, immutable audit/reversal history, exception classification, reversal liability restoration, stable receipt numbering, unallocated-document disclosure, statement source filtering, document/export access control, CSV denomination/formula safety, and database constraints.
 

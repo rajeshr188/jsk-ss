@@ -20,6 +20,23 @@ This is the canonical source for stable business rules.
 - **AUTH-014:** An unconnected provider identity is never authenticated or automatically linked by email. Subsequent Google login uses only the explicitly bound provider subject and still requires an active eligible customer.
 - **AUTH-015:** Password login and reset remain available, provider tokens are not stored, and the fail-closed Google switch may disable social login independently. OAuth callback responses are non-cacheable and omitted from edge access logs.
 - **AUTH-016:** Customer self-service unlink is unavailable until an append-oriented, authorized correction workflow is defined. A suspected compromise requires customer deactivation or the global Google kill switch while the binding is reviewed.
+- **AUTH-017:** Account deletion is a feature-gated verified request, not `CustomUser`
+  deletion. Public responses never disclose account existence; verification secrets
+  are digest-only, one-time, bounded, direct, non-cacheable, CSRF-confirmed, and
+  excluded from application and edge logs.
+- **AUTH-018:** Verification contains the account by disabling customer login,
+  revoking sessions and the Google credential, superseding unused invitations, and
+  blocking new customer-initiated actions. Containment never deletes a customer,
+  scheme, contribution, rate lock, allocation, receipt, redemption, correction, or
+  audit record and never blocks provider callbacks or financial reconciliation.
+- **AUTH-019:** Only an active owner with recent authentication may append a deletion
+  review decision. Until the qualified retention matrix is recorded, the only
+  supported decision is a reasoned continued-review/settlement hold with retained
+  categories and a future review date; no completion or anonymization action exists.
+- **AUTH-020:** Account deletion never forfeits an INR or exact-grade metal entitlement.
+  A completed-with-retention outcome must identify the retained categories, purpose,
+  next review date, and support route without claiming that provider, backup, or
+  statutory transaction evidence was erased.
 
 ## Scheme and contribution rules
 

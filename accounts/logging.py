@@ -5,6 +5,7 @@ import re
 SENSITIVE_AUTH_PATH_PATTERNS = (
     re.compile(r"/accounts/invitations/[^\s?#]+(?:\?[^\s]*)?"),
     re.compile(r"/accounts/registrations/verify/[^\s?#]+(?:\?[^\s]*)?"),
+    re.compile(r"/accounts/deletion/verify/[^\s?#]+(?:\?[^\s]*)?"),
     re.compile(r"/accounts/password/reset/key/[^\s?#]+(?:\?[^\s]*)?"),
     re.compile(r"/accounts/google/login/callback/(?:\?[^\s]*)?"),
 )
@@ -25,6 +26,8 @@ def _redacted_auth_path(path):
         return "/accounts/invitations/[REDACTED]/"
     if path.startswith("/accounts/registrations/verify/"):
         return "/accounts/registrations/verify/[REDACTED]/"
+    if path.startswith("/accounts/deletion/verify/"):
+        return "/accounts/deletion/verify/[REDACTED]/"
     if path.startswith("/accounts/google/login/callback/"):
         return "/accounts/google/login/callback/[REDACTED]/"
     return "/accounts/password/reset/key/[REDACTED]/"

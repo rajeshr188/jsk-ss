@@ -21,6 +21,9 @@
 - [x] `FW-ENROL-001` — Non-binding customer enrolment requests with owner conversion
 - [x] `FW-AUTH-004` — Google as an explicitly linked approved-customer credential
 
+- [x] `FW-PRIV-001A` — Disabled verified-request, containment, owner-hold, and integrity foundation
+- [ ] `FW-PRIV-001B` — Qualified-matrix-driven anonymization, completion, and production acceptance
+
 - [ ] `FW-MOBILE-001` — Mobile product, policy, account, and release readiness
 - [ ] `FW-MOBILE-002` — Network-safe installable PWA foundation
 - [ ] `FW-MOBILE-003` — Customer-only Android Trusted Web Activity

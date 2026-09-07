@@ -1,5 +1,6 @@
 from functools import wraps
 
+from allauth.account.decorators import reauthentication_required
 from django.contrib import messages
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
@@ -12,13 +13,25 @@ from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_POST
 
 from .forms import (
+    CustomerAccountDeletionAuthenticatedForm,
+    CustomerAccountDeletionHoldForm,
+    CustomerAccountDeletionPublicForm,
     CustomerInvitationPasswordForm,
     CustomerRegistrationApprovalForm,
     CustomerRegistrationForm,
     CustomerRegistrationRejectionForm,
 )
-from .models import CustomerInvitation, CustomerRegistration
+from .models import (
+    CustomerAccountDeletionRequest,
+    CustomerInvitation,
+    CustomerRegistration,
+)
+from .selectors import (
+    customer_account_deletion_detail,
+    customer_account_deletion_queue,
+)
 from .services import (
+    InvalidCustomerAccountDeletion,
     InvalidCustomerRegistration,
     InvalidCustomerInvitation,
     accept_customer_invitation,
@@ -27,9 +40,16 @@ from .services import (
     invitation_is_available,
     registration_is_verifiable,
     reject_customer_registration,
+    record_customer_account_deletion_hold,
+    request_authenticated_customer_account_deletion,
+    send_customer_account_deletion_notice,
+    send_customer_account_deletion_verification,
     send_customer_invitation,
     send_customer_registration_verification,
     submit_customer_registration,
+    submit_customer_account_deletion,
+    deletion_request_is_verifiable,
+    verify_and_contain_customer_account,
     verify_customer_registration_email,
 )
 
@@ -345,3 +365,210 @@ def customer_registration_resend_verification(request, application_id):
                 "The replacement verification email could not be sent.",
             )
     return redirect("customer_registration_detail", application_id=application.pk)
+
+
+def _customer_account_deletion_enabled():
+    return settings.CUSTOMER_ACCOUNT_DELETION_ENABLED
+
+
+def _deletion_verification_url(request, deletion_request, raw_token):
+    return request.build_absolute_uri(
+        reverse(
+            "customer_account_deletion_verify",
+            kwargs={"request_id": deletion_request.pk, "token": raw_token},
+        )
+    )
+
+
+@never_cache
+def customer_account_deletion(request):
+    if not _customer_account_deletion_enabled():
+        raise Http404
+    if request.user.is_authenticated:
+        return redirect("customer_account_deletion_authenticated")
+
+    form = CustomerAccountDeletionPublicForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        if not form.cleaned_data["website"]:
+            submission = submit_customer_account_deletion(
+                email=form.cleaned_data["email"],
+                source_ip=_source_ip(request),
+            )
+            if submission.deletion_request is not None:
+                verification_url = _deletion_verification_url(
+                    request,
+                    submission.deletion_request,
+                    submission.raw_token,
+                )
+                send_customer_account_deletion_verification(
+                    deletion_request=submission.deletion_request,
+                    raw_token=submission.raw_token,
+                    verification_url=verification_url,
+                )
+        return redirect("customer_account_deletion_submitted")
+    return render(
+        request,
+        "account/customer_deletion_request.html",
+        {"form": form},
+    )
+
+
+@never_cache
+def customer_account_deletion_submitted(request):
+    if not _customer_account_deletion_enabled():
+        raise Http404
+    return render(request, "account/customer_deletion_submitted.html")
+
+
+@never_cache
+def customer_account_deletion_verify(request, request_id, token):
+    if not _customer_account_deletion_enabled():
+        raise Http404
+    deletion_request = CustomerAccountDeletionRequest.objects.filter(
+        pk=request_id
+    ).first()
+    if deletion_request is None or not deletion_request_is_verifiable(
+        deletion_request, token
+    ):
+        return render(
+            request,
+            "account/customer_deletion_verification_invalid.html",
+            status=200,
+        )
+    if request.method == "POST":
+        try:
+            deletion_request = verify_and_contain_customer_account(
+                deletion_request_id=deletion_request.pk,
+                raw_token=token,
+            )
+        except (InvalidCustomerAccountDeletion, ObjectDoesNotExist):
+            return render(
+                request,
+                "account/customer_deletion_verification_invalid.html",
+                status=200,
+            )
+        send_customer_account_deletion_notice(
+            deletion_request=deletion_request,
+            notice_kind="contained",
+        )
+        return redirect("customer_account_deletion_verified")
+    return render(request, "account/customer_deletion_verify.html")
+
+
+@never_cache
+def customer_account_deletion_verified(request):
+    if not _customer_account_deletion_enabled():
+        raise Http404
+    return render(request, "account/customer_deletion_verified.html")
+
+
+@login_required
+@reauthentication_required(allow_get=True)
+@never_cache
+def customer_account_deletion_authenticated(request):
+    if not _customer_account_deletion_enabled():
+        raise Http404
+    user = request.user
+    if (
+        user.role != user.Role.CUSTOMER
+        or user.is_staff
+        or user.is_superuser
+        or not hasattr(user, "customer_profile")
+    ):
+        raise PermissionDenied
+    form = CustomerAccountDeletionAuthenticatedForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        try:
+            deletion_request = request_authenticated_customer_account_deletion(
+                user=user,
+                source_ip=_source_ip(request),
+            )
+        except InvalidCustomerAccountDeletion as error:
+            _add_validation_errors(form, error)
+        else:
+            send_customer_account_deletion_notice(
+                deletion_request=deletion_request,
+                notice_kind="contained",
+            )
+            return redirect("customer_account_deletion_verified")
+    return render(
+        request,
+        "account/customer_deletion_authenticated.html",
+        {
+            "form": form,
+            "completion_target_days": (
+                settings.CUSTOMER_ACCOUNT_DELETION_COMPLETION_TARGET_DAYS
+            ),
+        },
+    )
+
+
+@owner_required
+def customer_account_deletion_list(request):
+    if not _customer_account_deletion_enabled():
+        raise Http404
+    return render(
+        request,
+        "account/customer_deletion_list.html",
+        {"deletion_requests": customer_account_deletion_queue()},
+    )
+
+
+@owner_required
+def customer_account_deletion_detail_view(request, request_id):
+    if not _customer_account_deletion_enabled():
+        raise Http404
+    deletion_request = get_object_or_404(
+        CustomerAccountDeletionRequest,
+        pk=request_id,
+    )
+    deletion_request = customer_account_deletion_detail(deletion_request.pk)
+    return render(
+        request,
+        "account/customer_deletion_detail.html",
+        {
+            "deletion_request": deletion_request,
+            "hold_form": CustomerAccountDeletionHoldForm(),
+        },
+    )
+
+
+@owner_required
+@reauthentication_required()
+@require_POST
+def customer_account_deletion_hold(request, request_id):
+    if not _customer_account_deletion_enabled():
+        raise Http404
+    deletion_request = get_object_or_404(
+        CustomerAccountDeletionRequest,
+        pk=request_id,
+    )
+    hold_form = CustomerAccountDeletionHoldForm(request.POST)
+    if hold_form.is_valid():
+        try:
+            deletion_request, _ = record_customer_account_deletion_hold(
+                deletion_request=deletion_request,
+                actor=request.user,
+                reason=hold_form.cleaned_data["reason"],
+                retained_categories=hold_form.cleaned_data["retained_categories"],
+                review_due_at=hold_form.cleaned_data["review_due_at"],
+            )
+        except (InvalidCustomerAccountDeletion, ValidationError) as error:
+            _add_validation_errors(hold_form, error)
+        else:
+            send_customer_account_deletion_notice(
+                deletion_request=deletion_request,
+                notice_kind="awaiting_settlement",
+            )
+            messages.success(request, "The reviewed hold and next review date were recorded.")
+            return redirect(
+                "customer_account_deletion_detail",
+                request_id=deletion_request.pk,
+            )
+    deletion_request = customer_account_deletion_detail(deletion_request.pk)
+    return render(
+        request,
+        "account/customer_deletion_detail.html",
+        {"deletion_request": deletion_request, "hold_form": hold_form},
+        status=400,
+    )

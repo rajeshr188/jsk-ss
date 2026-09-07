@@ -5,6 +5,46 @@ from . import views
 
 urlpatterns = [
     path(
+        "deletion/",
+        views.customer_account_deletion,
+        name="customer_account_deletion",
+    ),
+    path(
+        "deletion/request/",
+        views.customer_account_deletion_authenticated,
+        name="customer_account_deletion_authenticated",
+    ),
+    path(
+        "deletion/submitted/",
+        views.customer_account_deletion_submitted,
+        name="customer_account_deletion_submitted",
+    ),
+    path(
+        "deletion/verify/<uuid:request_id>/<str:token>/",
+        views.customer_account_deletion_verify,
+        name="customer_account_deletion_verify",
+    ),
+    path(
+        "deletion/verified/",
+        views.customer_account_deletion_verified,
+        name="customer_account_deletion_verified",
+    ),
+    path(
+        "owner/deletion-requests/",
+        views.customer_account_deletion_list,
+        name="customer_account_deletion_list",
+    ),
+    path(
+        "owner/deletion-requests/<uuid:request_id>/",
+        views.customer_account_deletion_detail_view,
+        name="customer_account_deletion_detail",
+    ),
+    path(
+        "owner/deletion-requests/<uuid:request_id>/hold/",
+        views.customer_account_deletion_hold,
+        name="customer_account_deletion_hold",
+    ),
+    path(
         "register/",
         views.customer_registration,
         name="customer_registration",

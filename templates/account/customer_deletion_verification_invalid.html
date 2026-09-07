@@ -1,0 +1,9 @@
+{% extends "_base.html" %}
+{% block title %}Deletion verification unavailable | Jai Sri Krishna Jewellery{% endblock %}
+{% block content %}
+<div class="row justify-content-center"><div class="col-lg-7"><div class="card shadow-sm"><div class="card-body p-4 p-lg-5 text-center">
+  <h1 class="h2">This verification is unavailable</h1>
+  <p>The link may be invalid, expired, replaced, or already used.</p>
+  <a class="btn btn-outline-dark" href="{% url 'customer_account_deletion' %}">Start a new request</a>
+</div></div></div></div>
+{% endblock %}
