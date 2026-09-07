@@ -445,6 +445,11 @@ authorize new production CASH enrolments or contributions under `SCH-007`.
 - **MOB-010:** A native Android/iOS client or versioned customer API requires a new ADR
   covering authentication and revocation, authorization, idempotency, rate limiting,
   secure storage, provider SDKs, threat modeling, compatibility, and release operations.
+- **MOB-011:** The PWA worker may precache only the generic connection-required page
+  and reviewed application icons. Every navigation is network-first with HTTP-cache
+  reuse disabled; no network response is written to Cache Storage, and non-GET or
+  non-navigation requests are not intercepted. Disabling the PWA retires its worker
+  and named static cache on the next successful online page load.
 
 ## Precision
 

@@ -3,16 +3,17 @@
 ## Current milestone
 
 ADR-0014 accepts a PWA and customer-only Android Trusted Web Activity as the first
-mobile distribution path. The no-code `FW-MOBILE-001` audit now records the proposed
-permanent app identity, customer scope, store wording, Financial features and Data
-Safety drafts, deletion/retention design gate, support matrix, review-account rules,
-and pilot acceptance measures in `docs/MOBILE_RELEASE_READINESS.md`. The owner
-approved `com.jaishrikrishnajewellery.savings` as the permanent package identifier on
-5 September 2026 and confirmed on 7 September 2026 that the organization D-U-N-S
-prerequisite is available; its value is not stored. Play organization verification,
+mobile distribution path. `FW-MOBILE-002` now has a disabled-first installable PWA
+implementation on its feature branch: reviewed 192/512 icons, a web manifest, a
+root-scoped network-first service worker, a generic offline response, safe disable/
+unregister behavior, and regression coverage. Its cache contains only that offline
+response and icons; no customer, authentication, financial, health, owner, or CMS
+response is cached or queued. Production acceptance remains pending. The no-code
+`FW-MOBILE-001` record retains the approved permanent package identifier and confirmed
+D-U-N-S prerequisite without storing the number. Play organization verification,
 package/signing registration, qualified policy/retention, deletion implementation,
-and final Data Safety gates remain open. No PWA, service worker, Android project,
-mobile API, provider integration, or production change has been implemented. The
+and final Data Safety gates remain open. No Android project, mobile API, native
+provider integration, or production PWA change has been implemented. The
 production-accepted `FW-AUTH-004`, `FW-ENROL-001`, and all financial boundaries remain
 unchanged. ADR-0015 is accepted for staged implementation. `FW-PRIV-001A` is deployed
 in production as a disabled verified-request, access-containment, owner-hold, and
@@ -414,10 +415,11 @@ claim remain open.
 
 ## Known limitations
 
-- There is currently no installable PWA, service worker, Android application, mobile
-  API, App/Deep Link association, push notification, biometric mobile credential, or
-  iOS App Store client. ADR-0014 deliberately requires a policy-ready PWA/TWA pilot
-  before any native/API commitment; all mobile access today is the responsive website.
+- The installable PWA/service-worker foundation is implemented but not yet merged or
+  production-accepted. There is no Android application, mobile API, App/Deep Link
+  association, push notification, biometric mobile credential, or iOS App Store
+  client. ADR-0014 deliberately requires a policy-ready PWA/TWA pilot before any
+  native/API commitment; production mobile access remains the responsive website.
 - Google sign-in is limited to explicitly linked approved customers. Owners, staff,
   and superusers retain password authentication, and provider-assisted registration,
   additional social providers, and customer self-service unlink are intentionally
@@ -488,7 +490,10 @@ claim remain open.
 - Local and production PostgreSQL 16 migrations are applied through
   `schemes.0020_scheme_enrolment_requests` and
   `socialaccount.0006_alter_socialaccount_extra_data`.
-- 362 tests pass, including controlled Google credential linking, social-signup and
+- 369 tests pass, including the disabled-first PWA manifest, declared icon dimensions,
+  network-only navigation worker, strict three-asset cache allowlist, generic offline
+  response, mutation non-interception, and rollback cleanup, plus controlled Google
+  credential linking, social-signup and
   privileged-user rejection, stable-subject login, verified-email matching, password
   fallback, zero token retention, callback log protection, exact-calendar eligibility
   month-end clamping,
@@ -630,16 +635,13 @@ claim remain open.
 
 ## Next recommended step
 
-Create and verify the business-owned Play organization account and matching payments
-profile, create the draft Play app record, and record owner/recovery roles. Do not
-claim the approved `com.jaishrikrishnajewellery.savings` package is reserved until it
-is registered/bound to the reviewed signing identity during `FW-MOBILE-003`. In
-parallel, obtain the qualified Financial features/retention review and scope the
-dedicated account-deletion workflow accepted in ADR-0015. Review `FW-PRIV-001A`, keep
-its feature flag disabled, and obtain the qualified retention matrix before designing
-`FW-PRIV-001B` anonymization or any production enablement.
-The network-safe
-`FW-MOBILE-002` PWA foundation may begin after the product/package approval, but no
+Review and merge `agent/pwa-foundation`, then perform the disabled-first
+`FW-MOBILE-002` deployment and browser acceptance in the production guide. Keep the
+feature disabled until its manifest, exact cache allowlist, offline no-mutation,
+update, and rollback behavior pass over the canonical HTTPS origin. In parallel,
+complete the business-owned Play organization verification and qualified Financial
+features/retention review; do not begin `FW-MOBILE-003` or claim the approved package
+is bound until those prerequisites and the reviewed signing identity are ready. No
 public store release may bypass the remaining policy/deletion gates. The independent
 fund-safety priority remains the two no-mutation `FW-PAY-003` Razorpay recovery
 exercises, and the first genuine `FW-ELIG-002` reminder observation must not be

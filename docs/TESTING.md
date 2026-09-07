@@ -27,7 +27,29 @@ Mock financial tests use `override_settings` only for payment configuration. For
 
 Razorpay tests likewise replace the HTTPS boundary with deterministic order and payment responses. They verify raw-body webhook HMAC, invalid-callback rejection, captured-payment matching, duplicate callback/webhook idempotency, mode isolation, one metal allocation, customer isolation, snapshotted Checkout expiry, expired-resume blocking, captured-after-expiry confirmation, provider order inspection, dry-run/apply abandonment, flexible-attempt isolation, replacement resume, and late-capture exception routing without using provider credentials. Keep normal development and CI on `RAZORPAY_MODE=test`. Before a controlled production cutover, run `check_razorpay_live_readiness` with mode-matched synthetic or privately injected Live configuration; the command performs no provider request and prints no secret. For an external test-mode smoke, use private test keys, expose the webhook endpoint over HTTPS, subscribe to `payment.captured`, and confirm one test payment produces one contribution benefit and one processed webhook event. Use Razorpay's documented Test Mode instruments: select Netbanking and choose **Success**, enter `success@razorpay` for UPI, or use a documented domestic test card and complete the simulated OTP page. A payment left at provider status `created` has not been authorized and must not create entitlement. The abandoned-order command does call Razorpay: run it without `--apply` first, and never treat application-side abandonment as provider cancellation.
 
+PWA regressions verify the disabled-by-default routes, installable manifest fields,
+declared PNG dimensions, worker update headers, three-item static cache allowlist,
+network-only navigation behavior, non-interception of mutations/subresources, absence
+of runtime response caching/background sync/IndexedDB, generic dependency-free offline
+copy, and enabled/disabled document wiring. Run the focused suite with:
+
+```powershell
+uv run --env-file .env python manage.py test pages.test_pwa
+```
+
 ## Manual smoke test
+
+- With `PWA_ENABLED=False`, confirm the manifest, worker, and offline routes return 404
+  and an already-installed worker/cache is removed after one successful online load
+- With `PWA_ENABLED=True` over HTTPS, inspect the manifest and maskable safe area in
+  browser developer tools and confirm the app is installable with the reviewed name/icon
+- Inspect Cache Storage and confirm only `/offline/` and the 192/512 app icons exist
+- Take the browser offline, navigate to customer/auth/payment/owner URLs, and confirm
+  only the generic connection-required page appears with no cached customer data
+- Attempt a form submission while offline, restore connectivity, and prove no request,
+  order, contribution, rate lock, allocation, redemption, or approval was created
+- Restore connectivity and confirm current server state loads; exercise worker update
+  and disable/re-enable behavior without stale pages
 
 - Owner login and logout
 - Password-reset request renders and sends through the configured backend

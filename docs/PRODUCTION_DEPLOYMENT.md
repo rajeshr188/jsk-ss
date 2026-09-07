@@ -3029,6 +3029,81 @@ exact-grade, in-store-cash, and Google-link checks passed. The seven-customer,
 nine-account, zero-pending-order, zero-INR, `0.078407 g GOLD_22K_916`, `0.329272 g
 GOLD_24K_9999`, and zero-silver baseline was unchanged.
 
+## `FW-MOBILE-002` PWA foundation rollout
+
+This release has no migration. Deploy it disabled first and keep the old image/release
+identities as the rollback pair. Add this exact gate to `/opt/jsk/app/.env.production`:
+
+```dotenv
+PWA_ENABLED=False
+```
+
+After promoting the approved registry digest, recreate `web` and confirm the three PWA
+routes are closed while both health checks and the existing financial/authentication
+integrity commands pass:
+
+```bash
+docker compose --env-file .env.production -f compose.production.yml \
+  config --quiet
+docker compose --env-file .env.production -f compose.production.yml \
+  up -d --force-recreate --no-deps web
+curl -sS -o /dev/null -w 'manifest=%{http_code}\n' \
+  https://jaishrikrishnajewellery.com/manifest.webmanifest
+curl -sS -o /dev/null -w 'worker=%{http_code}\n' \
+  https://jaishrikrishnajewellery.com/service-worker.js
+curl -sS -o /dev/null -w 'offline=%{http_code}\n' \
+  https://jaishrikrishnajewellery.com/offline/
+```
+
+All three must be `404` while disabled. In a browser that previously installed this
+origin, load one online page and confirm this app's worker and `jsk-pwa-static-*` cache
+are removed. Do not delete unrelated origin storage.
+
+After the disabled checks pass, set `PWA_ENABLED=True`, validate the Compose config,
+and recreate only `web`. Caddy does not require a configuration change:
+
+```bash
+docker compose --env-file .env.production -f compose.production.yml \
+  config --quiet
+docker compose --env-file .env.production -f compose.production.yml \
+  up -d --force-recreate --no-deps web
+curl -fsS https://jaishrikrishnajewellery.com/manifest.webmanifest
+curl -fsSI https://jaishrikrishnajewellery.com/service-worker.js
+curl -fsSI https://jaishrikrishnajewellery.com/offline/
+curl -fsS https://jaishrikrishnajewellery.com/health/live/
+curl -fsS https://jaishrikrishnajewellery.com/health/ready/
+```
+
+Expect the manifest to name Jai Sri Krishna Jewellery and declare 192/512 PNG icons,
+the worker to return `Service-Worker-Allowed: /` plus
+`Cache-Control: no-cache, no-store, must-revalidate`, and the offline page to state
+that a connection is required and nothing was submitted.
+
+Complete browser acceptance on the canonical HTTPS origin before marking
+`FW-MOBILE-002` complete:
+
+1. Inspect the manifest, both icons, maskable safe area, worker scope, and installability
+   in browser developer tools; install and relaunch the standalone app.
+2. Inspect Cache Storage. The current `jsk-pwa-static-*` cache must contain exactly
+   `/offline/` and the two 192/512 icon URLs—no HTML response from any other route.
+3. While online, confirm customer login, scheme views, current rates, receipts, and
+   statements come from the server. Confirm health responses remain `no-store`.
+4. Go offline and navigate to public, authentication, customer, payment, owner, admin,
+   CMS, health, and token-bearing paths. Every navigation may show only the generic
+   connection-required page; no prior response or customer detail may appear.
+5. Submit an ordinary form and attempt a contribution while offline. After restoring
+   connectivity, prove no request, order, contribution, rate lock, allocation,
+   redemption, approval, or provider call was created by either attempt.
+6. Deploy a harmless release change and confirm the old named cache is removed after
+   activation. Then disable the flag once, load an online page, and confirm worker/cache
+   retirement before re-enabling and repeating the installability check.
+
+Record the commit, immutable image digest, rollback pair, recovery point, browser/
+device versions, cache contents, no-mutation evidence, health/integrity outputs, and
+the owner acceptance. A rollback sets `PWA_ENABLED=False`, recreates `web`, and relies
+on the next online page load to retire the safe worker; it does not require a database
+rollback.
+
 ## Go-live sign-off
 
 The target full-production checklist remains below. Live acceptance does not mark
