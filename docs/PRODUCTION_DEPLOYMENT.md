@@ -3014,6 +3014,21 @@ be enabled until `FW-PRIV-001B` supplies the qualified matrix, irreversible serv
 policy wording, provider procedures, synthetic no-history and retained-history tests,
 and a separately approved production runbook.
 
+Production evidence recorded 2026-09-07: protected-`main` release
+`e6a8ee0f20fe2324276fb75dad6bda9df64baf9d` was deployed from immutable image
+`ghcr.io/rajeshr188/jsk-savings@sha256:6b65308d74165d6ca19b298dd507f45f8bb51416bd14c69f406a782810cccd18`, with
+release `77141d0caa447028802ff1ec7166fad4fd198d8c` and digest
+`sha256:7e2f95e53333791ede60007f0a059377938574e63d574a55fb4da7fe48c63681`
+retained as rollback identities. The latest managed-PostgreSQL recovery point was
+recorded as 4:00 PM IST on 7 September 2026. The plan contained only additive
+`accounts.0005_customer_account_deletion_foundation`, which applied successfully.
+The feature remained false with a blank policy version, all deletion counts and
+integrity exceptions were zero, and the public route returned 404. Both HTTPS health
+checks and the authentication, payment-operations, financial-exception, Razorpay Live,
+exact-grade, in-store-cash, and Google-link checks passed. The seven-customer,
+nine-account, zero-pending-order, zero-INR, `0.078407 g GOLD_22K_916`, `0.329272 g
+GOLD_24K_9999`, and zero-silver baseline was unchanged.
+
 ## Go-live sign-off
 
 The target full-production checklist remains below. Live acceptance does not mark

@@ -14,10 +14,11 @@ package/signing registration, qualified policy/retention, deletion implementatio
 and final Data Safety gates remain open. No PWA, service worker, Android project,
 mobile API, provider integration, or production change has been implemented. The
 production-accepted `FW-AUTH-004`, `FW-ENROL-001`, and all financial boundaries remain
-unchanged. ADR-0015 is accepted for staged implementation. `FW-PRIV-001A` now adds a
-disabled verified-request, access-containment, owner-hold, and integrity foundation
-without any anonymization/completion mutation. The qualified retention matrix,
-`FW-PRIV-001B`, production enablement, and public-store deletion claim remain open.
+unchanged. ADR-0015 is accepted for staged implementation. `FW-PRIV-001A` is deployed
+in production as a disabled verified-request, access-containment, owner-hold, and
+integrity foundation without any anonymization/completion mutation. The qualified
+retention matrix, `FW-PRIV-001B`, production enablement, and public-store deletion
+claim remain open.
 
 ## Completed
 
@@ -348,6 +349,16 @@ without any anonymization/completion mutation. The qualified retention matrix,
   allocations; exactly one `SocialAccount` and zero `SocialToken` records existed.
   Authentication, financial-exception, and exact-grade integrity checks and both
   HTTPS health endpoints passed.
+- `FW-PRIV-001A` completed its disabled-first production rollout on 2026-09-07 in
+  release `e6a8ee0f20fe2324276fb75dad6bda9df64baf9d`, published as
+  `ghcr.io/rajeshr188/jsk-savings@sha256:6b65308d74165d6ca19b298dd507f45f8bb51416bd14c69f406a782810cccd18`.
+  Additive migration `accounts.0005_customer_account_deletion_foundation` applied
+  from the recorded 4:00 PM IST PostgreSQL recovery point. The feature remained
+  disabled with no policy version, all deletion workflow counts stayed zero, and the
+  public deletion route returned 404. Live/readiness, authentication, payment,
+  financial-exception, Live-mode, exact-grade, in-store-cash, and Google-link checks
+  passed. Customer, agreement, pending-order, INR, and exact-grade metal liabilities
+  matched the pre-migration baseline exactly.
 
 ## In progress
 
@@ -363,15 +374,10 @@ without any anonymization/completion mutation. The qualified retention matrix,
   Data Safety review. The first release remains customer-only and adds no mobile API.
 - ADR-0015 was owner-accepted on 7 September 2026 with 24-hour verification,
   seven-day owner-review, and 30-day removable-data service targets; owner-only review;
-  and entitlement-preserving retained-record communication. `FW-PRIV-001A` is
-  implemented on `agent/account-deletion-foundation` behind
-  `CUSTOMER_ACCOUNT_DELETION_ENABLED=False`: non-enumerating public intake, recent-
-  authentication customer intake, digest-only verification, session/Google/invitation
-  containment, append-only actions and holds, an owner queue, direct untracked notices,
-  protected token paths, and `check_customer_account_deletions`. No completion or
-  anonymization mutation exists. `FW-PRIV-001B` and production enablement remain
-  blocked on the qualified category-by-category retention matrix and a synthetic
-  rollout.
+  and entitlement-preserving retained-record communication. The disabled
+  `FW-PRIV-001A` foundation is production-accepted. `FW-PRIV-001B`, anonymization,
+  completion decisions, production enablement, and synthetic active-flow acceptance
+  remain blocked on the qualified category-by-category retention matrix.
 - `FW-ELIG-002` awaits only the first naturally occurring reminder-specific Postmark
   acceptance and matching owner delivery record. Its deployed zero-candidate run is
   correct evidence that no message is invented merely to satisfy a rollout smoke.
@@ -395,10 +401,10 @@ without any anonymization/completion mutation. The qualified retention matrix,
   CA are in place, SSH access is verified, Docker is installed, and the owned domain
   returns liveness and PostgreSQL readiness `200` through Caddy-managed HTTPS;
   paid external alert exercises remain deferred.
-- Production release `77141d0caa447028802ff1ec7166fad4fd198d8c` is healthy with
+- Production release `e6a8ee0f20fe2324276fb75dad6bda9df64baf9d` is healthy with
   migrations through `schemes.0020_scheme_enrolment_requests`,
   `catalog.0001_initial`, `pages.0001_initial`,
-  `accounts.0004_customerregistrationattempt_customerregistration`, and
+  `accounts.0005_customer_account_deletion_foundation`, and
   `socialaccount.0006_alter_socialaccount_extra_data`
   applied, zero reported financial exceptions, successful live/ready checks, valid
   catalogue authorization, working R2 media, published reviewed products, and public
@@ -581,6 +587,11 @@ without any anonymization/completion mutation. The qualified retention matrix,
   `33948122224` passed the 349-test, deploy, static, publish, and fixable-critical-
   vulnerability gates and produced
   `ghcr.io/rajeshr188/jsk-savings@sha256:7e2f95e53333791ede60007f0a059377938574e63d574a55fb4da7fe48c63681`.
+  PR `#53` merged the accepted account-deletion containment foundation as
+  `e6a8ee0f20fe2324276fb75dad6bda9df64baf9d`; protected-`main` run
+  `34111584454` passed the 362-test, deploy, static, publish, and fixable-critical-
+  vulnerability gates and produced
+  `ghcr.io/rajeshr188/jsk-savings@sha256:6b65308d74165d6ca19b298dd507f45f8bb51416bd14c69f406a782810cccd18`.
 - The Linode production Compose model passes `docker compose config --quiet`, and
   Caddy 2.11.4 validates the exact apex-domain, `www` redirect, masked JSON access
   log, and release-label configuration. The financial heartbeat shell script passes
