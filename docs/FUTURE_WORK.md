@@ -189,13 +189,6 @@ recorded limitations are not lost.
   workflow, and a release-candidate Data Safety review. The owner confirmed that the
   organization D-U-N-S prerequisite is available; its value is intentionally not
   stored in the repository.
-- **FW-MOBILE-002 — Add a network-safe installable PWA foundation:** Add the manifest,
-  reviewed icons/theme, installability metadata, narrowly allowlisted service worker,
-  static offline explanation, and mobile interaction/accessibility refinements.
-  Authenticated, identity, scheme, rate, payment, receipt, statement, eligibility,
-  OAuth, health, and owner routes must remain network-only. Test installability,
-  upgrades, cache deletion, slow/offline recovery, CSRF, Google login, Razorpay return,
-  payment expiry, and operational pauses on representative Android browsers.
 - **FW-MOBILE-003 — Build the customer-only Android TWA:** Create a separately owned
   Android repository and CI release pipeline; choose the permanent package and Play
   signing identity; publish exact Digital Asset Links from the canonical domain; and
@@ -233,6 +226,7 @@ Completed implementation and rollout details are intentionally not repeated here
 - **CMS, media, and catalogue:** `FW-CMS-001`, `FW-CMS-002`, `FW-CMS-003`,
   `FW-MEDIA-001`, `FW-CATALOG-001`, `FW-CATALOG-002`, `FW-CATALOG-003`, and
   `FW-CATALOG-004`.
+- **Mobile:** `FW-MOBILE-002`.
 
 Use [Project status](STATUS.md) for the completed capability summary, the
 [production runbook](PRODUCTION_DEPLOYMENT.md) for release evidence, and ADR-0003

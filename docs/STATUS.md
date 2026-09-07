@@ -3,17 +3,18 @@
 ## Current milestone
 
 ADR-0014 accepts a PWA and customer-only Android Trusted Web Activity as the first
-mobile distribution path. `FW-MOBILE-002` now has a disabled-first installable PWA
-implementation on its feature branch: reviewed 192/512 icons, a web manifest, a
-root-scoped network-first service worker, a generic offline response, safe disable/
-unregister behavior, and regression coverage. Its cache contains only that offline
-response and icons; no customer, authentication, financial, health, owner, or CMS
-response is cached or queued. Production acceptance remains pending. The no-code
+mobile distribution path. `FW-MOBILE-002` is production-accepted in release
+`049944412aa09668d6b04e45cabee2bc58dadc42`: the installable PWA uses reviewed
+192/512 icons, a root-scoped network-first service worker, a generic offline response,
+and safe disable/unregister behavior. Its cache contains only that offline response
+and icons; no customer, authentication, financial, health, owner, or CMS response is
+cached or queued. Offline submission and disable/re-enable cleanup passed without a
+server mutation. The no-code
 `FW-MOBILE-001` record retains the approved permanent package identifier and confirmed
 D-U-N-S prerequisite without storing the number. Play organization verification,
 package/signing registration, qualified policy/retention, deletion implementation,
-and final Data Safety gates remain open. No Android project, mobile API, native
-provider integration, or production PWA change has been implemented. The
+and final Data Safety gates remain open. No Android project, mobile API, or native
+provider integration has been implemented. The
 production-accepted `FW-AUTH-004`, `FW-ENROL-001`, and all financial boundaries remain
 unchanged. ADR-0015 is accepted for staged implementation. `FW-PRIV-001A` is deployed
 in production as a disabled verified-request, access-containment, owner-hold, and
@@ -402,7 +403,10 @@ claim remain open.
   CA are in place, SSH access is verified, Docker is installed, and the owned domain
   returns liveness and PostgreSQL readiness `200` through Caddy-managed HTTPS;
   paid external alert exercises remain deferred.
-- Production release `e6a8ee0f20fe2324276fb75dad6bda9df64baf9d` is healthy with
+- Production release `049944412aa09668d6b04e45cabee2bc58dadc42` is healthy from
+  immutable image
+  `ghcr.io/rajeshr188/jsk-savings@sha256:4f5d10d014c3f516c4194fe192a01df57387c5353c232aa80a88ad18a99bce02`
+  with
   migrations through `schemes.0020_scheme_enrolment_requests`,
   `catalog.0001_initial`, `pages.0001_initial`,
   `accounts.0005_customer_account_deletion_foundation`, and
@@ -411,12 +415,14 @@ claim remain open.
   catalogue authorization, working R2 media, published reviewed products, and public
   Jewellery links in the primary and footer navigation. Its production metal-only
   boundary, payment-operations manual pause/resume, and audited in-store cash receipt
-  path passed owner/customer smoke.
+  path passed owner/customer smoke. Its PWA install, strict three-asset cache,
+  generic offline behavior, no-mutation test, and flag-driven retirement/re-enable
+  sequence passed production owner acceptance on 7 September 2026.
 
 ## Known limitations
 
-- The installable PWA/service-worker foundation is implemented but not yet merged or
-  production-accepted. There is no Android application, mobile API, App/Deep Link
+- The installable PWA/service-worker foundation is production-accepted. There is no
+  Android application, mobile API, App/Deep Link
   association, push notification, biometric mobile credential, or iOS App Store
   client. ADR-0014 deliberately requires a policy-ready PWA/TWA pilot before any
   native/API commitment; production mobile access remains the responsive website.
@@ -621,6 +627,14 @@ claim remain open.
   payment is captured, one signed `payment.captured` webhook is processed, one cash
   entitlement is created, an owner completes the full redemption through a
   CSRF-protected form, and customer/owner outstanding cash reconciles to zero.
+- Production release `049944412aa09668d6b04e45cabee2bc58dadc42` passed the
+  disabled-first and enabled PWA route gates, installation, exact offline-plus-two-icon
+  cache inspection, offline no-disclosure/no-mutation checks, and automatic worker/
+  cache retirement when disabled. Re-enabling restored the three endpoints and root
+  worker scope. Live/readiness, financial-exception, and Razorpay Live checks remained
+  clean; the web container was healthy with 377 MiB available memory, 422 MiB free
+  swap, and 9.6 GiB free disk. The recovery point was recorded as 6:00 PM IST on
+  7 September 2026, and the previous release/image pair remains the rollback target.
 - Milestone 9 rollback-only authenticated smoke passes through owner plan creation and
   enrolment, customer mock payment, eligibility transition, and owner redemption:
   ₹100 principal earns ₹5, the immutable redemption stores both components, the
@@ -635,14 +649,11 @@ claim remain open.
 
 ## Next recommended step
 
-Review and merge `agent/pwa-foundation`, then perform the disabled-first
-`FW-MOBILE-002` deployment and browser acceptance in the production guide. Keep the
-feature disabled until its manifest, exact cache allowlist, offline no-mutation,
-update, and rollback behavior pass over the canonical HTTPS origin. In parallel,
-complete the business-owned Play organization verification and qualified Financial
-features/retention review; do not begin `FW-MOBILE-003` or claim the approved package
-is bound until those prerequisites and the reviewed signing identity are ready. No
-public store release may bypass the remaining policy/deletion gates. The independent
+Complete the business-owned Play organization verification and qualified Financial
+features/retention review. Finish `FW-PRIV-001B` before making a public-store account-
+deletion claim; do not begin `FW-MOBILE-003` or claim the approved package is bound
+until the Play prerequisites and reviewed signing identity are ready. No public store
+release may bypass the remaining policy/deletion gates. The independent
 fund-safety priority remains the two no-mutation `FW-PAY-003` Razorpay recovery
 exercises, and the first genuine `FW-ELIG-002` reminder observation must not be
 manufactured.

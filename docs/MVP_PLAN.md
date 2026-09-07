@@ -25,7 +25,7 @@
 - [ ] `FW-PRIV-001B` — Qualified-matrix-driven anonymization, completion, and production acceptance
 
 - [ ] `FW-MOBILE-001` — Mobile product, policy, account, and release readiness
-- [ ] `FW-MOBILE-002` — Network-safe installable PWA foundation (implementation ready; production acceptance pending)
+- [x] `FW-MOBILE-002` — Network-safe installable PWA foundation
 - [ ] `FW-MOBILE-003` — Customer-only Android Trusted Web Activity
 - [ ] `FW-MOBILE-004` — Play internal-test and controlled customer pilot
 - [ ] `FW-MOBILE-005` — Evidence-based native Android/iOS and API decision

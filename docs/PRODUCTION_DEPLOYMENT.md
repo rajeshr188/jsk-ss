@@ -3068,8 +3068,8 @@ docker compose --env-file .env.production -f compose.production.yml \
 docker compose --env-file .env.production -f compose.production.yml \
   up -d --force-recreate --no-deps web
 curl -fsS https://jaishrikrishnajewellery.com/manifest.webmanifest
-curl -fsSI https://jaishrikrishnajewellery.com/service-worker.js
-curl -fsSI https://jaishrikrishnajewellery.com/offline/
+curl -sS -D - -o /dev/null https://jaishrikrishnajewellery.com/service-worker.js
+curl -sS -D - -o /dev/null https://jaishrikrishnajewellery.com/offline/
 curl -fsS https://jaishrikrishnajewellery.com/health/live/
 curl -fsS https://jaishrikrishnajewellery.com/health/ready/
 ```
@@ -3103,6 +3103,19 @@ device versions, cache contents, no-mutation evidence, health/integrity outputs,
 the owner acceptance. A rollback sets `PWA_ENABLED=False`, recreates `web`, and relies
 on the next online page load to retire the safe worker; it does not require a database
 rollback.
+
+Production acceptance was completed on 7 September 2026 with release
+`049944412aa09668d6b04e45cabee2bc58dadc42` and immutable image
+`ghcr.io/rajeshr188/jsk-savings@sha256:4f5d10d014c3f516c4194fe192a01df57387c5353c232aa80a88ad18a99bce02`.
+The rollback pair is release `e6a8ee0f20fe2324276fb75dad6bda9df64baf9d` and image
+`ghcr.io/rajeshr188/jsk-savings@sha256:6b65308d74165d6ca19b298dd507f45f8bb51416bd14c69f406a782810cccd18`;
+the recovery point was recorded as 6:00 PM IST that day. Disabled routes returned
+404, enabled routes returned 200, installation succeeded, and the browser confirmed
+the canonical scope and exact offline-plus-two-icon cache. Offline navigation leaked
+no customer or scheme data and offline submission changed no tracked application or
+financial counts. The disable/re-enable cleanup removed and restored only this PWA's
+worker/cache. Live/readiness, financial-exception, and Razorpay Live checks stayed
+clean; the final container was healthy with 9.6 GiB free disk.
 
 ## Go-live sign-off
 
