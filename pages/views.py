@@ -2,7 +2,9 @@ import logging
 
 from django.conf import settings
 from django.db import DatabaseError, connection
-from django.http import JsonResponse
+from django.http import Http404, HttpResponse, JsonResponse
+from django.template.loader import render_to_string
+from django.templatetags.static import static
 from django.views.decorators.http import require_GET
 from django.views.generic import ListView, TemplateView
 
@@ -11,6 +13,74 @@ from .models import AboutPage, OurStoryPage
 from .selectors import public_editorial_page
 
 logger = logging.getLogger(__name__)
+
+
+def _require_pwa_enabled():
+    if not settings.PWA_ENABLED:
+        raise Http404
+
+
+@require_GET
+def pwa_manifest(request):
+    _require_pwa_enabled()
+    response = JsonResponse(
+        {
+            "id": "/",
+            "name": "Jai Sri Krishna Jewellery",
+            "short_name": "JSK Jewellery",
+            "description": (
+                "Customer access to jewellery savings plans and scheme records."
+            ),
+            "lang": "en-IN",
+            "start_url": "/",
+            "scope": "/",
+            "display": "standalone",
+            "background_color": "#f8f5ef",
+            "theme_color": "#2d1811",
+            "prefer_related_applications": False,
+            "icons": [
+                {
+                    "src": static("images/pwa-icon-192.png"),
+                    "sizes": "192x192",
+                    "type": "image/png",
+                    "purpose": "any",
+                },
+                {
+                    "src": static("images/pwa-icon-512.png"),
+                    "sizes": "512x512",
+                    "type": "image/png",
+                    "purpose": "any maskable",
+                },
+            ],
+        }
+    )
+    response["Content-Type"] = "application/manifest+json"
+    response["Cache-Control"] = "no-cache"
+    return response
+
+
+@require_GET
+def service_worker(request):
+    _require_pwa_enabled()
+    response = HttpResponse(
+        render_to_string(
+            "pages/service_worker.js",
+            {"app_release": settings.APP_RELEASE},
+        ),
+        content_type="text/javascript",
+    )
+    response["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    response["Service-Worker-Allowed"] = "/"
+    return response
+
+
+@require_GET
+def offline_page(request):
+    _require_pwa_enabled()
+    response = HttpResponse(render_to_string("pages/offline.html"))
+    response["Cache-Control"] = "public, max-age=86400"
+    response["X-Robots-Tag"] = "noindex, nofollow"
+    return response
 
 
 def _health_response(payload, *, status=200):

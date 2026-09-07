@@ -1,11 +1,12 @@
 # Mobile Release Readiness
 
-This document is the canonical no-code readiness record for `FW-MOBILE-001`. It
-implements the planning decision in ADR-0014 without adding a PWA, Android project,
-mobile API, or production behavior.
+This document is the canonical readiness record for `FW-MOBILE-001` and the bounded
+`FW-MOBILE-002` PWA foundation. It implements ADR-0014 without adding an Android
+project, mobile API, native authentication, or client-authoritative financial logic.
 
-Status: **in progress — product defaults are recorded; owner, policy, and deletion
-workflow gates remain open.**
+Status: **in progress — the disabled-first PWA implementation is ready for review and
+production acceptance; owner, policy, deletion, Android-signing, and Play gates remain
+open.**
 
 ## Product boundary
 
@@ -36,6 +37,31 @@ Excluded from the first mobile release:
   financial mutation;
 - claims that the plan is an investment, bank deposit, interest product, tradable
   metal account, guaranteed return, or cash-withdrawal service.
+
+## `FW-MOBILE-002` installable PWA foundation
+
+The Django application now has a disabled-by-default `PWA_ENABLED` boundary. When
+enabled it publishes `/manifest.webmanifest`, a root-scoped `/service-worker.js`, a
+standalone `/offline/` response, and reviewed 192/512 PNG icons. The manifest uses the
+canonical root start URL, standalone display, business name, and existing brown/gold
+visual identity. It does not guess an Android package or declare a store category.
+
+The worker's cache allowlist contains exactly the generic offline page and two app
+icons. GET navigations are always fetched from the network with HTTP-cache reuse
+disabled. A network failure may show only the generic connection-required message;
+the worker never caches the preceding response. POST requests, subresources,
+authentication and verification paths, scheme/customer data, rates, payments,
+receipts, statements, eligibility, OAuth callbacks, health checks, owner pages, and
+admin/CMS content are not intercepted or queued. There is no background sync,
+IndexedDB, push, analytics, or offline financial state.
+
+The feature remains a production rollout gate, not a schema migration. Disabling it
+hides the manifest/endpoints and causes the small registration script to unregister
+this app's worker and delete only `jsk-pwa-static-*` caches on the next successful
+online page load. Production acceptance must inspect the manifest and maskable icon,
+prove the cache contains only the three allowlisted URLs, test install/update/disable,
+and demonstrate that offline form submission creates no request, order, contribution,
+rate lock, allocation, or other server mutation.
 
 ## Proposed permanent app identity
 
@@ -329,6 +355,9 @@ public release may pass while any of the final five gates remains open.
 
 ## Authoritative references
 
+- [W3C Web Application Manifest](https://www.w3.org/TR/appmanifest/)
+- [Chrome installable-manifest criteria](https://developer.chrome.com/docs/lighthouse/pwa/installable-manifest)
+- [Chrome DevTools PWA inspection](https://developer.chrome.com/docs/devtools/progressive-web-apps)
 - [Choose a Play developer account type](https://support.google.com/googleplay/android-developer/answer/13634885)
 - [Financial features declaration](https://support.google.com/googleplay/android-developer/answer/13849271)
 - [Play account deletion requirements](https://support.google.com/googleplay/android-developer/answer/13327111)

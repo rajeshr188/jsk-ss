@@ -11,7 +11,10 @@ from .views import (
     ShippingDeliveryPageView,
     TermsPageView,
     live_health,
+    offline_page,
+    pwa_manifest,
     ready_health,
+    service_worker,
 )
 
 urlpatterns = [
@@ -34,4 +37,7 @@ urlpatterns = [
     ),
     path("health/live/", live_health, name="health_live"),
     path("health/ready/", ready_health, name="health_ready"),
+    path("manifest.webmanifest", pwa_manifest, name="pwa_manifest"),
+    path("service-worker.js", service_worker, name="service_worker"),
+    path("offline/", offline_page, name="pwa_offline"),
 ]

@@ -178,6 +178,7 @@ TEMPLATES = [
                 "accounts.context_processors.customer_google_login",
                 "accounts.context_processors.customer_account_deletion",
                 "catalog.context_processors.public_catalogue_navigation",
+                "pages.context_processors.pwa",
             ],
         },
     },
@@ -258,6 +259,10 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 
 # https://docs.djangoproject.com/en/dev/ref/settings/#static-url
 STATIC_URL = "/static/"
+
+# Installable-web delivery is separately gated. Its service worker is deliberately
+# network-first and may cache only the reviewed generic offline page and app icons.
+PWA_ENABLED = env_bool("PWA_ENABLED", False)
 
 # https://docs.djangoproject.com/en/dev/ref/contrib/staticfiles/#std:setting-STATICFILES_DIRS
 STATICFILES_DIRS = [BASE_DIR / "static"]
