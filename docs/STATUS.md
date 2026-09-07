@@ -14,7 +14,10 @@ package/signing registration, qualified policy/retention, deletion implementatio
 and final Data Safety gates remain open. No PWA, service worker, Android project,
 mobile API, provider integration, or production change has been implemented. The
 production-accepted `FW-AUTH-004`, `FW-ENROL-001`, and all financial boundaries remain
-unchanged.
+unchanged. ADR-0015 now proposes, but does not yet authorize, a verified account-
+deletion workflow that contains login access, preserves entitlements and financial
+history, anonymizes data without a continuing purpose, and records justified bounded
+retention explicitly.
 
 ## Completed
 
@@ -358,6 +361,11 @@ unchanged.
   qualified review of the Financial features classification and record-retention
   basis, an implemented account-deletion request path, and final dependency-level
   Data Safety review. The first release remains customer-only and adds no mobile API.
+- `FW-PRIV-001` is proposed under ADR-0015 and has no implementation. Owner acceptance
+  is pending for the 24-hour verification, seven-day review, and 30-day removable-data
+  service targets; owner-only authorization; customer communication; and a qualified
+  category-by-category retention matrix. The current `PROTECT` financial graph and
+  customer login behavior remain unchanged.
 - `FW-ELIG-002` awaits only the first naturally occurring reminder-specific Postmark
   acceptance and matching owner delivery record. Its deployed zero-candidate run is
   correct evidence that no message is invented merely to satisfy a rollout smoke.
@@ -610,7 +618,9 @@ profile, create the draft Play app record, and record owner/recovery roles. Do n
 claim the approved `com.jaishrikrishnajewellery.savings` package is reserved until it
 is registered/bound to the reviewed signing identity during `FW-MOBILE-003`. In
 parallel, obtain the qualified Financial features/retention review and scope the
-dedicated account-deletion workflow recorded by `FW-MOBILE-001`. The network-safe
+dedicated account-deletion workflow proposed by ADR-0015/`FW-PRIV-001`. Review and
+accept or amend the five owner/professional decisions in ADR-0015 before code work.
+The network-safe
 `FW-MOBILE-002` PWA foundation may begin after the product/package approval, but no
 public store release may bypass the remaining policy/deletion gates. The independent
 fund-safety priority remains the two no-mutation `FW-PAY-003` Razorpay recovery
