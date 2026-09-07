@@ -8,10 +8,11 @@ permanent app identity, customer scope, store wording, Financial features and Da
 Safety drafts, deletion/retention design gate, support matrix, review-account rules,
 and pilot acceptance measures in `docs/MOBILE_RELEASE_READINESS.md`. The owner
 approved `com.jaishrikrishnajewellery.savings` as the permanent package identifier on
-5 September 2026. Play organization/reservation, qualified policy/retention, deletion
-implementation, and final Data Safety gates remain open. No PWA, service worker,
-Android project, mobile API, provider integration, or production change has been
-implemented. The
+5 September 2026 and confirmed on 7 September 2026 that the organization D-U-N-S
+prerequisite is available; its value is not stored. Play organization verification,
+package/signing registration, qualified policy/retention, deletion implementation,
+and final Data Safety gates remain open. No PWA, service worker, Android project,
+mobile API, provider integration, or production change has been implemented. The
 production-accepted `FW-AUTH-004`, `FW-ENROL-001`, and all financial boundaries remain
 unchanged.
 
@@ -351,11 +352,12 @@ unchanged.
   package is `com.jaishrikrishnajewellery.savings`; the initial product support floor
   is Android 10/API 29 with a current TWA-capable browser, while new Play submissions
   currently target Android 16/API 36. The owner approved that package and store
-  identity on 5 September 2026. The remaining manual gates are reserving it under
-  verified organization Play/signing ownership, qualified review of the Financial
-  features classification and record-retention basis, an implemented account-deletion
-  request path, and final dependency-level Data Safety review. The first release
-  remains customer-only and adds no mobile API.
+  identity on 5 September 2026 and confirmed the D-U-N-S prerequisite on 7 September.
+  The remaining manual gates are verified organization Play/payments ownership,
+  binding the package to the reviewed signing identity during the Android phase,
+  qualified review of the Financial features classification and record-retention
+  basis, an implemented account-deletion request path, and final dependency-level
+  Data Safety review. The first release remains customer-only and adds no mobile API.
 - `FW-ELIG-002` awaits only the first naturally occurring reminder-specific Postmark
   acceptance and matching owner delivery record. Its deployed zero-candidate run is
   correct evidence that no message is invented merely to satisfy a rollout smoke.
@@ -603,8 +605,10 @@ unchanged.
 
 ## Next recommended step
 
-Create and verify the business-owned Play organization account, reserve the approved
-`com.jaishrikrishnajewellery.savings` package, and record signing/recovery roles. In
+Create and verify the business-owned Play organization account and matching payments
+profile, create the draft Play app record, and record owner/recovery roles. Do not
+claim the approved `com.jaishrikrishnajewellery.savings` package is reserved until it
+is registered/bound to the reviewed signing identity during `FW-MOBILE-003`. In
 parallel, obtain the qualified Financial features/retention review and scope the
 dedicated account-deletion workflow recorded by `FW-MOBILE-001`. The network-safe
 `FW-MOBILE-002` PWA foundation may begin after the product/package approval, but no

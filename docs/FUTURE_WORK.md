@@ -170,9 +170,12 @@ recorded limitations are not lost.
   declaration, data, deletion, reviewer-account, test-matrix, and pilot defaults are
   now drafted there. The owner approved the permanent package/store identity as
   `com.jaishrikrishnajewellery.savings` on 5 September 2026. Completion remains
-  blocked on reserving it under verified Play organization ownership, qualified
+  blocked on verified Play organization ownership and later binding the identifier
+  to the approved signing identity through Play package registration, qualified
   financial classification and retention review, an implemented deletion-request
-  workflow, and a release-candidate Data Safety review.
+  workflow, and a release-candidate Data Safety review. The owner confirmed that the
+  organization D-U-N-S prerequisite is available; its value is intentionally not
+  stored in the repository.
 - **FW-MOBILE-002 — Add a network-safe installable PWA foundation:** Add the manifest,
   reviewed icons/theme, installability metadata, narrowly allowlisted service worker,
   static offline explanation, and mobile interaction/accessibility refinements.
