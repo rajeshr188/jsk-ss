@@ -4,9 +4,8 @@ This document is the canonical readiness record for `FW-MOBILE-001` and the boun
 `FW-MOBILE-002` PWA foundation. It implements ADR-0014 without adding an Android
 project, mobile API, native authentication, or client-authoritative financial logic.
 
-Status: **in progress — the disabled-first PWA implementation is ready for review and
-production acceptance; owner, policy, deletion, Android-signing, and Play gates remain
-open.**
+Status: **in progress — `FW-MOBILE-002` is production-accepted; owner, policy,
+deletion, Android-signing, and Play gates remain open.**
 
 ## Product boundary
 
@@ -55,13 +54,36 @@ receipts, statements, eligibility, OAuth callbacks, health checks, owner pages, 
 admin/CMS content are not intercepted or queued. There is no background sync,
 IndexedDB, push, analytics, or offline financial state.
 
-The feature remains a production rollout gate, not a schema migration. Disabling it
+The feature is not a schema migration. Disabling it
 hides the manifest/endpoints and causes the small registration script to unregister
 this app's worker and delete only `jsk-pwa-static-*` caches on the next successful
-online page load. Production acceptance must inspect the manifest and maskable icon,
-prove the cache contains only the three allowlisted URLs, test install/update/disable,
-and demonstrate that offline form submission creates no request, order, contribution,
-rate lock, allocation, or other server mutation.
+online page load.
+
+### Production acceptance — 7 September 2026
+
+Release `049944412aa09668d6b04e45cabee2bc58dadc42` was promoted from immutable image
+`ghcr.io/rajeshr188/jsk-savings@sha256:4f5d10d014c3f516c4194fe192a01df57387c5353c232aa80a88ad18a99bce02`.
+The prior release `e6a8ee0f20fe2324276fb75dad6bda9df64baf9d` and image
+`ghcr.io/rajeshr188/jsk-savings@sha256:6b65308d74165d6ca19b298dd507f45f8bb51416bd14c69f406a782810cccd18`
+are the rollback pair. The latest managed-PostgreSQL recovery point was recorded as
+6:00 PM IST on 7 September 2026; this release had no migration.
+
+Disabled-first checks returned 404 for the manifest, worker, and offline page. With
+the feature enabled, all three returned 200 and the app installed successfully. The
+browser reported the canonical root worker scope and exactly one release-named cache
+containing only `/offline/` and the hashed 192/512 icon URLs. Offline customer and
+scheme navigation disclosed only the generic connection-required page. An offline
+form/contribution exercise left accounts, enrolment requests, rates, contributions,
+allocations, webhooks, and redemptions unchanged. Disabling the feature again removed
+the worker and `jsk-pwa-static-*` cache on the next online load without manual browser
+cleanup; re-enabling restored the expected scope and three-entry cache.
+
+Both health endpoints, the financial-exception check, and Razorpay Live readiness
+remained clean. The final web container was healthy with 377 MiB available memory,
+422 MiB free swap, and 9.6 GiB free disk. The owner accepted the controlled rollout.
+Exact browser/device versions were not retained here; the representative compatibility
+matrix remains an `FW-MOBILE-001`/`FW-MOBILE-003` release gate rather than a claim of
+Android-store readiness.
 
 ## Proposed permanent app identity
 
