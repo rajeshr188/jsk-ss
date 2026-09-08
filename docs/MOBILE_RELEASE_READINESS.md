@@ -4,8 +4,10 @@ This document is the canonical readiness record for `FW-MOBILE-001` and the boun
 `FW-MOBILE-002` PWA foundation. It implements ADR-0014 without adding an Android
 project, mobile API, native authentication, or client-authoritative financial logic.
 
-Status: **in progress — `FW-MOBILE-002` is production-accepted; owner, policy,
-deletion, Android-signing, and Play gates remain open.**
+Status: **in progress — `FW-MOBILE-002` is production-accepted, and the verified
+organization now owns a registered Play package with a Play-managed app-signing
+identity. Financial classification, retention/deletion, exact association, Data
+Safety, Android build, and Play release gates remain open.**
 
 ## Product boundary
 
@@ -90,7 +92,7 @@ Android-store readiness.
 | Item | Proposed value | Gate |
 | --- | --- | --- |
 | Play app name | Jai Sri Krishna Jewellery | Confirm in Play Console |
-| Android package | `com.jaishrikrishnajewellery.savings` | Owner approved 5 September 2026; bind it to the approved signing identity through Play package registration/first signed artifact and do not change later |
+| Android package | `com.jaishrikrishnajewellery.savings` | Owner approved 5 September 2026; registered to the verified organization with a Play App Signing SHA-256 identity on 8 September 2026; do not change it |
 | Publisher | Jai Sri Krishna Jewellery | Must match the verified organization identity |
 | Canonical origin | `https://jaishrikrishnajewellery.com` | Already production-owned; reverify before TWA work |
 | Initial market | India | Confirm before store setup |
@@ -100,11 +102,12 @@ Android-store readiness.
 | Repository | Separate business-controlled Android repository | Create during `FW-MOBILE-003`, not on Linode |
 
 The business owner approved this permanent package identifier on 5 September 2026.
-It is approved but not yet registered or bound to a signing identity. Creating a
-draft app entry in Play Console does not prove ownership of this package. Complete
-the current Play package-registration flow with the approved public signing
-certificate, or allow the verified Play flow to register it with the first correctly
-signed artifact, during `FW-MOBILE-003`. Do not create another production package,
+On 8 September 2026 the owner confirmed that the Play organization is verified, the
+draft app was created successfully, the package is registered, and Play App Signing
+already exposes its SHA-256 certificate fingerprint. The fingerprint is public but
+its exact value must be copied directly from Play Console and independently checked
+before it enters Digital Asset Links. No signing private key, account identifier, or
+recovery credential is recorded here. Do not create another production package,
 publish an independently signed build first, or silently change this identifier.
 
 ## Store listing copy draft
@@ -154,11 +157,12 @@ Google Play organization account. Before development begins, record evidence tha
 - no signing key, service-account credential, OAuth secret, or Play credential is
   stored in this Django repository or on the Linode serving host.
 
-Current status: **the owner confirmed on 7 September 2026 that the organization's
-D-U-N-S number is available.** The number itself must remain in the private Play/
-payments verification flow and must not be committed. Play organization identity,
-payments-profile matching, contact verification, recovery, roles, and signing
-ownership evidence are not yet supplied.
+Current status: **the owner confirmed on 8 September 2026 that the organization is
+verified, the package is registered, and a Play App Signing SHA-256 fingerprint
+exists.** The D-U-N-S number itself remains in the private Play/payments verification
+flow and must not be committed. Exact fingerprint comparison, payments-profile
+matching, account recovery, and least-privilege role evidence still need to be
+retained before an Android release.
 
 ### Manual Play account and draft-app sequence
 
@@ -201,11 +205,12 @@ an owner-controlled business Google account:
     identity documents, payment profile identifiers, recovery codes, credentials, or
     signing private keys.
 
-Creating the draft Play app is a useful account-readiness milestone but does not bind
-the approved Android package. Package registration now involves the package name and
-the public certificate of the signing identity. That step belongs with the deliberate
-signing setup in `FW-MOBILE-003`; current Play package-registration requirements must
-be rechecked immediately before doing it.
+The owner completed organization verification, draft-app creation, package
+registration, and Play-managed signing-identity creation on 8 September 2026. The
+next signing task is not to invent another app-signing key: it is to capture and
+independently compare the Play App Signing SHA-256 fingerprint, create a distinct
+recoverable upload key outside every repository and serving host, and use only the
+Play fingerprint in the production Digital Asset Links statement.
 
 ## Financial-features declaration draft
 
@@ -366,8 +371,9 @@ decide whether native Android/API cost and future iOS development are justified.
 - [x] Reviewer-account and pilot acceptance requirements recorded.
 - [x] Business owner approved the permanent package identifier and store identity on 5 September 2026.
 - [x] Business owner confirmed the organization D-U-N-S prerequisite is available on 7 September 2026; the number is not stored here.
-- [ ] Verified organization Play account, matching payments profile, recovery and role evidence recorded.
-- [ ] Approved package registered/bound to the reviewed signing identity.
+- [x] Verified organization Play account recorded.
+- [x] Approved package registered and Play App Signing identity created.
+- [ ] Exact Play signing fingerprint, matching payments profile, recovery and least-privilege role evidence independently recorded.
 - [ ] Qualified financial classification and retention review completed.
 - [ ] Dedicated deletion workflow implemented, tested, and reflected in public policy.
 - [ ] Release-candidate Data Safety answers reviewed against every dependency/provider.

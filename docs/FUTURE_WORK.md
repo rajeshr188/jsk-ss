@@ -182,13 +182,13 @@ recorded limitations are not lost.
   readiness record is `docs/MOBILE_RELEASE_READINESS.md`. Product, package, wording,
   declaration, data, deletion, reviewer-account, test-matrix, and pilot defaults are
   now drafted there. The owner approved the permanent package/store identity as
-  `com.jaishrikrishnajewellery.savings` on 5 September 2026. Completion remains
-  blocked on verified Play organization ownership and later binding the identifier
-  to the approved signing identity through Play package registration, qualified
-  financial classification and retention review, an implemented deletion-request
-  workflow, and a release-candidate Data Safety review. The owner confirmed that the
-  organization D-U-N-S prerequisite is available; its value is intentionally not
-  stored in the repository.
+  `com.jaishrikrishnajewellery.savings` on 5 September 2026. On 8 September the
+  verified Play organization created the draft app, registered that package, and
+  obtained a Play App Signing SHA-256 identity. Completion remains blocked on exact
+  fingerprint comparison, payments/recovery/role evidence, qualified financial
+  classification and retention review, an implemented deletion-request workflow,
+  and a release-candidate Data Safety review. The organization D-U-N-S value remains
+  intentionally outside the repository.
 - **FW-MOBILE-003 — Build the customer-only Android TWA:** Create a separately owned
   Android repository and CI release pipeline; choose the permanent package and Play
   signing identity; publish exact Digital Asset Links from the canonical domain; and
