@@ -196,6 +196,15 @@ recorded limitations are not lost.
   embedded WebView OAuth, application secrets, direct database access, or on-host
   Android builds. Validate browser fallback, App Links, Google OAuth, Razorpay/UPI
   handoff and return, process death, updates, accessibility, and release signing.
+  Foundation state on 8 September 2026: the private organization repository
+  `Jai-Sri-Krishna-Jewellery/jsk-savings-android` is initialized with the permanent
+  package, API 29 floor/API 36 target, secret/permission invariants, and passing local
+  and GitHub-hosted release lint plus unsigned AAB builds. Exact Play-fingerprint
+  comparison, production Digital Asset Links, recoverable upload-key custody, signed
+  internal bundle, device/journey validation, and release evidence remain open.
+  GitHub cannot enforce protection on this private organization repository under the
+  current plan; retain procedural green-PR discipline until an upgrade or separately
+  approved public-source decision resolves that gate.
 - **FW-MOBILE-004 — Run a bounded Play and customer pilot:** Start with Play Internal
   Testing and approximately five to ten legitimate customers. Pass password and linked-
   Google login, unconnected-identity rejection, registration/enrolment boundaries,

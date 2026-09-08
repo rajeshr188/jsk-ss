@@ -14,10 +14,11 @@ server mutation. The no-code
 and existing Play App Signing identity without storing private account data or the
 D-U-N-S number. Exact fingerprint comparison, account/recovery role evidence,
 qualified policy/retention, deletion implementation, and final Data Safety gates
-remain open. No Android project, mobile API, or native
-provider integration has been implemented. The
-production-accepted `FW-AUTH-004`, `FW-ENROL-001`, and all financial boundaries remain
-unchanged. ADR-0015 is accepted for staged implementation. `FW-PRIV-001A` is deployed
+remain open. The private business-owned Android TWA repository now has an API
+29-to-36 customer shell and a successful unsigned GitHub-hosted build; it adds no
+mobile API, native provider integration, financial authority, or application secret.
+The production-accepted `FW-AUTH-004`, `FW-ENROL-001`, and all financial boundaries
+remain unchanged. ADR-0015 is accepted for staged implementation. `FW-PRIV-001A` is deployed
 in production as a disabled verified-request, access-containment, owner-hold, and
 integrity foundation without any anonymization/completion mutation. The qualified
 retention matrix, `FW-PRIV-001B`, production enablement, and public-store deletion
@@ -372,6 +373,14 @@ claim remain open.
   identity on 5 September 2026 and confirmed the D-U-N-S prerequisite on 7 September.
   On 8 September the verified organization successfully created the draft app,
   registered the package, and obtained its Play App Signing SHA-256 identity. The
+  private `Jai-Sri-Krishna-Jewellery/jsk-savings-android` repository was then
+  initialized at commits `983226f` and `7317a51`; Android CI run `34235149531`
+  passed release invariants, release lint, and an unsigned API 36 AAB build. The
+  upload-key path is outside the repository and no key was created. Play Billing,
+  location, notification permission, application secrets, and a mobile API are
+  absent. Server-enforced branch protection remains unavailable for this private
+  organization repository on the current GitHub plan, so an upgrade or an explicitly
+  approved public-source decision is still required for that enforcement. The
   remaining gates are exact fingerprint comparison, payments/recovery/role evidence,
   qualified review of the Financial features classification and record-retention
   basis, an implemented account-deletion request path, and final dependency-level
@@ -651,11 +660,12 @@ claim remain open.
 
 ## Next recommended step
 
-Capture and independently compare the exact Play App Signing fingerprint, confirm
-business-owned repository/recovery/least-privilege access, and begin the isolated
-`FW-MOBILE-003` customer-only TWA foundation. Keep its upload key outside repositories
-and Linode, and do not publish Digital Asset Links until the exact Play fingerprint is
-reviewed. Finish qualified Financial-features/retention review and `FW-PRIV-001B`
+Capture and independently compare the exact Play App Signing fingerprint, then publish
+and verify the precise Digital Asset Links binding for
+`com.jaishrikrishnajewellery.savings`. Create and rehearse a distinct recoverable
+upload key outside repositories and Linode, and resolve server-enforced protection for
+the private Android repository. Finish qualified Financial-features/retention review
+and `FW-PRIV-001B`
 before making a public-store account-deletion claim. No public store release may
 bypass the remaining policy/deletion gates. The independent
 fund-safety priority remains the two no-mutation `FW-PAY-003` Razorpay recovery
