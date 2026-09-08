@@ -10,10 +10,11 @@ and safe disable/unregister behavior. Its cache contains only that offline respo
 and icons; no customer, authentication, financial, health, owner, or CMS response is
 cached or queued. Offline submission and disable/re-enable cleanup passed without a
 server mutation. The no-code
-`FW-MOBILE-001` record retains the approved permanent package identifier and confirmed
-D-U-N-S prerequisite without storing the number. Play organization verification,
-package/signing registration, qualified policy/retention, deletion implementation,
-and final Data Safety gates remain open. No Android project, mobile API, or native
+`FW-MOBILE-001` records the verified Play organization, registered permanent package,
+and existing Play App Signing identity without storing private account data or the
+D-U-N-S number. Exact fingerprint comparison, account/recovery role evidence,
+qualified policy/retention, deletion implementation, and final Data Safety gates
+remain open. No Android project, mobile API, or native
 provider integration has been implemented. The
 production-accepted `FW-AUTH-004`, `FW-ENROL-001`, and all financial boundaries remain
 unchanged. ADR-0015 is accepted for staged implementation. `FW-PRIV-001A` is deployed
@@ -369,8 +370,9 @@ claim remain open.
   is Android 10/API 29 with a current TWA-capable browser, while new Play submissions
   currently target Android 16/API 36. The owner approved that package and store
   identity on 5 September 2026 and confirmed the D-U-N-S prerequisite on 7 September.
-  The remaining manual gates are verified organization Play/payments ownership,
-  binding the package to the reviewed signing identity during the Android phase,
+  On 8 September the verified organization successfully created the draft app,
+  registered the package, and obtained its Play App Signing SHA-256 identity. The
+  remaining gates are exact fingerprint comparison, payments/recovery/role evidence,
   qualified review of the Financial features classification and record-retention
   basis, an implemented account-deletion request path, and final dependency-level
   Data Safety review. The first release remains customer-only and adds no mobile API.
@@ -649,11 +651,13 @@ claim remain open.
 
 ## Next recommended step
 
-Complete the business-owned Play organization verification and qualified Financial
-features/retention review. Finish `FW-PRIV-001B` before making a public-store account-
-deletion claim; do not begin `FW-MOBILE-003` or claim the approved package is bound
-until the Play prerequisites and reviewed signing identity are ready. No public store
-release may bypass the remaining policy/deletion gates. The independent
+Capture and independently compare the exact Play App Signing fingerprint, confirm
+business-owned repository/recovery/least-privilege access, and begin the isolated
+`FW-MOBILE-003` customer-only TWA foundation. Keep its upload key outside repositories
+and Linode, and do not publish Digital Asset Links until the exact Play fingerprint is
+reviewed. Finish qualified Financial-features/retention review and `FW-PRIV-001B`
+before making a public-store account-deletion claim. No public store release may
+bypass the remaining policy/deletion gates. The independent
 fund-safety priority remains the two no-mutation `FW-PAY-003` Razorpay recovery
 exercises, and the first genuine `FW-ELIG-002` reminder observation must not be
 manufactured.
