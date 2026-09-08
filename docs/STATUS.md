@@ -12,9 +12,11 @@ cached or queued. Offline submission and disable/re-enable cleanup passed withou
 server mutation. The no-code
 `FW-MOBILE-001` records the verified Play organization, registered permanent package,
 and existing Play App Signing identity without storing private account data or the
-D-U-N-S number. Exact fingerprint comparison, account/recovery role evidence,
-qualified policy/retention, deletion implementation, and final Data Safety gates
-remain open. The private business-owned Android TWA repository now has an API
+D-U-N-S number. The exact Play fingerprint is now published and independently
+compared on the canonical origin in release `1826afec8628d4f9288c1625091974687af7aba0`.
+Installed Play-signed association, account/recovery role evidence, qualified
+policy/retention, deletion implementation, and final Data Safety gates remain open.
+The private business-owned Android TWA repository now has an API
 29-to-36 customer shell and a successful unsigned GitHub-hosted build; it adds no
 mobile API, native provider integration, financial authority, or application secret.
 The production-accepted `FW-AUTH-004`, `FW-ENROL-001`, and all financial boundaries
@@ -381,10 +383,12 @@ claim remain open.
   absent. Server-enforced branch protection remains unavailable for this private
   organization repository on the current GitHub plan, so an upgrade or an explicitly
   approved public-source decision is still required for that enforcement. The
-  owner has now supplied the exact Play App Signing SHA-256 fingerprint, and a
-  disabled-by-default Django Digital Asset Links response binds only that certificate
-  and the registered package. The remaining gates are production publication and
-  independent association verification, payments/recovery/role evidence,
+  owner supplied the exact Play App Signing SHA-256 fingerprint, and production
+  release `1826afec8628d4f9288c1625091974687af7aba0` now serves the exact Digital
+  Asset Links response for that certificate and registered package. Disabled-first,
+  direct-200, JSON content-type, exact-value, cache, and health checks passed. The
+  remaining gates are verification from a Play-signed build,
+  payments/recovery/role evidence,
   qualified review of the Financial features classification and record-retention
   basis, an implemented account-deletion request path, and final dependency-level
   Data Safety review. The first release remains customer-only and adds no mobile API.
@@ -663,11 +667,10 @@ claim remain open.
 
 ## Next recommended step
 
-Deploy the Digital Asset Links implementation disabled, enable it after the closed
-check passes, then compare and verify the precise production binding for
-`com.jaishrikrishnajewellery.savings` against Play Console and a Play-signed build.
-Create and rehearse a distinct recoverable
-upload key outside repositories and Linode, and resolve server-enforced protection for
+Create and rehearse a distinct recoverable upload key outside repositories and
+Linode, produce a signed bundle for Play Internal Testing, and verify the published
+Digital Asset Links association from the Play-signed installed build. Resolve
+server-enforced protection for
 the private Android repository. Finish qualified Financial-features/retention review
 and `FW-PRIV-001B`
 before making a public-store account-deletion claim. No public store release may
