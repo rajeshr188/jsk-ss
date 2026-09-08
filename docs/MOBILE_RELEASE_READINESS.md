@@ -145,12 +145,19 @@ SHA-256 fingerprint for the registered package:
 `25:78:42:37:4E:7A:C9:62:C8:AF:90:11:E3:8C:86:32:E2:08:DF:E4:6E:77:C0:86:59:7F:31:E7:32:D7:07:97`
 
 This public certificate identity is intentionally recorded; no private signing
-material is present. The Django origin has a disabled-by-default implementation for
-`/.well-known/assetlinks.json` that binds only this fingerprint and
-`com.jaishrikrishnajewellery.savings`. It must still be deployed, enabled, compared
-character-for-character with Play Console, and verified from an installed Play-signed
-build. Do not add an upload-key or local debug certificate fingerprint to the
-production statement.
+material is present. On 8 September 2026 production release
+`1826afec8628d4f9288c1625091974687af7aba0` published
+`/.well-known/assetlinks.json` after a disabled-first rollout. The canonical HTTPS
+origin returned a direct HTTP/2 200, `application/json`, a one-hour public cache
+policy, and only this package/fingerprint association; the exact automated comparison
+and both health checks passed. The immutable image was
+`ghcr.io/rajeshr188/jsk-savings@sha256:ac31ab070a9560a64b1239fff7b883573a6732b69b21fd133e858298750a2bf8`,
+with release `049944412aa09668d6b04e45cabee2bc58dadc42` and image
+`ghcr.io/rajeshr188/jsk-savings@sha256:4f5d10d014c3f516c4194fe192a01df57387c5353c232aa80a88ad18a99bce02`
+retained as the rollback pair. The managed-PostgreSQL recovery point was recorded as
+8:00 PM IST that day; no migration or database mutation was required. Verification
+from an installed Play-signed build remains open. Do not add an upload-key or local
+debug certificate fingerprint to the production statement.
 
 ## Store listing copy draft
 
@@ -415,7 +422,8 @@ decide whether native Android/API cost and future iOS development are justified.
 - [x] Business owner confirmed the organization D-U-N-S prerequisite is available on 7 September 2026; the number is not stored here.
 - [x] Verified organization Play account recorded.
 - [x] Approved package registered and Play App Signing identity created.
-- [ ] Exact Play signing fingerprint deployed and independently compared; matching payments profile, recovery and least-privilege role evidence recorded.
+- [x] Exact Play signing fingerprint deployed and independently compared on the canonical origin.
+- [ ] Matching payments profile, recovery and least-privilege role evidence recorded.
 - [ ] Qualified financial classification and retention review completed.
 - [ ] Dedicated deletion workflow implemented, tested, and reflected in public policy.
 - [ ] Release-candidate Data Safety answers reviewed against every dependency/provider.

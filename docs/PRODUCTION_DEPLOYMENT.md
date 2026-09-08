@@ -3169,6 +3169,21 @@ pair, HTTPS response, Play comparison, device result, health/integrity outputs, 
 owner acceptance. A rollback sets the flag to `False` and recreates only `web`; no
 database rollback is involved.
 
+Production origin acceptance completed on 8 September 2026 with release
+`1826afec8628d4f9288c1625091974687af7aba0` and immutable image
+`ghcr.io/rajeshr188/jsk-savings@sha256:ac31ab070a9560a64b1239fff7b883573a6732b69b21fd133e858298750a2bf8`.
+The rollback pair is release `049944412aa09668d6b04e45cabee2bc58dadc42` and image
+`ghcr.io/rajeshr188/jsk-savings@sha256:4f5d10d014c3f516c4194fe192a01df57387c5353c232aa80a88ad18a99bce02`;
+the managed-PostgreSQL recovery point was recorded as 8:00 PM IST that day. The
+disabled stage returned 404. After enablement, the origin returned a direct HTTP/2
+200 with `application/json`, the expected one-hour cache policy, and the sole exact
+registered package/Play-fingerprint statement. Automated comparison and both HTTPS
+health checks passed, and the authentication, payment-operations,
+financial-exception, Razorpay Live, exact-grade, in-store-cash, enrolment-request,
+public-registration, and Google-link integrity checks remained clean. There was no
+migration. Installed Play-signed association verification remains an Android release
+gate rather than part of this origin acceptance.
+
 ## Go-live sign-off
 
 The target full-production checklist remains below. Live acceptance does not mark

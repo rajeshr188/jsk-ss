@@ -186,9 +186,11 @@ recorded limitations are not lost.
   verified Play organization created the draft app, registered that package, and
   obtained a Play App Signing SHA-256 identity. The exact public fingerprint is now
   recorded in the canonical mobile readiness record and a disabled-by-default Django
-  Digital Asset Links response is implemented. Completion remains blocked on its
-  production publication and independent comparison, payments/recovery/role
-  evidence, qualified financial classification and retention review, an implemented
+  Digital Asset Links response is implemented. Release `1826afec` now publishes the
+  exact package/Play-fingerprint binding after a successful disabled-first rollout
+  and independent response comparison. Completion remains blocked on installed
+  Play-signed verification, payments/recovery/role evidence, qualified financial
+  classification and retention review, an implemented
   deletion-request workflow,
   and a release-candidate Data Safety review. The organization D-U-N-S value remains
   intentionally outside the repository.
@@ -203,8 +205,8 @@ recorded limitations are not lost.
   `Jai-Sri-Krishna-Jewellery/jsk-savings-android` is initialized with the permanent
   package, API 29 floor/API 36 target, secret/permission invariants, and passing local
   and GitHub-hosted release lint plus unsigned AAB builds. The exact Play fingerprint
-  is recorded and the origin response is implemented behind a rollout flag;
-  production publication/comparison, recoverable upload-key custody, signed
+  is recorded and its exact origin response is production-published and compared;
+  recoverable upload-key custody, installed Play-signed verification, signed
   internal bundle, device/journey validation, and release evidence remain open.
   GitHub cannot enforce protection on this private organization repository under the
   current plan; retain procedural green-PR discipline until an upgrade or separately
