@@ -1,13 +1,15 @@
 # Mobile Release Readiness
 
-This document is the canonical readiness record for `FW-MOBILE-001` and the bounded
-`FW-MOBILE-002` PWA foundation. It implements ADR-0014 without adding an Android
-project, mobile API, native authentication, or client-authoritative financial logic.
+This document is the canonical readiness record for `FW-MOBILE-001`, the bounded
+`FW-MOBILE-002` PWA foundation, and `FW-MOBILE-003` Android TWA delivery. It implements
+ADR-0014 without adding a mobile API, native authentication, or client-authoritative
+financial logic.
 
-Status: **in progress — `FW-MOBILE-002` is production-accepted, and the verified
-organization now owns a registered Play package with a Play-managed app-signing
-identity. Financial classification, retention/deletion, exact association, Data
-Safety, Android build, and Play release gates remain open.**
+Status: **in progress — `FW-MOBILE-002` is production-accepted, the verified
+organization owns the registered Play package and Play-managed app-signing identity,
+and the isolated Android TWA foundation passes local and GitHub-hosted unsigned
+release builds. Financial classification, retention/deletion, exact association,
+Data Safety, signed release, device, and Play release gates remain open.**
 
 ## Product boundary
 
@@ -99,7 +101,7 @@ Android-store readiness.
 | App category | Shopping | Provisional; do not use it to avoid an accurate financial declaration |
 | Target audience | Adults; not designed for children | Confirm through the Play audience/content forms |
 | Advertising | None; do not request an advertising ID | Re-audit every Android dependency before release |
-| Repository | Separate business-controlled Android repository | Create during `FW-MOBILE-003`, not on Linode |
+| Repository | Private `Jai-Sri-Krishna-Jewellery/jsk-savings-android` | Created 8 September 2026; build only on workstations/GitHub, never Linode |
 
 The business owner approved this permanent package identifier on 5 September 2026.
 On 8 September 2026 the owner confirmed that the Play organization is verified, the
@@ -109,6 +111,36 @@ its exact value must be copied directly from Play Console and independently chec
 before it enters Digital Asset Links. No signing private key, account identifier, or
 recovery credential is recorded here. Do not create another production package,
 publish an independently signed build first, or silently change this identifier.
+
+## Android TWA foundation evidence
+
+On 8 September 2026 the business organization created the private repository
+`https://github.com/Jai-Sri-Krishna-Jewellery/jsk-savings-android`. Bootstrap commits
+`983226f` and `7317a51` establish:
+
+- the permanent package `com.jaishrikrishnajewellery.savings` bound to the canonical
+  origin and root start URL;
+- Bubblewrap 1.25.0 with Android 10/API 29 as the minimum and API 36 as the compile and
+  target SDK;
+- no Play Billing, geolocation, notification permission, native financial workflow,
+  mobile API, production credential, or signing material;
+- a non-repository upload-key location (`../.signing/jsk-savings-upload.keystore`)
+  whose key has not yet been created;
+- disabled native backup/data transfer, a pinned Gradle distribution checksum, and
+  immutable CI action revisions; and
+- a release-invariant check plus release lint and unsigned AAB build. Local build and
+  GitHub Actions run `34235149531` both passed; the retained CI artifact is explicitly
+  unsigned and cannot be uploaded as a release artifact.
+
+The repository remains private. GitHub rejected server-enforced branch protection on
+the current organization plan, requiring either a paid plan or making the repository
+public. Neither change is implied by this record; until the owner chooses one,
+feature-branch/green-PR discipline is procedural rather than server-enforced.
+
+Digital Asset Links remain intentionally unpublished. The owner must copy the exact
+**Play App Signing key certificate** SHA-256 fingerprint from Play Console, and it
+must be independently compared before the Django origin serves the binding. Do not
+substitute an upload-key or local debug certificate fingerprint.
 
 ## Store listing copy draft
 
