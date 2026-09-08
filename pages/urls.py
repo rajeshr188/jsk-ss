@@ -10,6 +10,7 @@ from .views import (
     PrivacyPageView,
     ShippingDeliveryPageView,
     TermsPageView,
+    android_asset_links,
     live_health,
     offline_page,
     pwa_manifest,
@@ -18,6 +19,11 @@ from .views import (
 )
 
 urlpatterns = [
+    path(
+        ".well-known/assetlinks.json",
+        android_asset_links,
+        name="android_asset_links",
+    ),
     path("", HomePageView.as_view(), name="home"),
     path("about/", AboutPageView.as_view(), name="about"),
     path("our-story/", OurStoryPageView.as_view(), name="our_story"),

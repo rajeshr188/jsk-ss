@@ -381,7 +381,10 @@ claim remain open.
   absent. Server-enforced branch protection remains unavailable for this private
   organization repository on the current GitHub plan, so an upgrade or an explicitly
   approved public-source decision is still required for that enforcement. The
-  remaining gates are exact fingerprint comparison, payments/recovery/role evidence,
+  owner has now supplied the exact Play App Signing SHA-256 fingerprint, and a
+  disabled-by-default Django Digital Asset Links response binds only that certificate
+  and the registered package. The remaining gates are production publication and
+  independent association verification, payments/recovery/role evidence,
   qualified review of the Financial features classification and record-retention
   basis, an implemented account-deletion request path, and final dependency-level
   Data Safety review. The first release remains customer-only and adds no mobile API.
@@ -660,9 +663,10 @@ claim remain open.
 
 ## Next recommended step
 
-Capture and independently compare the exact Play App Signing fingerprint, then publish
-and verify the precise Digital Asset Links binding for
-`com.jaishrikrishnajewellery.savings`. Create and rehearse a distinct recoverable
+Deploy the Digital Asset Links implementation disabled, enable it after the closed
+check passes, then compare and verify the precise production binding for
+`com.jaishrikrishnajewellery.savings` against Play Console and a Play-signed build.
+Create and rehearse a distinct recoverable
 upload key outside repositories and Linode, and resolve server-enforced protection for
 the private Android repository. Finish qualified Financial-features/retention review
 and `FW-PRIV-001B`

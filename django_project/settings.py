@@ -264,6 +264,18 @@ STATIC_URL = "/static/"
 # network-first and may cache only the reviewed generic offline page and app icons.
 PWA_ENABLED = env_bool("PWA_ENABLED", False)
 
+# The Android TWA trust statement is published separately from PWA installability.
+# These are public, immutable Play identity values; no signing private key belongs in
+# Django settings, environment files, this repository, or the production host.
+ANDROID_TWA_ASSET_LINKS_ENABLED = env_bool(
+    "ANDROID_TWA_ASSET_LINKS_ENABLED", False
+)
+ANDROID_TWA_PACKAGE_NAME = "com.jaishrikrishnajewellery.savings"
+ANDROID_TWA_PLAY_SHA256_FINGERPRINTS = (
+    "25:78:42:37:4E:7A:C9:62:C8:AF:90:11:E3:8C:86:32:"
+    "E2:08:DF:E4:6E:77:C0:86:59:7F:31:E7:32:D7:07:97",
+)
+
 # https://docs.djangoproject.com/en/dev/ref/contrib/staticfiles/#std:setting-STATICFILES_DIRS
 STATICFILES_DIRS = [BASE_DIR / "static"]
 

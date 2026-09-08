@@ -21,6 +21,32 @@ def _require_pwa_enabled():
 
 
 @require_GET
+def android_asset_links(request):
+    if not settings.ANDROID_TWA_ASSET_LINKS_ENABLED:
+        raise Http404
+
+    response = JsonResponse(
+        [
+            {
+                "relation": ["delegate_permission/common.handle_all_urls"],
+                "target": {
+                    "namespace": "android_app",
+                    "package_name": settings.ANDROID_TWA_PACKAGE_NAME,
+                    "sha256_cert_fingerprints": list(
+                        settings.ANDROID_TWA_PLAY_SHA256_FINGERPRINTS
+                    ),
+                },
+            }
+        ],
+        safe=False,
+    )
+    # Keep certificate rotation recoverable without forcing every request to Django.
+    response["Cache-Control"] = "public, max-age=3600"
+    response["X-Robots-Tag"] = "noindex, nofollow"
+    return response
+
+
+@require_GET
 def pwa_manifest(request):
     _require_pwa_enabled()
     response = JsonResponse(
