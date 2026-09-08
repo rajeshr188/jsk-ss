@@ -37,6 +37,10 @@ copy, and enabled/disabled document wiring. Run the focused suite with:
 uv run --env-file .env python manage.py test pages.test_pwa
 ```
 
+The same suite proves that Android Digital Asset Links is 404 while disabled and,
+when enabled, returns a read-only JSON statement containing only the permanent
+package and reviewed Play App Signing fingerprint at the exact well-known path.
+
 ## Manual smoke test
 
 - With `PWA_ENABLED=False`, confirm the manifest, worker, and offline routes return 404
@@ -50,6 +54,10 @@ uv run --env-file .env python manage.py test pages.test_pwa
   order, contribution, rate lock, allocation, redemption, or approval was created
 - Restore connectivity and confirm current server state loads; exercise worker update
   and disable/re-enable behavior without stale pages
+- With `ANDROID_TWA_ASSET_LINKS_ENABLED=False`, confirm
+  `/.well-known/assetlinks.json` returns 404; when enabled, confirm a direct 200 JSON
+  response with no redirect and compare the package and every fingerprint byte with
+  Play Console before testing a Play-signed build
 
 - Owner login and logout
 - Password-reset request renders and sends through the configured backend

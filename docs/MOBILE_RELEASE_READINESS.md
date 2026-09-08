@@ -8,7 +8,9 @@ financial logic.
 Status: **in progress — `FW-MOBILE-002` is production-accepted, the verified
 organization owns the registered Play package and Play-managed app-signing identity,
 and the isolated Android TWA foundation passes local and GitHub-hosted unsigned
-release builds. Financial classification, retention/deletion, exact association,
+release builds. The owner supplied the exact Play App Signing fingerprint and the
+canonical origin now has a disabled-by-default Digital Asset Links implementation.
+Production association verification, Financial classification, retention/deletion,
 Data Safety, signed release, device, and Play release gates remain open.**
 
 ## Product boundary
@@ -137,10 +139,18 @@ the current organization plan, requiring either a paid plan or making the reposi
 public. Neither change is implied by this record; until the owner chooses one,
 feature-branch/green-PR discipline is procedural rather than server-enforced.
 
-Digital Asset Links remain intentionally unpublished. The owner must copy the exact
-**Play App Signing key certificate** SHA-256 fingerprint from Play Console, and it
-must be independently compared before the Django origin serves the binding. Do not
-substitute an upload-key or local debug certificate fingerprint.
+On 8 September 2026 the owner supplied the exact **Play App Signing key certificate**
+SHA-256 fingerprint for the registered package:
+
+`25:78:42:37:4E:7A:C9:62:C8:AF:90:11:E3:8C:86:32:E2:08:DF:E4:6E:77:C0:86:59:7F:31:E7:32:D7:07:97`
+
+This public certificate identity is intentionally recorded; no private signing
+material is present. The Django origin has a disabled-by-default implementation for
+`/.well-known/assetlinks.json` that binds only this fingerprint and
+`com.jaishrikrishnajewellery.savings`. It must still be deployed, enabled, compared
+character-for-character with Play Console, and verified from an installed Play-signed
+build. Do not add an upload-key or local debug certificate fingerprint to the
+production statement.
 
 ## Store listing copy draft
 
@@ -405,7 +415,7 @@ decide whether native Android/API cost and future iOS development are justified.
 - [x] Business owner confirmed the organization D-U-N-S prerequisite is available on 7 September 2026; the number is not stored here.
 - [x] Verified organization Play account recorded.
 - [x] Approved package registered and Play App Signing identity created.
-- [ ] Exact Play signing fingerprint, matching payments profile, recovery and least-privilege role evidence independently recorded.
+- [ ] Exact Play signing fingerprint deployed and independently compared; matching payments profile, recovery and least-privilege role evidence recorded.
 - [ ] Qualified financial classification and retention review completed.
 - [ ] Dedicated deletion workflow implemented, tested, and reflected in public policy.
 - [ ] Release-candidate Data Safety answers reviewed against every dependency/provider.

@@ -184,9 +184,12 @@ recorded limitations are not lost.
   now drafted there. The owner approved the permanent package/store identity as
   `com.jaishrikrishnajewellery.savings` on 5 September 2026. On 8 September the
   verified Play organization created the draft app, registered that package, and
-  obtained a Play App Signing SHA-256 identity. Completion remains blocked on exact
-  fingerprint comparison, payments/recovery/role evidence, qualified financial
-  classification and retention review, an implemented deletion-request workflow,
+  obtained a Play App Signing SHA-256 identity. The exact public fingerprint is now
+  recorded in the canonical mobile readiness record and a disabled-by-default Django
+  Digital Asset Links response is implemented. Completion remains blocked on its
+  production publication and independent comparison, payments/recovery/role
+  evidence, qualified financial classification and retention review, an implemented
+  deletion-request workflow,
   and a release-candidate Data Safety review. The organization D-U-N-S value remains
   intentionally outside the repository.
 - **FW-MOBILE-003 — Build the customer-only Android TWA:** Create a separately owned
@@ -199,8 +202,9 @@ recorded limitations are not lost.
   Foundation state on 8 September 2026: the private organization repository
   `Jai-Sri-Krishna-Jewellery/jsk-savings-android` is initialized with the permanent
   package, API 29 floor/API 36 target, secret/permission invariants, and passing local
-  and GitHub-hosted release lint plus unsigned AAB builds. Exact Play-fingerprint
-  comparison, production Digital Asset Links, recoverable upload-key custody, signed
+  and GitHub-hosted release lint plus unsigned AAB builds. The exact Play fingerprint
+  is recorded and the origin response is implemented behind a rollout flag;
+  production publication/comparison, recoverable upload-key custody, signed
   internal bundle, device/journey validation, and release evidence remain open.
   GitHub cannot enforce protection on this private organization repository under the
   current plan; retain procedural green-PR discipline until an upgrade or separately

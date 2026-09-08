@@ -3117,6 +3117,58 @@ financial counts. The disable/re-enable cleanup removed and restored only this P
 worker/cache. Live/readiness, financial-exception, and Razorpay Live checks stayed
 clean; the final container was healthy with 9.6 GiB free disk.
 
+## `FW-MOBILE-003` Digital Asset Links rollout
+
+This release has no migration and does not require a Caddy configuration change. The
+application owns the exact well-known path. Keep the previous image/release as the
+rollback pair and first add this disabled gate to `/opt/jsk/app/.env.production`:
+
+```dotenv
+ANDROID_TWA_ASSET_LINKS_ENABLED=False
+```
+
+Promote the approved registry digest, recreate only `web`, and verify the closed
+stage:
+
+```bash
+docker compose --env-file .env.production -f compose.production.yml \
+  config --quiet
+docker compose --env-file .env.production -f compose.production.yml \
+  up -d --force-recreate --no-deps web
+curl -sS -o /dev/null -w 'assetlinks=%{http_code}\n' \
+  https://jaishrikrishnajewellery.com/.well-known/assetlinks.json
+```
+
+The response must be `404`. Then set the gate to `True`, validate Compose, and
+recreate only `web`. Verify the exact response and ordinary health endpoints:
+
+```bash
+docker compose --env-file .env.production -f compose.production.yml \
+  config --quiet
+docker compose --env-file .env.production -f compose.production.yml \
+  up -d --force-recreate --no-deps web
+curl -sS -D /tmp/jsk-assetlinks-headers.txt \
+  -o /tmp/jsk-assetlinks.json \
+  https://jaishrikrishnajewellery.com/.well-known/assetlinks.json
+python3 -m json.tool /tmp/jsk-assetlinks.json
+curl -fsS https://jaishrikrishnajewellery.com/health/live/
+curl -fsS https://jaishrikrishnajewellery.com/health/ready/
+```
+
+Require HTTP 200 without a redirect, `Content-Type: application/json`, package
+`com.jaishrikrishnajewellery.savings`, relation
+`delegate_permission/common.handle_all_urls`, and this sole fingerprint:
+
+`25:78:42:37:4E:7A:C9:62:C8:AF:90:11:E3:8C:86:32:E2:08:DF:E4:6E:77:C0:86:59:7F:31:E7:32:D7:07:97`
+
+Compare all 32 byte pairs directly with **Play Console → Setup → App integrity →
+App signing key certificate**. Do not use the upload-key or debug fingerprint. Remove
+the temporary response files after review. Then verify the association from an
+installed Play-signed Internal Testing build and retain the release/image, rollback
+pair, HTTPS response, Play comparison, device result, health/integrity outputs, and
+owner acceptance. A rollback sets the flag to `False` and recreates only `web`; no
+database rollback is involved.
+
 ## Go-live sign-off
 
 The target full-production checklist remains below. Live acceptance does not mark

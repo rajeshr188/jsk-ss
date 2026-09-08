@@ -6,6 +6,57 @@ from django.test import SimpleTestCase, TestCase, override_settings
 from django.urls import reverse
 
 
+PLAY_APP_SIGNING_SHA256 = (
+    "25:78:42:37:4E:7A:C9:62:C8:AF:90:11:E3:8C:86:32:"
+    "E2:08:DF:E4:6E:77:C0:86:59:7F:31:E7:32:D7:07:97"
+)
+
+
+class AndroidAssetLinksTests(TestCase):
+    @override_settings(ANDROID_TWA_ASSET_LINKS_ENABLED=False)
+    def test_asset_links_is_closed_by_default(self):
+        self.assertEqual(
+            self.client.get("/.well-known/assetlinks.json").status_code,
+            404,
+        )
+
+    @override_settings(ANDROID_TWA_ASSET_LINKS_ENABLED=True)
+    def test_asset_links_binds_only_the_play_signed_customer_app(self):
+        response = self.client.get("/.well-known/assetlinks.json")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "application/json")
+        self.assertEqual(response["Cache-Control"], "public, max-age=3600")
+        self.assertEqual(response["X-Robots-Tag"], "noindex, nofollow")
+        self.assertEqual(
+            response.json(),
+            [
+                {
+                    "relation": ["delegate_permission/common.handle_all_urls"],
+                    "target": {
+                        "namespace": "android_app",
+                        "package_name": "com.jaishrikrishnajewellery.savings",
+                        "sha256_cert_fingerprints": [PLAY_APP_SIGNING_SHA256],
+                    },
+                }
+            ],
+        )
+        fingerprint = response.json()[0]["target"]["sha256_cert_fingerprints"][0]
+        self.assertEqual(len(fingerprint.split(":")), 32)
+        self.assertRegex(fingerprint, r"^(?:[0-9A-F]{2}:){31}[0-9A-F]{2}$")
+        self.assertEqual(
+            reverse("android_asset_links"),
+            "/.well-known/assetlinks.json",
+        )
+
+    @override_settings(ANDROID_TWA_ASSET_LINKS_ENABLED=True)
+    def test_asset_links_is_read_only(self):
+        self.assertEqual(
+            self.client.post("/.well-known/assetlinks.json").status_code,
+            405,
+        )
+
+
 @override_settings(PUBLIC_CATALOGUE_ENABLED=False)
 class PwaDisabledTests(TestCase):
     @override_settings(PWA_ENABLED=False)
