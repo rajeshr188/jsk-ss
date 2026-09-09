@@ -188,9 +188,10 @@ recorded limitations are not lost.
   registered package and first Play certificate after a successful disabled-first
   rollout. A signed Internal Testing bundle was accepted on 9 September; the installed
   APK proved an additional Google-managed Play certificate that must be retained
-  additively in the origin statement. Completion remains blocked on production
-  rollout and installed Play-signed verification, payments/recovery/role evidence,
-  qualified financial
+  additively in the origin statement. Release `0c611f6` published both Play
+  certificates; Google and Android verification passed and the installed app opened
+  without browser chrome. Completion remains blocked on payments/recovery/role
+  evidence, qualified financial
   classification and retention review, an implemented
   deletion-request workflow,
   and a release-candidate Data Safety review. The organization D-U-N-S value remains
@@ -208,8 +209,9 @@ recorded limitations are not lost.
   and GitHub-hosted builds. The recoverable upload key has two verified encrypted
   backups; encrypted GitHub secrets produced a verified signed AAB that Play accepted
   for Internal Testing. Device inspection discovered the additive Play signing
-  certificate keyset requirement. Its origin rollout, successful no-browser-chrome
-  association, device/journey validation, and final release evidence remain open.
+  certificate keyset requirement; its production rollout and no-browser-chrome
+  association now pass. The remaining device/journey matrix and final release
+  evidence remain open.
   GitHub cannot enforce protection on this private organization repository under the
   current plan; retain procedural green-PR discipline until an upgrade or separately
   approved public-source decision resolves that gate.

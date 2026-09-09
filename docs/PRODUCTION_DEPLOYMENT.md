@@ -3187,8 +3187,19 @@ registered package/Play-fingerprint statement. Automated comparison and both HTT
 health checks passed, and the authentication, payment-operations,
 financial-exception, Razorpay Live, exact-grade, in-store-cash, enrolment-request,
 public-registration, and Google-link integrity checks remained clean. There was no
-migration. Installed Play-signed association verification remains an Android release
-gate rather than part of this origin acceptance.
+migration.
+
+The additive Play keyset correction completed production acceptance on 9 September
+2026 in release `0c611f6e51434aa7f0a3faa8ddba8ef492910af3`, immutable image
+`ghcr.io/rajeshr188/jsk-savings@sha256:7a9cd29e01f1cd9240098622c11e869e43fb953e554d94dc97ed75e55203d374`.
+The prior release/image immediately above is its rollback pair. There was no migration
+or database mutation. The origin returned both exact Play certificates, both HTTPS
+health endpoints returned that release, and Google's association API linked each
+certificate. On the Internal Testing device, Android reported the installed Google
+certificate and canonical domain as verified, link handling was enabled, Chrome was
+the default browser, and relaunching the app removed the address bar. The upload-key
+certificate remained absent. The wider customer-journey matrix remains an Android
+release gate rather than part of this association acceptance.
 
 ## Go-live sign-off
 
