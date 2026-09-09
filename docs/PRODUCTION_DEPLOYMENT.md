@@ -3201,6 +3201,43 @@ the default browser, and relaunching the app removed the address bar. The upload
 certificate remained absent. The wider customer-journey matrix remains an Android
 release gate rather than part of this association acceptance.
 
+### Daily contribution-channel metrics production evidence — 9 September 2026
+
+PR `#65` merged the owner daily contribution-channel reporting as release
+`9fa12943b9719e1c14d1894c4cfceb753b54376c`. Protected-`main` CI run
+`34382198915` passed Django, static/deployment, immutable-image publication, and
+fixable-critical-vulnerability gates and produced
+`ghcr.io/rajeshr188/jsk-savings@sha256:4e8abb514e2ac33a757c3abfc545d414a9430edbcf4c085157fe2ce4a941616e`.
+The rollback pair was release `0c611f6e51434aa7f0a3faa8ddba8ef492910af3`
+and image
+`ghcr.io/rajeshr188/jsk-savings@sha256:7a9cd29e01f1cd9240098622c11e869e43fb953e554d94dc97ed75e55203d374`.
+The managed-PostgreSQL recovery point was recorded as 10:00 PM IST that day.
+
+Before cutover, the owner applied the audited global payment pause. One INR 4,000.00
+Live Gold 22K order was 97.9 minutes old and past its Checkout deadline; a fresh
+provider inspection reported `created`, zero attempts, zero payments, zero paid, and
+the full amount due. The standard dry-run classified it as
+`ELIGIBLE_FOR_ABANDONMENT`, and apply abandoned exactly that contribution with zero
+errors. Payment operations then reported zero pending orders for every grade, while
+financial exceptions and Razorpay Live readiness remained clean.
+
+The candidate used the approved digest, had no planned migrations, and previewed the
+India-local daily selector as INR 0.00 physical cash, INR 4,000.00 captured Live
+Razorpay, one verified contribution, and INR 4,000.00 total verified. The host retained
+449 MiB available memory, 343 MiB free swap, and 8.4 GiB free disk before cutover.
+After web and Caddy recreation, public liveness and PostgreSQL readiness returned the
+exact release, the homepage returned `200`, and an unauthenticated owner contribution
+request returned the expected login redirect. Payment-operations, financial-exception,
+Razorpay Live, exact-grade, and in-store-cash checks all passed. The authenticated owner
+confirmed the three displayed daily values, then removed the audited pause; all grades
+reported `OPEN` with zero pending orders.
+
+Cloudflare Web Analytics was separately confirmed enabled for the production site.
+No analytics dependency, tag, cookie, consent state, Django setting, or privacy-policy
+change was introduced by this release. Aggregate Cloudflare traffic reporting does not
+close the independent health/log/financial-alert exercises still deferred under
+`FW-PROD-002`.
+
 ## Go-live sign-off
 
 The target full-production checklist remains below. Live acceptance does not mark
