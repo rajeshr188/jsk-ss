@@ -211,7 +211,9 @@ recorded limitations are not lost.
   for Internal Testing. Device inspection discovered the additive Play signing
   certificate keyset requirement; its production rollout and no-browser-chrome
   association now pass. The remaining device/journey matrix and final release
-  evidence remain open.
+  evidence remain open. The canonical readiness guide now contains the bounded,
+  evidence-safe Internal Testing customer-journey matrix; its unrun rows are not
+  completion evidence.
   GitHub cannot enforce protection on this private organization repository under the
   current plan; retain procedural green-PR discipline until an upgrade or separately
   approved public-source decision resolves that gate.

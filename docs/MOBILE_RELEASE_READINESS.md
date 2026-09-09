@@ -413,6 +413,41 @@ independently of OTP or a developer's personal Google account. Before submission
 
 Current status: **not created; required before Play review.**
 
+## Internal Testing customer-journey matrix
+
+Run this matrix against one immutable Internal Testing build before inviting a wider
+pilot. Record only the build/version, production release, device/Android/browser,
+date, pass/fail result, and a redacted support reference. Never store passwords,
+verification/reset links, Razorpay signatures, API credentials, full payment
+identifiers, or customer personal data in repository evidence.
+
+Use a dedicated non-privileged test customer and a separate owner session. Start and
+finish with the application integrity commands named in the production guide. A
+registration or enrolment test must prove that no scheme account or financial record
+is created before its owner approval boundary. A Live payment is limited to one
+owner-approved low-value transaction after all Test-mode payment cases pass.
+
+| Area | Controlled case | Acceptance | State |
+| --- | --- | --- | --- |
+| TWA | Launch the Play-installed build from the launcher | Canonical origin opens without browser chrome; association remains verified | Passed 9 Sep 2026 |
+| Password identity | Login, logout, relaunch, password reset, then login again | Only the intended customer session exists; reset link is single-use and absent from logs | Not run |
+| Google identity | Login with the linked Google identity, then try an unlinked identity | Linked customer reaches the same account; unlinked identity creates no user/profile | Not run |
+| Registration | Submit, verify, approve, and complete one staged registration | Direct allauth signup remains blocked; no customer exists before owner approval | Not run |
+| Enrolment | Submit interest, inspect both queues, then approve it | No account/contribution/order/rate lock/allocation exists before approval; one account exists after | Not run |
+| Razorpay Test | Complete success, explicit failure, modal cancellation, and checkout expiry | State and messages are correct; only captured success allocates metal; reconciliation is clean | Not run |
+| Operations pause | Pause the applicable grade before checkout and while an order is open | New initiation is blocked; webhook truth remains accepted; no duplicate allocation occurs | Not run |
+| Razorpay Live | Make one pre-approved low-value contribution | Captured webhook, one allocation, receipt, statement, and reconciliation all agree | Not run |
+| Documents | Open and print/download the accepted contribution receipt and statement | Amount, grade, rate, grams, identifiers, and totals agree; no other customer is exposed | Not run |
+| Lifecycle | Background/kill/relaunch during login and checkout return; reboot once | Server state remains authoritative; no duplicated request, order, payment, or allocation | Not run |
+| Network/offline | Launch offline, use slow data, and switch Wi-Fi/mobile during safe reads | Generic offline behavior appears; authenticated/financial pages are not served from cache | Not run |
+| Update | Upgrade from the previous Internal Testing build | Session behavior is intentional; data and Digital Asset Links verification remain intact | Not run |
+| Accessibility | Test 200% text, portrait/landscape, TalkBack labels/focus, and contrast | Core customer journey remains readable, operable, labelled, and free of blocking defects | Not run |
+| Privacy/logs | Inspect Android, Caddy, and web logs after all cases | No credential, token, signature, personal-data payload, or authenticated document body is retained | Not run |
+
+Any critical/high defect, financial mismatch, identity-boundary breach, or secret/data
+leak stops the matrix. Fix it in a separate reviewed release and rerun every affected
+case plus the opening and closing integrity checks.
+
 ## Pilot measures and acceptance gates
 
 Use approximately five to ten legitimate customers under `FW-MOBILE-004`. Retain
