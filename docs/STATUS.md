@@ -43,7 +43,10 @@ authentication, payment-operation, financial, exact-grade, in-store-cash,
 enrolment, registration, Google-login, account-deletion, and Live Razorpay checks
 passed. Catalogue/product, About, existing-image, CMS-login, and non-publishing
 preview checks also passed without changing published content. A blog remains a
-separate future CMS capability and is not implied by this dependency acceptance.
+separate capability and is not implied by this dependency acceptance. ADR-0016 now
+accepts `FW-CMS-004` as an in-development, disabled-first Jewellery journal: one
+`/blog/` root and business-authored posts with isolated Blog staff groups, media, and
+publisher approval. It is not merged, deployed, populated, or publicly enabled yet.
 
 ## Completed
 
@@ -554,11 +557,13 @@ separate future CMS capability and is not implied by this dependency acceptance.
 
 ## Verification
 
-- The Wagtail 8.0 candidate and Django 6.0.4 pass local system checks, migration
-  detection, 66 focused catalogue/editorial/media tests, and all 380 project tests.
-  The sole planned Wagtail change is additive vendor migration
-  `wagtailcore.0098_apitoken`; production Wagtail remains 7.4.3 with its existing
-  Wagtail, taggit, and catalogue migrations applied.
+- The production-accepted Wagtail 8.0 and Django 6.0.4 baseline passed system checks,
+  migration detection, 66 focused catalogue/editorial/media tests, and all 380
+  project tests. Its sole migration was additive vendor migration
+  `wagtailcore.0098_apitoken`. The in-development blog candidate passes 69 combined
+  CMS/environment tests and all 391 project tests, including hierarchy, preview,
+  rollout gating, public discovery, pagination, validation, permission isolation, and
+  publisher-workflow coverage.
 - Local and production PostgreSQL 16 migrations are applied through
   `schemes.0020_scheme_enrolment_requests` and
   `socialaccount.0006_alter_socialaccount_extra_data`.

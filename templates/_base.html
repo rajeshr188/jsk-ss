@@ -57,6 +57,11 @@
             <a class="nav-link{% if public_catalogue_is_current %} active{% endif %}"{% if public_catalogue_is_current %} aria-current="page"{% endif %} href="{{ public_catalogue_url }}">Jewellery</a>
           </li>
           {% endif %}
+          {% if public_blog_page %}
+          <li class="nav-item">
+            <a class="nav-link{% if public_blog_is_current %} active{% endif %}"{% if public_blog_is_current %} aria-current="page"{% endif %} href="{{ public_blog_url }}">Journal</a>
+          </li>
+          {% endif %}
           <li class="nav-item">
             <a class="nav-link{% if current_url == 'about' %} active{% endif %}"{% if current_url == 'about' %} aria-current="page"{% endif %} href="{% url 'about' %}">About</a>
           </li>
@@ -153,6 +158,7 @@
             <a href="{% url 'pricing' %}">Savings plans</a>
             <a href="{% url 'how_it_works' %}">How it works</a>
             {% if public_catalogue_page %}<a href="{{ public_catalogue_url }}">Jewellery catalogue</a>{% endif %}
+            {% if public_blog_page %}<a href="{{ public_blog_url }}">Jewellery journal</a>{% endif %}
             <a href="{% url 'terms' %}">Terms</a>
             <a href="{% url 'privacy' %}">Privacy</a>
             <a href="{% url 'cancellation_refund' %}">Cancellation &amp; refunds</a>

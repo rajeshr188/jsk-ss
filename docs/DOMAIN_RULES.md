@@ -409,6 +409,36 @@ authorize new production CASH enrolments or contributions under `SCH-007`.
   dedicated Editorial media collection, and remain subject to `FW-MEDIA-002` source-
   original retention until isolated media backup and restore proof exists.
 
+## Jewellery journal boundaries
+
+- **BLOG-001:** The Jewellery journal is business-authored educational and editorial
+  content. It must not accept public submissions, comments, customer-specific advice,
+  or user-generated content.
+- **BLOG-002:** One `BlogIndexPage` at `/blog/` contains only `BlogPostPage` children.
+  Public listings include only live, unrestricted descendants of that root and are
+  bounded to nine articles per page.
+- **BLOG-003:** Public blog access requires both live/public Wagtail state and
+  `PUBLIC_BLOG_ENABLED=True`. When disabled, direct index and article routes return
+  `404` and global navigation contains no journal link; CMS preview and revision
+  history remain available to authorized staff.
+- **BLOG-004:** A journal article is never authoritative for a Scheme Rate, plan term,
+  product price or availability, policy, payment, allocation, balance, eligibility,
+  redemption, or customer agreement. It links to the owning application surface
+  instead of duplicating or controlling that data.
+- **BLOG-005:** CMS access requires explicit active staff membership in a dedicated
+  Blog group. Editors may draft and submit; Blog Publishers and Administrators may
+  approve and publish. Blog authorization, pages, workflow, and media remain isolated
+  from Catalogue and Editorial groups and from `CustomUser.role`.
+- **BLOG-006:** Optional featured images require meaningful alt text and use the
+  dedicated Blog media collection. R2 originals and renditions remain subject to the
+  `FW-MEDIA-002` source-original retention and recovery limitation.
+- **BLOG-007:** Public posts expose a factual date, byline, summary, canonical URL,
+  and social metadata. Featured ordering is editorial presentation only and cannot
+  alter financial or product records.
+- **BLOG-008:** The application seeds no public or placeholder articles. The business
+  must create and approve genuine content before enabling public discovery; categories,
+  tags, feeds, comments, and cross-site search require measured need and separate scope.
+
 ## Mobile distribution boundaries
 
 - **MOB-001:** The first mobile distribution is an installable PWA and customer-only
