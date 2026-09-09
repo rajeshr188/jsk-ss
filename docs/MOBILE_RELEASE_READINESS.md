@@ -9,10 +9,10 @@ Status: **in progress — `FW-MOBILE-002` is production-accepted, the verified
 organization owns the registered Play package and Play-managed app-signing identity,
 and Play accepted a GitHub-built, upload-key-signed AAB for Internal Testing. Device
 inspection proved that the installed build uses an additional Google-managed Play
-app-signing certificate, so an additive origin keyset correction is awaiting rollout.
-Successful no-browser-chrome association, Financial classification,
-retention/deletion, Data Safety, device-journey, and broader Play release gates remain
-open.**
+app-signing certificate. The additive keyset is production-published, Google and
+Android verification pass, and the app opens without browser chrome. Financial
+classification, retention/deletion, Data Safety, device-journey, and broader Play
+release gates remain open.**
 
 ## Product boundary
 
@@ -163,10 +163,16 @@ with release `049944412aa09668d6b04e45cabee2bc58dadc42` and image
 retained as the rollback pair. The managed-PostgreSQL recovery point was recorded as
 8:00 PM IST that day; no migration or database mutation was required. The installed
 build exposed the additive keyset requirement when Android rejected the second
-certificate against the single-certificate origin response. Production deployment
-of both Play certificates and a successful no-browser-chrome device recheck remain
-open. Do not add an upload-key or local debug certificate fingerprint to the
-production statement.
+certificate against the single-certificate origin response. On 9 September release
+`0c611f6e51434aa7f0a3faa8ddba8ef492910af3`, immutable image
+`ghcr.io/rajeshr188/jsk-savings@sha256:7a9cd29e01f1cd9240098622c11e869e43fb953e554d94dc97ed75e55203d374`,
+published both Play certificates with no migration or environment-key change. The
+previous release/image above is the rollback pair. The direct origin response, both
+health endpoints, and Google's association check for each certificate passed.
+Android then reported the installed Google certificate and canonical domain as
+verified, link handling was enabled, Chrome was confirmed as default, and a clean
+relaunch displayed no address bar. Do not add an upload-key or local debug
+certificate fingerprint to the production statement.
 
 ## Store listing copy draft
 

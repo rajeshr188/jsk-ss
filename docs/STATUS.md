@@ -16,9 +16,10 @@ D-U-N-S number. The originally recorded Play fingerprint is published on the
 canonical origin in release `1826afec8628d4f9288c1625091974687af7aba0`. A signed
 Internal Testing bundle was accepted by Play on 9 September 2026, and read-only
 device inspection found that Play delivered it under an additional Google-managed
-app-signing certificate. The additive certificate-keyset correction is implemented
-but still requires production rollout and installed-device reverification.
-Account/recovery role evidence, qualified
+app-signing certificate. Release `0c611f6e51434aa7f0a3faa8ddba8ef492910af3`
+now publishes both Play certificates; Google linked both, Android reported the
+installed certificate and domain as verified, and the app reopened without browser
+chrome. Account/recovery role evidence, qualified
 policy/retention, deletion implementation, and final Data Safety gates remain open.
 The private business-owned Android TWA repository now has an API
 29-to-36 customer shell and a successful unsigned GitHub-hosted build; it adds no
@@ -397,11 +398,15 @@ claim remain open.
   JSON content-type, exact-value, cache, and health checks passed. Read-only inspection
   of the Play-installed APK independently proved Google signer
   `B8:A3:25:32:0B:80:2C:2A:E1:9B:EA:F7:30:27:C4:89:E5:2D:D6:1F:E4:60:F2:99:2F:6E:C6:54:14:24:17:B4`;
-  Android and Google's verification API rejected that installed certificate because
-  the origin still listed only the first certificate. The source now retains both
-  Play certificates and explicitly excludes the upload key. The remaining gates are
-  production rollout and successful installed association,
-  payments/recovery/role evidence,
+  Android and Google's verification API initially rejected that installed certificate
+  because the origin listed only the first certificate. Release
+  `0c611f6e51434aa7f0a3faa8ddba8ef492910af3`, image
+  `ghcr.io/rajeshr188/jsk-savings@sha256:7a9cd29e01f1cd9240098622c11e869e43fb953e554d94dc97ed75e55203d374`,
+  additively published both Play certificates and explicitly excluded the upload key.
+  Both Google association checks returned linked, Android changed the canonical
+  domain to verified with link handling enabled, Chrome was the default browser, and
+  the relaunched app had no address bar. The remaining gates are the bounded
+  payments/recovery/role device matrix,
   qualified review of the Financial features classification and record-retention
   basis, an implemented account-deletion request path, and final dependency-level
   Data Safety review. The first release remains customer-only and adds no mobile API.
@@ -680,10 +685,10 @@ claim remain open.
 
 ## Next recommended step
 
-Deploy the additive Play App Signing certificate keyset, verify Google links both
-certificates, force installed-device reverification, and confirm the TWA opens the
-canonical origin without browser chrome. Then execute the bounded customer journey
-matrix for the accepted Internal Testing build. Resolve
+Execute the bounded customer journey matrix for the accepted Internal Testing build:
+password and linked-Google authentication, registration/enrolment isolation,
+Razorpay handoff and return, checkout cancellation/expiry/pause, receipts/statements,
+process death, update behavior, accessibility, and no-secret logs. Resolve
 server-enforced protection for
 the private Android repository. Finish qualified Financial-features/retention review
 and `FW-PRIV-001B`
