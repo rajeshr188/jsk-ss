@@ -267,6 +267,22 @@ class PublicPricingPageTests(TestCase):
         self.assertContains(response, "Contact us to enrol")
         self.assertContains(response, "Existing customer login")
 
+    @override_settings(
+        CUSTOMER_ENROLMENT_REQUESTS_ENABLED=True,
+        PUBLIC_CUSTOMER_REGISTRATION_ENABLED=True,
+    )
+    def test_pricing_getting_started_offers_public_customer_access(self):
+        self.make_plan(code="ACCESS", publicly_listed=True)
+
+        response = self.client.get(reverse("pricing"))
+
+        self.assertContains(response, "Request customer access", count=2)
+        self.assertContains(
+            response,
+            f'href="{reverse("customer_registration")}"',
+        )
+        self.assertNotContains(response, "Contact us to enrol")
+
     def test_unpublished_plan_is_private_by_default(self):
         plan = self.make_plan(code="DEFAULT")
 

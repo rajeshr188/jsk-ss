@@ -67,6 +67,8 @@
     <div class="d-flex flex-wrap gap-2">
       {% if customer_enrolment_requests_enabled and user.is_authenticated and user.role == 'CUSTOMER' %}
       <a class="btn btn-jsk" href="{% url 'schemes:my_enrolment_requests' %}">My enrolment requests</a>
+      {% elif customer_enrolment_requests_enabled and not user.is_authenticated and public_customer_registration_enabled %}
+      <a class="btn btn-jsk" href="{% url 'customer_registration' %}">Request customer access</a>
       {% else %}
       <a class="btn btn-jsk" href="{% url 'contact' %}">Contact us to enrol</a>
       {% endif %}
