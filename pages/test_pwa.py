@@ -2,7 +2,7 @@ from pathlib import Path
 
 from PIL import Image
 from django.conf import settings
-from django.test import SimpleTestCase, TestCase, override_settings
+from django.test import TestCase, override_settings
 from django.urls import reverse
 
 
@@ -95,7 +95,7 @@ class PwaDisabledTests(TestCase):
 
 
 @override_settings(PWA_ENABLED=True, PUBLIC_CATALOGUE_ENABLED=False)
-class PwaFoundationTests(SimpleTestCase):
+class PwaFoundationTests(TestCase):
     def test_manifest_has_installability_and_brand_fields(self):
         response = self.client.get(reverse("pwa_manifest"))
 

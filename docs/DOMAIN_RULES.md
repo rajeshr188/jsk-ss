@@ -395,9 +395,9 @@ authorize new production CASH enrolments or contributions under `SCH-007`.
   `PUBLIC_EDITORIAL_PAGES_ENABLED=True`; a missing, draft, restricted, or unpublished
   CMS page falls back to the reviewed Django template.
 - **EDIT-003:** Plan, rate, payment, eligibility, fulfilment, and policy explanations
-  rendered on the About page remain application-owned template content. Editorial
-  rich text is limited to business background and must not become a source of
-  financial or compliance terms.
+  rendered on the About or How It Works pages remain application-owned template
+  content. Editorial rich text is limited to business background and must not become
+  a source of financial or compliance terms.
 - **EDIT-004:** Editorial CMS access requires explicit active staff membership in a
   dedicated Editorial group. Editors may revise and submit; Publishers and Editorial
   Administrators may approve and publish. Editorial permissions and media are

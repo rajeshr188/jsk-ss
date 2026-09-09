@@ -46,12 +46,14 @@ claim remain open.
   mobile customer contribution/redemption cards; gold-label, Bootstrap secondary-
   text, and warm-gradient homepage colors meet axe/WCAG AA normal-text contrast
   thresholds against their lightest-risk theme surfaces.
-- Conversion-focused public homepage with a prospect-first plan/showroom journey,
-  distinct existing-customer access, an explicit INR-to-locked-metal-to-jewellery
-  visual redemption flow, concise gold/silver copy, local business details,
+- Conversion-focused public homepage with a concise jewellery-goal proposition,
+  role- and feature-aware customer-access/enrolment actions, up to three live
+  published-plan previews, distinct existing-customer access, local business details,
   BIS hallmark/HUID trust cues, embedded Bootstrap Icons, and one optimized,
-  self-hosted Pexels jewellery photograph clearly labelled as illustrative; repeated
-  plan/contact actions and pre-enrolment policy links remain prominent.
+  self-hosted Pexels jewellery photograph clearly labelled as illustrative. The
+  detailed registration-to-redemption explanation now lives on a dedicated,
+  Django-owned How It Works page; the homepage links there while preserving the
+  non-binding request and showroom-confirmed agreement boundary.
 - Owner/customer roles, customer records, reusable plans, and snapshotted enrolments.
 - Owner customer-management flow and isolated customer scheme view.
 - Owner-only, one-time customer password-setup invitations with digest-only secrets,

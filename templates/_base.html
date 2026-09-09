@@ -49,6 +49,9 @@
           <li class="nav-item">
             <a class="nav-link{% if current_url == 'pricing' %} active{% endif %}"{% if current_url == 'pricing' %} aria-current="page"{% endif %} href="{% url 'pricing' %}">Savings plans</a>
           </li>
+          <li class="nav-item">
+            <a class="nav-link{% if current_url == 'how_it_works' %} active{% endif %}"{% if current_url == 'how_it_works' %} aria-current="page"{% endif %} href="{% url 'how_it_works' %}">How it works</a>
+          </li>
           {% if public_catalogue_page %}
           <li class="nav-item">
             <a class="nav-link{% if public_catalogue_is_current %} active{% endif %}"{% if public_catalogue_is_current %} aria-current="page"{% endif %} href="{{ public_catalogue_url }}">Jewellery</a>
@@ -148,6 +151,7 @@
             <a href="{% url 'about' %}">About</a>
             <a href="{% url 'contact' %}">Contact</a>
             <a href="{% url 'pricing' %}">Savings plans</a>
+            <a href="{% url 'how_it_works' %}">How it works</a>
             {% if public_catalogue_page %}<a href="{{ public_catalogue_url }}">Jewellery catalogue</a>{% endif %}
             <a href="{% url 'terms' %}">Terms</a>
             <a href="{% url 'privacy' %}">Privacy</a>
