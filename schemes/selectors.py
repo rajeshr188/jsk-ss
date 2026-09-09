@@ -15,10 +15,12 @@ from .models import (
     AuditEvent,
     Contribution,
     Customer,
+    GatewayMode,
     InStoreCashContributionReversal,
     InStoreCashReceipt,
     MetalAllocation,
     MetalGrade,
+    PaymentChannel,
     PaymentWebhookEvent,
     SchemeRate,
     Redemption,
@@ -91,6 +93,19 @@ class InStoreCashDailySummary:
     @property
     def net_amount(self):
         return self.received_amount - self.reversed_amount
+
+
+@dataclass(frozen=True)
+class OwnerContributionDailySummary:
+    cash: InStoreCashDailySummary
+    razorpay_count: int
+    razorpay_amount: Decimal
+    verified_count: int
+    verified_amount: Decimal
+
+    @property
+    def as_of(self):
+        return self.cash.as_of
 
 
 @dataclass(frozen=True)
@@ -463,6 +478,50 @@ def get_in_store_cash_daily_summary(as_of=None):
         received_amount=receipts["amount"],
         reversals_count=reversals["count"],
         reversed_amount=reversals["amount"],
+    )
+
+
+def get_owner_contribution_daily_summary(as_of=None):
+    cash = get_in_store_cash_daily_summary(as_of=as_of)
+    current_timezone = timezone.get_current_timezone()
+    day_start = timezone.make_aware(
+        datetime.combine(cash.as_of, time.min),
+        current_timezone,
+    )
+    day_end = day_start + timedelta(days=1)
+    money_field = DecimalField(max_digits=14, decimal_places=2)
+    successful_today = Contribution.objects.filter(
+        status__in=SUCCESSFUL_PAYMENT_STATUSES,
+        paid_at__gte=day_start,
+        paid_at__lt=day_end,
+    )
+    live_razorpay = Q(
+        payment_channel=PaymentChannel.RAZORPAY,
+        gateway_mode=GatewayMode.LIVE,
+    )
+    real_payment = live_razorpay | Q(
+        payment_channel=PaymentChannel.IN_STORE_CASH,
+    )
+    totals = successful_today.aggregate(
+        razorpay_count=Count("pk", filter=live_razorpay),
+        razorpay_amount=Coalesce(
+            Sum("amount", filter=live_razorpay),
+            Value(Decimal("0.00")),
+            output_field=money_field,
+        ),
+        verified_count=Count("pk", filter=real_payment),
+        verified_amount=Coalesce(
+            Sum("amount", filter=real_payment),
+            Value(Decimal("0.00")),
+            output_field=money_field,
+        ),
+    )
+    return OwnerContributionDailySummary(
+        cash=cash,
+        razorpay_count=totals["razorpay_count"],
+        razorpay_amount=totals["razorpay_amount"],
+        verified_count=totals["verified_count"],
+        verified_amount=totals["verified_amount"],
     )
 
 

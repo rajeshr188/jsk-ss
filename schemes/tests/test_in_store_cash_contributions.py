@@ -14,6 +14,7 @@ from django.utils import timezone
 from schemes.models import (
     AuditEvent,
     Contribution,
+    GatewayMode,
     InStoreCashContributionReversal,
     InStoreCashReceipt,
     MetalAllocation,
@@ -25,6 +26,7 @@ from schemes.models import (
 from schemes.selectors import (
     get_in_store_cash_daily_summary,
     get_metal_balance,
+    get_owner_contribution_daily_summary,
     get_scheme_statement,
 )
 from schemes.services import (
@@ -104,6 +106,33 @@ class InStoreCashContributionTests(TestCase):
         values.update(overrides)
         return record_in_store_cash_contribution(**values)
 
+    def record_razorpay(self, *, amount, mode=GatewayMode.LIVE, paid_at=None):
+        reference = uuid.uuid4().hex
+        contribution = Contribution.objects.create(
+            scheme_account=self.account,
+            amount=amount,
+            contribution_period=timezone.localdate().replace(day=1),
+            frequency_rule_snapshot=SchemePlan.FrequencyRule.FLEXIBLE,
+            status=Contribution.Status.PAID,
+            payment_gateway="razorpay",
+            gateway_mode=mode,
+            gateway_order_id=f"order_{reference}",
+            gateway_reference=f"pay_{reference}",
+            scheme_rate=self.rate,
+            rate_locked_at=timezone.now(),
+            paid_at=paid_at or timezone.now(),
+        )
+        MetalAllocation.objects.create(
+            contribution=contribution,
+            scheme_rate=self.rate,
+            metal=self.account.metal_grade.metal,
+            metal_grade=self.account.metal_grade,
+            quantity=(amount / self.rate.rate_per_gram).quantize(
+                Decimal("0.000001")
+            ),
+        )
+        return contribution
+
     def test_records_cash_then_allocates_locked_grade(self):
         contribution = self.record_cash()
 
@@ -126,6 +155,38 @@ class InStoreCashContributionTests(TestCase):
                 actor=self.owner,
             ).exists()
         )
+
+    def test_owner_daily_summary_separates_real_payment_channels(self):
+        self.record_cash(amount=Decimal("500.00"))
+        self.record_razorpay(amount=Decimal("4000.00"))
+        self.record_razorpay(amount=Decimal("999.00"), mode=GatewayMode.TEST)
+        self.record_razorpay(
+            amount=Decimal("600.00"),
+            paid_at=timezone.now() - timedelta(days=2),
+        )
+
+        summary = get_owner_contribution_daily_summary()
+
+        self.assertEqual(summary.cash.receipts_count, 1)
+        self.assertEqual(summary.cash.received_amount, Decimal("500.00"))
+        self.assertEqual(summary.razorpay_count, 1)
+        self.assertEqual(summary.razorpay_amount, Decimal("4000.00"))
+        self.assertEqual(summary.verified_count, 2)
+        self.assertEqual(summary.verified_amount, Decimal("4500.00"))
+
+    def test_owner_contribution_page_labels_and_displays_channel_totals(self):
+        self.record_cash(amount=Decimal("500.00"))
+        self.record_razorpay(amount=Decimal("4000.00"))
+        self.client.force_login(self.owner)
+
+        response = self.client.get(reverse("schemes:contribution_list"))
+
+        self.assertContains(response, "In-store cash received today")
+        self.assertContains(response, "Razorpay captured today")
+        self.assertContains(response, "Total verified today")
+        self.assertContains(response, "₹4000.00")
+        self.assertContains(response, "₹4500.00")
+        self.assertNotContains(response, ">Cash received today<")
 
     def test_submission_token_is_idempotent_and_cannot_be_reused_differently(self):
         token = uuid.uuid4()

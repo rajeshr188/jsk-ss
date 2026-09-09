@@ -183,6 +183,10 @@ claim remain open.
   redemptions, reversals, and current denomination-specific entitlement.
 - Owner contribution and redemption CSV exports with separated INR/gold/silver
   fields and spreadsheet-formula neutralization.
+- Owner daily contribution reporting separates physical in-store cash, cash
+  corrections/net cash, captured Live Razorpay payments, and the combined active
+  verified total. Test/Mock and unsuccessful or reversed records do not inflate the
+  real-funds cards.
 - Strict namespaced production settings with bounded numeric/boolean parsing,
   signing-key fallback rotation, persistent database health checks, SMTP settings,
   secure cookie/header defaults, proxy trust opt-in, and timestamped stdout logging.
@@ -548,7 +552,7 @@ claim remain open.
   `socialaccount.0006_alter_socialaccount_extra_data`.
 - Environment-template coverage verifies every setting referenced by Django plus the
   media-storage environment contract, and verifies production-only Compose inputs.
-- 378 tests pass, including the disabled-first PWA manifest, declared icon dimensions,
+- 380 tests pass, including the disabled-first PWA manifest, declared icon dimensions,
   network-only navigation worker, strict three-asset cache allowlist, generic offline
   response, mutation non-interception, and rollback cleanup, plus controlled Google
   credential linking, social-signup and
