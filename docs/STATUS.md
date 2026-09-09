@@ -40,6 +40,11 @@ claim remain open.
   navigation, wider financial data surfaces, consistent cards/forms/tables,
   refreshed public and authenticated journeys, and keyboard/reduced-motion
   accessibility improvements; no new frontend framework or dependency was added.
+- Mobile/TWA presentation refinement with safe-area-aware page chrome, a sticky and
+  bounded mobile navigation menu, compact conversion-page hierarchy, single-column
+  thumb-sized action groups, readable stacked plan facts, a condensed journey
+  timeline, touch-friendly tables/forms, and a two-column mobile footer. Financial,
+  authentication, enrolment, and offline behavior are unchanged.
 - Figma-principle refinement pass with WCAG-AA small-text contrast, structured
   financial form fieldsets, progressively disclosed owner records, consistent
   account-recovery and owner-list surfaces, explicit table-header semantics, and

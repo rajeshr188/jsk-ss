@@ -161,10 +161,18 @@ class PwaFoundationTests(TestCase):
     def test_base_document_enables_manifest_and_worker_registration(self):
         response = self.client.get(reverse("home"))
 
+        self.assertContains(response, "viewport-fit=cover")
         self.assertContains(response, f'href="{reverse("pwa_manifest")}"')
         self.assertContains(response, "images/pwa-icon-192.png")
         self.assertContains(response, "js/pwa.js")
         self.assertContains(response, 'data-pwa-enabled="true"')
+
+        responsive_source = (
+            Path(settings.BASE_DIR) / "static" / "css" / "base.css"
+        ).read_text(encoding="utf-8")
+        self.assertIn("env(safe-area-inset-top)", responsive_source)
+        self.assertIn("env(safe-area-inset-bottom)", responsive_source)
+        self.assertIn("min-height: 2.75rem", responsive_source)
 
     def test_pwa_endpoints_are_read_only(self):
         for route_name in ("pwa_manifest", "service_worker", "pwa_offline"):

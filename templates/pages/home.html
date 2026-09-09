@@ -11,7 +11,7 @@
         <p class="page-eyebrow">Gold and silver jewellery savings</p>
         <h1 id="hero-title">Your jewellery goal starts with one clear plan.</h1>
         <p class="lead">Choose a published plan, request enrolment online, and follow every verified contribution from your customer account.</p>
-        <div class="d-flex flex-wrap gap-2 mt-4">
+        <div class="hero-actions d-flex flex-wrap gap-2 mt-4">
           {% if user.is_authenticated and user.role == 'CUSTOMER' %}
             {% if customer_enrolment_requests_enabled %}
               <a class="btn btn-jsk btn-lg" href="{% url 'pricing' %}">Choose a savings plan</a>
@@ -84,7 +84,7 @@
             {% endif %}
           </p>
           <p class="small text-secondary mb-4">{{ plan.get_frequency_rule_display }} · {{ plan.default_months }} months</p>
-          <div class="mt-auto d-grid gap-2">
+          <div class="home-plan-actions mt-auto d-grid gap-2">
             {% if customer_enrolment_requests_enabled and user.is_authenticated and user.role == 'CUSTOMER' %}
               <a class="btn btn-jsk" href="{% url 'schemes:scheme_enrolment_request_create' plan.pk %}">Request this plan</a>
             {% elif not user.is_authenticated and public_customer_registration_enabled %}

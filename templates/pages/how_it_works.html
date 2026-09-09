@@ -8,7 +8,7 @@
   <p class="page-eyebrow">How it works</p>
   <h1 class="display-4">From a savings plan to jewellery you choose</h1>
   <p class="lead text-secondary">A clear guide to customer access, showroom-approved enrolment, recorded contributions, and in-person jewellery selection.</p>
-  <div class="d-flex flex-wrap justify-content-center gap-2 mt-4">
+  <div class="mobile-action-group d-flex flex-wrap justify-content-center gap-2 mt-4">
     <a class="btn btn-jsk" href="{% url 'pricing' %}">Choose a savings plan</a>
     {% if not user.is_authenticated and public_customer_registration_enabled %}<a class="btn btn-outline-dark" href="{% url 'customer_registration' %}">Request customer access</a>{% endif %}
   </div>

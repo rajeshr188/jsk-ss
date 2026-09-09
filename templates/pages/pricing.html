@@ -23,9 +23,9 @@
           <span class="badge text-bg-light border">{{ offering.metal_grade.display_name }}</span>
           {% endif %}{% endfor %}
         </div>
-        <dl class="row mb-0 border-top pt-3">
-          <dt class="col-5">INR contribution</dt>
-          <dd class="col-7">
+        <dl class="row plan-facts mb-0 border-top pt-3">
+          <dt class="col-12 col-sm-5">INR contribution</dt>
+          <dd class="col-12 col-sm-7">
             {% if plan.amount_rule == 'FIXED' %}
               ₹{{ plan.fixed_contribution_amount|floatformat:2 }}
             {% elif plan.maximum_contribution %}
@@ -34,12 +34,12 @@
               ₹{{ plan.minimum_contribution|floatformat:2 }} or more
             {% endif %}
           </dd>
-          <dt class="col-5">Frequency</dt><dd class="col-7">{{ plan.get_frequency_rule_display }}</dd>
-          <dt class="col-5">Standard duration</dt><dd class="col-7">{{ plan.default_months }} months</dd>
-          <dt class="col-5">Minimum duration</dt><dd class="col-7">{{ plan.minimum_months }} months</dd>
+          <dt class="col-12 col-sm-5">Frequency</dt><dd class="col-12 col-sm-7">{{ plan.get_frequency_rule_display }}</dd>
+          <dt class="col-12 col-sm-5">Standard duration</dt><dd class="col-12 col-sm-7">{{ plan.default_months }} months</dd>
+          <dt class="col-12 col-sm-5">Minimum duration</dt><dd class="col-12 col-sm-7">{{ plan.minimum_months }} months</dd>
         </dl>
         {% if customer_enrolment_requests_enabled %}
-        <div class="d-flex flex-wrap gap-2 mt-4">
+        <div class="plan-card__actions d-flex flex-wrap gap-2 mt-4">
           {% url 'schemes:scheme_enrolment_request_create' plan.pk as request_url %}
           {% if user.is_authenticated and user.role == 'CUSTOMER' %}
           <a class="btn btn-jsk" href="{{ request_url }}">Request enrolment</a>
@@ -64,7 +64,7 @@
     <p>An approved customer login may submit a non-binding request for a displayed plan and metal grade. The request does not create a savings agreement or payment access. The showroom contacts you, reviews the current terms, and separately creates the agreement. You may also contact or visit us instead. Online payment is available only after enrolment and only for amounts allowed by your recorded plan.</p>
     <p>The current Jai Sri Krishna Jewellery Scheme Rate for your selected grade is shown and locked before payment starts. After verification, your INR contribution is converted to a recorded quantity of that exact grade. A later Scheme Rate does not change quantities already credited.</p>
     <p>Once the plan becomes eligible, the accumulated metal quantity may be applied toward jewellery or an eligible matching-metal coin at our showroom. It cannot be withdrawn as cash through this website.</p>
-    <div class="d-flex flex-wrap gap-2">
+    <div class="mobile-action-group d-flex flex-wrap gap-2">
       {% if customer_enrolment_requests_enabled and user.is_authenticated and user.role == 'CUSTOMER' %}
       <a class="btn btn-jsk" href="{% url 'schemes:my_enrolment_requests' %}">My enrolment requests</a>
       {% elif customer_enrolment_requests_enabled and not user.is_authenticated and public_customer_registration_enabled %}

@@ -5,7 +5,7 @@
 <head>
   <meta charset="utf-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
-  <meta name="viewport" content="width=device-width,minimum-scale=1,initial-scale=1">
+  <meta name="viewport" content="width=device-width,minimum-scale=1,initial-scale=1,viewport-fit=cover">
   <title>{% block title %}Jai Sri Krishna Jewellery{% endblock title %}</title>
   <meta name="description" content="{% block meta_description %}Jai Sri Krishna Jewellery gold and silver jewellery purchase plans in Vellore, Tamil Nadu.{% endblock %}">
   <meta name="author" content="">
@@ -115,7 +115,7 @@
           </ul>
         </div>
         {% else %}
-        <div class="d-flex flex-wrap gap-2">
+        <div class="nav-guest-actions d-flex flex-wrap gap-2">
           {% if public_customer_registration_enabled %}<a href="{% url 'customer_registration' %}" class="btn btn-sm btn-outline-light px-3">Request access</a>{% endif %}
           <a href="{% url 'account_login' %}" class="btn btn-sm btn-light px-3">Customer login</a>
         </div>
