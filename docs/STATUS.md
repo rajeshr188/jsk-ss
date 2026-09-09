@@ -35,6 +35,13 @@ integrity foundation without any anonymization/completion mutation. The qualifie
 retention matrix, `FW-PRIV-001B`, production enablement, and public-store deletion
 claim remain open.
 
+The isolated `agent/wagtail-8-upgrade` candidate updates the CMS dependency from
+Wagtail 7.4.3 LTS to Wagtail 8.0. The project uses none of the removed extension APIs,
+explicitly requests WebP renditions, and needs no application migration. Wagtail's
+additive `wagtailcore.0098_apitoken` vendor migration must pass the normal
+production recovery-point, migration-plan, and rollback gates before rollout;
+production remains on Wagtail 7.4.3 until that acceptance is complete.
+
 ## Completed
 
 - Lithium authentication, Bootstrap/crispy forms, WhiteNoise, and custom user preserved.
@@ -544,9 +551,11 @@ claim remain open.
 
 ## Verification
 
-- Wagtail 7.4.3 and Django 6.0.4 pass system checks, production-shaped deploy checks,
-  static collection, and an applied-migration check. Wagtail, taggit, and catalogue
-  migrations are applied to production PostgreSQL.
+- The Wagtail 8.0 candidate and Django 6.0.4 pass local system checks, migration
+  detection, 66 focused catalogue/editorial/media tests, and all 380 project tests.
+  The sole planned Wagtail change is additive vendor migration
+  `wagtailcore.0098_apitoken`; production Wagtail remains 7.4.3 with its existing
+  Wagtail, taggit, and catalogue migrations applied.
 - Local and production PostgreSQL 16 migrations are applied through
   `schemes.0020_scheme_enrolment_requests` and
   `socialaccount.0006_alter_socialaccount_extra_data`.

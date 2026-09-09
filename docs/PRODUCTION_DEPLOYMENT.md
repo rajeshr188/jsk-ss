@@ -3238,6 +3238,39 @@ change was introduced by this release. Aggregate Cloudflare traffic reporting do
 close the independent health/log/financial-alert exercises still deferred under
 `FW-PROD-002`.
 
+## Wagtail 8.0 dependency rollout
+
+Wagtail 8.0 is a major dependency release. Deploy it as its own immutable image and
+do not combine the rollout with catalogue/editorial model changes or content
+publication. Before changing the running web service, record the current image and
+release, a current managed-PostgreSQL recovery point, host capacity, and the standard
+financial/authentication integrity checks.
+
+Run the candidate deploy check and migration plan sequentially. For this upgrade the
+reviewed plan must add only Wagtail's vendor migration
+`wagtailcore.0098_apitoken`; there is no project-generated migration:
+
+```bash
+docker compose --env-file .env.production -f compose.production.yml \
+  run --rm --no-deps web python manage.py check --deploy --fail-level ERROR
+
+docker compose --env-file .env.production -f compose.production.yml \
+  run --rm --no-deps web python manage.py migrate --plan
+```
+
+Stop if any other unexpected migration appears. After reviewing the plan, apply it
+once with the candidate, recreate only `web`, wait for health, then validate and
+recreate Caddy through the normal release procedure. Verify both health endpoints,
+public catalogue listing/product pages, About/Our Story fallbacks or enabled CMS
+pages, Wagtail admin login, one non-publishing preview, catalogue/editorial
+authorization checks, and the production R2 upload/read/rendition/cleanup check.
+Run all standard integrity checks afterward.
+
+The migration only adds Wagtail's API-token table. If application behavior fails but
+database integrity remains clean, return to the recorded Wagtail 7.4.3 image; that
+release ignores the additive table. Do not reverse or delete the vendor migration as
+part of an application-only rollback.
+
 ## Go-live sign-off
 
 The target full-production checklist remains below. Live acceptance does not mark

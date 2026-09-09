@@ -14,8 +14,10 @@ from django.db import IntegrityError, transaction
 from django.test import RequestFactory, TestCase, override_settings
 from django.urls import reverse
 from wagtail.images import get_image_model
-from wagtail.images.permissions import permission_policy as image_permission_policy
 from wagtail.models import Collection, Locale, Page, PageLogEntry, Site, WorkflowState
+from wagtail.permissions import policy_registry
+
+image_permission_policy = policy_registry.get_by_type(get_image_model())
 
 from .models import (
     CatalogIndexPage,
