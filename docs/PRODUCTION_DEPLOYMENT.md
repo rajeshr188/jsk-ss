@@ -3157,12 +3157,18 @@ curl -fsS https://jaishrikrishnajewellery.com/health/ready/
 
 Require HTTP 200 without a redirect, `Content-Type: application/json`, package
 `com.jaishrikrishnajewellery.savings`, relation
-`delegate_permission/common.handle_all_urls`, and this sole fingerprint:
+`delegate_permission/common.handle_all_urls`, and these two Play App Signing
+certificate fingerprints:
 
 `25:78:42:37:4E:7A:C9:62:C8:AF:90:11:E3:8C:86:32:E2:08:DF:E4:6E:77:C0:86:59:7F:31:E7:32:D7:07:97`
 
-Compare all 32 byte pairs directly with **Play Console → Setup → App integrity →
-App signing key certificate**. Do not use the upload-key or debug fingerprint. Remove
+`B8:A3:25:32:0B:80:2C:2A:E1:9B:EA:F7:30:27:C4:89:E5:2D:D6:1F:E4:60:F2:99:2F:6E:C6:54:14:24:17:B4`
+
+The second certificate was independently extracted from the APK delivered by Play
+Internal Testing on 9 September 2026. Retain both certificates so Play delivery or
+signing-key segmentation does not break supported devices. Compare all 32 byte pairs
+with Play Console and/or a signature-verified installed Play APK. Do not use the
+upload-key or debug fingerprint. Remove
 the temporary response files after review. Then verify the association from an
 installed Play-signed Internal Testing build and retain the release/image, rollback
 pair, HTTPS response, Play comparison, device result, health/integrity outputs, and
@@ -3176,7 +3182,7 @@ The rollback pair is release `049944412aa09668d6b04e45cabee2bc58dadc42` and imag
 `ghcr.io/rajeshr188/jsk-savings@sha256:4f5d10d014c3f516c4194fe192a01df57387c5353c232aa80a88ad18a99bce02`;
 the managed-PostgreSQL recovery point was recorded as 8:00 PM IST that day. The
 disabled stage returned 404. After enablement, the origin returned a direct HTTP/2
-200 with `application/json`, the expected one-hour cache policy, and the sole exact
+200 with `application/json`, the expected one-hour cache policy, and the then-known
 registered package/Play-fingerprint statement. Automated comparison and both HTTPS
 health checks passed, and the authentication, payment-operations,
 financial-exception, Razorpay Live, exact-grade, in-store-cash, enrolment-request,

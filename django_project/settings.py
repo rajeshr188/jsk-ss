@@ -274,6 +274,8 @@ ANDROID_TWA_PACKAGE_NAME = "com.jaishrikrishnajewellery.savings"
 ANDROID_TWA_PLAY_SHA256_FINGERPRINTS = (
     "25:78:42:37:4E:7A:C9:62:C8:AF:90:11:E3:8C:86:32:"
     "E2:08:DF:E4:6E:77:C0:86:59:7F:31:E7:32:D7:07:97",
+    "B8:A3:25:32:0B:80:2C:2A:E1:9B:EA:F7:30:27:C4:89:"
+    "E5:2D:D6:1F:E4:60:F2:99:2F:6E:C6:54:14:24:17:B4",
 )
 
 # https://docs.djangoproject.com/en/dev/ref/contrib/staticfiles/#std:setting-STATICFILES_DIRS
