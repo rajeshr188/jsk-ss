@@ -257,6 +257,10 @@ class PublicPricingPageTests(TestCase):
         self.assertNotContains(response, private.name)
         self.assertNotContains(response, inactive.name)
 
+    @override_settings(
+        CUSTOMER_ENROLMENT_REQUESTS_ENABLED=False,
+        PUBLIC_CUSTOMER_REGISTRATION_ENABLED=False,
+    )
     def test_variable_plan_displays_public_inr_range_and_enrolment_flow(self):
         plan = self.make_plan(code="VARIABLE", publicly_listed=True, variable=True)
 

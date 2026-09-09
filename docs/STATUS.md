@@ -24,6 +24,10 @@ policy/retention, deletion implementation, and final Data Safety gates remain op
 The private business-owned Android TWA repository now has an API
 29-to-36 customer shell and a successful unsigned GitHub-hosted build; it adds no
 mobile API, native provider integration, financial authority, or application secret.
+The canonical mobile-readiness guide now contains the bounded Internal Testing
+customer-journey matrix. Only TWA launch/association is recorded as passed; identity,
+registration, enrolment, payment, lifecycle, network, update, accessibility, and
+privacy/log cases remain to be executed against one immutable build.
 The production-accepted `FW-AUTH-004`, `FW-ENROL-001`, and all financial boundaries
 remain unchanged. ADR-0015 is accepted for staged implementation. `FW-PRIV-001A` is deployed
 in production as a disabled verified-request, access-containment, owner-hold, and
@@ -35,6 +39,9 @@ claim remain open.
 
 - Lithium authentication, Bootstrap/crispy forms, WhiteNoise, and custom user preserved.
 - PostgreSQL-only environment configuration and India time zone.
+- Local and production environment templates cover every application setting, with
+  production-only Compose inputs documented separately and an automated coverage
+  test preventing newly referenced settings from silently going undocumented.
 - Jai Sri Krishna Jewellery branding and canonical documentation.
 - Bootstrap 5-only responsive interface modernization with a simplified owner
   navigation, wider financial data surfaces, consistent cards/forms/tables,
@@ -539,7 +546,9 @@ claim remain open.
 - Local and production PostgreSQL 16 migrations are applied through
   `schemes.0020_scheme_enrolment_requests` and
   `socialaccount.0006_alter_socialaccount_extra_data`.
-- 369 tests pass, including the disabled-first PWA manifest, declared icon dimensions,
+- Environment-template coverage verifies every setting referenced by Django plus the
+  media-storage environment contract, and verifies production-only Compose inputs.
+- 378 tests pass, including the disabled-first PWA manifest, declared icon dimensions,
   network-only navigation worker, strict three-asset cache allowlist, generic offline
   response, mutation non-interception, and rollback cleanup, plus controlled Google
   credential linking, social-signup and
@@ -695,7 +704,9 @@ claim remain open.
 Execute the bounded customer journey matrix for the accepted Internal Testing build:
 password and linked-Google authentication, registration/enrolment isolation,
 Razorpay handoff and return, checkout cancellation/expiry/pause, receipts/statements,
-process death, update behavior, accessibility, and no-secret logs. Resolve
+process death, update behavior, accessibility, and no-secret logs. Use the executable
+matrix in `docs/MOBILE_RELEASE_READINESS.md` and stop on any critical/high,
+financial-integrity, identity-boundary, or data-exposure failure. Resolve
 server-enforced protection for
 the private Android repository. Finish qualified Financial-features/retention review
 and `FW-PRIV-001B`
