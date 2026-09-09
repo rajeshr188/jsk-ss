@@ -12,9 +12,13 @@ cached or queued. Offline submission and disable/re-enable cleanup passed withou
 server mutation. The no-code
 `FW-MOBILE-001` records the verified Play organization, registered permanent package,
 and existing Play App Signing identity without storing private account data or the
-D-U-N-S number. The exact Play fingerprint is now published and independently
-compared on the canonical origin in release `1826afec8628d4f9288c1625091974687af7aba0`.
-Installed Play-signed association, account/recovery role evidence, qualified
+D-U-N-S number. The originally recorded Play fingerprint is published on the
+canonical origin in release `1826afec8628d4f9288c1625091974687af7aba0`. A signed
+Internal Testing bundle was accepted by Play on 9 September 2026, and read-only
+device inspection found that Play delivered it under an additional Google-managed
+app-signing certificate. The additive certificate-keyset correction is implemented
+but still requires production rollout and installed-device reverification.
+Account/recovery role evidence, qualified
 policy/retention, deletion implementation, and final Data Safety gates remain open.
 The private business-owned Android TWA repository now has an API
 29-to-36 customer shell and a successful unsigned GitHub-hosted build; it adds no
@@ -377,17 +381,26 @@ claim remain open.
   registered the package, and obtained its Play App Signing SHA-256 identity. The
   private `Jai-Sri-Krishna-Jewellery/jsk-savings-android` repository was then
   initialized at commits `983226f` and `7317a51`; Android CI run `34235149531`
-  passed release invariants, release lint, and an unsigned API 36 AAB build. The
-  upload-key path is outside the repository and no key was created. Play Billing,
+  passed release invariants, release lint, and an unsigned API 36 AAB build. On 9
+  September the owner created the distinct upload key outside both repositories and
+  Linode, verified two encrypted backups, configured encrypted GitHub secrets, and
+  workflow run `34263042974` built and verified the signed AAB. Play accepted that
+  bundle for Internal Testing and displayed the expected upload-certificate
+  fingerprint. Play Billing,
   location, notification permission, application secrets, and a mobile API are
   absent. Server-enforced branch protection remains unavailable for this private
   organization repository on the current GitHub plan, so an upgrade or an explicitly
   approved public-source decision is still required for that enforcement. The
-  owner supplied the exact Play App Signing SHA-256 fingerprint, and production
-  release `1826afec8628d4f9288c1625091974687af7aba0` now serves the exact Digital
-  Asset Links response for that certificate and registered package. Disabled-first,
-  direct-200, JSON content-type, exact-value, cache, and health checks passed. The
-  remaining gates are verification from a Play-signed build,
+  owner supplied the first Play App Signing SHA-256 fingerprint, and production
+  release `1826afec8628d4f9288c1625091974687af7aba0` serves the Digital Asset Links
+  response for that certificate and registered package. Disabled-first, direct-200,
+  JSON content-type, exact-value, cache, and health checks passed. Read-only inspection
+  of the Play-installed APK independently proved Google signer
+  `B8:A3:25:32:0B:80:2C:2A:E1:9B:EA:F7:30:27:C4:89:E5:2D:D6:1F:E4:60:F2:99:2F:6E:C6:54:14:24:17:B4`;
+  Android and Google's verification API rejected that installed certificate because
+  the origin still listed only the first certificate. The source now retains both
+  Play certificates and explicitly excludes the upload key. The remaining gates are
+  production rollout and successful installed association,
   payments/recovery/role evidence,
   qualified review of the Financial features classification and record-retention
   basis, an implemented account-deletion request path, and final dependency-level
@@ -667,9 +680,10 @@ claim remain open.
 
 ## Next recommended step
 
-Create and rehearse a distinct recoverable upload key outside repositories and
-Linode, produce a signed bundle for Play Internal Testing, and verify the published
-Digital Asset Links association from the Play-signed installed build. Resolve
+Deploy the additive Play App Signing certificate keyset, verify Google links both
+certificates, force installed-device reverification, and confirm the TWA opens the
+canonical origin without browser chrome. Then execute the bounded customer journey
+matrix for the accepted Internal Testing build. Resolve
 server-enforced protection for
 the private Android repository. Finish qualified Financial-features/retention review
 and `FW-PRIV-001B`

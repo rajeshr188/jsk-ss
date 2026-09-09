@@ -39,7 +39,9 @@ uv run --env-file .env python manage.py test pages.test_pwa
 
 The same suite proves that Android Digital Asset Links is 404 while disabled and,
 when enabled, returns a read-only JSON statement containing only the permanent
-package and reviewed Play App Signing fingerprint at the exact well-known path.
+package and reviewed Play App Signing certificate keyset at the exact well-known
+path. It rejects accidental inclusion of the separately controlled upload-key
+certificate.
 
 ## Manual smoke test
 

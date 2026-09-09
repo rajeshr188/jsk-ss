@@ -7,11 +7,12 @@ financial logic.
 
 Status: **in progress — `FW-MOBILE-002` is production-accepted, the verified
 organization owns the registered Play package and Play-managed app-signing identity,
-and the isolated Android TWA foundation passes local and GitHub-hosted unsigned
-release builds. The owner supplied the exact Play App Signing fingerprint and the
-canonical origin now has a disabled-by-default Digital Asset Links implementation.
-Production association verification, Financial classification, retention/deletion,
-Data Safety, signed release, device, and Play release gates remain open.**
+and Play accepted a GitHub-built, upload-key-signed AAB for Internal Testing. Device
+inspection proved that the installed build uses an additional Google-managed Play
+app-signing certificate, so an additive origin keyset correction is awaiting rollout.
+Successful no-browser-chrome association, Financial classification,
+retention/deletion, Data Safety, device-journey, and broader Play release gates remain
+open.**
 
 ## Product boundary
 
@@ -139,25 +140,33 @@ the current organization plan, requiring either a paid plan or making the reposi
 public. Neither change is implied by this record; until the owner chooses one,
 feature-branch/green-PR discipline is procedural rather than server-enforced.
 
-On 8 September 2026 the owner supplied the exact **Play App Signing key certificate**
+On 8 September 2026 the owner supplied the first **Play App Signing key certificate**
 SHA-256 fingerprint for the registered package:
 
 `25:78:42:37:4E:7A:C9:62:C8:AF:90:11:E3:8C:86:32:E2:08:DF:E4:6E:77:C0:86:59:7F:31:E7:32:D7:07:97`
 
-This public certificate identity is intentionally recorded; no private signing
+On 9 September read-only inspection of the APK delivered through Play Internal
+Testing established the additional Google-managed signing certificate:
+
+`B8:A3:25:32:0B:80:2C:2A:E1:9B:EA:F7:30:27:C4:89:E5:2D:D6:1F:E4:60:F2:99:2F:6E:C6:54:14:24:17:B4`
+
+These public certificate identities are intentionally recorded; no private signing
 material is present. On 8 September 2026 production release
 `1826afec8628d4f9288c1625091974687af7aba0` published
 `/.well-known/assetlinks.json` after a disabled-first rollout. The canonical HTTPS
 origin returned a direct HTTP/2 200, `application/json`, a one-hour public cache
-policy, and only this package/fingerprint association; the exact automated comparison
-and both health checks passed. The immutable image was
+policy, and the then-known package/fingerprint association; the exact automated
+comparison and both health checks passed. The immutable image was
 `ghcr.io/rajeshr188/jsk-savings@sha256:ac31ab070a9560a64b1239fff7b883573a6732b69b21fd133e858298750a2bf8`,
 with release `049944412aa09668d6b04e45cabee2bc58dadc42` and image
 `ghcr.io/rajeshr188/jsk-savings@sha256:4f5d10d014c3f516c4194fe192a01df57387c5353c232aa80a88ad18a99bce02`
 retained as the rollback pair. The managed-PostgreSQL recovery point was recorded as
-8:00 PM IST that day; no migration or database mutation was required. Verification
-from an installed Play-signed build remains open. Do not add an upload-key or local
-debug certificate fingerprint to the production statement.
+8:00 PM IST that day; no migration or database mutation was required. The installed
+build exposed the additive keyset requirement when Android rejected the second
+certificate against the single-certificate origin response. Production deployment
+of both Play certificates and a successful no-browser-chrome device recheck remain
+open. Do not add an upload-key or local debug certificate fingerprint to the
+production statement.
 
 ## Store listing copy draft
 
@@ -255,11 +264,20 @@ an owner-controlled business Google account:
     signing private keys.
 
 The owner completed organization verification, draft-app creation, package
-registration, and Play-managed signing-identity creation on 8 September 2026. The
-next signing task is not to invent another app-signing key: it is to capture and
-independently compare the Play App Signing SHA-256 fingerprint, create a distinct
-recoverable upload key outside every repository and serving host, and use only the
-Play fingerprint in the production Digital Asset Links statement.
+registration, and Play-managed signing-identity creation on 8 September 2026. On 9
+September the distinct upload key was created outside every repository and serving
+host, two encrypted owner-controlled backups were checksum-verified, and encrypted
+GitHub secrets produced a signature-verified AAB in workflow run `34263042974`. Play
+accepted it for Internal Testing and displayed the matching upload-certificate
+fingerprint. The upload certificate is not a Digital Asset Links identity.
+
+Read-only inspection of the app installed from Play independently identified Google
+app-signing certificate
+`B8:A3:25:32:0B:80:2C:2A:E1:9B:EA:F7:30:27:C4:89:E5:2D:D6:1F:E4:60:F2:99:2F:6E:C6:54:14:24:17:B4`.
+The installed package, version `1.0.0`/code `1`, and canonical origin were correct,
+but Android reported failed domain verification because production listed only the
+previously recorded Play certificate. The safe correction retains both Play-managed
+certificates and continues excluding the distinct upload key.
 
 ## Financial-features declaration draft
 

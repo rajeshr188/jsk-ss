@@ -6,9 +6,17 @@ from django.test import SimpleTestCase, TestCase, override_settings
 from django.urls import reverse
 
 
-PLAY_APP_SIGNING_SHA256 = (
+PLAY_APP_SIGNING_SHA256_REGISTERED = (
     "25:78:42:37:4E:7A:C9:62:C8:AF:90:11:E3:8C:86:32:"
     "E2:08:DF:E4:6E:77:C0:86:59:7F:31:E7:32:D7:07:97"
+)
+PLAY_APP_SIGNING_SHA256_DELIVERED = (
+    "B8:A3:25:32:0B:80:2C:2A:E1:9B:EA:F7:30:27:C4:89:"
+    "E5:2D:D6:1F:E4:60:F2:99:2F:6E:C6:54:14:24:17:B4"
+)
+UPLOAD_KEY_SHA256 = (
+    "F1:EF:0D:80:86:ED:08:9B:D1:3E:41:FF:03:F4:E3:06:"
+    "7D:31:7D:AD:AB:73:F1:C3:37:C7:BC:7D:F5:C8:2B:A6"
 )
 
 
@@ -36,14 +44,22 @@ class AndroidAssetLinksTests(TestCase):
                     "target": {
                         "namespace": "android_app",
                         "package_name": "com.jaishrikrishnajewellery.savings",
-                        "sha256_cert_fingerprints": [PLAY_APP_SIGNING_SHA256],
+                        "sha256_cert_fingerprints": [
+                            PLAY_APP_SIGNING_SHA256_REGISTERED,
+                            PLAY_APP_SIGNING_SHA256_DELIVERED,
+                        ],
                     },
                 }
             ],
         )
-        fingerprint = response.json()[0]["target"]["sha256_cert_fingerprints"][0]
-        self.assertEqual(len(fingerprint.split(":")), 32)
-        self.assertRegex(fingerprint, r"^(?:[0-9A-F]{2}:){31}[0-9A-F]{2}$")
+        fingerprints = response.json()[0]["target"]["sha256_cert_fingerprints"]
+        self.assertEqual(len(fingerprints), 2)
+        self.assertEqual(len(set(fingerprints)), len(fingerprints))
+        self.assertNotIn(UPLOAD_KEY_SHA256, fingerprints)
+        for fingerprint in fingerprints:
+            with self.subTest(fingerprint=fingerprint):
+                self.assertEqual(len(fingerprint.split(":")), 32)
+                self.assertRegex(fingerprint, r"^(?:[0-9A-F]{2}:){31}[0-9A-F]{2}$")
         self.assertEqual(
             reverse("android_asset_links"),
             "/.well-known/assetlinks.json",

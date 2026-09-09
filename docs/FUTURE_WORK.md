@@ -184,12 +184,13 @@ recorded limitations are not lost.
   now drafted there. The owner approved the permanent package/store identity as
   `com.jaishrikrishnajewellery.savings` on 5 September 2026. On 8 September the
   verified Play organization created the draft app, registered that package, and
-  obtained a Play App Signing SHA-256 identity. The exact public fingerprint is now
-  recorded in the canonical mobile readiness record and a disabled-by-default Django
-  Digital Asset Links response is implemented. Release `1826afec` now publishes the
-  exact package/Play-fingerprint binding after a successful disabled-first rollout
-  and independent response comparison. Completion remains blocked on installed
-  Play-signed verification, payments/recovery/role evidence, qualified financial
+  obtained a Play App Signing SHA-256 identity. Release `1826afec` publishes the
+  registered package and first Play certificate after a successful disabled-first
+  rollout. A signed Internal Testing bundle was accepted on 9 September; the installed
+  APK proved an additional Google-managed Play certificate that must be retained
+  additively in the origin statement. Completion remains blocked on production
+  rollout and installed Play-signed verification, payments/recovery/role evidence,
+  qualified financial
   classification and retention review, an implemented
   deletion-request workflow,
   and a release-candidate Data Safety review. The organization D-U-N-S value remains
@@ -204,10 +205,11 @@ recorded limitations are not lost.
   Foundation state on 8 September 2026: the private organization repository
   `Jai-Sri-Krishna-Jewellery/jsk-savings-android` is initialized with the permanent
   package, API 29 floor/API 36 target, secret/permission invariants, and passing local
-  and GitHub-hosted release lint plus unsigned AAB builds. The exact Play fingerprint
-  is recorded and its exact origin response is production-published and compared;
-  recoverable upload-key custody, installed Play-signed verification, signed
-  internal bundle, device/journey validation, and release evidence remain open.
+  and GitHub-hosted builds. The recoverable upload key has two verified encrypted
+  backups; encrypted GitHub secrets produced a verified signed AAB that Play accepted
+  for Internal Testing. Device inspection discovered the additive Play signing
+  certificate keyset requirement. Its origin rollout, successful no-browser-chrome
+  association, device/journey validation, and final release evidence remain open.
   GitHub cannot enforce protection on this private organization repository under the
   current plan; retain procedural green-PR discipline until an upgrade or separately
   approved public-source decision resolves that gate.

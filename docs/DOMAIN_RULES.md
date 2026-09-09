@@ -450,6 +450,11 @@ authorize new production CASH enrolments or contributions under `SCH-007`.
   reuse disabled; no network response is written to Cache Storage, and non-GET or
   non-navigation requests are not intercepted. Disabling the PWA retires its worker
   and named static cache on the next successful online page load.
+- **MOB-012:** The Digital Asset Links statement contains every Play App Signing
+  certificate observed for supported Play-delivered builds and no upload or debug
+  certificate. Signing-key rotation or Play delivery segmentation is handled by an
+  additive certificate keyset; removing an established Play certificate requires
+  separate installed-device evidence.
 
 ## Precision
 
