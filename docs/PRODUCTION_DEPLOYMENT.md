@@ -599,6 +599,7 @@ ALLOWED_HOSTS=savings.example.com
 CSRF_TRUSTED_ORIGINS=https://savings.example.com
 WAGTAILADMIN_BASE_URL=https://savings.example.com
 PUBLIC_CATALOGUE_ENABLED=False
+PUBLIC_BLOG_ENABLED=False
 
 MEDIA_STORAGE_BACKEND=r2
 R2_ACCOUNT_ID=<32-character-cloudflare-account-id>
@@ -665,6 +666,10 @@ Configuration rules:
   With the flag disabled—or when a CMS page is draft, restricted, or unpublished—the
   stable `/about/` and `/our-story/` routes serve their reviewed Django fallbacks.
   Enable it only after editorial authorization and the live About revision pass review.
+- Keep `PUBLIC_BLOG_ENABLED=False` through the blog schema and authorization rollout.
+  Publishing the blog root or an article while disabled must not make either route
+  public. Enable it only after genuine content, approval, direct-route, rendition,
+  metadata, accessibility, and mobile checks pass.
 - `MEDIA_STORAGE_BACKEND=r2` is mandatory when Wagtail is deployed. Use a separate
   R2 Standard bucket and Object Read & Write token for each environment. Scope each
   token to its one bucket; never expose either credential to browser code or logs.
@@ -1513,6 +1518,36 @@ routes. Verify `/our-story/` directly only if its CMS revision was deliberately
 published; it must not appear in navigation. Fast rollback is to set the flag to
 `False` and recreate `web`, which immediately restores both reviewed Django fallbacks
 without deleting Wagtail revisions or media.
+
+For a release containing `FW-CMS-004`, keep `PUBLIC_BLOG_ENABLED=False`, apply the
+additive `blog.0001_initial` migration, and reconcile the dedicated Blog groups,
+media collection, draft root, and approval workflow while Caddy is stopped:
+
+```bash
+docker compose --env-file .env.production -f compose.production.yml \
+  run --rm --no-deps web python manage.py configure_blog_permissions
+docker compose --env-file .env.production -f compose.production.yml \
+  run --rm --no-deps web python manage.py configure_blog_permissions --check
+```
+
+The command is idempotent and creates no user membership or public article. It resets
+only `Blog Editors`, `Blog Publishers`, and `Blog Administrators` to their reviewed
+page/media scopes. Explicitly assign active staff, create genuine business-authored
+content, and use the Blog workflow to preview and approve the root and posts. With the
+flag false, confirm `/blog/` and published article URLs both return `404` and no
+Journal link appears in primary or footer navigation.
+
+Before enabling, review factual accuracy and confirm that articles contain no Scheme
+Rates, authoritative plan/product/policy terms, personalized advice, or financial
+claims. Verify canonical and social metadata, meaningful image alt text, responsive
+R2 renditions, empty/paginated states, and mobile/desktop accessibility. Then set
+`PUBLIC_BLOG_ENABLED=True`, validate Compose, recreate `web`, recreate Caddy, and
+verify `/blog/`, each approved post, and both navigation links. Re-run CMS, R2,
+authentication, payment, grade, and financial integrity checks.
+
+Fast public rollback is to set `PUBLIC_BLOG_ENABLED=False` and recreate `web` and
+Caddy. Preserve `blog` tables, Wagtail revisions, workflow history, and R2 objects;
+never delete or reverse them merely to hide public discovery.
 
 For the `FW-PRODUCT-001` metal-only boundary release, repeat the read-only CASH audit
 immediately before stopping traffic. The approved baseline is one open CASH account,

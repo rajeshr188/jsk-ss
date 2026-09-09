@@ -129,6 +129,7 @@ INSTALLED_APPS = [
     "django_filters",
     # Local
     "accounts",
+    "blog.apps.BlogConfig",
     "catalog.apps.CatalogConfig",
     "pages",
     "schemes",
@@ -177,6 +178,7 @@ TEMPLATES = [
                 "accounts.context_processors.public_customer_registration",
                 "accounts.context_processors.customer_google_login",
                 "accounts.context_processors.customer_account_deletion",
+                "blog.context_processors.public_blog_navigation",
                 "catalog.context_processors.public_catalogue_navigation",
                 "pages.context_processors.pwa",
             ],
@@ -313,7 +315,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # Wagtail is a bounded catalogue CMS. Existing public and financial routes remain
 # ordinary Django views until their own approved implementation phase.
-WAGTAIL_SITE_NAME = "Jai Sri Krishna Jewellery Catalogue"
+WAGTAIL_SITE_NAME = "Jai Sri Krishna Jewellery CMS"
 WAGTAILADMIN_BASE_URL = os.getenv(
     "WAGTAILADMIN_BASE_URL",
     "http://localhost:8000" if DEBUG else "https://jaishrikrishnajewellery.com",
@@ -324,6 +326,9 @@ PUBLIC_CATALOGUE_ENABLED = env_bool("PUBLIC_CATALOGUE_ENABLED", False)
 # About and Our Story retain their reviewed Django fallbacks until their live Wagtail
 # revisions have passed rollout checks and this separate gate is enabled.
 PUBLIC_EDITORIAL_PAGES_ENABLED = env_bool("PUBLIC_EDITORIAL_PAGES_ENABLED", False)
+# The blog root and posts remain publicly unreachable until their isolated content,
+# authorization, and production checks pass and this gate is enabled.
+PUBLIC_BLOG_ENABLED = env_bool("PUBLIC_BLOG_ENABLED", False)
 WAGTAILSEARCH_BACKENDS = {
     "default": {
         "BACKEND": "wagtail.search.backends.database",

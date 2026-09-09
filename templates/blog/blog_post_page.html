@@ -1,0 +1,55 @@
+{% extends "_base.html" %}
+{% load wagtailcore_tags wagtailimages_tags %}
+
+{% block title %}{{ page.seo_title|default:page.title }} | Jai Sri Krishna Jewellery{% endblock %}
+{% block meta_description %}{{ page.search_description|default:page.summary }}{% endblock %}
+{% block canonical_url %}<link rel="canonical" href="{{ page.full_url }}">{% endblock %}
+{% block social_meta %}
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="{{ page.seo_title|default:page.title }}">
+  <meta property="og:description" content="{{ page.search_description|default:page.summary }}">
+  <meta property="og:url" content="{{ page.full_url }}">
+  <meta property="article:published_time" content="{{ page.publication_date|date:'Y-m-d' }}">
+  {% if page.featured_image %}{% image page.featured_image fill-1200x800 format-webp as social_image %}<meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{{ social_image.url }}"><meta property="og:image:alt" content="{{ page.featured_image_alt }}">{% endif %}
+{% endblock %}
+
+{% block content %}
+<nav class="small mb-4" aria-label="Breadcrumb">
+  <ol class="breadcrumb mb-0">
+    <li class="breadcrumb-item"><a href="{% pageurl blog_index %}">{{ blog_index.title }}</a></li>
+    <li class="breadcrumb-item active" aria-current="page">{{ page.title }}</li>
+  </ol>
+</nav>
+
+<article class="mx-auto" style="max-width: 880px;">
+  <header class="mb-4 mb-lg-5">
+    <p class="page-eyebrow">Jewellery journal</p>
+    <h1 class="display-5">{{ page.title }}</h1>
+    <p class="lead text-secondary">{{ page.summary }}</p>
+    <p class="small text-secondary mb-0">By {{ page.author_name }} &middot; <time datetime="{{ page.publication_date|date:'Y-m-d' }}">{{ page.publication_date|date:"j F Y" }}</time></p>
+  </header>
+
+  {% if page.featured_image %}
+    {% image page.featured_image fill-1200x800 format-webp as hero_image %}
+    <figure class="mb-4 mb-lg-5">
+      <img class="img-fluid rounded-4" src="{{ hero_image.url }}" width="{{ hero_image.width }}" height="{{ hero_image.height }}" alt="{{ page.featured_image_alt }}" fetchpriority="high" decoding="async">
+    </figure>
+  {% endif %}
+
+  <div class="rich-text fs-5">{{ page.body|richtext }}</div>
+</article>
+
+<aside class="surface-card mt-5 mx-auto" style="max-width: 880px;" aria-labelledby="journal-showroom-heading">
+  <p class="page-eyebrow">Personal guidance</p>
+  <h2 class="h3" id="journal-showroom-heading">Continue at our Vellore showroom</h2>
+  <p class="text-secondary">Articles provide general jewellery information. Product availability, final pricing, and savings-plan terms are confirmed through their authoritative showroom and application records.</p>
+  <div class="d-flex flex-column flex-sm-row gap-2">
+    <a class="btn btn-primary" href="{% url 'pricing' %}">View savings plans</a>
+    <a class="btn btn-outline-primary" href="{% url 'contact' %}">Contact the showroom</a>
+  </div>
+</aside>
+
+<div class="mt-5 pt-3 border-top mx-auto" style="max-width: 880px;">
+  <a class="fw-semibold" href="{% pageurl blog_index %}">&larr; Back to {{ blog_index.title }}</a>
+</div>
+{% endblock %}
