@@ -40,18 +40,25 @@ claim remain open.
   navigation, wider financial data surfaces, consistent cards/forms/tables,
   refreshed public and authenticated journeys, and keyboard/reduced-motion
   accessibility improvements; no new frontend framework or dependency was added.
+- Mobile/TWA presentation refinement with safe-area-aware page chrome, a sticky and
+  bounded mobile navigation menu, compact conversion-page hierarchy, single-column
+  thumb-sized action groups, readable stacked plan facts, a condensed journey
+  timeline, touch-friendly tables/forms, and a two-column mobile footer. Financial,
+  authentication, enrolment, and offline behavior are unchanged.
 - Figma-principle refinement pass with WCAG-AA small-text contrast, structured
   financial form fieldsets, progressively disclosed owner records, consistent
   account-recovery and owner-list surfaces, explicit table-header semantics, and
   mobile customer contribution/redemption cards; gold-label, Bootstrap secondary-
   text, and warm-gradient homepage colors meet axe/WCAG AA normal-text contrast
   thresholds against their lightest-risk theme surfaces.
-- Conversion-focused public homepage with a prospect-first plan/showroom journey,
-  distinct existing-customer access, an explicit INR-to-locked-metal-to-jewellery
-  visual redemption flow, concise gold/silver copy, local business details,
+- Conversion-focused public homepage with a concise jewellery-goal proposition,
+  role- and feature-aware customer-access/enrolment actions, up to three live
+  published-plan previews, distinct existing-customer access, local business details,
   BIS hallmark/HUID trust cues, embedded Bootstrap Icons, and one optimized,
-  self-hosted Pexels jewellery photograph clearly labelled as illustrative; repeated
-  plan/contact actions and pre-enrolment policy links remain prominent.
+  self-hosted Pexels jewellery photograph clearly labelled as illustrative. The
+  detailed registration-to-redemption explanation now lives on a dedicated,
+  Django-owned How It Works page; the homepage links there while preserving the
+  non-binding request and showroom-confirmed agreement boundary.
 - Owner/customer roles, customer records, reusable plans, and snapshotted enrolments.
 - Owner customer-management flow and isolated customer scheme view.
 - Owner-only, one-time customer password-setup invitations with digest-only secrets,

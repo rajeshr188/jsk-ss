@@ -8,7 +8,7 @@ from django.templatetags.static import static
 from django.views.decorators.http import require_GET
 from django.views.generic import ListView, TemplateView
 
-from schemes.models import SchemePlan
+from schemes.selectors import get_public_scheme_plans
 from .models import AboutPage, OurStoryPage
 from .selectors import public_editorial_page
 
@@ -137,6 +137,14 @@ def ready_health(request):
 class HomePageView(TemplateView):
     template_name = "pages/home.html"
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["featured_plans"] = get_public_scheme_plans(limit=3)
+        context["customer_enrolment_requests_enabled"] = (
+            settings.CUSTOMER_ENROLMENT_REQUESTS_ENABLED
+        )
+        return context
+
 
 class EditorialPageFallbackMixin:
     editorial_page_model = None
@@ -168,13 +176,7 @@ class PricingPageView(ListView):
     context_object_name = "plans"
 
     def get_queryset(self):
-        return SchemePlan.objects.filter(
-            active=True,
-            publicly_listed=True,
-            metal_offerings__active=True,
-        ).prefetch_related("metal_offerings__metal_grade").distinct().order_by(
-            "name", "code"
-        )
+        return get_public_scheme_plans()
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -182,6 +184,10 @@ class PricingPageView(ListView):
             settings.CUSTOMER_ENROLMENT_REQUESTS_ENABLED
         )
         return context
+
+
+class HowItWorksPageView(TemplateView):
+    template_name = "pages/how_it_works.html"
 
 
 class TermsPageView(TemplateView):

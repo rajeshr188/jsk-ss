@@ -8,7 +8,7 @@ from django.core.exceptions import ValidationError
 from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.db import OperationalError
-from django.test import SimpleTestCase, TestCase, override_settings
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from wagtail.models import (
     Collection,
@@ -34,43 +34,127 @@ from pages.permissions import (
     EDITORIAL_WORKFLOW,
     editorial_permission_configuration_errors,
 )
-from schemes.models import MetalGrade, SchemePlan, SchemePlanOffering
+from schemes.models import Customer, MetalGrade, SchemePlan, SchemePlanOffering
 from schemes.tests.grade_helpers import metal_grade_for
 
 
-@override_settings(PUBLIC_CATALOGUE_ENABLED=False)
-class PublicPageTests(SimpleTestCase):
+@override_settings(
+    PUBLIC_CATALOGUE_ENABLED=False,
+    PUBLIC_CUSTOMER_REGISTRATION_ENABLED=True,
+    CUSTOMER_ENROLMENT_REQUESTS_ENABLED=True,
+)
+class PublicPageTests(TestCase):
+    def setUp(self):
+        self.plan = SchemePlan.objects.create(
+            name="Golden Future Plan",
+            code="HOME-PUBLIC",
+            minimum_months=12,
+            default_months=12,
+            amount_rule=SchemePlan.AmountRule.FIXED,
+            frequency_rule=SchemePlan.FrequencyRule.ONCE_PER_MONTH,
+            fixed_contribution_amount=Decimal("1000.00"),
+            minimum_contribution=Decimal("1000.00"),
+            maximum_contribution=Decimal("1000.00"),
+            active=True,
+            publicly_listed=True,
+        )
+        self.grade = metal_grade_for(
+            MetalGrade.Metal.GOLD,
+            code=MetalGrade.GOLD_22K_916,
+        )
+        SchemePlanOffering.objects.create(
+            plan=self.plan,
+            metal_grade=self.grade,
+            active=True,
+        )
+
     def test_home_is_branded(self):
         response = self.client.get(reverse("home"))
         self.assertContains(response, "Jai Sri Krishna Jewellery")
         self.assertContains(
-            response, "Plan today. Choose the jewellery you love tomorrow."
+            response, "Your jewellery goal starts with one clear plan."
         )
-        self.assertContains(
-            response,
-            "Your INR contributions accumulate a recorded quantity",
-        )
-        self.assertContains(response, "A contribution does not reserve or purchase")
-        self.assertContains(response, "It is not a bank deposit")
-        self.assertContains(response, "From contribution to jewellery")
-        self.assertContains(response, "Lock the rate")
-        self.assertNotContains(response, "Build gold grams")
-        self.assertNotContains(response, "Build silver grams")
+        self.assertContains(response, "Get started")
+        self.assertContains(response, self.plan.name)
+        self.assertContains(response, "₹1000")
+        self.assertContains(response, "Get customer access")
+        self.assertContains(response, "An enrolment request is non-binding")
         self.assertContains(response, "BIS-hallmarked jewellery")
-        self.assertContains(response, "Hallmark and HUID verification at purchase")
         self.assertContains(response, "images/home-jewellery.webp")
         self.assertContains(response, "Illustrative jewellery")
-        self.assertContains(response, "bi-currency-rupee")
         self.assertContains(response, "bi-patch-check-fill")
         self.assertNotContains(response, "Cash")
         self.assertNotContains(response, "cash")
-        self.assertContains(response, "No public signup")
+        self.assertNotContains(response, "No public signup")
+        self.assertNotContains(response, "From contribution to jewellery")
+        self.assertNotContains(response, "Lock the rate")
         self.assertContains(response, f'href="{reverse("pricing")}"')
-        self.assertContains(response, "Savings plans")
+        self.assertContains(response, f'href="{reverse("how_it_works")}"')
+        self.assertContains(response, f'href="{reverse("customer_registration")}"')
         self.assertNotContains(response, "Plans &amp; pricing")
         self.assertContains(response, f'href="{reverse("contact")}"')
         self.assertContains(response, f'href="{reverse("account_login")}"')
         self.assertNotContains(response, "Django starter project")
+
+    def test_approved_customer_can_request_featured_plan_directly(self):
+        user = get_user_model().objects.create_user(
+            username="home-customer@example.com",
+            email="home-customer@example.com",
+            password="correct-horse-battery-staple",
+            role=get_user_model().Role.CUSTOMER,
+        )
+        Customer.objects.create(
+            user=user,
+            customer_number="CUS-HOME",
+            full_name="Homepage Customer",
+            mobile_number="9489481436",
+            address="Vellore",
+        )
+        self.client.force_login(user)
+
+        response = self.client.get(reverse("home"))
+
+        self.assertContains(response, "Choose a savings plan")
+        self.assertContains(response, "Track my requests")
+        self.assertContains(
+            response,
+            f'href="{reverse("schemes:scheme_enrolment_request_create", args=[self.plan.pk])}"',
+        )
+        self.assertContains(response, "Request this plan")
+
+    @override_settings(CUSTOMER_ENROLMENT_REQUESTS_ENABLED=False)
+    def test_home_does_not_offer_direct_enrolment_request_when_disabled(self):
+        user = get_user_model().objects.create_user(
+            username="disabled-home-customer@example.com",
+            email="disabled-home-customer@example.com",
+            password="correct-horse-battery-staple",
+            role=get_user_model().Role.CUSTOMER,
+        )
+        Customer.objects.create(
+            user=user,
+            customer_number="CUS-HOME-OFF",
+            full_name="Disabled Homepage Customer",
+            mobile_number="9489481436",
+            address="Vellore",
+        )
+        self.client.force_login(user)
+
+        response = self.client.get(reverse("home"))
+
+        self.assertNotContains(response, "Request this plan")
+        self.assertNotContains(response, "Track my requests")
+
+    def test_how_it_works_holds_the_detailed_customer_journey(self):
+        response = self.client.get(reverse("how_it_works"))
+
+        self.assertContains(response, "Five clear stages")
+        self.assertContains(response, "Request access")
+        self.assertContains(response, "An online request is the beginning")
+        self.assertContains(response, "See the rate first")
+        self.assertContains(response, "Credit the exact grade")
+        self.assertContains(response, "A contribution does not reserve or purchase")
+        self.assertContains(response, f'href="{reverse("pricing")}"')
+        self.assertContains(response, f'href="{reverse("customer_registration")}"')
 
     def test_about_page(self):
         response = self.client.get(reverse("about"))
@@ -116,6 +200,7 @@ class PublicPageTests(SimpleTestCase):
             "about",
             "contact",
             "pricing",
+            "how_it_works",
             "terms",
             "privacy",
             "cancellation_refund",
@@ -181,6 +266,22 @@ class PublicPricingPageTests(TestCase):
         self.assertContains(response, "₹500.00–₹5000.00")
         self.assertContains(response, "Contact us to enrol")
         self.assertContains(response, "Existing customer login")
+
+    @override_settings(
+        CUSTOMER_ENROLMENT_REQUESTS_ENABLED=True,
+        PUBLIC_CUSTOMER_REGISTRATION_ENABLED=True,
+    )
+    def test_pricing_getting_started_offers_public_customer_access(self):
+        self.make_plan(code="ACCESS", publicly_listed=True)
+
+        response = self.client.get(reverse("pricing"))
+
+        self.assertContains(response, "Request customer access", count=2)
+        self.assertContains(
+            response,
+            f'href="{reverse("customer_registration")}"',
+        )
+        self.assertNotContains(response, "Contact us to enrol")
 
     def test_unpublished_plan_is_private_by_default(self):
         plan = self.make_plan(code="DEFAULT")

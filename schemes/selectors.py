@@ -24,6 +24,7 @@ from .models import (
     Redemption,
     SchemeAccount,
     SchemeEnrolmentRequest,
+    SchemePlan,
     SchemeReminder,
 )
 
@@ -281,6 +282,22 @@ def get_customer_scheme_summary(user):
 
 def get_owner_customers():
     return Customer.objects.select_related("user").prefetch_related("scheme_accounts")
+
+
+def get_public_scheme_plans(*, limit=None):
+    plans = (
+        SchemePlan.objects.filter(
+            active=True,
+            publicly_listed=True,
+            metal_offerings__active=True,
+        )
+        .prefetch_related("metal_offerings__metal_grade")
+        .distinct()
+        .order_by("name", "code")
+    )
+    if limit is not None:
+        return plans[:limit]
+    return plans
 
 
 def get_owner_customer(customer_id):

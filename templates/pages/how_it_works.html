@@ -1,0 +1,110 @@
+{% extends '_base.html' %}
+
+{% block title %}How Jewellery Savings Work | Jai Sri Krishna Jewellery{% endblock %}
+{% block meta_description %}Understand customer access, scheme enrolment, INR contributions, exact-grade metal crediting, and jewellery redemption at Jai Sri Krishna Jewellery.{% endblock %}
+
+{% block content %}
+<header class="text-center pricing-header mx-auto mb-5">
+  <p class="page-eyebrow">How it works</p>
+  <h1 class="display-4">From a savings plan to jewellery you choose</h1>
+  <p class="lead text-secondary">A clear guide to customer access, showroom-approved enrolment, recorded contributions, and in-person jewellery selection.</p>
+  <div class="mobile-action-group d-flex flex-wrap justify-content-center gap-2 mt-4">
+    <a class="btn btn-jsk" href="{% url 'pricing' %}">Choose a savings plan</a>
+    {% if not user.is_authenticated and public_customer_registration_enabled %}<a class="btn btn-outline-dark" href="{% url 'customer_registration' %}">Request customer access</a>{% endif %}
+  </div>
+</header>
+
+<section class="scheme-journey" aria-labelledby="journey-heading">
+  <div class="text-center mb-4">
+    <p class="page-eyebrow">Your journey</p>
+    <h2 class="h3" id="journey-heading">Five clear stages</h2>
+  </div>
+  <ol class="journey-flow journey-flow--five">
+    <li class="journey-step">
+      <span class="feature-number" aria-hidden="true">1</span>
+      <strong>Request access</strong>
+      <span>Verify your email and await showroom approval</span>
+    </li>
+    <li class="journey-step">
+      <span class="feature-number" aria-hidden="true">2</span>
+      <strong>Choose a plan</strong>
+      <span>Select the amount, duration, and available metal grade</span>
+    </li>
+    <li class="journey-step">
+      <span class="feature-number" aria-hidden="true">3</span>
+      <strong>Confirm enrolment</strong>
+      <span>The showroom reviews current terms before creating an agreement</span>
+    </li>
+    <li class="journey-step">
+      <span class="feature-number" aria-hidden="true">4</span>
+      <strong>Contribute</strong>
+      <span>See the exact-grade rate before each eligible payment</span>
+    </li>
+    <li class="journey-step">
+      <span class="feature-number" aria-hidden="true">5</span>
+      <strong>Choose jewellery</strong>
+      <span>Apply eligible accumulated metal at our Vellore showroom</span>
+    </li>
+  </ol>
+</section>
+
+<section class="mt-5 pt-lg-2" aria-labelledby="before-enrolment-heading">
+  <div class="section-heading">
+    <div>
+      <p class="page-eyebrow">Before enrolment</p>
+      <h2 id="before-enrolment-heading">An online request is the beginning—not the agreement.</h2>
+    </div>
+  </div>
+  <div class="row g-3 g-lg-4">
+    <div class="col-md-4"><article class="card feature-card"><div class="card-body p-4"><h3 class="h5">Customer access</h3><p class="mb-0 text-secondary">Submit your contact details, verify your email, and wait for owner approval. Approval creates a secure customer login only.</p></div></article></div>
+    <div class="col-md-4"><article class="card feature-card"><div class="card-body p-4"><h3 class="h5">Plan request</h3><p class="mb-0 text-secondary">An approved customer may request a displayed plan and metal grade. The request is non-binding and creates no payment access.</p></div></article></div>
+    <div class="col-md-4"><article class="card feature-card"><div class="card-body p-4"><h3 class="h5">Showroom confirmation</h3><p class="mb-0 text-secondary">We contact you, review the current terms, and separately create the savings agreement only after confirmation.</p></div></article></div>
+  </div>
+</section>
+
+<section class="trust-panel mt-5" aria-labelledby="contribution-heading">
+  <div class="row g-4 g-lg-5 align-items-center">
+    <div class="col-lg-5">
+      <p class="page-eyebrow">After enrolment</p>
+      <h2 id="contribution-heading">Each verified contribution becomes a traceable record.</h2>
+      <p class="text-secondary mb-lg-0">Your account keeps the contribution history understandable without turning it into a metal-trading service.</p>
+    </div>
+    <div class="col-lg-7">
+      <div class="row g-3">
+        <div class="col-sm-6"><div class="trust-point"><span class="trust-point__icon" aria-hidden="true">₹</span><div class="trust-point__copy"><strong>Pay in INR</strong><span>Contribute only the amount and frequency allowed by your recorded plan.</span></div></div></div>
+        <div class="col-sm-6"><div class="trust-point"><span class="trust-point__icon" aria-hidden="true"><svg class="bi bi-lock-fill" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8 0a4 4 0 0 1 4 4v2.05a2.5 2.5 0 0 1 2 2.45v5a2.5 2.5 0 0 1-2.5 2.5h-7A2.5 2.5 0 0 1 2 13.5v-5a2.5 2.5 0 0 1 2-2.45V4a4 4 0 0 1 4-4m0 1a3 3 0 0 0-3 3v2h6V4a3 3 0 0 0-3-3"/></svg></span><div class="trust-point__copy"><strong>See the rate first</strong><span>The current rate for your enrolled grade is shown and locked before payment starts.</span></div></div></div>
+        <div class="col-sm-6"><div class="trust-point"><span class="trust-point__icon" aria-hidden="true"><svg class="bi bi-gem" viewBox="0 0 16 16"><path d="M3.1.7a.5.5 0 0 1 .4-.2h9a.5.5 0 0 1 .4.2l2.976 3.974c.149.185.156.45.01.644L8.4 15.3a.5.5 0 0 1-.8 0L.1 5.3a.5.5 0 0 1 0-.6zm11.386 3.785-1.806-2.41-.776 2.413zm-3.633.004.961-2.989H4.186l.963 2.995zM5.47 5.495 8 13.366l2.532-7.876zm-1.371-.999-.78-2.422-1.818 2.425zM1.499 5.5l5.113 6.817-2.192-6.82zm7.889 6.817 5.123-6.83-2.928.002z"/></svg></span><div class="trust-point__copy"><strong>Credit the exact grade</strong><span>Only a verified payment is converted to a recorded quantity of your enrolled grade.</span></div></div></div>
+        <div class="col-sm-6"><div class="trust-point"><span class="trust-point__icon" aria-hidden="true"><svg class="bi bi-file-check" viewBox="0 0 16 16"><path d="M10.854 6.146a.5.5 0 0 1 0 .708l-3 3a.5.5 0 0 1-.708 0l-1.5-1.5a.5.5 0 1 1 .708-.708L7.5 8.793l2.646-2.647a.5.5 0 0 1 .708 0"/><path d="M4 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2zm0 1h8a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1"/></svg></span><div class="trust-point__copy"><strong>Keep the evidence</strong><span>Review payment history, locked rates, metal quantities, receipts, and statements.</span></div></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="card border-0 mt-5" aria-labelledby="redemption-heading">
+  <div class="card-body p-4 p-lg-5">
+    <p class="page-eyebrow">When your plan is eligible</p>
+    <h2 class="h3" id="redemption-heading">Select your jewellery at the showroom.</h2>
+    <p>Your eligible accumulated metal quantity may be applied toward jewellery or an eligible coin of the matching metal under your recorded terms. Jewellery selection, final product price, applicable taxes, making charges, and wastage or value addition are confirmed at the showroom.</p>
+    <p class="mb-0"><strong>A contribution does not reserve or purchase a specific jewellery item.</strong> The website does not provide withdrawals or metal trading.</p>
+  </div>
+</section>
+
+<section class="conversion-panel mt-5" aria-labelledby="how-next-heading">
+  <div>
+    <p class="page-eyebrow">Your next step</p>
+    <h2 id="how-next-heading">Compare the plans and choose what suits your goal.</h2>
+    <p class="mb-0 text-secondary">Questions? Speak with our team before submitting a request.</p>
+  </div>
+  <div class="conversion-actions">
+    <a class="btn btn-jsk" href="{% url 'pricing' %}">View savings plans</a>
+    <a class="btn btn-outline-dark" href="{% url 'contact' %}">Contact the showroom</a>
+  </div>
+</section>
+
+<nav class="pre-enrolment-links mt-4" aria-label="Information to review before enrolment">
+  <span>Review before enrolment:</span>
+  <a href="{% url 'terms' %}">Terms and conditions</a>
+  <a href="{% url 'cancellation_refund' %}">Cancellation and refunds</a>
+  <a href="{% url 'privacy' %}">Privacy policy</a>
+</nav>
+{% endblock %}

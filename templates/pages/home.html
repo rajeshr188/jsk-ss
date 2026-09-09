@@ -1,160 +1,168 @@
 {% extends '_base.html' %}
 {% load static %}
-{% block title %}Gold &amp; Silver Jewellery Plans in Vellore | Jai Sri Krishna Jewellery{% endblock title %}
-{% block meta_description %}Explore showroom-enrolled gold and silver jewellery purchase plans with INR contributions, recorded metal quantities, and clear redemption terms.{% endblock %}
+{% block title %}Gold &amp; Silver Jewellery Savings in Vellore | Jai Sri Krishna Jewellery{% endblock title %}
+{% block meta_description %}Choose a published gold or silver jewellery savings plan, request customer access online, and begin your enrolment journey with Jai Sri Krishna Jewellery in Vellore.{% endblock %}
 
 {% block content %}
 <section class="hero-card hero-card--home mb-5" aria-labelledby="hero-title">
   <div class="row g-4 g-lg-5 align-items-center position-relative">
-    <div class="col-lg-8">
-      <div class="hero-content">
-        <p class="page-eyebrow">Gold and silver jewellery purchase plans</p>
-        <h1 id="hero-title">Plan today. Choose the jewellery you love tomorrow.</h1>
-        <p class="lead">Your INR contributions accumulate a recorded quantity of your enrolled gold or silver grade. Once eligible, apply it toward jewellery at our Vellore showroom.</p>
-        <div class="trust-row" aria-label="Jewellery trust assurances">
-          <span>BIS-hallmarked jewellery</span>
-          <span>Hallmark and HUID verification at purchase</span>
-        </div>
-        <div class="d-flex flex-wrap gap-2 mt-4">
-          <a class="btn btn-jsk btn-lg" href="{% url 'pricing' %}">Explore available plans</a>
-          <a class="btn btn-outline-dark btn-lg" href="{% url 'contact' %}">Talk to us</a>
-        </div>
-        <p class="small mt-3 mb-0">
-          {% if user.is_authenticated %}
-          Already enrolled? <a class="fw-semibold" href="{% url 'schemes:post_login' %}">Open your dashboard</a>.
-          {% else %}
-          Already enrolled? <a class="fw-semibold" href="{% url 'account_login' %}">Sign in to your customer account</a>.
-          {% endif %}
-        </p>
-      </div>
-    </div>
-    <div class="col-lg-4">
-      <aside class="hero-summary hero-visual" aria-labelledby="hero-summary-title">
-        <p class="page-eyebrow mb-2">Your jewellery goal</p>
-        <h2 class="h4 text-center" id="hero-summary-title">Contribute. Accumulate. Choose jewellery.</h2>
-        <figure class="hero-photo">
-          <img src="{% static 'images/home-jewellery.webp' %}" width="900" height="1050" alt="Traditional gold necklace displayed on a dark jewellery bust" fetchpriority="high" decoding="async">
-          <figcaption class="hero-photo__caption">
-            <span>Illustrative jewellery</span>
-          </figcaption>
-        </figure>
-        <div class="hero-route" aria-label="INR contributions become a recorded metal quantity for showroom redemption">
-          <span>INR contributions</span>
-          <span aria-hidden="true">→</span>
-          <span>Showroom redemption</span>
-        </div>
-      </aside>
-    </div>
-  </div>
-</section>
-
-
-<section class="scheme-journey mt-4" aria-labelledby="conversion-explained-heading">
-  <div class="text-center mb-4">
-    <p class="page-eyebrow">How your plan works</p>
-    <h2 class="h3" id="conversion-explained-heading">From contribution to jewellery</h2>
-  </div>
-  <ol class="journey-flow">
-    <li class="journey-step">
-      <span class="journey-icon" aria-hidden="true">
-        <svg class="bi bi-currency-rupee" viewBox="0 0 16 16"><path d="M4 3.06h2.726c1.22 0 2.12.575 2.325 1.724H4v1.051h5.051C8.855 7.001 8 7.558 6.788 7.558H4v1.317L8.437 14h2.11L6.095 8.884h.855c2.316-.018 3.465-1.476 3.688-3.049H12V4.784h-1.345c-.08-.778-.357-1.335-.793-1.732H12V2H4z"/></svg>
-      </span>
-      <strong>Pay in INR</strong>
-      <span>Your scheduled amount</span>
-    </li>
-    <li class="journey-step">
-      <span class="journey-icon" aria-hidden="true">
-        <svg class="bi bi-lock-fill" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8 0a4 4 0 0 1 4 4v2.05a2.5 2.5 0 0 1 2 2.45v5a2.5 2.5 0 0 1-2.5 2.5h-7A2.5 2.5 0 0 1 2 13.5v-5a2.5 2.5 0 0 1 2-2.45V4a4 4 0 0 1 4-4m0 1a3 3 0 0 0-3 3v2h6V4a3 3 0 0 0-3-3"/></svg>
-      </span>
-      <strong>Lock the rate</strong>
-      <span>Shown before payment</span>
-    </li>
-    <li class="journey-step">
-      <span class="journey-icon journey-icon--metal" aria-hidden="true">
-        <svg class="bi bi-gem" viewBox="0 0 16 16"><path d="M3.1.7a.5.5 0 0 1 .4-.2h9a.5.5 0 0 1 .4.2l2.976 3.974c.149.185.156.45.01.644L8.4 15.3a.5.5 0 0 1-.8 0L.1 5.3a.5.5 0 0 1 0-.6zm11.386 3.785-1.806-2.41-.776 2.413zm-3.633.004.961-2.989H4.186l.963 2.995zM5.47 5.495 8 13.366l2.532-7.876zm-1.371-.999-.78-2.422-1.818 2.425zM1.499 5.5l5.113 6.817-2.192-6.82zm7.889 6.817 5.123-6.83-2.928.002z"/></svg>
-      </span>
-      <strong>Accumulate metal</strong>
-      <span>Your enrolled grade is recorded</span>
-    </li>
-    <li class="journey-step">
-      <span class="journey-icon" aria-hidden="true">
-        <svg class="bi bi-shop" viewBox="0 0 16 16"><path d="M2.97 1.35A1 1 0 0 1 3.73 1h8.54a1 1 0 0 1 .76.35l2.609 3.044A1.5 1.5 0 0 1 16 5.37v.255a2.375 2.375 0 0 1-4.25 1.458A2.37 2.37 0 0 1 9.875 8 2.37 2.37 0 0 1 8 7.083 2.37 2.37 0 0 1 6.125 8a2.37 2.37 0 0 1-1.875-.917A2.375 2.375 0 0 1 0 5.625V5.37a1.5 1.5 0 0 1 .361-.976zm1.78 4.275a1.375 1.375 0 0 0 2.75 0 .5.5 0 0 1 1 0 1.375 1.375 0 0 0 2.75 0 .5.5 0 0 1 1 0 1.375 1.375 0 1 0 2.75 0V5.37a.5.5 0 0 0-.12-.325L12.27 2H3.73L1.12 5.045A.5.5 0 0 0 1 5.37v.255a1.375 1.375 0 0 0 2.75 0 .5.5 0 0 1 1 0M1.5 8.5A.5.5 0 0 1 2 9v6h1v-5a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v5h6V9a.5.5 0 0 1 1 0v6h.5a.5.5 0 0 1 0 1H.5a.5.5 0 0 1 0-1H1V9a.5.5 0 0 1 .5-.5M4 15h3v-5H4zm5-5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1zm3 0h-2v3h2z"/></svg>
-      </span>
-      <strong>Choose jewellery</strong>
-      <span>At the showroom when eligible</span>
-    </li>
-  </ol>
-  <p class="journey-note mb-0"><strong>A contribution does not reserve or purchase a specific item.</strong> Final product price, taxes, making charges, and wastage/value addition are confirmed at the showroom. <a href="{% url 'terms' %}">Read full terms</a>.</p>
-</section>
-
-<section class="mt-5 pt-lg-3" aria-labelledby="how-it-works">
-  <div class="section-heading">
-    <div>
-      <p class="page-eyebrow">From interest to jewellery</p>
-      <h2 id="how-it-works">A straightforward way to get started</h2>
-    </div>
-    <p>No public signup and no scheme without recorded terms.</p>
-  </div>
-  <div class="row g-3 g-lg-4">
-    <div class="col-sm-6 col-lg-3">
-      <article class="card feature-card"><div class="card-body p-4">
-        <span class="feature-number" aria-hidden="true">1</span>
-        <h3 class="h5">Explore the plans</h3>
-        <p class="mb-0 text-secondary">Amount · frequency · duration</p>
-      </div></article>
-    </div>
-    <div class="col-sm-6 col-lg-3">
-      <article class="card feature-card"><div class="card-body p-4">
-        <span class="feature-number" aria-hidden="true">2</span>
-        <h3 class="h5">Speak with us</h3>
-        <p class="mb-0 text-secondary">Choose gold or silver and accept the terms.</p>
-      </div></article>
-    </div>
-    <div class="col-sm-6 col-lg-3">
-      <article class="card feature-card"><div class="card-body p-4">
-        <span class="feature-number" aria-hidden="true">3</span>
-        <h3 class="h5">Receive your login</h3>
-        <p class="mb-0 text-secondary">We create your enrolment and secure account.</p>
-      </div></article>
-    </div>
-    <div class="col-sm-6 col-lg-3">
-      <article class="card feature-card"><div class="card-body p-4">
-        <span class="feature-number" aria-hidden="true">4</span>
-        <h3 class="h5">Track progress</h3>
-        <p class="mb-0 text-secondary">Payments · grams · receipts · redemption</p>
-      </div></article>
-    </div>
-  </div>
-</section>
-
-<section class="trust-panel mt-5" aria-labelledby="trust-heading">
-  <div class="row g-4 g-lg-5 align-items-center">
-    <div class="col-lg-5">
-      <p class="page-eyebrow">Clarity from day one</p>
-      <h2 id="trust-heading">A scheme record designed to stay understandable</h2>
-      <p class="text-secondary mb-lg-0">Your customer account records the contribution journey. It is not a bank deposit, an interest-bearing account, a metal-trading product, or an online jewellery store.</p>
-    </div>
     <div class="col-lg-7">
-      <div class="row g-3">
-        <div class="col-sm-6"><div class="trust-point"><span class="trust-point__icon" aria-hidden="true"><svg class="bi bi-file-check" viewBox="0 0 16 16"><path d="M10.854 6.146a.5.5 0 0 1 0 .708l-3 3a.5.5 0 0 1-.708 0l-1.5-1.5a.5.5 0 1 1 .708-.708L7.5 8.793l2.646-2.647a.5.5 0 0 1 .708 0"/><path d="M4 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2zm0 1h8a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1"/></svg></span><div class="trust-point__copy"><strong>Terms stay attached</strong><span>Later plan changes do not rewrite an existing enrolment.</span></div></div></div>
-        <div class="col-sm-6"><div class="trust-point"><span class="trust-point__icon" aria-hidden="true"><svg class="bi bi-patch-check-fill" viewBox="0 0 16 16"><path d="M10.067.87a2.89 2.89 0 0 0-4.134 0l-.622.638-.89-.011a2.89 2.89 0 0 0-2.924 2.924l.01.89-.636.622a2.89 2.89 0 0 0 0 4.134l.637.622-.011.89a2.89 2.89 0 0 0 2.924 2.924l.89-.01.622.636a2.89 2.89 0 0 0 4.134 0l.622-.637.89.011a2.89 2.89 0 0 0 2.924-2.924l-.01-.89.636-.622a2.89 2.89 0 0 0 0-4.134l-.637-.622.011-.89a2.89 2.89 0 0 0-2.924-2.924l-.89.01zm.287 5.984-3 3a.5.5 0 0 1-.708 0l-1.5-1.5a.5.5 0 1 1 .708-.708L7 8.793l2.646-2.647a.5.5 0 0 1 .708.708"/></svg></span><div class="trust-point__copy"><strong>BIS hallmark assurance</strong><span>Inspect the hallmark and applicable HUID when selecting your jewellery.</span></div></div></div>
-        <div class="col-sm-6"><div class="trust-point"><span class="trust-point__icon" aria-hidden="true"><svg class="bi bi-clock-history" viewBox="0 0 16 16"><path d="M8.515 1.019A7 7 0 0 0 8 1V0a8 8 0 0 1 .589.022zm2.004.45a7 7 0 0 0-.985-.299l.219-.976q.576.129 1.126.342zm1.37.71a7 7 0 0 0-.439-.27l.493-.87a8 8 0 0 1 .979.654l-.615.789a7 7 0 0 0-.418-.302zm1.834 1.79a7 7 0 0 0-.653-.796l.724-.69q.406.429.747.91zm.744 1.352a7 7 0 0 0-.214-.468l.893-.45a8 8 0 0 1 .45 1.088l-.95.313a7 7 0 0 0-.179-.483m.53 2.507a7 7 0 0 0-.1-1.025l.985-.17q.1.58.116 1.17zm-.131 1.538q.05-.254.081-.51l.993.123a8 8 0 0 1-.23 1.155l-.964-.267q.069-.247.12-.501m-.952 2.379q.276-.436.486-.908l.914.405q-.24.54-.555 1.038zm-.964 1.205q.183-.183.35-.378l.758.653a8 8 0 0 1-.401.432z"/><path d="M8 1a7 7 0 1 0 4.95 11.95l.707.707A8.001 8.001 0 1 1 8 0z"/><path d="M7.5 3a.5.5 0 0 1 .5.5v5.21l3.248 1.856a.5.5 0 0 1-.496.868l-3.5-2A.5.5 0 0 1 7 9V3.5a.5.5 0 0 1 .5-.5"/></svg></span><div class="trust-point__copy"><strong>History stays visible</strong><span>Verified payments, allocations, receipts, and settlements remain traceable.</span></div></div></div>
-        <div class="col-sm-6"><div class="trust-point"><span class="trust-point__icon" aria-hidden="true"><svg class="bi bi-shop" viewBox="0 0 16 16"><path d="M2.97 1.35A1 1 0 0 1 3.73 1h8.54a1 1 0 0 1 .76.35l2.609 3.044A1.5 1.5 0 0 1 16 5.37v.255a2.375 2.375 0 0 1-4.25 1.458A2.37 2.37 0 0 1 9.875 8 2.37 2.37 0 0 1 8 7.083 2.37 2.37 0 0 1 6.125 8a2.37 2.37 0 0 1-1.875-.917A2.375 2.375 0 0 1 0 5.625V5.37a1.5 1.5 0 0 1 .361-.976zm1.78 4.275a1.375 1.375 0 0 0 2.75 0 .5.5 0 0 1 1 0 1.375 1.375 0 0 0 2.75 0 .5.5 0 0 1 1 0 1.375 1.375 0 1 0 2.75 0V5.37a.5.5 0 0 0-.12-.325L12.27 2H3.73L1.12 5.045A.5.5 0 0 0 1 5.37v.255a1.375 1.375 0 0 0 2.75 0 .5.5 0 0 1 1 0M1.5 8.5A.5.5 0 0 1 2 9v6h1v-5a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v5h6V9a.5.5 0 0 1 1 0v6h.5a.5.5 0 0 1 0 1H.5a.5.5 0 0 1 0-1H1V9a.5.5 0 0 1 .5-.5M4 15h3v-5H4zm5-5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1zm3 0h-2v3h2z"/></svg></span><div class="trust-point__copy"><strong>Showroom fulfilment</strong><span>Jewellery selection, invoicing, and collection are completed in person at our Vellore showroom.</span></div></div></div>
+      <div class="hero-content">
+        <p class="page-eyebrow">Gold and silver jewellery savings</p>
+        <h1 id="hero-title">Your jewellery goal starts with one clear plan.</h1>
+        <p class="lead">Choose a published plan, request enrolment online, and follow every verified contribution from your customer account.</p>
+        <div class="hero-actions d-flex flex-wrap gap-2 mt-4">
+          {% if user.is_authenticated and user.role == 'CUSTOMER' %}
+            {% if customer_enrolment_requests_enabled %}
+              <a class="btn btn-jsk btn-lg" href="{% url 'pricing' %}">Choose a savings plan</a>
+              <a class="btn btn-outline-dark btn-lg" href="{% url 'schemes:my_enrolment_requests' %}">Track my requests</a>
+            {% else %}
+              <a class="btn btn-jsk btn-lg" href="{% url 'pricing' %}">View savings plans</a>
+              <a class="btn btn-outline-dark btn-lg" href="{% url 'contact' %}">Contact the showroom</a>
+            {% endif %}
+          {% elif user.is_authenticated %}
+            <a class="btn btn-jsk btn-lg" href="{% url 'schemes:post_login' %}">Open dashboard</a>
+            <a class="btn btn-outline-dark btn-lg" href="{% url 'pricing' %}">View savings plans</a>
+          {% elif public_customer_registration_enabled %}
+            <a class="btn btn-jsk btn-lg" href="{% url 'customer_registration' %}">Get started</a>
+            <a class="btn btn-outline-dark btn-lg" href="#available-plans">View savings plans</a>
+          {% else %}
+            <a class="btn btn-jsk btn-lg" href="#available-plans">View savings plans</a>
+            <a class="btn btn-outline-dark btn-lg" href="{% url 'contact' %}">Contact the showroom</a>
+          {% endif %}
+        </div>
+        <p class="hero-boundary mb-0">Your online request starts a showroom review. It does not create a savings agreement or payment access by itself.</p>
+        {% if not user.is_authenticated %}<p class="small mt-2 mb-0">Already approved? <a class="fw-semibold" href="{% url 'account_login' %}">Sign in to your customer account</a>.</p>{% endif %}
+        <div class="trust-row" aria-label="Jewellery and account assurances">
+          <span>BIS-hallmarked jewellery</span>
+          <span>Exact metal grade recorded</span>
+          <span>Receipts and statements online</span>
+        </div>
       </div>
     </div>
+    <div class="col-lg-5">
+      <figure class="home-hero-photo mb-0">
+        <img src="{% static 'images/home-jewellery.webp' %}" width="900" height="1050" alt="Traditional gold necklace displayed on a dark jewellery bust" fetchpriority="high" decoding="async">
+        <figcaption>
+          <strong>Save with a jewellery goal</strong>
+          <span>Choose your jewellery in person at our Vellore showroom.</span>
+          <small>Illustrative jewellery</small>
+        </figcaption>
+      </figure>
+    </div>
   </div>
+</section>
+
+<section id="available-plans" class="mt-5 pt-lg-2" aria-labelledby="available-plans-heading">
+  <div class="section-heading align-items-end">
+    <div>
+      <p class="page-eyebrow">Start with the right fit</p>
+      <h2 id="available-plans-heading">Choose your savings plan</h2>
+      <p class="mb-0 text-secondary">Compare the contribution amount, duration, and available metal grades.</p>
+    </div>
+    <a class="fw-semibold" href="{% url 'pricing' %}">See all plan details <span aria-hidden="true">→</span></a>
+  </div>
+
+  <div class="row g-3 g-lg-4">
+    {% for plan in featured_plans %}
+    <div class="col-md-6 col-xl-4">
+      <article class="card home-plan-card h-100">
+        <div class="card-body p-4 d-flex flex-column">
+          <div class="d-flex flex-wrap gap-2 mb-3" aria-label="Available metal grades">
+            {% for offering in plan.metal_offerings.all %}{% if offering.active %}
+            <span class="badge text-bg-light border">{{ offering.metal_grade.display_name }}</span>
+            {% endif %}{% endfor %}
+          </div>
+          <h3 class="h4">{{ plan.name }}</h3>
+          <p class="home-plan-amount mb-1">
+            {% if plan.amount_rule == 'FIXED' %}
+              ₹{{ plan.fixed_contribution_amount|floatformat:0 }}
+            {% elif plan.maximum_contribution %}
+              ₹{{ plan.minimum_contribution|floatformat:0 }}–₹{{ plan.maximum_contribution|floatformat:0 }}
+            {% else %}
+              From ₹{{ plan.minimum_contribution|floatformat:0 }}
+            {% endif %}
+          </p>
+          <p class="small text-secondary mb-4">{{ plan.get_frequency_rule_display }} · {{ plan.default_months }} months</p>
+          <div class="home-plan-actions mt-auto d-grid gap-2">
+            {% if customer_enrolment_requests_enabled and user.is_authenticated and user.role == 'CUSTOMER' %}
+              <a class="btn btn-jsk" href="{% url 'schemes:scheme_enrolment_request_create' plan.pk %}">Request this plan</a>
+            {% elif not user.is_authenticated and public_customer_registration_enabled %}
+              <a class="btn btn-jsk" href="{% url 'customer_registration' %}">Get customer access</a>
+            {% else %}
+              <a class="btn btn-outline-dark" href="{% url 'pricing' %}">View plan details</a>
+            {% endif %}
+          </div>
+        </div>
+      </article>
+    </div>
+    {% empty %}
+    <div class="col-12">
+      <div class="card empty-state">
+        <h3 class="h4">Plans are being updated</h3>
+        <p>Contact our showroom to ask when new enrolments will reopen.</p>
+        <div><a class="btn btn-jsk" href="{% url 'contact' %}">Contact the showroom</a></div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  <p class="small text-secondary mt-3 mb-0">An enrolment request is non-binding. The showroom confirms the current terms with you before creating any savings agreement.</p>
+</section>
+
+<section class="home-confidence mt-5" aria-labelledby="confidence-heading">
+  <div class="text-center mx-auto mb-4 home-confidence__heading">
+    <p class="page-eyebrow">Confidence at every step</p>
+    <h2 id="confidence-heading">Clear records. Local service. Jewellery you choose.</h2>
+  </div>
+  <div class="row g-3">
+    <div class="col-md-4">
+      <article class="home-confidence__item">
+        <span class="trust-point__icon" aria-hidden="true"><svg class="bi bi-patch-check-fill" viewBox="0 0 16 16"><path d="M10.067.87a2.89 2.89 0 0 0-4.134 0l-.622.638-.89-.011a2.89 2.89 0 0 0-2.924 2.924l.01.89-.636.622a2.89 2.89 0 0 0 0 4.134l.637.622-.011.89a2.89 2.89 0 0 0 2.924 2.924l.89-.01.622.636a2.89 2.89 0 0 0 4.134 0l.622-.637.89.011a2.89 2.89 0 0 0 2.924-2.924l-.01-.89.636-.622a2.89 2.89 0 0 0 0-4.134l-.637-.622.011-.89a2.89 2.89 0 0 0-2.924-2.924l-.89.01zm.287 5.984-3 3a.5.5 0 0 1-.708 0l-1.5-1.5a.5.5 0 1 1 .708-.708L7 8.793l2.646-2.647a.5.5 0 0 1 .708.708"/></svg></span>
+        <h3 class="h5">Hallmark assurance</h3>
+        <p class="mb-0 text-secondary">Inspect the BIS hallmark and applicable HUID when selecting your jewellery.</p>
+      </article>
+    </div>
+    <div class="col-md-4">
+      <article class="home-confidence__item">
+        <span class="trust-point__icon" aria-hidden="true"><svg class="bi bi-file-earmark-text" viewBox="0 0 16 16"><path d="M14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h5.5zm-3 0A1.5 1.5 0 0 0 12.5 6H13zM4.5 8a.5.5 0 0 0 0 1h7a.5.5 0 0 0 0-1zm0 2a.5.5 0 0 0 0 1h7a.5.5 0 0 0 0-1zm0 2a.5.5 0 0 0 0 1h4a.5.5 0 0 0 0-1z"/></svg></span>
+        <h3 class="h5">A record you can follow</h3>
+        <p class="mb-0 text-secondary">See verified contributions, locked rates, credited metal, receipts, and statements.</p>
+      </article>
+    </div>
+    <div class="col-md-4">
+      <article class="home-confidence__item">
+        <span class="trust-point__icon" aria-hidden="true"><svg class="bi bi-shop" viewBox="0 0 16 16"><path d="M2.97 1.35A1 1 0 0 1 3.73 1h8.54a1 1 0 0 1 .76.35l2.609 3.044A1.5 1.5 0 0 1 16 5.37v.255a2.375 2.375 0 0 1-4.25 1.458A2.37 2.37 0 0 1 9.875 8 2.37 2.37 0 0 1 8 7.083 2.37 2.37 0 0 1 6.125 8a2.37 2.37 0 0 1-1.875-.917A2.375 2.375 0 0 1 0 5.625V5.37a1.5 1.5 0 0 1 .361-.976zm1.78 4.275a1.375 1.375 0 0 0 2.75 0 .5.5 0 0 1 1 0 1.375 1.375 0 0 0 2.75 0 .5.5 0 0 1 1 0 1.375 1.375 0 1 0 2.75 0V5.37a.5.5 0 0 0-.12-.325L12.27 2H3.73L1.12 5.045A.5.5 0 0 0 1 5.37v.255a1.375 1.375 0 0 0 2.75 0 .5.5 0 0 1 1 0M1.5 8.5A.5.5 0 0 1 2 9v6h1v-5a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v5h6V9a.5.5 0 0 1 1 0v6h.5a.5.5 0 0 1 0 1H.5a.5.5 0 0 1 0-1H1V9a.5.5 0 0 1 .5-.5M4 15h3v-5H4zm5-5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1zm3 0h-2v3h2z"/></svg></span>
+        <h3 class="h5">Your local showroom</h3>
+        <p class="mb-0 text-secondary">Review terms and choose, invoice, and collect your jewellery in Vellore.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section class="home-explainer mt-5" aria-labelledby="home-explainer-heading">
+  <div>
+    <p class="page-eyebrow">Want the full picture?</p>
+    <h2 id="home-explainer-heading">See how your plan works before you begin.</h2>
+    <p class="mb-0 text-secondary">Learn how access approval, enrolment, contribution rate locking, metal crediting, and showroom redemption fit together.</p>
+  </div>
+  <a class="btn btn-outline-dark" href="{% url 'how_it_works' %}">Read how it works</a>
 </section>
 
 <section class="conversion-panel mt-5" aria-labelledby="next-step-heading">
   <div>
-    <p class="page-eyebrow">Your next step</p>
-    <h2 id="next-step-heading">Start with a plan you can understand.</h2>
-    <p class="mb-2">Review the published options, then speak with us before you enrol.</p>
+    <p class="page-eyebrow">Ready to begin?</p>
+    <h2 id="next-step-heading">Take the first step toward your jewellery goal.</h2>
     <p class="small text-secondary mb-0">No. 155, Azad Road, Thorapadi, Vellore · Monday–Saturday 9:00 AM–9:00 PM · Sunday until 1:00 PM</p>
   </div>
   <div class="conversion-actions">
-    <a class="btn btn-jsk" href="{% url 'pricing' %}">View savings plans</a>
-    <a class="btn btn-outline-dark" href="{% url 'contact' %}">Contact Jai Sri Krishna Jewellery</a>
+    {% if user.is_authenticated and user.role == 'CUSTOMER' and customer_enrolment_requests_enabled %}
+      <a class="btn btn-jsk" href="{% url 'pricing' %}">Choose a savings plan</a>
+    {% elif not user.is_authenticated and public_customer_registration_enabled %}
+      <a class="btn btn-jsk" href="{% url 'customer_registration' %}">Start my application</a>
+    {% else %}
+      <a class="btn btn-jsk" href="{% url 'pricing' %}">View savings plans</a>
+    {% endif %}
+    <a class="btn btn-outline-dark" href="{% url 'contact' %}">Talk to the showroom</a>
   </div>
 </section>
 
