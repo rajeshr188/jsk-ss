@@ -35,12 +35,15 @@ integrity foundation without any anonymization/completion mutation. The qualifie
 retention matrix, `FW-PRIV-001B`, production enablement, and public-store deletion
 claim remain open.
 
-The isolated `agent/wagtail-8-upgrade` candidate updates the CMS dependency from
-Wagtail 7.4.3 LTS to Wagtail 8.0. The project uses none of the removed extension APIs,
-explicitly requests WebP renditions, and needs no application migration. Wagtail's
-additive `wagtailcore.0098_apitoken` vendor migration must pass the normal
-production recovery-point, migration-plan, and rollback gates before rollout;
-production remains on Wagtail 7.4.3 until that acceptance is complete.
+Wagtail 8.0 is production-accepted in release
+`65eff0d80a2e23f5f7df1da9d610d7ae1ef26038`. The isolated rollout applied only
+Wagtail's additive `wagtailcore.0098_apitoken` vendor migration, and it preserved the
+existing catalogue and editorial boundaries. Health, CMS authorization, R2 media,
+authentication, payment-operation, financial, exact-grade, in-store-cash,
+enrolment, registration, Google-login, account-deletion, and Live Razorpay checks
+passed. Catalogue/product, About, existing-image, CMS-login, and non-publishing
+preview checks also passed without changing published content. A blog remains a
+separate future CMS capability and is not implied by this dependency acceptance.
 
 ## Completed
 
