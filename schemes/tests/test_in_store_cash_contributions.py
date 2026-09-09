@@ -157,15 +157,23 @@ class InStoreCashContributionTests(TestCase):
         )
 
     def test_owner_daily_summary_separates_real_payment_channels(self):
-        self.record_cash(amount=Decimal("500.00"))
-        self.record_razorpay(amount=Decimal("4000.00"))
-        self.record_razorpay(amount=Decimal("999.00"), mode=GatewayMode.TEST)
+        cash_contribution = self.record_cash(amount=Decimal("500.00"))
+        summary_date = timezone.localdate(cash_contribution.paid_at)
+        self.record_razorpay(
+            amount=Decimal("4000.00"),
+            paid_at=cash_contribution.paid_at,
+        )
+        self.record_razorpay(
+            amount=Decimal("999.00"),
+            mode=GatewayMode.TEST,
+            paid_at=cash_contribution.paid_at,
+        )
         self.record_razorpay(
             amount=Decimal("600.00"),
-            paid_at=timezone.now() - timedelta(days=2),
+            paid_at=cash_contribution.paid_at - timedelta(days=2),
         )
 
-        summary = get_owner_contribution_daily_summary()
+        summary = get_owner_contribution_daily_summary(as_of=summary_date)
 
         self.assertEqual(summary.cash.receipts_count, 1)
         self.assertEqual(summary.cash.received_amount, Decimal("500.00"))
@@ -279,10 +287,17 @@ class InStoreCashContributionTests(TestCase):
                 contribution=contribution,
             ).exists()
         )
-        summary = get_in_store_cash_daily_summary()
-        self.assertEqual(summary.received_amount, Decimal("500.00"))
-        self.assertEqual(summary.reversed_amount, Decimal("500.00"))
-        self.assertEqual(summary.net_amount, Decimal("0.00"))
+        receipt_date = timezone.localdate(contribution.cash_receipt.received_at)
+        reversal_date = timezone.localdate(reversal.reversed_at)
+        receipt_summary = get_in_store_cash_daily_summary(as_of=receipt_date)
+        reversal_summary = get_in_store_cash_daily_summary(as_of=reversal_date)
+        self.assertEqual(receipt_summary.received_amount, Decimal("500.00"))
+        self.assertEqual(reversal_summary.reversed_amount, Decimal("500.00"))
+        if receipt_date == reversal_date:
+            self.assertEqual(receipt_summary.net_amount, Decimal("0.00"))
+        else:
+            self.assertEqual(receipt_summary.net_amount, Decimal("500.00"))
+            self.assertEqual(reversal_summary.net_amount, Decimal("-500.00"))
         statement = get_scheme_statement(self.account)
         self.assertEqual(statement.remaining_entitlement, Decimal("0.000000"))
         self.assertEqual(
