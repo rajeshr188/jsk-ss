@@ -702,6 +702,19 @@ claim remain open.
 - Milestone 11 rollback-only authenticated smoke passes for a gold mock payment,
   stable printable receipt, statement showing 0.080000 g gold, and both owner CSV
   exports; all tagged records were rolled back.
+- Production release `9fa12943b9719e1c14d1894c4cfceb753b54376c` was accepted on
+  9 September 2026 from immutable image
+  `ghcr.io/rajeshr188/jsk-savings@sha256:4e8abb514e2ac33a757c3abfc545d414a9430edbcf4c085157fe2ce4a941616e`.
+  A 10:00 PM IST managed-PostgreSQL recovery point and the previous
+  `0c611f6e51434aa7f0a3faa8ddba8ef492910af3` release/image pair were retained.
+  An expired Live Razorpay order was provider-verified as untouched, abandoned through
+  the dry-run/apply workflow, and left zero pending exposure before cutover. There was
+  no migration. Live/readiness, payment, financial-exception, Live-mode, exact-grade,
+  and in-store-cash checks passed; all grades reopened after the maintenance pause.
+  The owner Contributions page displayed INR 0.00 physical cash, INR 4,000.00 captured
+  Live Razorpay, and INR 4,000.00 total verified for the India-local day. Cloudflare
+  Web Analytics was confirmed enabled independently; this does not complete deferred
+  external operational alerting under `FW-PROD-002`.
 
 ## Next recommended step
 
