@@ -81,10 +81,10 @@ from .selectors import (
     get_latest_customer_invitation,
     get_current_scheme_rate,
     get_current_scheme_rates,
-    get_in_store_cash_daily_summary,
     get_metal_balance,
     get_owner_activity_summary,
     get_owner_audit_events,
+    get_owner_contribution_daily_summary,
     get_owner_contributions,
     get_owner_customers,
     get_owner_enrolment_requests,
@@ -1597,7 +1597,7 @@ def contribution_list(request):
         "schemes/contribution_list.html",
         {
             "contributions": get_owner_contributions(),
-            "cash_daily_summary": get_in_store_cash_daily_summary(),
+            "daily_summary": get_owner_contribution_daily_summary(),
             "in_store_cash_enabled": in_store_cash_contributions_are_enabled(),
         },
     )

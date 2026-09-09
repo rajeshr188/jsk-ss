@@ -7,13 +7,15 @@
   <div><p class="page-eyebrow">Payment records</p><h1>Contributions</h1><p class="page-subtitle">All customer payment attempts.</p></div>
   <div class="page-actions"><a class="btn btn-outline-dark" href="{% url 'schemes:contribution_export' %}">Download CSV</a></div>
 </div>
-{% if in_store_cash_enabled %}
 <div class="row g-3 mb-4">
-  <div class="col-6 col-lg-3"><div class="card stat-card h-100"><div class="card-body"><div class="stat-label">Cash received today</div><div class="stat-value">₹{{ cash_daily_summary.received_amount|floatformat:2 }}</div><div class="stat-meta">{{ cash_daily_summary.receipts_count }} receipt{{ cash_daily_summary.receipts_count|pluralize }}</div></div></div></div>
-  <div class="col-6 col-lg-3"><div class="card stat-card h-100"><div class="card-body"><div class="stat-label">Corrections today</div><div class="stat-value">₹{{ cash_daily_summary.reversed_amount|floatformat:2 }}</div><div class="stat-meta">{{ cash_daily_summary.reversals_count }} reversal{{ cash_daily_summary.reversals_count|pluralize }}</div></div></div></div>
-  <div class="col-12 col-lg-3"><div class="card stat-card stat-card--success h-100"><div class="card-body"><div class="stat-label">Net cash record today</div><div class="stat-value">₹{{ cash_daily_summary.net_amount|floatformat:2 }}</div><div class="stat-meta">{{ cash_daily_summary.as_of|date:'d M Y' }}</div></div></div></div>
+  {% if in_store_cash_enabled %}
+  <div class="col-6 col-lg-4 col-xl"><div class="card stat-card h-100"><div class="card-body"><div class="stat-label">In-store cash received today</div><div class="stat-value">₹{{ daily_summary.cash.received_amount|floatformat:2 }}</div><div class="stat-meta">{{ daily_summary.cash.receipts_count }} receipt{{ daily_summary.cash.receipts_count|pluralize }}</div></div></div></div>
+  <div class="col-6 col-lg-4 col-xl"><div class="card stat-card h-100"><div class="card-body"><div class="stat-label">Cash corrections today</div><div class="stat-value">₹{{ daily_summary.cash.reversed_amount|floatformat:2 }}</div><div class="stat-meta">{{ daily_summary.cash.reversals_count }} reversal{{ daily_summary.cash.reversals_count|pluralize }}</div></div></div></div>
+  <div class="col-6 col-lg-4 col-xl"><div class="card stat-card h-100"><div class="card-body"><div class="stat-label">Net in-store cash today</div><div class="stat-value">₹{{ daily_summary.cash.net_amount|floatformat:2 }}</div><div class="stat-meta">Cash receipts less corrections</div></div></div></div>
+  {% endif %}
+  <div class="col-6 col-lg-4 col-xl"><div class="card stat-card h-100"><div class="card-body"><div class="stat-label">Razorpay captured today</div><div class="stat-value">₹{{ daily_summary.razorpay_amount|floatformat:2 }}</div><div class="stat-meta">{{ daily_summary.razorpay_count }} Live payment{{ daily_summary.razorpay_count|pluralize }}</div></div></div></div>
+  <div class="col-12 col-lg-4 col-xl"><div class="card stat-card stat-card--success h-100"><div class="card-body"><div class="stat-label">Total verified today</div><div class="stat-value">₹{{ daily_summary.verified_amount|floatformat:2 }}</div><div class="stat-meta">{{ daily_summary.verified_count }} active contribution{{ daily_summary.verified_count|pluralize }} · {{ daily_summary.as_of|date:'d M Y' }}</div></div></div></div>
 </div>
-{% endif %}
 <div class="table-responsive">
   <table class="table align-middle">
     <thead><tr><th scope="col">Created</th><th scope="col">Customer</th><th scope="col">Scheme</th><th scope="col">Period</th><th scope="col">Amount</th><th scope="col">Provider</th><th scope="col">Entitlement</th><th scope="col">Status</th><th scope="col">Action</th></tr></thead>
