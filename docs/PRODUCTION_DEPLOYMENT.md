@@ -3271,6 +3271,35 @@ database integrity remains clean, return to the recorded Wagtail 7.4.3 image; th
 release ignores the additive table. Do not reverse or delete the vendor migration as
 part of an application-only rollback.
 
+### Production acceptance — 10 September 2026
+
+The isolated Wagtail 8.0 rollout was accepted in release
+`65eff0d80a2e23f5f7df1da9d610d7ae1ef26038` from immutable image
+`ghcr.io/rajeshr188/jsk-savings@sha256:521ced1f7e0686728cebc73e4be89aba6db30963aa421ce0a7a3538d1e09f406`.
+The managed-PostgreSQL recovery point was recorded as 10 September 2026 at
+12:10 AM IST. The previous release
+`9fa12943b9719e1c14d1894c4cfceb753b54376c` and image
+`ghcr.io/rajeshr188/jsk-savings@sha256:4e8abb514e2ac33a757c3abfc545d414a9430edbcf4c085157fe2ce4a941616e`
+remain the application rollback target; the additive API-token table must remain if
+that rollback is used.
+
+The reviewed and applied migration plan contained only
+`wagtailcore.0098_apitoken`. Both health endpoints returned the candidate release,
+and runtime inspection reported Wagtail 8.0. Catalogue and Editorial authorization
+checks passed, as did the R2 upload, read, rendition, and cleanup exercise. The full
+authentication and financial integrity suite reported no duplicate or blank login
+emails, no blocked-grade or pending-payment exposure, no paid-unallocated records,
+no failed or mismatched webhooks, no grade-contract mismatch, no invalid in-store
+cash lifecycle, and no invalid enrolment, registration, Google-login, or
+account-deletion lifecycle. Live Razorpay readiness passed, and the abandoned-order
+dry run reported zero candidates and zero errors.
+
+Manual checks confirmed the public catalogue and a product page, About, existing
+images/renditions, Wagtail admin login, and a non-publishing preview. Existing
+catalogue/editorial content remained unchanged. This acceptance covers the major
+dependency upgrade only; it does not approve a blog model, new editorial scope, or
+new publication permissions.
+
 ## Go-live sign-off
 
 The target full-production checklist remains below. Live acceptance does not mark
