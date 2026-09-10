@@ -88,9 +88,17 @@ recent local reauthentication. Verification invokes an explicit atomic containme
 service that disables the login, revokes sessions and Google linkage, supersedes
 unused invitations, and appends privacy actions while leaving the protected customer
 and financial graph intact. The owner queue is a selector over current requests and
-financial context. Its first phase can append only a reasoned hold and review date;
-anonymization and completion services do not exist until a qualified retention matrix
-is approved.
+financial context. Its first phase can append only a reasoned hold and review date.
+The next local increment adds a non-cacheable, read-only owner disposition preview
+using existing financial selectors for separate agreement/grade balances and an
+explicit external-review checklist. ADR-0015's 10 September revision permits
+owner-operated development without a blanket professional-sign-off prerequisite.
+The local completion service now requires documented field/category dispositions,
+preserves financial history and commits a separate retryable notice queue. The
+`privacy_erased_at` guard prevents ordinary credential/profile restoration and new
+enrolment/contribution initiation. Retention reviews append decisions and may remove
+additional eligible profile fields; they never purge financial history. Production
+enablement remains a separate policy/procedure and synthetic-acceptance gate.
 
 Wagtail authorization is independent of application roles. Dedicated Editorial and
 Catalogue groups scope page and media access to their respective content; neither an

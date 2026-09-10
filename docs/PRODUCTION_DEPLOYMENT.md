@@ -3023,8 +3023,138 @@ coordinated overlap is unavailable.
 
 ## `FW-PRIV-001A` account-deletion foundation rollout
 
+### Local `FW-PRIV-001B` completion increment — not an enablement approval
+
+Migration `accounts.0006_customer_deletion_completion` adds the erased-login marker,
+disposition constraints and completion-notice queue. It does not erase records.
+For local synthetic testing, apply migrations with `uv run --env-file .env python
+manage.py migrate`. Never use a real customer as a deletion smoke test. Review the
+owner preview, reauthenticate, document every category, confirm the request UUID,
+and verify the removed login/profile, preserved financial facts and outcome notice.
+For synthetic local form tests, use the console or in-memory email backend rather than
+sending fake-customer notices through production SMTP. Neither proves SMTP delivery.
+Do not copy local synthetic policy versions or enablement flags
+to Linode.
+
+Production must remain `CUSTOMER_ACCOUNT_DELETION_ENABLED=False` until policy
+wording and actual provider/export/log/backup procedures are owner-approved and a
+separate rollout is reviewed. Use a CI-built GHCR digest; never build on the serving
+host. Run `check_customer_account_deletions` with the existing auth, registration,
+financial and health checks after the migration and disabled-stage recreation.
+
+When eventual enablement is approved, the owner must check the privacy queue daily.
+Completed requests remain visible for retention reviews and outcome-email retries.
+The integrity command reports `completion_errors`, `orphaned_erased_logins`,
+`notice_pending` and `notice_needs_review`; a failed notice or one pending more than
+24 hours requires attention. Never repeat data removal to resend a notice. Provider
+acceptance clears its temporary address but does not establish inbox receipt.
+
+Before the first real completion, document a restricted, purpose-limited record of
+completed deletion decisions that remains available during disaster recovery, and
+exercise reapplication/suppression on an isolated restore before reopening access.
+Do not restore erased identities to contact customers. If a completion has occurred,
+do not roll back to a pre-completion-aware application or restore a database backup
+without this suppression procedure. Prefer a forward fix. Automated external-copy
+purging and financial-history destruction are not implemented.
+
+#### Owner procedure review before enablement
+
+Record the actual decisions in the ADR-0015 worksheet and restricted operational
+records, not customer-identifying evidence in Git. Do not treat the synthetic test
+retention text or its 30-day review date as the business retention schedule.
+
+1. Name the owner responsible for daily privacy-queue checks, failed notices and
+   overdue reviews. Record how that duty is covered during absence.
+2. For Postmark/support mail, Razorpay, Cloudflare/application logs, R2 documents,
+   downloaded exports, paper records and database backups, record whether customer
+   data exists, its purpose, actual configured retention or disposal condition,
+   access restrictions, responsible person and next review date. Verify provider
+   settings rather than assuming a default. Mark non-applicable categories with
+   evidence; application completion does not delete these external copies.
+3. Keep a restricted recovery record outside the database being restored: request,
+   customer and user identifiers; completion timestamp; policy/decision version;
+   fields already removed; retained categories; and subsequent review decisions.
+   Do not copy removed names, email addresses, tokens or passwords into that record.
+   Establish who updates it after each completion/review and verifies it is current.
+4. Rehearse using synthetic identities in an isolated restore with outbound email,
+   payment actions, scheduled jobs and public access disabled. Compare the restored
+   data against the recovery record, reconcile newer financial facts separately,
+   and review the required minimization before any reopening. There is no automatic
+   replay command: do not blindly rerun an old decision against a restored balance.
+5. Record that erased login/contact fields remain unusable, Google links and sessions
+   cannot restore access, financial facts are unchanged by minimization, and current
+   integrity checks pass. Record discrepancies and resolve them before reopening.
+   A successful ordinary database restore alone does not prove this deletion drill.
+6. Align the public policy and customer notice with the approved procedures, including
+   retained records and backup limitations. Review the disabled-stage release and
+   authorize enablement separately; do not claim Play deletion acceptance yet.
+
+#### Synthetic local restore rehearsal — 10 September 2026
+
+Reproduce only on a local development PostgreSQL server with `pg_dump` and
+`pg_restore` on PATH and permission to create temporary databases:
+
+```powershell
+uv run --env-file .env python -m accounts.rehearse_deletion_restore --synthetic-local
+```
+
+This is not a production recovery command. It refuses non-loopback database targets
+and connection-option overrides, generates two fresh random database names, migrates
+only its empty source database and creates test fixtures. It never dumps or migrates
+the configured application database. Email is in-memory, payments are disabled and
+no web server or scheduled job is started. It restores only its own synthetic dump
+into its own fresh destination, then removes both databases and temporary artifacts.
+Do not run this on the serving Linode or pass it a production environment file.
+
+Observed result: real PostgreSQL 16 client `pg_dump`/`pg_restore` succeeded. The
+backup contained verified/contained requests before completion. Restoration brought
+back personal fields and removed completion markers, demonstrating the risk even
+though those contained logins stayed inactive. An independent synthetic decision
+record preserved identifiers, policy/version/timestamps, field dispositions and a
+financial fingerprint, without copying removed customer contact values.
+
+Two cases passed: no financial history, and a customer with a preserved exact-grade
+gold entitlement. The first case included a later review removing name/email after
+initial completion; replay used that latest decision, not the older retention list.
+Reapplication preserved the full selected financial rows, removed eligible identity
+and authentication bindings, cleared temporary notice contacts through in-memory
+delivery, and passed deletion integrity. Missing-request and financial-mismatch
+guards rejected replay. Cleanup removed two temporary databases and all generated
+synthetic dump/decision files; no real customer data was used or removed.
+
+Scope limit: this demonstrates local **post-containment** recovery using existing
+completion services, not an automated production recovery facility. A backup predating
+the verified request requires separately supervised recovery; the script refuses to
+invent verification or authorization. Changed financial state also requires separate
+reconciliation. The exercise does not prove recovery of decisions lost from the real
+production backup, correctness/authenticity of a real independent recovery register,
+external-provider erasure or Linode restore performance. Before real enablement,
+establish the restricted independent register and approve the applicable recovery
+procedure. Do not mark production restore suppression accepted from this result alone.
+
+#### Owner-reported provider inventory — 10 September 2026
+
+- Postmark activity retention: 45 days (owner confirmed). Message activity/content
+  expiry does not establish deletion of suppressions or support mailbox copies.
+- No retained customer CSV exports, downloaded statements, paper records or customer
+  documents in R2 (owner confirmed). Reassess if these practices change.
+- Latest reported Linode recovery point: 10 September 2026 at 14:00 IST.
+  The reported 18 August cluster creation date is not confirmed backup availability;
+  oldest available recovery point remains unknown.
+- Journals occupy 798.2 MB (owner output). This is usage, not a time-retention policy.
+  Effective Docker log configuration and journal/Cloudflare retention remain unverified.
+
+Provider references: [Postmark retention](https://postmarkapp.com/support/article/how-does-the-retention-add-on-work)
+and [Akamai backup management](https://techdocs.akamai.com/cloud-computing/docs/aiven-manage-database).
+Provider defaults do not replace evidence of actual account configuration.
+
+### Previously accepted disabled foundation
+
 ADR-0015 permits an additive, disabled-first request and containment foundation while
-the qualified retention matrix remains open. This phase has no anonymization or
+the completion and retention procedures remain open. Its 10 September revision
+allows owner-operated development without waiting for qualified written sign-off;
+the read-only disposition preview does not change this rollout boundary.
+This phase has no anonymization or
 completion mutation and must not be described to Google Play or customers as a live,
 completed deletion facility.
 
@@ -3074,7 +3204,7 @@ Expect `status=ok`, `enabled=false`, and zero deletion requests/actions. Both de
 entry points and their navigation links must remain unavailable. Re-run the existing
 authentication and financial integrity commands and live/ready checks. Stop there:
 `CUSTOMER_ACCOUNT_DELETION_POLICY_VERSION` must remain blank and the feature must not
-be enabled until `FW-PRIV-001B` supplies the qualified matrix, irreversible service,
+be enabled until `FW-PRIV-001B` supplies owner-approved dispositions, the irreversible service,
 policy wording, provider procedures, synthetic no-history and retained-history tests,
 and a separately approved production runbook.
 

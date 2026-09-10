@@ -617,7 +617,7 @@ if (
     and not CUSTOMER_ACCOUNT_DELETION_POLICY_VERSION
 ):
     raise ImproperlyConfigured(
-        "Customer account deletion requires a qualified retention-policy version"
+        "Customer account deletion requires an approved retention-policy version"
     )
 CUSTOMER_ENROLMENT_REQUESTS_ENABLED = env_bool(
     "CUSTOMER_ENROLMENT_REQUESTS_ENABLED"

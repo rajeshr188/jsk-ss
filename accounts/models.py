@@ -2,7 +2,7 @@ import uuid
 
 from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
-from django.db import models
+from django.db import models, transaction
 from django.db.models.functions import Lower
 from django.utils import timezone
 
@@ -14,6 +14,15 @@ class CustomUser(AbstractUser):
         CUSTOMER = "CUSTOMER", "Customer"
 
     role = models.CharField(max_length=10, choices=Role.choices, default=Role.CUSTOMER)
+    privacy_erased_at = models.DateTimeField(null=True, blank=True, editable=False)
+
+    def save(self, *args, **kwargs):
+        with transaction.atomic():
+            if self.pk and type(self).objects.select_for_update().filter(
+                pk=self.pk,
+            ).values_list("privacy_erased_at", flat=True).first() is not None:
+                raise ValidationError("A removed login cannot be changed or reactivated.")
+            return super().save(*args, **kwargs)
 
     def has_perm(self, perm, obj=None):
         if perm == "wagtailadmin.access_admin" and not self.is_staff:
@@ -29,7 +38,16 @@ class CustomUser(AbstractUser):
                 Lower("email"),
                 condition=~models.Q(email=""),
                 name="accounts_user_email_ci_unique",
-            )
+            ),
+            models.CheckConstraint(
+                condition=models.Q(privacy_erased_at__isnull=True) | models.Q(
+                    is_active=False, is_staff=False, is_superuser=False,
+                    role="CUSTOMER", password__startswith="!",
+                    email__endswith="@deleted.invalid", username__startswith="deleted-",
+                    first_name="", last_name="", last_login__isnull=True,
+                ),
+                name="erased_login_is_unusable",
+            ),
         ]
 
 
@@ -495,6 +513,8 @@ class CustomerAccountDeletionDecision(models.Model):
             "AWAITING_SETTLEMENT",
             "Awaiting settlement or retention review",
         )
+        COMPLETED_WITH_RETENTION = "COMPLETED_WITH_RETENTION", "Completed with retained records"
+        RETENTION_REVIEW = "RETENTION_REVIEW", "Retention reviewed"
 
     request = models.ForeignKey(
         CustomerAccountDeletionRequest,
@@ -504,6 +524,7 @@ class CustomerAccountDeletionDecision(models.Model):
     outcome = models.CharField(max_length=32, choices=Outcome.choices)
     reason = models.TextField()
     retained_categories = models.TextField(blank=True)
+    disposition = models.JSONField(default=dict, blank=True)
     review_due_at = models.DateTimeField(null=True, blank=True)
     policy_version = models.CharField(max_length=40)
     decided_by = models.ForeignKey(
@@ -521,7 +542,7 @@ class CustomerAccountDeletionDecision(models.Model):
         constraints = [
             models.CheckConstraint(
                 condition=models.Q(
-                    outcome="AWAITING_SETTLEMENT"
+                    outcome__in=["AWAITING_SETTLEMENT", "COMPLETED_WITH_RETENTION", "RETENTION_REVIEW"]
                 ),
                 name="account_deletion_decision_outcome_valid",
             ),
@@ -535,6 +556,14 @@ class CustomerAccountDeletionDecision(models.Model):
                     retained_categories__gt="",
                 ),
                 name="account_deletion_decision_review_shape_valid",
+            ),
+            models.UniqueConstraint(
+                fields=["request"], condition=models.Q(outcome="COMPLETED_WITH_RETENTION"),
+                name="account_deletion_one_completion",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(outcome="AWAITING_SETTLEMENT") | ~models.Q(disposition={}),
+                name="account_deletion_disposition_required",
             ),
         ]
 
@@ -566,6 +595,9 @@ class CustomerAccountDeletionAction(models.Model):
         OWNER_REJECTED = "OWNER_REJECTED", "Owner rejected request"
         NOTICE_ACCEPTED = "NOTICE_ACCEPTED", "Customer notice accepted"
         NOTICE_FAILED = "NOTICE_FAILED", "Customer notice failed"
+        DATA_MINIMIZED = "DATA_MINIMIZED", "Eligible account data removed"
+        COMPLETED_WITH_RETENTION = "COMPLETED_WITH_RETENTION", "Completed with retained records"
+        RETENTION_REVIEWED = "RETENTION_REVIEWED", "Retention reviewed"
 
     request = models.ForeignKey(
         CustomerAccountDeletionRequest,
@@ -607,6 +639,9 @@ class CustomerAccountDeletionAction(models.Model):
                         "OWNER_REJECTED",
                         "NOTICE_ACCEPTED",
                         "NOTICE_FAILED",
+                        "DATA_MINIMIZED",
+                        "COMPLETED_WITH_RETENTION",
+                        "RETENTION_REVIEWED",
                     ]
                 ),
                 name="account_deletion_action_valid",
@@ -624,3 +659,27 @@ class CustomerAccountDeletionAction(models.Model):
 
     def delete(self, *args, **kwargs):
         raise ValidationError("Account deletion actions cannot be deleted.")
+
+
+class CustomerAccountDeletionNotice(models.Model):
+    """Durable completion outbox; recipient is cleared after SMTP acceptance."""
+
+    decision = models.OneToOneField(
+        CustomerAccountDeletionDecision, on_delete=models.PROTECT, related_name="notice",
+    )
+    recipient_email = models.EmailField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    accepted_at = models.DateTimeField(null=True, blank=True)
+    last_attempt_at = models.DateTimeField(null=True, blank=True)
+    attempts = models.PositiveIntegerField(default=0)
+    last_error = models.CharField(max_length=100, blank=True)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    models.Q(accepted_at__isnull=True) & ~models.Q(recipient_email="")
+                ) | models.Q(accepted_at__isnull=False, recipient_email="", last_error=""),
+                name="deletion_notice_recipient_lifecycle",
+            ),
+        ]

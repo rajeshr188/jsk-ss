@@ -13,6 +13,8 @@ from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_POST
 
 from .forms import (
+    CustomerDeletionCompletionForm,
+    CustomerDeletionRetentionFormSet,
     CustomerAccountDeletionAuthenticatedForm,
     CustomerAccountDeletionHoldForm,
     CustomerAccountDeletionPublicForm,
@@ -22,12 +24,20 @@ from .forms import (
     CustomerRegistrationRejectionForm,
 )
 from .models import (
+    CustomerAccountDeletionNotice,
     CustomerAccountDeletionRequest,
     CustomerInvitation,
     CustomerRegistration,
 )
+from .deletion import (
+    RETENTION_CATEGORIES,
+    complete_customer_account_deletion,
+    send_completion_notice,
+    review_customer_account_retention,
+)
 from .selectors import (
     customer_account_deletion_detail,
+    customer_account_deletion_disposition,
     customer_account_deletion_queue,
 )
 from .services import (
@@ -203,7 +213,7 @@ def owner_required(view_func):
     @wraps(view_func)
     def wrapped(request, *args, **kwargs):
         user = request.user
-        if not (user.is_superuser or user.role == user.Role.OWNER):
+        if not user.is_active or not (user.is_superuser or user.role == user.Role.OWNER):
             raise PermissionDenied
         return view_func(request, *args, **kwargs)
 
@@ -504,6 +514,7 @@ def customer_account_deletion_authenticated(request):
 
 
 @owner_required
+@never_cache
 def customer_account_deletion_list(request):
     if not _customer_account_deletion_enabled():
         raise Http404
@@ -515,6 +526,7 @@ def customer_account_deletion_list(request):
 
 
 @owner_required
+@never_cache
 def customer_account_deletion_detail_view(request, request_id):
     if not _customer_account_deletion_enabled():
         raise Http404
@@ -529,11 +541,13 @@ def customer_account_deletion_detail_view(request, request_id):
         {
             "deletion_request": deletion_request,
             "hold_form": CustomerAccountDeletionHoldForm(),
+            "disposition": customer_account_deletion_disposition(deletion_request),
         },
     )
 
 
 @owner_required
+@never_cache
 @reauthentication_required()
 @require_POST
 def customer_account_deletion_hold(request, request_id):
@@ -569,6 +583,73 @@ def customer_account_deletion_hold(request, request_id):
     return render(
         request,
         "account/customer_deletion_detail.html",
-        {"deletion_request": deletion_request, "hold_form": hold_form},
+        {
+            "deletion_request": deletion_request,
+            "hold_form": hold_form,
+            "disposition": customer_account_deletion_disposition(deletion_request),
+        },
         status=400,
     )
+
+
+@owner_required
+@never_cache
+@reauthentication_required()
+def customer_account_deletion_complete(request, request_id, review=False):
+    if not _customer_account_deletion_enabled():
+        raise Http404
+    deletion_request = get_object_or_404(CustomerAccountDeletionRequest, pk=request_id)
+    if review and deletion_request.status != deletion_request.Status.COMPLETED_WITH_RETENTION:
+        raise Http404
+    if not review and deletion_request.status == deletion_request.Status.COMPLETED_WITH_RETENTION:
+        return redirect("customer_account_deletion_detail", request_id=request_id)
+    form = CustomerDeletionCompletionForm(request.POST if request.method == "POST" else None)
+    formset = CustomerDeletionRetentionFormSet(
+        request.POST if request.method == "POST" else None,
+        initial=[{"category": key} for key, label in RETENTION_CATEGORIES],
+        prefix="retention",
+    )
+    if request.method == "POST":
+        valid_form, valid_rows = form.is_valid(), formset.is_valid()
+        if valid_form and valid_rows:
+            rows = [{**row, "review_on": row["review_on"].isoformat()} for row in formset.cleaned_data]
+            try:
+                service = review_customer_account_retention if review else complete_customer_account_deletion
+                locked, decision = service(
+                    request_id=request_id, actor=request.user, retention_plan=rows,
+                    **{k: v for k, v in form.cleaned_data.items() if k != "reviewed"},
+                )
+            except ValidationError as error:
+                form.add_error(None, error)
+            else:
+                # The account mutation has committed. SMTP failure cannot undo it.
+                if not hasattr(decision, "notice"):
+                    messages.success(request, "Retention review recorded. No contact address remains; no notice was sent. Do not recover erased contact data.")
+                    return redirect("customer_account_deletion_detail", request_id=locked.pk)
+                accepted = send_completion_notice(notice_id=decision.notice.pk, actor=request.user)
+                if accepted:
+                    messages.success(request, "Eligible account data removed; the email provider accepted the outcome notice.")
+                else:
+                    messages.warning(request, "Account data removed. The outcome email needs retry from this request's notice queue.")
+                return redirect("customer_account_deletion_detail", request_id=locked.pk)
+    return render(request, "account/customer_deletion_complete.html", {
+        "deletion_request": deletion_request,
+        "disposition": customer_account_deletion_disposition(deletion_request),
+        "completion_form": form, "retention_forms": formset, "is_review": review,
+    }, status=400 if request.method == "POST" else 200)
+
+
+@owner_required
+@never_cache
+@reauthentication_required()
+@require_POST
+def customer_account_deletion_retry_notice(request, request_id, notice_id):
+    if not _customer_account_deletion_enabled():
+        raise Http404
+    notice = get_object_or_404(CustomerAccountDeletionNotice, pk=notice_id, decision__request_id=request_id)
+    accepted = send_completion_notice(notice_id=notice.pk, actor=request.user)
+    if accepted:
+        messages.success(request, "The email provider accepted the notice; the delivery address has been cleared from the queue.")
+    else:
+        messages.warning(request, "Notice delivery is still unconfirmed. Review SMTP and retry; no account removal was repeated.")
+    return redirect("customer_account_deletion_detail", request_id=request_id)

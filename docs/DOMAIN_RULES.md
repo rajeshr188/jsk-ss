@@ -30,9 +30,22 @@ This is the canonical source for stable business rules.
   scheme, contribution, rate lock, allocation, receipt, redemption, correction, or
   audit record and never blocks provider callbacks or financial reconciliation.
 - **AUTH-019:** Only an active owner with recent authentication may append a deletion
-  review decision. Until the qualified retention matrix is recorded, the only
-  supported decision is a reasoned continued-review/settlement hold with retained
-  categories and a future review date; no completion or anonymization action exists.
+  review decision. ADR-0015 permits owner-operated implementation without a blanket
+  professional-sign-off prerequisite; execution still needs an explicit category/field
+  disposition, justified retention and review dates. Owner completion removes eligible
+  account identity and credentials while preserving financial history; retained
+  records use `COMPLETED_WITH_RETENTION` and a review due date. Erased logins cannot
+  be restored or reused for new agreements/contributions. Pending payments,
+  unallocated entitlements and unresolved matched webhooks require review first.
+  Zero balances/counts do not establish the absence of external obligations. Preview
+  balances preserve separate agreements, INR principal/bonus and exact metal grades;
+  financial facts are never changed by a privacy preview.
+- **AUTH-021:** Completion is atomic and idempotent. Its durable notice is retried
+  separately; SMTP acceptance clears the temporary delivery address but does not
+  prove receipt. Retention reviews may remove more eligible profile fields but
+  never restore erased data or automatically purge financial evidence. Review
+  notices require a still-retained contact route; backup recovery is not a source
+  for restoring erased contact information.
 - **AUTH-020:** Account deletion never forfeits an INR or exact-grade metal entitlement.
   A completed-with-retention outcome must identify the retained categories, purpose,
   next review date, and support route without claiming that provider, backup, or

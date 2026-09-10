@@ -1,6 +1,7 @@
 from datetime import timedelta
 
 from allauth.socialaccount.models import SocialAccount
+from allauth.account.models import EmailAddress
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 from django.db.models import Count, Q
@@ -10,6 +11,9 @@ from accounts.models import (
     CustomerAccountDeletionAction,
     CustomerAccountDeletionAttempt,
     CustomerAccountDeletionRequest,
+    CustomerAccountDeletionNotice,
+    CustomerInvitation,
+    CustomUser,
 )
 
 
@@ -31,6 +35,7 @@ class Command(BaseCommand):
                 CustomerAccountDeletionRequest.Status.CONTAINED,
                 CustomerAccountDeletionRequest.Status.AWAITING_SETTLEMENT,
                 CustomerAccountDeletionRequest.Status.APPROVED,
+                CustomerAccountDeletionRequest.Status.COMPLETED_WITH_RETENTION,
             ]
         )
         active_contained_logins = contained.filter(customer__user__is_active=True).count()
@@ -40,6 +45,7 @@ class Command(BaseCommand):
                 CustomerAccountDeletionRequest.Status.CONTAINED,
                 CustomerAccountDeletionRequest.Status.AWAITING_SETTLEMENT,
                 CustomerAccountDeletionRequest.Status.APPROVED,
+                CustomerAccountDeletionRequest.Status.COMPLETED_WITH_RETENTION,
             ],
         ).count()
         overdue_owner_reviews = contained.filter(owner_review_due_at__lt=now).count()
@@ -79,7 +85,6 @@ class Command(BaseCommand):
             status__in=[
                 CustomerAccountDeletionRequest.Status.APPROVED,
                 CustomerAccountDeletionRequest.Status.COMPLETED,
-                CustomerAccountDeletionRequest.Status.COMPLETED_WITH_RETENTION,
                 CustomerAccountDeletionRequest.Status.REJECTED,
                 CustomerAccountDeletionRequest.Status.WITHDRAWN,
             ]
@@ -94,6 +99,41 @@ class Command(BaseCommand):
             )
         ).count()
 
+        completed = CustomerAccountDeletionRequest.objects.filter(status="COMPLETED_WITH_RETENTION")
+        completion_errors = 0
+        for item in completed.select_related("customer__user").prefetch_related("decisions", "actions"):
+            user = item.customer.user
+            decisions = [d for d in item.decisions.all() if d.outcome == "COMPLETED_WITH_RETENTION"]
+            bad = (
+                not user.privacy_erased_at or user.is_active or user.has_usable_password()
+                or bool(user.first_name or user.last_name)
+                or not user.email.endswith("@deleted.invalid")
+                or not item.requested_email.endswith("@deleted.invalid")
+                or len(decisions) != 1
+                or not any(a.action == "DATA_MINIMIZED" for a in item.actions.all())
+                or not any(a.action == "COMPLETED_WITH_RETENTION" for a in item.actions.all())
+                or EmailAddress.objects.filter(user=user).exists()
+                or SocialAccount.objects.filter(user=user).exists()
+                or CustomerInvitation.objects.filter(user=user).exists()
+            )
+            if decisions:
+                bad = bad or not CustomerAccountDeletionNotice.objects.filter(decision=decisions[0]).exists()
+                latest = next(d for d in item.decisions.all() if d.outcome != "AWAITING_SETTLEMENT")
+                kept = latest.disposition.get("retain_profile_fields", [])
+                for field in ("full_name", "email", "mobile_number", "address"):
+                    if field not in kept:
+                        expected = user.email if field == "email" else "Removed customer" if field == "full_name" else ""
+                        bad = bad or getattr(item.customer, field) != expected
+            completion_errors += int(bool(bad))
+        orphaned_erased_logins = CustomUser.objects.filter(privacy_erased_at__isnull=False).exclude(
+            customer_profile__account_deletion_requests__status="COMPLETED_WITH_RETENTION",
+        ).count()
+        pending_notices = CustomerAccountDeletionNotice.objects.filter(accepted_at__isnull=True)
+        notice_pending = pending_notices.count()
+        notice_needs_review = pending_notices.filter(
+            Q(attempts__gt=0) | Q(created_at__lt=now - timedelta(hours=24)),
+        ).count()
+
         errors = sum(
             [
                 pending_expired,
@@ -106,6 +146,9 @@ class Command(BaseCommand):
                 unsupported_final_states,
                 invalid_customer_roles,
                 stale_attempts,
+                completion_errors,
+                orphaned_erased_logins,
+                notice_needs_review,
             ]
         )
         summary = " ".join(
@@ -128,6 +171,10 @@ class Command(BaseCommand):
                 f"unsupported_final_states={unsupported_final_states}",
                 f"invalid_customer_roles={invalid_customer_roles}",
                 f"stale_attempts={stale_attempts}",
+                f"completion_errors={completion_errors}",
+                f"orphaned_erased_logins={orphaned_erased_logins}",
+                f"notice_pending={notice_pending}",
+                f"notice_needs_review={notice_needs_review}",
             ]
         )
         if errors:

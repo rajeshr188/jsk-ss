@@ -147,7 +147,7 @@ def customer_account_deletion_configuration(app_configs, **kwargs):
             Error(
                 "Account deletion requires an approved retention-policy version.",
                 hint=(
-                    "Record the qualified matrix and set "
+                    "Record the owner-approved retention policy and set "
                     "CUSTOMER_ACCOUNT_DELETION_POLICY_VERSION."
                 ),
                 id="jsk.E028",

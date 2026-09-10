@@ -6,6 +6,7 @@
   <h1 class="h2">Delete my customer account</h1>
   <p>This request disables your login immediately. We target completion of removable-data work within {{ completion_target_days }} days, subject to existing entitlements, captured payments, disputes, and approved accounting or legal retention.</p>
   <div class="alert alert-warning" role="note">Deleting access does not cancel or forfeit accumulated metal. Contact the showroom to receive statements or complete an eligible showroom redemption.</div>
+  {% include "account/_deletion_retention_explanation.html" %}
   <form method="post" novalidate>{% csrf_token %}{{ form|crispy }}<button class="btn btn-danger" type="submit">Submit deletion request</button></form>
 </div></div></div></div>
 {% endblock %}

@@ -1,0 +1,22 @@
+{% if decision.outcome == "RETENTION_REVIEW" %}The showroom has reviewed the records retained after your account deletion. Your login remains removed. The updated disposition is below.{% else %}Your customer login has been removed following your verified deletion request.{% endif %}
+
+We removed the password, login email bindings, social credentials, invitations, sessions and unnecessary profile/linked registration identity fields. Protected internal record keys remain; this is not a claim that all related history is anonymous or erased.
+
+Outcome: completed with retained records.
+Policy version: {{ decision.policy_version }}
+Decision recorded: {{ decision.decided_at }}
+Next owner review scheduled by this decision: {{ decision.review_due_at }}
+
+Showroom profile fields retained: {{ decision.disposition.retain_profile_fields|join:", "|default:"none" }}
+{% for row in retention_plan %}
+Category: {{ row.category }}
+Treatment: {{ row.treatment }}
+Purpose: {{ row.purpose }}
+Fields/records: {{ row.fields }}
+Period starts: {{ row.period_start }}
+Duration or release condition/next action: {{ row.period_or_condition }}
+Next review: {{ row.review_on }}
+{% endfor %}
+Financial entitlements and payment evidence are not forfeited or erased. Provider, exported, log and backup copies follow the reviewed retention/disposal procedures; they are not automatically deleted by this action. Your delivery address is temporarily retained for this notice and cleared from its delivery queue after email-provider acceptance.
+
+For statements, settlement, questions or a review of retained data, contact admin@jaishrikrishnajewellery.com or 9489481436. A future registration requires fresh owner approval and does not grant access to historical agreements.

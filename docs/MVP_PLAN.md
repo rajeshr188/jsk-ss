@@ -22,7 +22,7 @@
 - [x] `FW-AUTH-004` — Google as an explicitly linked approved-customer credential
 
 - [x] `FW-PRIV-001A` — Disabled verified-request, containment, owner-hold, and integrity foundation
-- [ ] `FW-PRIV-001B` — Qualified-matrix-driven anonymization, completion, and production acceptance
+- [ ] `FW-PRIV-001B` — Owner-operated data disposition, minimization, completion, and production acceptance (preview, completion, notice retries and retention reviews implemented locally; policies/procedures and rollout acceptance pending)
 
 - [ ] `FW-MOBILE-001` — Mobile product, policy, account, and release readiness
 - [x] `FW-MOBILE-002` — Network-safe installable PWA foundation
