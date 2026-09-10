@@ -25,9 +25,12 @@ The private business-owned Android TWA repository now has an API
 29-to-36 customer shell and a successful unsigned GitHub-hosted build; it adds no
 mobile API, native provider integration, financial authority, or application secret.
 The canonical mobile-readiness guide now contains the bounded Internal Testing
-customer-journey matrix. Only TWA launch/association is recorded as passed; identity,
-registration, enrolment, payment, lifecycle, network, update, accessibility, and
-privacy/log cases remain to be executed against one immutable build.
+customer-journey matrix. On 10 September the owner confirmed authentication,
+registration, enrolment, payments, and documents through the Play-installed app,
+with approximately five pilot customers. These core journeys are owner-reported
+passes; exact build/device metadata and individual negative-case evidence remain
+unrecorded. Lifecycle, network, update/fallback, accessibility, checkout edge cases,
+and privacy/log acceptance remain open. `FW-MOBILE-004` is underway.
 The production-accepted `FW-AUTH-004`, `FW-ENROL-001`, and all financial boundaries
 remain unchanged. ADR-0015 is accepted for staged implementation. `FW-PRIV-001A` is deployed
 in production as a disabled verified-request, access-containment, owner-hold, and
@@ -766,11 +769,13 @@ and rejection of unsafe/non-Google URLs. Django checks and migration-drift check
 
 ## Next recommended step
 
-Execute the bounded customer journey matrix for the accepted Internal Testing build:
-password and linked-Google authentication, registration/enrolment isolation,
-Razorpay handoff and return, checkout cancellation/expiry/pause, receipts/statements,
-process death, update behavior, accessibility, and no-secret logs. Use the executable
-matrix in `docs/MOBILE_RELEASE_READINESS.md` and stop on any critical/high,
+Complete the qualified retention worksheet in ADR-0015 to unblock `FW-PRIV-001B`.
+In parallel, finish the remaining Internal Testing cases: checkout
+cancellation/expiry/pause, unlinked-identity rejection, process death, network/offline,
+updates/browser fallback, accessibility, and no-secret logs. Core authentication,
+registration, enrolment, payment and document journeys are owner-confirmed through
+the Play-installed app; collect missing build/device metadata and reuse that evidence.
+Use `docs/MOBILE_RELEASE_READINESS.md` and stop on any critical/high,
 financial-integrity, identity-boundary, or data-exposure failure. Resolve
 server-enforced protection for
 the private Android repository. Finish qualified Financial-features/retention review

@@ -415,6 +415,29 @@ Current status: **not created; required before Play review.**
 
 ## Internal Testing customer-journey matrix
 
+### Owner-reported pilot evidence — 10 September 2026
+
+The owner reports approximately five pilot customers, with more expected, and
+confirms that authentication, registration, enrolment, payments, and documents work
+through the Play-installed Android app. These are accepted as owner-reported core
+journey passes. Exact build/web release, device versions, payment mode, individual
+negative cases, and log inspection evidence were not supplied with this confirmation.
+Do not infer that every assertion in the detailed matrix below has been exercised.
+
+| Core journey | Reported result |
+| --- | --- |
+| Authentication | Owner-confirmed pass in Play-installed app |
+| Registration | Owner-confirmed pass in Play-installed app |
+| Enrolment | Owner-confirmed pass in Play-installed app |
+| Payment journey | Owner-confirmed pass in Play-installed app |
+| Receipts/statements | Owner-confirmed pass in Play-installed app |
+
+`FW-MOBILE-004` is underway. `FW-MOBILE-003` remains in final acceptance pending
+the remaining device, edge-case, and privacy evidence. Collect missing metadata
+from the existing pilot where available; repeat a successful core journey only if a
+changed release or unresolved defect requires it. The rows below track the more
+specific assertions, not a denial of the reported core journey results.
+
 Run this matrix against one immutable Internal Testing build before inviting a wider
 pilot. Record only the build/version, production release, device/Android/browser,
 date, pass/fail result, and a redacted support reference. Never store passwords,
@@ -426,6 +449,10 @@ finish with the application integrity commands named in the production guide. A
 registration or enrolment test must prove that no scheme account or financial record
 is created before its owner approval boundary. A Live payment is limited to one
 owner-approved low-value transaction after all Test-mode payment cases pass.
+Run Razorpay Test cases on an isolated test deployment with separate credentials
+and data. Do not switch the serving Live deployment to Test mode for this matrix.
+Use existing accepted payment evidence when sufficient; no additional real payment
+is implied by recording these results.
 
 | Area | Controlled case | Acceptance | State |
 | --- | --- | --- | --- |

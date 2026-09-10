@@ -127,7 +127,9 @@ recorded limitations are not lost.
   notice evidence, and aggregate integrity check. The owner accepted the
   24-hour/7-day/30-day service targets and entitlement-preserving communication.
   Obtain the qualified category-by-category retention matrix before adding any
-  irreversible anonymization or completion action. Public Play release remains
+  irreversible anonymization or completion action. ADR-0015 now contains a review
+  worksheet and the ordered implementation/acceptance plan; all retention periods
+  and legal bases await qualified review. Public Play release remains
   blocked until the completion workflow, policy/deletion URL, synthetic rollout, and
   production evidence are complete. Never cascade-delete `CustomUser`, `Customer`, or
   financial records.
@@ -225,6 +227,10 @@ recorded limitations are not lost.
   current plan; retain procedural green-PR discipline until an upgrade or separately
   approved public-source decision resolves that gate.
 - **FW-MOBILE-004 — Run a bounded Play and customer pilot:** Start with Play Internal
+  Testing. As of 10 September 2026 the owner reports approximately five customers
+  and confirms core authentication, registration, enrolment, payments, and documents
+  through the Play-installed Android app. Record this as a pilot in progress, not
+  completed negative-case or device-matrix acceptance. Continue with Play Internal
   Testing and approximately five to ten legitimate customers. Pass password and linked-
   Google login, unconnected-identity rejection, registration/enrolment boundaries,
   Razorpay Test checkout, one approved low-value Live reconciliation, cancellation,

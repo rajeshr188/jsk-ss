@@ -248,6 +248,63 @@ Until that matrix is recorded, the application must expose no anonymization,
 only accept and verify requests, contain access, preserve financial processing, and
 let an owner append a reasoned hold with a next review date.
 
+## FW-PRIV-001B review worksheet and execution plan
+
+Prepared 10 September 2026. This worksheet collects the outstanding decision; it
+does not approve a retention period or establish a legal duty. The owner and a
+qualified legal/accounting reviewer must complete each category before the
+irreversible implementation begins. The existing service targets remain accepted.
+
+For every row, record the purpose/legal basis, minimum identifying fields, retention
+duration, event that starts the duration, legal-hold exceptions, review/disposal
+action, and responsible owner. Mark a category not applicable only with a reason.
+Record the schedule version, review date, reviewer role and owner acceptance; keep
+professional correspondence and sensitive business documents outside the repository.
+
+| Category | Current data to consider | Decision required |
+| --- | --- | --- |
+| Applicants and consent | Registration name, email, phone, address, verification and approval evidence, policy versions | Separate unapproved/expired applicants from approved customers; identify removable duplicates and the consent evidence still needed |
+| Login and profile | CustomUser, Customer, allauth email/Google binding, invitations, sessions | Define removal/tombstone fields, necessary contact for unresolved obligations, and re-registration treatment |
+| Scheme agreements | Plan/grade contract, enrolment request, acceptance and account history | Identify contract evidence and customer identity needed during and after settlement; define the starting event |
+| Contributions and payment evidence | Razorpay orders, payment identifiers, webhook payloads, cash receipts | Separate immutable amounts/status/rate locks from personal payload fields; define transaction-evidence retention |
+| Allocations, receipts and statements | Exact-grade quantities, printed/downloaded documents and identity copies | Preserve entitlements and financial facts; identify which customer-identifying fields require retention |
+| Redemptions, corrections and disputes | Settlement, reversal, refund/dispute records and supporting correspondence | Define unresolved-obligation holds, settlement evidence and release/review conditions |
+| Audit and security | Audit actor labels/details, registration/deletion attempts, Caddy/Cloudflare/application logs | Minimize personal identifiers; define distinct operational/security retention and disposal periods |
+| Communications and provider copies | Postmark metadata, reminder/invitation emails, support mailbox, Google/Razorpay provider data | Identify processor follow-ups, retained provider records, response evidence and message-copy disposal |
+| Exports and showroom records | CSVs, downloaded statements, printed receipts, manual customer records | Assign a person to find, retain or dispose of copies under the same approved schedule |
+| Backups and restoration | Linode managed backups and any local/manual database exports | Document actual expiry/access restrictions and how a restore reapplies completed deletion decisions before reopening access |
+| Privacy request evidence | Verification digests, decisions, actions, retained categories and notification result | Define minimal completion evidence and its own retention so the audit does not retain erased personal data |
+
+### Execution checkpoints
+
+- [x] Inspect the existing foundation: selectors expose request history and counts;
+  services support verified containment and owner holds; completion and anonymization
+  are intentionally unavailable.
+- [x] Prepare the category worksheet and record the Play-installed pilot core results.
+- [ ] Obtain the completed qualified retention schedule and owner acceptance.
+- [ ] Map the approved schedule to exact model fields and provider/export/backup
+  procedures. Identify outstanding entitlements and pending provider events using
+  existing financial selectors; counts alone cannot authorize completion.
+- [ ] Implement a read-only owner disposition preview, versioned decisions, and
+  supported terminal lifecycle constraints. Show retained categories, purpose and
+  next review date before confirmation.
+- [ ] Implement recently authenticated, atomic, idempotent owner completion services
+  for approved no-history and retained-history cases; preserve financial foreign
+  keys and quantities, and prevent account reactivation from restoring removed data.
+- [ ] Add provider follow-up/outcome notices and retention-review handling; ensure
+  email or provider failures remain visible and retryable without repeating erasure.
+- [ ] Test synthetic no-history/history cases, holds, late captured payments,
+  concurrent/double completion, owner authorization, and identity/cache/log safety.
+- [ ] Update policies, account entry point and public deletion page to match the
+  approved behavior. Validate the in-app and external request journeys.
+- [ ] Deploy disabled, verify migrations/integrity and recovery procedures, then
+  perform synthetic acceptance before approved production enablement.
+- [ ] Record production evidence and update Play Data Safety/deletion declarations.
+
+The immediate dependency is the completed schedule, not additional successful
+customer payments. The owner-confirmed Android pilot does not supply retention
+decisions or authorize erasing any pilot customer's records.
+
 ## References
 
 - [Google Play account deletion requirements](https://support.google.com/googleplay/android-developer/answer/13327111)
