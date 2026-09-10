@@ -36,17 +36,20 @@ retention matrix, `FW-PRIV-001B`, production enablement, and public-store deleti
 claim remain open.
 
 Wagtail 8.0 is production-accepted in release
-`65eff0d80a2e23f5f7df1da9d610d7ae1ef26038`. The isolated rollout applied only
-Wagtail's additive `wagtailcore.0098_apitoken` vendor migration, and it preserved the
-existing catalogue and editorial boundaries. Health, CMS authorization, R2 media,
-authentication, payment-operation, financial, exact-grade, in-store-cash,
-enrolment, registration, Google-login, account-deletion, and Live Razorpay checks
-passed. Catalogue/product, About, existing-image, CMS-login, and non-publishing
-preview checks also passed without changing published content. A blog remains a
-separate capability and is not implied by this dependency acceptance. ADR-0016 now
-accepts `FW-CMS-004` as an in-development, disabled-first Jewellery journal: one
-`/blog/` root and business-authored posts with isolated Blog staff groups, media, and
-publisher approval. It is not merged, deployed, populated, or publicly enabled yet.
+`65eff0d80a2e23f5f7df1da9d610d7ae1ef26038`. Its isolated rollout applied only
+Wagtail's additive `wagtailcore.0098_apitoken` vendor migration and preserved the
+existing catalogue and editorial boundaries. The disabled-first `FW-CMS-004`
+Jewellery journal foundation is now production-accepted in release
+`6396371fa71cc4b53c2e4a92ee31b329a5c9419b`, using immutable image
+`ghcr.io/rajeshr188/jsk-savings@sha256:55c8f840cb023ff8760bdbb0f602472787cfac2186c01bbc7d608c630d32db7c`.
+The additive `blog.0001_initial` migration and isolated Blog groups, media collection,
+draft root, publisher task, and approval workflow are installed and valid. The public
+flag remains disabled: `/blog/` returns `404`, no Journal navigation is exposed, no
+staff membership or article was created, and existing content/financial authority is
+unchanged. CMS authorization, R2 media, authentication, payment-operation, financial,
+exact-grade, in-store-cash, Live Razorpay, and reconciliation checks passed before
+payments reopened. Genuine article creation, approval, accessibility/metadata review,
+and a separately controlled public enablement remain open.
 
 ## Completed
 

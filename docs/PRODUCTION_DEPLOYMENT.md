@@ -3335,6 +3335,36 @@ catalogue/editorial content remained unchanged. This acceptance covers the major
 dependency upgrade only; it does not approve a blog model, new editorial scope, or
 new publication permissions.
 
+### Disabled-first Jewellery journal foundation acceptance — 10 September 2026
+
+`FW-CMS-004` completed its disabled-first production foundation in release
+`6396371fa71cc4b53c2e4a92ee31b329a5c9419b`, published as immutable image
+`ghcr.io/rajeshr188/jsk-savings@sha256:55c8f840cb023ff8760bdbb0f602472787cfac2186c01bbc7d608c630d32db7c`.
+The recorded managed-PostgreSQL recovery point was 10 September 2026 at 6:00 AM IST.
+The retained application rollback pair is release
+`65eff0d80a2e23f5f7df1da9d610d7ae1ef26038` and image
+`ghcr.io/rajeshr188/jsk-savings@sha256:521ced1f7e0686728cebc73e4be89aba6db30963aa421ce0a7a3538d1e09f406`.
+Because the migration is additive, an application rollback must preserve the blog
+tables, Wagtail revisions, workflow evidence, and R2 objects.
+
+The reviewed plan contained only `blog.0001_initial`; it applied successfully and is
+recorded as applied. The idempotent authorization command created the draft Blog root,
+dedicated media collection, `Blog Editors`, `Blog Publishers`, and
+`Blog Administrators`, plus the publisher approval task and Blog review workflow. Its
+check passed. No user was assigned, no article was created, and application roles were
+not changed. Catalogue and Editorial authorization checks remained valid, and the R2
+upload/read/rendition/cleanup exercise passed.
+
+Both HTTPS health endpoints reported the candidate release. With
+`PUBLIC_BLOG_ENABLED=False`, `/blog/` returned `404` and Journal discovery remained
+absent from primary and footer navigation. Authentication email integrity, financial
+exceptions, Razorpay Live readiness, exact-grade contracts, in-store cash lifecycle,
+and abandoned-order reconciliation all passed with zero exceptions or open orders.
+Payments were paused for the rollout, then reopened; every enabled grade reported
+`OPEN` with zero pending contributions. This accepts only the private foundation.
+Article approval, content accuracy, accessibility, metadata, R2 presentation, and the
+separate `PUBLIC_BLOG_ENABLED=True` activation remain future controlled work.
+
 ## Go-live sign-off
 
 The target full-production checklist remains below. Live acceptance does not mark
