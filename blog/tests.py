@@ -165,7 +165,7 @@ class PublicBlogTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, published.title)
         self.assertNotContains(response, draft.title)
-        self.assertContains(response, f'href="{self.blog.url}">Journal</a>')
+        self.assertContains(response, f'href="{self.blog.url}">Articles</a>', count=2)
         self.assertEqual(self.client.get(published.url).status_code, 200)
         self.assertEqual(self.client.get(draft.url).status_code, 404)
 
@@ -177,8 +177,7 @@ class PublicBlogTests(TestCase):
         self.assertEqual(self.client.get(post.url).status_code, 404)
         homepage = self.client.get(reverse("home"))
         self.assertIsNone(homepage.context["public_blog_page"])
-        self.assertNotContains(homepage, ">Journal</a>")
-        self.assertNotContains(homepage, ">Jewellery journal</a>")
+        self.assertNotContains(homepage, ">Articles</a>")
 
     def test_featured_then_newest_ordering_and_pagination_are_bounded(self):
         featured = self.make_post(

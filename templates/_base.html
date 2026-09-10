@@ -59,7 +59,7 @@
           {% endif %}
           {% if public_blog_page %}
           <li class="nav-item">
-            <a class="nav-link{% if public_blog_is_current %} active{% endif %}"{% if public_blog_is_current %} aria-current="page"{% endif %} href="{{ public_blog_url }}">Journal</a>
+            <a class="nav-link{% if public_blog_is_current %} active{% endif %}"{% if public_blog_is_current %} aria-current="page"{% endif %} href="{{ public_blog_url }}">Articles</a>
           </li>
           {% endif %}
           <li class="nav-item">
@@ -148,8 +148,11 @@
     <div class="container py-4 py-lg-5">
       <div class="row g-4 align-items-start">
         <div class="col-lg-5">
-          <p class="footer-brand fw-semibold mb-1">Jai Sri Krishna Jewellery</p>
-          <address class="small text-muted mb-0">No. 155, Azad Road, Thorapadi, Vellore, Tamil Nadu 632001, India</address>
+          <p class="footer-brand fw-semibold mb-1">{{ showroom.name }}</p>
+          <address class="small text-muted mb-0">{{ showroom.full_address }}</address>
+          {% if showroom.google_profile_url %}
+          <a class="small d-inline-block py-2 mt-1" href="{{ showroom.google_profile_url }}" target="_blank" rel="noopener noreferrer">Find us on Google Maps<span class="visually-hidden"> (opens in a new tab)</span></a>
+          {% endif %}
         </div>
         <div class="col-lg-7 d-lg-flex justify-content-lg-end">
           <nav class="footer-links" aria-label="Legal and business information">
@@ -158,7 +161,7 @@
             <a href="{% url 'pricing' %}">Savings plans</a>
             <a href="{% url 'how_it_works' %}">How it works</a>
             {% if public_catalogue_page %}<a href="{{ public_catalogue_url }}">Jewellery catalogue</a>{% endif %}
-            {% if public_blog_page %}<a href="{{ public_blog_url }}">Jewellery journal</a>{% endif %}
+            {% if public_blog_page %}<a href="{{ public_blog_url }}">Articles</a>{% endif %}
             <a href="{% url 'terms' %}">Terms</a>
             <a href="{% url 'privacy' %}">Privacy</a>
             <a href="{% url 'cancellation_refund' %}">Cancellation &amp; refunds</a>
@@ -167,7 +170,7 @@
           </nav>
         </div>
       </div>
-      <div class="small text-muted border-top border-light border-opacity-10 mt-4 pt-3">Customer support: <a class="text-reset" href="mailto:admin@jaishrikrishnajewellery.com">admin@jaishrikrishnajewellery.com</a> · <a class="text-reset" href="tel:+919489481436">+91 94894 81436</a></div>
+      <div class="small text-muted border-top border-light border-opacity-10 mt-4 pt-3">Customer support: <a class="text-reset" href="mailto:{{ showroom.email }}">{{ showroom.email }}</a> · <a class="text-reset" href="tel:{{ showroom.telephone }}">{{ showroom.telephone_display }}</a></div>
     </div>
   </footer>
 

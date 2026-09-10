@@ -19,7 +19,7 @@
 </header>
 
 {% if posts %}
-<section aria-label="Jewellery journal articles">
+<section aria-label="Articles">
   <div class="row g-4">
     {% for post in posts %}
     <article class="col-md-6 col-xl-4">
@@ -50,7 +50,7 @@
 </section>
 
 {% if posts.paginator.num_pages > 1 %}
-<nav class="mt-5" aria-label="Journal pages">
+<nav class="mt-5" aria-label="Article pages">
   <ul class="pagination justify-content-center">
     {% if posts.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ posts.previous_page_number }}" rel="prev">Previous</a></li>{% endif %}
     <li class="page-item active" aria-current="page"><span class="page-link">Page {{ posts.number }} of {{ posts.paginator.num_pages }}</span></li>

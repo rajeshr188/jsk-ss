@@ -39,6 +39,41 @@ def env_list(name, default=""):
     return [item.strip() for item in os.getenv(name, default).split(",") if item.strip()]
 
 
+def validate_google_business_profile_url(value):
+    value = value.strip()
+    if not value:
+        return ""
+    try:
+        parsed = urlparse(value)
+        maps_hosts = {
+            "www.google.com", "google.com", "maps.google.com",
+            "www.google.co.in", "maps.google.co.in",
+        }
+        share_hosts = {"maps.app.goo.gl", "g.page", "share.google"}
+        host = parsed.netloc.lower()
+        valid = (
+            parsed.scheme == "https"
+            and not any(
+                character.isspace() or ord(character) < 32 or character in '<>"\\'
+                for character in value
+            )
+            and (
+                (
+                    host in maps_hosts
+                    and (parsed.path == "/maps" or parsed.path.startswith("/maps/"))
+                )
+                or (host in share_hosts and parsed.path not in {"", "/"})
+            )
+        )
+    except ValueError:
+        valid = False
+    if not valid:
+        raise ImproperlyConfigured(
+            "GOOGLE_BUSINESS_PROFILE_URL must be blank or an HTTPS Google Maps/business share link"
+        )
+    return value
+
+
 def env_int_list(name, default, *, minimum=None, maximum=None, max_items=None):
     raw_items = env_list(name, default)
     values = []
@@ -181,6 +216,7 @@ TEMPLATES = [
                 "blog.context_processors.public_blog_navigation",
                 "catalog.context_processors.public_catalogue_navigation",
                 "pages.context_processors.pwa",
+                "pages.context_processors.showroom",
             ],
         },
     },
@@ -329,6 +365,10 @@ PUBLIC_EDITORIAL_PAGES_ENABLED = env_bool("PUBLIC_EDITORIAL_PAGES_ENABLED", Fals
 # The blog root and posts remain publicly unreachable until their isolated content,
 # authorization, and production checks pass and this gate is enabled.
 PUBLIC_BLOG_ENABLED = env_bool("PUBLIC_BLOG_ENABLED", False)
+# Public listing link only; unrelated to customer Google OAuth credentials.
+GOOGLE_BUSINESS_PROFILE_URL = validate_google_business_profile_url(
+    os.getenv("GOOGLE_BUSINESS_PROFILE_URL", "")
+)
 WAGTAILSEARCH_BACKENDS = {
     "default": {
         "BACKEND": "wagtail.search.backends.database",
