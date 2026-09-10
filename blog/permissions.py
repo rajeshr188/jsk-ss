@@ -139,7 +139,7 @@ def _get_or_create_blog_root():
         )
 
     blog = BlogIndexPage(
-        title="Jewellery journal",
+        title="Articles",
         slug="blog",
         intro=(
             "Practical jewellery guidance, care notes, and stories from "

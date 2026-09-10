@@ -2,6 +2,7 @@
 
 {% block title %}Contact us | Jai Sri Krishna Jewellery{% endblock %}
 {% block meta_description %}Contact Jai Sri Krishna Jewellery at No. 155, Azad Road, Thorapadi, Vellore, Tamil Nadu.{% endblock %}
+{% block structured_data %}{% include "pages/includes/showroom_structured_data.html" %}{% endblock %}
 
 {% block content %}
 <div class="policy-page">
@@ -11,14 +12,20 @@
 
   <div class="card mt-4">
     <div class="card-body p-4">
-      <h2 class="h4 mt-0">Jai Sri Krishna Jewellery</h2>
-      <address class="mb-3">No. 155, Azad Road<br>Thorapadi, Vellore<br>Tamil Nadu 632001, India</address>
+      <h2 class="h4 mt-0">{{ showroom.name }}</h2>
+      <address class="mb-3">{{ showroom.street }}<br>{{ showroom.locality }}<br>{{ showroom.region }} {{ showroom.postal_code }}, {{ showroom.country }}</address>
       <dl class="row mb-0">
-        <dt class="col-sm-3">Email</dt><dd class="col-sm-9"><a href="mailto:admin@jaishrikrishnajewellery.com">admin@jaishrikrishnajewellery.com</a></dd>
-        <dt class="col-sm-3">Phone</dt><dd class="col-sm-9"><a href="tel:+919489481436">+91 94894 81436</a></dd>
-        <dt class="col-sm-3">Monday–Saturday</dt><dd class="col-sm-9">9:00 AM–9:00 PM</dd>
-        <dt class="col-sm-3">Sunday</dt><dd class="col-sm-9">9:00 AM–1:00 PM</dd>
+        <dt class="col-sm-3">Email</dt><dd class="col-sm-9"><a href="mailto:{{ showroom.email }}">{{ showroom.email }}</a></dd>
+        <dt class="col-sm-3">Phone</dt><dd class="col-sm-9"><a href="tel:{{ showroom.telephone }}">{{ showroom.telephone_display }}</a></dd>
+        {% for hours in showroom.hours %}<dt class="col-sm-3">{{ hours.label }}</dt><dd class="col-sm-9">{{ hours.display }}</dd>{% endfor %}
       </dl>
+      <div class="d-flex flex-column flex-sm-row flex-wrap gap-2 mt-3" aria-label="Showroom on Google Maps">
+        <a class="btn btn-outline-dark" href="{{ showroom.directions_url }}" target="_blank" rel="noopener noreferrer">Get directions<span class="visually-hidden"> on Google Maps (opens in a new tab)</span></a>
+        {% if showroom.google_profile_url %}
+        <a class="btn btn-outline-dark" href="{{ showroom.google_profile_url }}" target="_blank" rel="noopener noreferrer">Read reviews on Google<span class="visually-hidden"> (opens our Business Profile in a new tab)</span></a>
+        {% endif %}
+      </div>
+      <p class="small text-secondary mt-2 mb-0">Directions open Google Maps using our showroom address. Please confirm the destination before travelling.</p>
     </div>
   </div>
 

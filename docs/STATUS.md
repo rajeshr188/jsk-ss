@@ -43,13 +43,41 @@ Jewellery journal foundation is now production-accepted in release
 `6396371fa71cc4b53c2e4a92ee31b329a5c9419b`, using immutable image
 `ghcr.io/rajeshr188/jsk-savings@sha256:55c8f840cb023ff8760bdbb0f602472787cfac2186c01bbc7d608c630d32db7c`.
 The additive `blog.0001_initial` migration and isolated Blog groups, media collection,
-draft root, publisher task, and approval workflow are installed and valid. The public
-flag remains disabled: `/blog/` returns `404`, no Journal navigation is exposed, no
-staff membership or article was created, and existing content/financial authority is
-unchanged. CMS authorization, R2 media, authentication, payment-operation, financial,
+draft root, publisher task, and approval workflow are installed and valid. At rollout
+acceptance the public flag was disabled: `/blog/` returned `404`, no Journal
+navigation was exposed, and no staff membership or article had been created.
+Existing content/financial authority is unchanged. CMS authorization, R2 media, authentication, payment-operation, financial,
 exact-grade, in-store-cash, Live Razorpay, and reconciliation checks passed before
-payments reopened. Genuine article creation, approval, accessibility/metadata review,
-and a separately controlled public enablement remain open.
+payments reopened. Subsequently, the user assigned staff roles and reviewed the five
+initial articles (hallmarking/HUID, savings in grams, family occasions, jewellery care,
+and 22K/24K gold); the root and articles were published through Blog approval.
+On 10 September 2026 the root title was changed to **Articles** through the same
+workflow, retaining `/blog/`. Five newly generated featured illustrations were
+uploaded to Blog media and saved with descriptive alternative text; all five revised
+articles are verified **In Moderation**, leaving their previously published revisions
+intact. Replacement-image approval remains pending; original images were retained.
+Local navigation, footer, article eyebrow, accessibility labels, app display name,
+and new-root default now use Articles, pending code release. Blog regression tests,
+Django checks, and migration-drift checks pass; no migration is required. Public
+feature-flag activation has not been independently verified in this content refresh.
+
+Website-side Google Business Profile support is implemented locally, not deployed.
+`pages/business.py` centralizes reviewed showroom identity for Contact/home/footer
+display and home/Contact `JewelryStore` JSON-LD. Contact provides address-based Maps
+directions; optional `GOOGLE_BUSINESS_PROFILE_URL` enables homepage/footer listing
+links, the Contact review link, and schema identity/map references. The user supplied
+`https://maps.app.goo.gl/TKpjGNXgNYpiFzDM7`; browser inspection on 10 September matched
+the business name, phone, and 155 Azad Road address. The local environment and both
+templates now include that public URL; production configuration/deployment remains
+pending. Stakeholder consistency review remains for Google's Ramset Nagar locality
+versus the site's Thorapadi wording, and its delivery attribute versus the website's
+showroom-only scheme fulfilment. Existing approved website details are unchanged.
+No Google credentials, embedded maps/reviews, tracking scripts, ratings, financial
+authority, or migration are added. Updating Google's Website field remains a separate
+stakeholder action. Prior Articles refresh changes are preserved on the working branch.
+The 61-test pages/blog/environment-template regression run passes, including optional
+link visibility, shared identity/hours, fixed canonical origin, safe JSON-LD escaping,
+and rejection of unsafe/non-Google URLs. Django checks and migration-drift checks pass.
 
 ## Completed
 

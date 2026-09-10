@@ -657,6 +657,35 @@ Configuration rules:
   the public origin uses a non-default port.
 - `WAGTAILADMIN_BASE_URL` is the public origin used to build absolute CMS links. Do
   not include `/cms/` or a trailing slash.
+- `GOOGLE_BUSINESS_PROFILE_URL` is optional public information, not a Google OAuth
+  credential. Set it to the exact showroom listing's HTTPS Google Maps/share URL
+  only after the stakeholder confirms the name, address, phone, hours, and map pin.
+  Do not use a Business Profile management URL or a general address-search URL.
+  Blank hides the homepage/footer profile links and Contact review link, and omits
+  `sameAs`/`hasMap` from structured data. Google-domain validation checks URL shape,
+  not ownership or the destination behind a short link; manually open and verify it.
+  The Contact directions link independently uses the published showroom address.
+  No Google API key, OAuth permission, review widget, or tracking script is required.
+  Add the value to Linode `.env.production`, validate Compose, and recreate `web`
+  using the normal immutable-image rollout (then recreate Caddy as documented).
+  Verify the links on desktop/mobile and that they open the correct listing.
+  Clear the value and recreate to remove profile discovery if the listing is wrong.
+  The stakeholder separately adds the canonical website to the Google Business
+  Profile; deploying these links does not perform that Google-account change.
+  The user-supplied listing inspected on 10 September 2026 is
+  `GOOGLE_BUSINESS_PROFILE_URL=https://maps.app.goo.gl/TKpjGNXgNYpiFzDM7`.
+  Its name, phone, and 155 Azad Road address match; ask the stakeholder to review
+  Google's Ramset Nagar locality label versus Thorapadi on the website and its
+  delivery attribute versus showroom-only scheme fulfilment. Do not automatically
+  rewrite approved address or fulfilment terms from Google's listing.
+  Showroom identity and opening hours are reviewed Django-owned data in
+  `pages/business.py`, shared by Contact/home/footer display and the home/Contact
+  `JewelryStore` JSON-LD. No guessed coordinates, product prices, stock-photo business
+  images, self-serving ratings, or Google endorsement claims are published. After
+  deployment, validate the two public URLs with Google's Rich Results Test; optional
+  data warnings must not be filled with invented facts, and rich results are not
+  guaranteed. See [Google LocalBusiness guidance](https://developers.google.com/search/docs/appearance/structured-data/local-business)
+  and [Maps URLs](https://developers.google.com/maps/documentation/urls/get-started).
 - Keep `PUBLIC_CATALOGUE_ENABLED=False` through the initial catalogue deployment.
   Change it to `True` only after the catalogue root and reviewed products are live and
   their direct public URLs pass desktop/mobile, metadata, rendition, and enquiry checks.

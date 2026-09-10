@@ -9,6 +9,7 @@ from django.views.decorators.http import require_GET
 from django.views.generic import ListView, TemplateView
 
 from schemes.selectors import get_public_scheme_plans
+from .business import showroom_structured_data
 from .models import AboutPage, OurStoryPage
 from .selectors import public_editorial_page
 
@@ -140,6 +141,7 @@ class HomePageView(TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["featured_plans"] = get_public_scheme_plans(limit=3)
+        context["showroom_json_ld"] = showroom_structured_data()
         context["customer_enrolment_requests_enabled"] = (
             settings.CUSTOMER_ENROLMENT_REQUESTS_ENABLED
         )
@@ -169,6 +171,11 @@ class OurStoryPageView(EditorialPageFallbackMixin, TemplateView):
 
 class ContactPageView(TemplateView):
     template_name = "pages/contact.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["showroom_json_ld"] = showroom_structured_data()
+        return context
 
 
 class PricingPageView(ListView):
