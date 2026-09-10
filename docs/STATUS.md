@@ -2,6 +2,86 @@
 
 ## Current milestone
 
+Immediate priority: **Google Play release preparation**, not implementation of
+`FW-PROD-007`. The owner accepted the recovery-isolation rule after clarification:
+restored systems remain private with payment/email/jobs disabled until latest
+deletion decisions and newer financial facts are reconciled; missing evidence keeps
+the restore isolated. This approves the procedure, not a production restore.
+Next: the bounded deletion acceptance pilot, reviewer access and final Console
+declarations in `docs/MOBILE_RELEASE_READINESS.md`. Enablement and irreversible
+completions still require explicit approval. After the reauthentication UI regression
+was added, all 38 account-deletion/final-completion tests passed locally on
+10 September; Django system checks found no issues.
+The test runner recreated and removed its local `test_jsk_ss` database; no production
+database or application configuration was changed.
+Production activation preflight then passed on release
+`7819fd9552825c61ebc34a7844ba346c7ad92488`: deletion is enabled with deletion and
+registration-privacy policy versions `2026-09-10`; the public deletion route returns
+200; account-deletion integrity reports zero requests and zero errors; financial
+exceptions remain zero. At activation this exposed request intake but was not deletion
+acceptance: no request, containment or completion had yet been exercised.
+The first Play-installed authenticated deletion request subsequently reached
+`CONTAINED` with the expected requested/verified/session-revocation/Google-removal/
+containment/notice actions; login is inactive and integrity remains clean. Completion
+is deliberately paused: contrary to the disposable zero-history assumption, its
+customer owns two active `GOLD_24K_9999` agreements and one failed Test-mode Razorpay
+contribution of INR 15,200 (zero allocations and redemptions). No completion decision
+exists. The owner placed it under reviewed hold because the history is intentional
+synthetic/test data; never erase or reactivate the login by ad-hoc database editing.
+This containment result is partial pilot evidence, not end-to-end deletion acceptance.
+
+The owner also reported that django-allauth's reauthentication page appeared as an
+unstyled fallback during that review. Root cause: the project customized ordinary
+account templates but had no `account/reauthenticate.html` override. A Bootstrap 5
+project-layout override and focused regression test are now implemented locally;
+both the layout test and existing recent-authentication/CSRF guard test pass. This
+presentation fix is not yet committed, merged or deployed; security semantics are
+unchanged.
+
+`FW-PRIV-001B` **disabled-stage production rollout accepted** on 10 September 2026
+from owner-supplied Linode output and explicit smoke-test confirmation. PR #72 merged
+as `7819fd9552825c61ebc34a7844ba346c7ad92488`; main CI and the published-image
+fixable-critical vulnerability gate passed. Production runs
+`ghcr.io/rajeshr188/jsk-savings@sha256:4f07a2b4a274130cca8bd079d6ffba60547cb2d49e3e9bf4aff39cfdbccaa806`.
+Migration `accounts.0006_customer_deletion_completion` applied; web is healthy,
+deletion integrity and financial exception checks pass with zero reported errors.
+Caddy validation passed; both public health endpoints report the new release;
+`/accounts/deletion/` returns 404; login, customer dashboard and Savings Plans work.
+Deletion remains disabled with no completed requests. Confirmed recovery point:
+10 September 2026 at **13:00 IST**, superseding the proposed 15:00 timestamp.
+Rollback identity and detailed evidence are in `docs/PRODUCTION_DEPLOYMENT.md`.
+The owner subsequently confirmed restricted business Workspace Drive storage and
+a privately identified backup custodian: the encrypted synthetic Drive and USB
+copies both decrypted successfully, and unauthorized Drive access was denied.
+That closes the storage/access test only, not before/after decision reconciliation.
+Three fictional JSON stages (intent/completion/latest review) have been prepared
+outside the repository for the custodian's encrypted-copy recordkeeping exercise;
+JSON validation passed. The owner confirmed the sequence-recognition exercise:
+version 3 is latest, version 1 does not prove execution, and version 2 must not
+restore fields removed by version 3. This is a tabletop exercise, not a production
+decision reconciliation. Responsibility split accepted: the showroom owner reviews
+obligations and approves decisions; Rajesh maintains the technical recovery record
+and verifies Drive/USB copies after each decision change; the identified backup
+custodian provides recovery cover. Review the request queue daily; no daily USB
+recopy is required when decisions have not changed.
+Both running containers use Docker's local log driver with `max-size=20m` and
+`max-file=5` (owner output). Subsequent inspection shows journald forwarding to
+active local rsyslog; syslog/UFW rotate weekly with four archives and a daily timer.
+Rotation-service success and cloud-init/mail.err coverage remain unverified.
+Website Logpush is unavailable on the reported Cloudflare Free plan; other export
+mechanisms/provider-held data are not ruled out.
+`FW-PROD-007` now tracks a budget-conscious security-log preservation plan, using
+180 days as the CERT-In planning baseline for this sole proprietorship. The earlier
+standalone 14-day/256-MB proposal is withdrawn. Repository inspection confirms
+privacy filters and Docker size caps, not durable archival or complete security-event
+coverage. Measure volume and approve a private destination before implementing;
+no paid service, log upload, host change or cleanup was performed. Restore-isolation
+procedure acceptance is recorded above; production restore execution remains untested.
+This accepts deployment only: production recovery-record operation,
+production restore handling, effective log/provider retention procedures, applicant
+disposal and enabled Play-app acceptance remain open. Earlier local-only notes below
+describe the preparation history, not the current deployment state.
+
 ADR-0014 accepts a PWA and customer-only Android Trusted Web Activity as the first
 mobile distribution path. `FW-MOBILE-002` is production-accepted in release
 `049944412aa09668d6b04e45cabee2bc58dadc42`: the installable PWA uses reviewed

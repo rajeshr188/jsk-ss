@@ -22,7 +22,8 @@
 - [x] `FW-AUTH-004` — Google as an explicitly linked approved-customer credential
 
 - [x] `FW-PRIV-001A` — Disabled verified-request, containment, owner-hold, and integrity foundation
-- [ ] `FW-PRIV-001B` — Owner-operated data disposition, minimization, completion, and production acceptance (preview, completion, notice retries and retention reviews implemented locally; policies/procedures and rollout acceptance pending)
+- [ ] `FW-PRIV-001B` — Owner-operated data disposition, minimization and completion (disabled production rollout accepted 10 September 2026; recovery/retention procedures and enabled acceptance pending)
+- [ ] `FW-PROD-007` — Budget-conscious security-log preservation (inventory/plan documented; measured sizing, archive implementation and recovery acceptance pending)
 
 - [ ] `FW-MOBILE-001` — Mobile product, policy, account, and release readiness
 - [x] `FW-MOBILE-002` — Network-safe installable PWA foundation
