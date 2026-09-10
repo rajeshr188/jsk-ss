@@ -3,6 +3,7 @@ from django.contrib.auth.forms import AdminUserCreationForm, SetPasswordForm, Us
 
 from .models import CustomUser
 from .services import normalize_indian_mobile
+from .deletion import RETENTION_CATEGORIES
 
 
 class CustomUserCreationForm(AdminUserCreationForm):
@@ -131,3 +132,36 @@ class CustomerAccountDeletionHoldForm(forms.Form):
         label="Next review date and time",
         widget=forms.DateTimeInput(attrs={"type": "datetime-local"}),
     )
+
+
+class CustomerDeletionCompletionForm(forms.Form):
+    reason = forms.CharField(max_length=3000, widget=forms.Textarea(attrs={"rows": 2}))
+    external_review = forms.CharField(
+        max_length=3000, widget=forms.Textarea(attrs={"rows": 3}),
+        label="External review evidence and outstanding follow-ups",
+        help_text="Document provider, export, log and backup checks. Do not paste customer identifiers, credentials or private correspondence.",
+    )
+    retain_profile_fields = forms.MultipleChoiceField(
+        required=False, choices=[(v, v.replace("_", " ").title()) for v in ("full_name", "email", "mobile_number", "address")],
+        widget=forms.CheckboxSelectMultiple,
+        label="Showroom profile fields that must be retained",
+        help_text="Leave unneeded fields unchecked. Open agreements/entitlements require name and email for settlement; the login is removed regardless.",
+    )
+    confirmation = forms.CharField(label="Type the request UUID to confirm irreversible removal")
+    reviewed = forms.BooleanField(label="I reviewed the disposition and external records, and approve the stated purposes, fields and review dates.")
+
+
+class CustomerDeletionRetentionForm(forms.Form):
+    category = forms.ChoiceField(choices=RETENTION_CATEGORIES, disabled=True)
+    treatment = forms.ChoiceField(choices=[("RETAIN", "Retain for documented purpose"), ("NOT_APPLICABLE", "Not applicable — explain why")])
+    purpose = forms.CharField(max_length=1500, widget=forms.Textarea(attrs={"rows": 2}))
+    fields = forms.CharField(max_length=1500, label="Minimum fields/records retained, or none with explanation")
+    period_start = forms.CharField(max_length=1500, label="Event/date that starts the retention period")
+    period_or_condition = forms.CharField(max_length=1500, label="Duration or hold-release condition and next action")
+    review_on = forms.DateField(widget=forms.DateInput(attrs={"type": "date"}), label="Next review date (within 365 days)")
+
+
+CustomerDeletionRetentionFormSet = forms.formset_factory(
+    CustomerDeletionRetentionForm, extra=0, min_num=7, max_num=7,
+    validate_min=True, validate_max=True,
+)

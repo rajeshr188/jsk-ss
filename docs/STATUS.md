@@ -34,9 +34,52 @@ and privacy/log acceptance remain open. `FW-MOBILE-004` is underway.
 The production-accepted `FW-AUTH-004`, `FW-ENROL-001`, and all financial boundaries
 remain unchanged. ADR-0015 is accepted for staged implementation. `FW-PRIV-001A` is deployed
 in production as a disabled verified-request, access-containment, owner-hold, and
-integrity foundation without any anonymization/completion mutation. The qualified
-retention matrix, `FW-PRIV-001B`, production enablement, and public-store deletion
-claim remain open.
+integrity foundation without any anonymization/completion mutation. On 10 September
+the owner accepted ADR-0015's revised owner-operated implementation boundary; a
+qualified written retention matrix is no longer a blanket development prerequisite.
+Local `FW-PRIV-001B` now includes the non-cacheable owner preview, structured
+category dispositions, atomic/idempotent completion, erased-login/profile guards,
+durable retryable outcome notices and retained-record reviews. New additive migration
+`accounts.0006_customer_deletion_completion` is required; it performs no customer
+erasure on migration. Completion itself requires recent owner authentication, exact
+request confirmation and current obligation checks. Financial history is preserved,
+and every supported completion discloses retained records. The production deletion
+flag remains disabled; policy/procedure review, synthetic rollout acceptance and the
+public-store deletion claim remain open. No production customer has been erased.
+Verification on 10 September: the full 421-test regression run passed. After final
+concurrent-edit guards and additional identity-minimization cases, all 95 accounts
+tests passed again. Django checks, migration-drift checks and `git diff --check`
+passed. A subsequent local rollout rehearsal on 10 September confirmed the default
+database is `localhost:5432/jsk_ss` and applied only accounts migrations `0005` and
+`0006`; unrelated pending Wagtail/blog migrations were left untouched. All 16 targeted
+completion tests passed again, including the synthetic owner form, duplicate POST,
+notice retry, retained-field review and financial-preservation journeys, using the
+isolated test database and in-memory email backend. Local deletion integrity, Django
+checks and migration-drift checks passed; the local deletion flag remains disabled.
+The production guide now records the owner procedure checklist and isolated-restore
+acceptance requirements. Actual provider settings, owner retention decisions and
+restore suppression have not been verified by these tests. No production migration,
+feature enablement, real-customer deletion, commit or push was performed.
+Release preparation now includes an implementation-aligned disposition baseline in
+ADR-0015 and revised Privacy/feature-gated deletion-entry wording. It distinguishes
+the GST record baseline from unrelated personal data, review dates from disposal,
+and application minimization from external-copy handling. Production policy-version
+changes, provider settings, applicant disposal and restore suppression remain open;
+this is not a completed retention schedule or Play acceptance.
+The combined 68-test pages/deletion/completion regression run passed, including
+enabled/disabled policy links and both public/authenticated retention disclosures.
+Django checks, migration-drift checks and patch whitespace checks passed. This
+wording increment adds no migration. The branch is being prepared for PR/CI review;
+this does not authorize merge, production deployment or deletion enablement.
+The 10 September synthetic local PostgreSQL dump/restore rehearsal also passed:
+two fresh temporary databases, two synthetic customers, restored identity detected,
+latest retention-review disposition reapplied, exact financial rows unchanged and
+missing-request/financial-mismatch guards enforced. All temporary databases and
+artifacts were removed. This proves only post-containment local recovery, not
+production recovery-register durability or pre-request restore handling. The guide
+records owner-confirmed 45-day Postmark activity retention, absence of retained
+customer exports/paper/R2 documents, and the latest reported recovery point. Oldest
+available backup and effective time-based log retention remain unconfirmed.
 
 Wagtail 8.0 is production-accepted in release
 `65eff0d80a2e23f5f7df1da9d610d7ae1ef26038`. Its isolated rollout applied only
@@ -472,15 +515,17 @@ and rejection of unsafe/non-Google URLs. Django checks and migration-drift check
   domain to verified with link handling enabled, Chrome was the default browser, and
   the relaunched app had no address bar. The remaining gates are the bounded
   payments/recovery/role device matrix,
-  qualified review of the Financial features classification and record-retention
-  basis, an implemented account-deletion request path, and final dependency-level
+  Financial features classification review, owner-approved record-retention
+  procedures, an implemented account-deletion request path, and final dependency-level
   Data Safety review. The first release remains customer-only and adds no mobile API.
 - ADR-0015 was owner-accepted on 7 September 2026 with 24-hour verification,
   seven-day owner-review, and 30-day removable-data service targets; owner-only review;
   and entitlement-preserving retained-record communication. The disabled
   `FW-PRIV-001A` foundation is production-accepted. `FW-PRIV-001B`, anonymization,
   completion decisions, production enablement, and synthetic active-flow acceptance
-  remain blocked on the qualified category-by-category retention matrix.
+  remain pending for production. The 10 September ADR revision permits owner-operated
+  development without waiting for a qualified written retention matrix. Local
+  completion/notice/review implementation is not production acceptance.
 - `FW-ELIG-002` awaits only the first naturally occurring reminder-specific Postmark
   acceptance and matching owner delivery record. Its deployed zero-candidate run is
   correct evidence that no message is invented merely to satisfy a rollout smoke.
@@ -769,7 +814,13 @@ and rejection of unsafe/non-Google URLs. Django checks and migration-drift check
 
 ## Next recommended step
 
-Complete the qualified retention worksheet in ADR-0015 to unblock `FW-PRIV-001B`.
+Review the implemented `FW-PRIV-001B` owner disposition and run a synthetic local
+owner journey. Complete the real category-specific retention policy, external
+provider/export handling and backup/restore suppression procedure, then review/CI
+and a separately approved disabled-first production rollout of `accounts.0006`.
+Keep production deletion disabled until synthetic acceptance and policy/procedures
+are complete. No automatic financial purge or blanket statutory retention period
+has been approved; do not use pilot customers for destructive acceptance tests.
 In parallel, finish the remaining Internal Testing cases: checkout
 cancellation/expiry/pause, unlinked-identity rejection, process death, network/offline,
 updates/browser fallback, accessibility, and no-secret logs. Core authentication,
@@ -778,8 +829,8 @@ the Play-installed app; collect missing build/device metadata and reuse that evi
 Use `docs/MOBILE_RELEASE_READINESS.md` and stop on any critical/high,
 financial-integrity, identity-boundary, or data-exposure failure. Resolve
 server-enforced protection for
-the private Android repository. Finish qualified Financial-features/retention review
-and `FW-PRIV-001B`
+the private Android repository. Finish the Financial-features classification review,
+owner-approved retention procedures and `FW-PRIV-001B`
 before making a public-store account-deletion claim. No public store release may
 bypass the remaining policy/deletion gates. The independent
 fund-safety priority remains the two no-mutation `FW-PAY-003` Razorpay recovery

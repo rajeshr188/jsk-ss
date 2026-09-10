@@ -126,13 +126,23 @@ recorded limitations are not lost.
   verification, immediate access containment, owner queue, reasoned hold, provider
   notice evidence, and aggregate integrity check. The owner accepted the
   24-hour/7-day/30-day service targets and entitlement-preserving communication.
-  Obtain the qualified category-by-category retention matrix before adding any
-  irreversible anonymization or completion action. ADR-0015 now contains a review
-  worksheet and the ordered implementation/acceptance plan; all retention periods
-  and legal bases await qualified review. Public Play release remains
+  On 10 September the owner accepted the revised ADR-0015 owner-operated approach;
+  professional sign-off is no longer a blanket development prerequisite. The
+  read-only owner disposition preview is implemented with separated financial
+  balances, related-record counts, local review flags and explicit external unknowns.
+  Structured category/field decisions, atomic minimization/completion, retryable
+  notices and retained-record reviews are now implemented locally with migration
+  `accounts.0006`. Next review real retention procedures, policy wording, manual
+  external disposal/restore suppression and synthetic rollout evidence. No automatic financial-evidence
+  destruction or blanket statutory period is approved. Public Play release remains
   blocked until the completion workflow, policy/deletion URL, synthetic rollout, and
   production evidence are complete. Never cascade-delete `CustomUser`, `Customer`, or
   financial records.
+  Standalone/unapproved applicant minimization and ambiguous email-matched historical
+  applications need a separately reviewed disposition path; this completion service
+  stops instead of guessing ownership. Automatic external-copy disposal, financial
+  purge and restore-suppression automation remain unimplemented. Retention due dates
+  and failed notices require daily owner review, not a claim of automated disposal.
 
 ## Eligibility and customer communication
 
@@ -200,8 +210,8 @@ recorded limitations are not lost.
   additively in the origin statement. Release `0c611f6` published both Play
   certificates; Google and Android verification passed and the installed app opened
   without browser chrome. Completion remains blocked on payments/recovery/role
-  evidence, qualified financial
-  classification and retention review, an implemented
+  evidence, financial classification review,
+  owner-approved retention procedures, an implemented
   deletion-request workflow,
   and a release-candidate Data Safety review. The organization D-U-N-S value remains
   intentionally outside the repository.

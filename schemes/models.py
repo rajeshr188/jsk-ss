@@ -4,7 +4,7 @@ from decimal import Decimal
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
-from django.db import models
+from django.db import models, transaction
 from django.utils import timezone
 
 from .eligibility import is_redemption_eligible
@@ -31,6 +31,13 @@ class Customer(models.Model):
 
     def __str__(self):
         return f"{self.customer_number} — {self.full_name}"
+
+    def save(self, *args, **kwargs):
+        with transaction.atomic():
+            stored = type(self).objects.select_for_update().filter(pk=self.pk).first() if self.pk else None
+            if stored is not None and stored.user.privacy_erased_at:
+                raise ValidationError("A removed customer's profile requires the privacy workflow, not ordinary editing.")
+            return super().save(*args, **kwargs)
 
 
 class MetalGrade(models.Model):

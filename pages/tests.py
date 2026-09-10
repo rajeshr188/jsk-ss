@@ -193,6 +193,28 @@ class PublicPageTests(TestCase):
                 self.assertContains(response, text)
                 self.assertContains(response, "admin@jaishrikrishnajewellery.com")
 
+    @override_settings(CUSTOMER_ACCOUNT_DELETION_ENABLED=False)
+    def test_privacy_explains_retention_without_exposing_disabled_deletion(self):
+        response = self.client.get(reverse("privacy"))
+        self.assertContains(response, "supporting Android app")
+        self.assertContains(response, "72 months from the due date")
+        self.assertContains(response, "not a six-year period starting from account deletion")
+        self.assertNotContains(response, f'href="{reverse("customer_account_deletion")}"')
+        self.assertNotContains(response, "What is removed and what may remain")
+
+    @override_settings(CUSTOMER_ACCOUNT_DELETION_ENABLED=True)
+    def test_privacy_discloses_completion_and_external_retention_limits(self):
+        response = self.client.get(reverse("privacy"))
+        self.assertContains(response, f'href="{reverse("customer_account_deletion")}"')
+        for text in (
+            "What is removed and what may remain",
+            "A review date is not an automatic deletion date",
+            "not your Google account",
+            "They are not automatically erased by removing your login",
+            "Provider acceptance does not prove inbox delivery",
+        ):
+            self.assertContains(response, text)
+
     def test_footer_exposes_all_compliance_links(self):
         response = self.client.get(reverse("home"))
 

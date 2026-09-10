@@ -4,6 +4,9 @@ from . import views
 
 
 urlpatterns = [
+    path("owner/deletion-requests/<uuid:request_id>/review-retention/", views.customer_account_deletion_complete, {"review": True}, name="customer_account_deletion_review_retention"),
+    path("owner/deletion-requests/<uuid:request_id>/complete/", views.customer_account_deletion_complete, name="customer_account_deletion_complete"),
+    path("owner/deletion-requests/<uuid:request_id>/notices/<int:notice_id>/retry/", views.customer_account_deletion_retry_notice, name="customer_account_deletion_retry_notice"),
     path(
         "deletion/",
         views.customer_account_deletion,

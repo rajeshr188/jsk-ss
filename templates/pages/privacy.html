@@ -5,9 +5,9 @@
 
 {% block content %}
 <article class="policy-page">
-  <p class="text-uppercase small fw-semibold text-secondary mb-2">Effective 5 September 2026</p>
+  <p class="text-uppercase small fw-semibold text-secondary mb-2">Revised 10 September 2026</p>
   <h1>Privacy policy</h1>
-  <p>Jai Sri Krishna Jewellery respects customer privacy. This policy explains how we handle personal information through our showroom and savings-scheme website.</p>
+  <p>Jai Sri Krishna Jewellery respects customer privacy. This policy explains how we handle personal information through our showroom, savings-scheme website and supporting Android app.</p>
 
   <h2>Information we collect</h2>
   <ul>
@@ -32,7 +32,8 @@
   <p>The website uses essential cookies for login sessions, request security, and account functionality. These are not used by us for third-party advertising. Razorpay may process information under its own privacy terms when its checkout is opened.</p>
 
   <h2>Retention</h2>
-  <p>We retain scheme and financial records for as long as reasonably required to operate the scheme and meet accounting, tax, dispute, payment-network, and other legal obligations. Registration rate-limit digests are configured for short retention and are pruned after their security purpose ends. Registration decisions and consent evidence may be retained to explain how an account was approved or why a duplicate was not merged. Security logs and support records are retained only as long as reasonably necessary for their purpose. Some financial records are append-oriented and cannot be silently deleted because they establish the transaction history.</p>
+  <p>We retain necessary scheme and financial evidence while needed to establish entitlements and meet accounting, tax, dispute or other applicable obligations. This does not require keeping every profile field or unrelated message indefinitely. For records covered by section 36 of the CGST Act, the retention period is 72 months from the due date for the relevant annual return, with extensions for applicable proceedings or investigations. Other applicable obligations may require longer retention; this is not a six-year period starting from account deletion.</p>
+  <p>Registration rate-limit digests have a configured short retention window; cleanup runs when further requests are processed, so expiry is not a guarantee of immediate physical deletion. Registration decisions, consent and privacy-request evidence require their own documented purposes and reviews. Security logs and support records are reviewed separately from statutory transaction evidence. We do not automatically destroy financial history when a review date arrives.</p>
 
   <h2>Security</h2>
   <p>We use access controls, encrypted HTTPS transport, restricted production systems, payment-signature verification, and traceable financial records. No internet service can guarantee absolute security. Customers should use a strong password and immediately report suspected account misuse.</p>
@@ -41,6 +42,10 @@
   <p>You may ask about a connected Google identity. Online unlink is not available in the initial release; contact the showroom immediately so a suspected compromised connection can be disabled and reviewed.</p>
   <p>You may ask us to review or correct your contact information and may raise questions about access, retention, or lawful processing. Some information cannot be removed while retention is required for financial, contractual, fraud-prevention, dispute, or legal purposes. We will respond according to applicable law after verifying the requester’s identity.</p>
   {% if customer_account_deletion_enabled %}<p>You can submit a verified request through our <a href="{% url 'customer_account_deletion' %}">account deletion page</a>. Verification disables login and new customer-initiated transactions while existing payments, metal entitlements, disputes, and necessary retained records are reviewed. We aim to review a verified request within seven calendar days and complete removable-data work within 30 calendar days. If specific records must remain longer, we will explain their categories, purpose, and next review date.</p>{% endif %}
+
+  {% if customer_account_deletion_enabled %}
+    {% include "account/_deletion_retention_explanation.html" %}
+  {% endif %}
 
   <h2>Contact</h2>
   <p>For a privacy request, email <a href="mailto:admin@jaishrikrishnajewellery.com">admin@jaishrikrishnajewellery.com</a>, call <a href="tel:+919489481436">+91 94894 81436</a>, or visit Jai Sri Krishna Jewellery, No. 155, Azad Road, Thorapadi, Vellore, Tamil Nadu 632001, India.</p>

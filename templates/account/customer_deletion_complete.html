@@ -1,0 +1,21 @@
+{% extends "_base.html" %}
+{% load crispy_forms_tags %}
+{% block title %}Approve account disposition | Jai Sri Krishna Jewellery{% endblock %}
+{% block content %}
+<a href="{% url 'customer_account_deletion_detail' deletion_request.pk %}">Back to disposition preview</a>
+<h1 class="h2 mt-3">{% if is_review %}Review retained records{% else %}Approve account disposition{% endif %}</h1>
+{% if is_review %}<p>Only previously retained profile fields may remain selected. Unchecked fields will be removed if obligations allow it. Financial history cannot be destroyed here. A review notice is queued only if a contact email was still retained.</p>{% endif %}
+<p>Request: <strong>{{ deletion_request.pk }}</strong> · {{ deletion_request.customer.customer_number }}</p>
+<div class="alert alert-warning">This removes login credentials and unneeded identity fields irreversibly. Financial records and justified retained fields remain. It is not a financial refund, settlement, or deletion of provider/backups. No legal retention period is pre-approved by this form.</div>
+<ul>{% for flag in disposition.review_flags %}<li>{{ flag }}</li>{% endfor %}</ul>
+<form method="post" novalidate>
+  {% csrf_token %}
+  {{ completion_form|crispy }}
+  <h2 class="h4 mt-4">Category-specific retention decisions</h2>
+  <p>Write plain-language explanations suitable for the customer notice. Review dates trigger owner review, not automatic destruction. Explain “not applicable” rather than leaving fields blank.</p>
+  {{ retention_forms.management_form }}
+  {{ retention_forms.non_form_errors }}
+  {% for form in retention_forms %}<fieldset class="card p-3 mb-3"><legend class="h5">Category {{ forloop.counter }}</legend>{{ form|crispy }}</fieldset>{% endfor %}
+  <button class="btn btn-danger" type="submit">Remove eligible account data and queue outcome notice</button>
+</form>
+{% endblock %}

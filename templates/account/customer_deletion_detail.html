@@ -3,9 +3,57 @@
 {% block title %}Review deletion request | Jai Sri Krishna Jewellery{% endblock %}
 {% block content %}
 <div class="mb-4"><a href="{% url 'customer_account_deletion_list' %}">← Account deletion requests</a><h1 class="h2 mt-2">Review deletion request</h1></div>
+{% if disposition %}
+<section class="card shadow-sm mb-4" aria-labelledby="disposition-title">
+  <div class="card-body">
+    <h2 id="disposition-title" class="h4">Data disposition preview</h2>
+    <p class="text-secondary">Read-only snapshot at {{ disposition.generated_at }}. No records are changed, no provider is contacted and no deletion is approved by viewing this page.</p>
+    <div class="alert alert-info">Zero balances do not mean every record can be erased. Review local and external obligations and record category-specific purposes before completion. Financial history is preserved.</div>
+    {% if deletion_request.status == "CONTAINED" or deletion_request.status == "AWAITING_SETTLEMENT" %}<p><a class="btn btn-outline-danger" href="{% url 'customer_account_deletion_complete' deletion_request.pk %}">Review and approve data disposition</a></p>{% endif %}
+    {% if deletion_request.status == "COMPLETED_WITH_RETENTION" %}<p><a class="btn btn-outline-primary" href="{% url 'customer_account_deletion_review_retention' deletion_request.pk %}">Review retained records</a></p>{% endif %}
+    <h3 class="h5">Review findings</h3>
+    <ul>{% for flag in disposition.review_flags %}<li>{{ flag }}</li>{% empty %}<li>No local review flags found. External checks and a documented disposition are still required.</li>{% endfor %}</ul>
+    <h3 class="h5">Outstanding amounts by agreement</h3>
+    <p class="small">INR principal, earned bonus and each metal grade remain separate. Six-decimal grams are shown here for owner reconciliation. These balances include historical test-mode allocations where present; they are not a live-payment-only total.</p>
+    <div class="table-responsive">
+      <table class="table table-sm align-middle">
+        <caption>Current financial-selector balances; no cross-account netting or purity conversion.</caption>
+        <thead><tr><th scope="col">Scheme</th><th scope="col">Status</th><th scope="col">Grade</th><th scope="col">Principal (INR)</th><th scope="col">Earned bonus (INR)</th><th scope="col">Grams</th></tr></thead>
+        <tbody>{% for balance in disposition.account_balances %}<tr><td>{{ balance.scheme_number }}</td><td>{{ balance.status }}</td><td>{{ balance.grade }}</td><td>{{ balance.cash_principal|floatformat:2 }}</td><td>{{ balance.cash_earned_bonus|floatformat:2 }}</td><td>{{ balance.metal_quantity|floatformat:6 }}</td></tr>{% empty %}<tr><td colspan="6">No scheme agreements recorded.</td></tr>{% endfor %}</tbody>
+      </table>
+    </div>
+    <h3 class="h5">Local data inventory and proposed treatment</h3>
+    <div class="table-responsive">
+      <table class="table align-middle">
+        <caption>Counts are related records, not a complete inventory of personal fields or permission to delete them.</caption>
+        <thead><tr><th scope="col">Category</th><th scope="col">Records</th><th scope="col">Review / proposed treatment</th></tr></thead>
+        <tbody>{% for category, count, treatment in disposition.inventory %}<tr><th scope="row">{{ category }}</th><td>{{ count }}</td><td>{{ treatment }}</td></tr>{% endfor %}</tbody>
+      </table>
+    </div>
+    <h3 class="h5">External checks — not verified by this application</h3>
+    <ul class="mb-0">{% for check in disposition.external_checks %}<li>{{ check }}</li>{% endfor %}</ul>
+  </div>
+</section>
+{% endif %}
 <div class="row g-4"><div class="col-lg-7"><div class="card shadow-sm"><div class="card-body">
   <dl class="row mb-0"><dt class="col-sm-4">Customer</dt><dd class="col-sm-8">{{ deletion_request.customer.customer_number }} — {{ deletion_request.customer.full_name }}</dd><dt class="col-sm-4">Status</dt><dd class="col-sm-8">{{ deletion_request.get_status_display }}</dd><dt class="col-sm-4">Requested</dt><dd class="col-sm-8">{{ deletion_request.requested_at }}</dd><dt class="col-sm-4">Review due</dt><dd class="col-sm-8">{{ deletion_request.owner_review_due_at }}</dd><dt class="col-sm-4">Scheme accounts</dt><dd class="col-sm-8">{{ deletion_request.scheme_account_count }}</dd><dt class="col-sm-4">Contributions</dt><dd class="col-sm-8">{{ deletion_request.contribution_count }}</dd><dt class="col-sm-4">Pending provider orders</dt><dd class="col-sm-8">{{ deletion_request.pending_provider_count }}</dd></dl>
 </div></div>
 <div class="card shadow-sm mt-4"><div class="card-body"><h2 class="h4">Append-only actions</h2><ul class="list-group list-group-flush">{% for action in deletion_request.actions.all %}<li class="list-group-item px-0"><strong>{{ action.get_action_display }}</strong><br><span class="small text-secondary">{{ action.created_at }} · {{ action.actor_label }}</span></li>{% empty %}<li class="list-group-item px-0">No actions recorded.</li>{% endfor %}</ul></div></div></div>
-<div class="col-lg-5"><div class="card border-warning"><div class="card-body"><h2 class="h4">Record continued review</h2><p class="small">Use this for an open entitlement, provider state, dispute, or records awaiting the qualified retention decision. It does not anonymize data.</p><form method="post" action="{% url 'customer_account_deletion_hold' deletion_request.pk %}" novalidate>{% csrf_token %}{{ hold_form|crispy }}<button class="btn btn-warning" type="submit">Record hold and review date</button></form></div></div></div></div>
+<div class="col-lg-5">{% if deletion_request.status != "COMPLETED_WITH_RETENTION" %}<div class="card border-warning"><div class="card-body"><h2 class="h4">Record continued review</h2><p class="small">Use this for an open entitlement, provider state, dispute, or a documented retention review. It does not anonymize data. Record the purpose, necessary record categories and a future review date; avoid unnecessary personal details.</p><form method="post" action="{% url 'customer_account_deletion_hold' deletion_request.pk %}" novalidate>{% csrf_token %}{{ hold_form|crispy }}<button class="btn btn-warning" type="submit">Record hold and review date</button></form></div></div>{% endif %}
+<div class="card mt-4"><div class="card-body"><h2 class="h4">Recorded review decisions</h2>{% for decision in deletion_request.decisions.all %}<div class="border-bottom mb-3 pb-3"><p><strong>{{ decision.get_outcome_display }}</strong><br>{{ decision.decided_at }} · {{ decision.decided_by_label }}</p><p>{{ decision.reason|linebreaksbr }}</p><p>Retained categories: {{ decision.retained_categories|linebreaksbr }}</p><p class="small mb-0">Review due: {{ decision.review_due_at }} · Policy: {{ decision.policy_version }}</p></div>{% empty %}<p>No owner decisions recorded.</p>{% endfor %}</div></div>
+</div></div>
+{% for decision in deletion_request.decisions.all %}
+{% if decision.disposition %}
+<section class="card my-3"><div class="card-body">
+  <h2 class="h4">Disposition recorded {{ decision.decided_at }}</h2>
+  <p>Retained profile fields: {{ decision.disposition.retain_profile_fields|join:", "|default:"none" }}</p>
+  <p>External review and follow-ups: {{ decision.disposition.external_review|linebreaksbr }}</p>
+  <div class="table-responsive"><table class="table table-sm"><caption>Owner-recorded category decisions; not an automatic purge schedule.</caption><thead><tr><th scope="col">Category / treatment</th><th scope="col">Purpose / fields</th><th scope="col">Start / duration or condition</th><th scope="col">Review</th></tr></thead><tbody>
+  {% for row in decision.disposition.retention_plan %}<tr><th scope="row">{{ row.category }}<br>{{ row.treatment }}</th><td>{{ row.purpose }}<br>{{ row.fields }}</td><td>{{ row.period_start }}<br>{{ row.period_or_condition }}</td><td>{{ row.review_on }}</td></tr>{% endfor %}
+  </tbody></table></div>
+</div></section>
+{% endif %}
+{% if decision.notice %}
+<section class="card my-3"><div class="card-body"><h2 class="h4">Outcome notice</h2><p>Attempts: {{ decision.notice.attempts }} · {% if decision.notice.accepted_at %}Accepted by the email provider on {{ decision.notice.accepted_at }}. Delivery address cleared.{% else %}Delivery not yet confirmed. The delivery address remains temporarily in the queue.{% endif %}</p>{% if not decision.notice.accepted_at %}<form method="post" action="{% url 'customer_account_deletion_retry_notice' deletion_request.pk decision.notice.pk %}">{% csrf_token %}<button class="btn btn-outline-primary" type="submit">Retry outcome notice</button></form>{% endif %}</div></section>
+{% endif %}{% endfor %}
 {% endblock %}

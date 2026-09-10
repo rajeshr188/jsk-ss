@@ -8,6 +8,7 @@ from .models import (
     CustomerAccountDeletionAttempt,
     CustomerAccountDeletionDecision,
     CustomerAccountDeletionRequest,
+    CustomerAccountDeletionNotice,
     CustomerRegistration,
     CustomerRegistrationAttempt,
 )
@@ -28,6 +29,11 @@ class CustomUserAdmin(UserAdmin):
     add_fieldsets = UserAdmin.add_fieldsets + (
         ("Application role", {"fields": ("email", "role")}),
     )
+
+    def has_change_permission(self, request, obj=None):
+        if obj is not None and obj.privacy_erased_at:
+            return False
+        return super().has_change_permission(request, obj)
 
 
 admin.site.register(CustomUser, CustomUserAdmin)
@@ -104,3 +110,8 @@ class CustomerAccountDeletionActionAdmin(ReadOnlyAccountDeletionAdmin):
 class CustomerAccountDeletionAttemptAdmin(ReadOnlyAccountDeletionAdmin):
     list_display = ("attempted_at", "outcome")
     list_filter = ("outcome",)
+
+
+@admin.register(CustomerAccountDeletionNotice)
+class CustomerAccountDeletionNoticeAdmin(ReadOnlyAccountDeletionAdmin):
+    list_display = ("decision", "created_at", "accepted_at", "attempts")

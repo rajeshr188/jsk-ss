@@ -365,14 +365,24 @@ The future implementation must:
 7. Record an auditable owner decision without deleting or rewriting financial source
    records, and test referential integrity before release.
 
-No exact financial-record retention period is approved here. The owner and a
-qualified Indian legal/accounting adviser must document the lawful retention basis
-and period before the privacy notice, Data Safety form, or deletion promise is
-finalized. Application implementation requires a separate scoped change with tests;
-it may not use a bulk `CustomUser` deletion or hidden database edits.
+No blanket financial-record retention period is approved here. On 10 September
+2026 the owner accepted ADR-0015's revised owner-operated implementation boundary:
+professional written sign-off is no longer a blanket development prerequisite.
+Category-specific purposes, necessary identifying fields, start events, retention
+periods/hold-release conditions, external follow-ups and review dates must still be
+documented before execution and accurately reflected in the privacy notice and Data
+Safety form. Seek professional advice where applicability is uncertain; an AI-assisted
+implementation is not legal/accounting certification.
 
-Current status: **workflow and retention basis not implemented or approved; public
-release blocker.**
+Current status: **disabled request/containment foundation deployed; completion implemented locally.**
+Owner preview, completion/minimization, retryable notices and retention reviews are tested locally.
+Public wording and an implementation-aligned category baseline are now prepared in
+ADR-0015, Privacy and the two feature-gated deletion entry pages. Actual provider
+settings, per-category release conditions, restore suppression and applicant disposal
+are not verified by that wording. Actual retention procedures, production acceptance
+and enablement remain public-release blockers.
+The preview is not proof that any records may be erased. No bulk `CustomUser`
+deletion or hidden database edits are permitted.
 
 ## Platform and device support baseline
 
@@ -510,7 +520,7 @@ decide whether native Android/API cost and future iOS development are justified.
 - [x] Approved package registered and Play App Signing identity created.
 - [x] Exact Play signing fingerprint deployed and independently compared on the canonical origin.
 - [ ] Matching payments profile, recovery and least-privilege role evidence recorded.
-- [ ] Qualified financial classification and retention review completed.
+- [ ] Financial classification review and owner-approved category-specific retention procedures completed (ADR-0015 revision).
 - [ ] Dedicated deletion workflow implemented, tested, and reflected in public policy.
 - [ ] Release-candidate Data Safety answers reviewed against every dependency/provider.
 

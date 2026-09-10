@@ -355,6 +355,9 @@ def enroll_customer(
     performed_by=None,
     reason="Customer enrolled through service.",
 ):
+    customer = Customer.objects.select_for_update().get(pk=customer.pk)
+    if get_user_model().objects.filter(pk=customer.user_id, privacy_erased_at__isnull=False).exists():
+        raise ValidationError("A removed customer login cannot receive new enrolments.")
     if metal_grade is not None:
         savings_mode = metal_grade.metal
     elif savings_mode != SchemeAccount.SavingsMode.CASH:
@@ -875,6 +878,10 @@ def validate_contribution_allowed(
     contribution_period=None,
     exclude_contribution_id=None,
 ):
+    if Customer.objects.filter(
+        pk=scheme_account.customer_id, user__privacy_erased_at__isnull=False,
+    ).exists():
+        raise ValidationError("A removed customer login cannot initiate new contributions.")
     if (
         scheme_account.savings_mode == SchemeAccount.SavingsMode.CASH
         and not cash_scheme_activity_is_enabled()

@@ -1,5 +1,6 @@
 import re
 from datetime import timedelta
+from decimal import Decimal
 from io import StringIO
 from pathlib import Path
 
@@ -10,8 +11,9 @@ from django.contrib.sessions.models import Session
 from django.core import mail
 from django.core.management import call_command
 from django.core.management.base import CommandError
-from django.db import IntegrityError, transaction
+from django.db import IntegrityError, connection, transaction
 from django.test import Client, TestCase, override_settings
+from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from django.utils import timezone
 
@@ -29,7 +31,11 @@ from accounts.services import (
     submit_customer_account_deletion,
     verify_and_contain_customer_account,
 )
-from schemes.models import Customer, SchemeAccount, SchemePlan, SchemePlanOffering
+from accounts.selectors import customer_account_deletion_disposition
+from schemes.models import (
+    Contribution, Customer, MetalAllocation, PaymentChannel, PaymentWebhookEvent,
+    SchemeAccount, SchemePlan, SchemePlanOffering, SchemeRate,
+)
 from schemes.services import enroll_customer
 from schemes.tests.grade_helpers import metal_grade_for
 
@@ -83,6 +89,19 @@ class CustomerAccountDeletionTests(TestCase):
             email=email or self.user.email,
             source_ip="203.0.113.10",
         )
+
+    def test_deletion_entry_pages_share_retention_disclosure(self):
+        self.client.force_login(self.user)
+        self.client.post(reverse("account_reauthenticate"), {"password": "strong-customer-password"})
+        for name in ("customer_account_deletion", "customer_account_deletion_authenticated"):
+            with self.subTest(name=name):
+                client = Client() if name == "customer_account_deletion" else self.client
+                response = client.get(reverse(name))
+                self.assertContains(response, "What is removed and what may remain")
+                self.assertContains(response, "A review date is not an automatic deletion date")
+                self.assertContains(response, "Deletion does not forfeit your savings")
+                self.assertContains(response, "must not be used to reactivate a removed account")
+        self.assertFalse(CustomerAccountDeletionRequest.objects.exists())
 
     def test_public_view_is_generic_for_matching_and_unknown_email(self):
         real_response = self.client.post(
@@ -308,6 +327,163 @@ class CustomerAccountDeletionTests(TestCase):
         contents = caddyfile.read_text(encoding="utf-8")
         self.assertIn("/accounts/deletion/verify/*", contents)
         self.assertIn("log_skip @sensitiveAuthPaths", contents)
+
+    def preview_account(self, grade_code="GOLD_22K_916", quantity="0.010227"):
+        plan, _ = SchemePlan.objects.get_or_create(
+            code="DELETE-PREVIEW", defaults={
+                "name": "Preview plan", "amount_rule": "VARIABLE",
+                "frequency_rule": "FLEXIBLE", "minimum_contribution": "100.00",
+            },
+        )
+        grade = metal_grade_for("SILVER" if grade_code == "SILVER_999" else "GOLD", code=grade_code)
+        SchemePlanOffering.objects.get_or_create(plan=plan, metal_grade=grade)
+        account = enroll_customer(customer=self.customer, plan=plan, metal_grade=grade)
+        rate = SchemeRate.objects.create(
+            metal=grade.metal, metal_grade=grade, purity=grade.fineness,
+            rate_per_gram="14667.0000", published_by=self.owner,
+        )
+        contribution = Contribution.objects.create(
+            scheme_account=account, amount="150.00",
+            contribution_period=timezone.localdate().replace(day=1),
+            frequency_rule_snapshot="FLEXIBLE", status="PAID",
+            payment_gateway="razorpay", payment_channel=PaymentChannel.RAZORPAY,
+            gateway_mode="live", gateway_reference=f"pay_preview_{account.pk}",
+            gateway_order_id=f"order_preview_{account.pk}", paid_at=timezone.now(),
+            scheme_rate=rate, rate_locked_at=timezone.now(),
+        )
+        MetalAllocation.objects.create(
+            contribution=contribution, scheme_rate=rate, metal=grade.metal,
+            metal_grade=grade, quantity=Decimal(quantity),
+        )
+        return account, contribution
+
+    def test_disposition_is_read_only_and_zero_history_is_not_approval(self):
+        deletion_request = self.submit().deletion_request
+        with CaptureQueriesContext(connection) as queries:
+            preview = customer_account_deletion_disposition(deletion_request)
+        self.assertFalse(any(q["sql"].lstrip().upper().startswith(("INSERT", "UPDATE", "DELETE")) for q in queries))
+        self.assertEqual(preview.account_balances, ())
+        self.assertTrue(preview.external_checks)
+        self.assertIn("Access containment", " ".join(preview.review_flags))
+        deletion_request.refresh_from_db()
+        self.assertEqual(deletion_request.status, "PENDING_VERIFICATION")
+        self.assertEqual(deletion_request.decisions.count(), 0)
+        self.assertFalse(hasattr(preview, "can_complete"))
+
+    def test_disposition_keeps_grade_balances_separate_and_six_decimal(self):
+        self.preview_account("GOLD_22K_916", "0.010227")
+        self.preview_account("GOLD_24K_9999", "0.329272")
+        self.preview_account("SILVER_999", "0.000001")
+        deletion_request = self.submit().deletion_request
+        preview = customer_account_deletion_disposition(deletion_request)
+        balances = {b.grade: b.metal_quantity for b in preview.account_balances}
+        self.assertEqual(balances, {
+            "GOLD_22K_916": Decimal("0.010227"),
+            "GOLD_24K_9999": Decimal("0.329272"),
+            "SILVER_999": Decimal("0.000001"),
+        })
+        self.assertIn("non-zero entitlement", " ".join(preview.review_flags))
+        self.assertEqual(MetalAllocation.objects.count(), 3)
+
+    def test_disposition_detects_paid_unallocated_and_identifier_matched_webhook(self):
+        account, paid = self.preview_account()
+        Contribution.objects.create(
+            scheme_account=account, amount="100.00",
+            contribution_period=timezone.localdate().replace(day=1),
+            frequency_rule_snapshot="FLEXIBLE", status="PAID_UNALLOCATED",
+            payment_gateway="razorpay", payment_channel=PaymentChannel.RAZORPAY,
+            gateway_mode="live", gateway_reference="pay_unallocated_preview",
+            paid_at=timezone.now(), scheme_rate=paid.scheme_rate, rate_locked_at=timezone.now(),
+        )
+        PaymentWebhookEvent.objects.create(
+            gateway="razorpay", gateway_mode="live", event_id="evt_preview",
+            event_type="payment.captured", payload_sha256="a" * 64,
+            status="REVIEW_REQUIRED", gateway_order_id=paid.gateway_order_id,
+        )
+        preview = customer_account_deletion_disposition(self.submit().deletion_request)
+        findings = " ".join(preview.review_flags)
+        self.assertIn("Payments needing allocation review: 1", findings)
+        self.assertIn("webhook events need review: 1", findings)
+
+    def test_disposition_does_not_match_blank_provider_identifiers(self):
+        PaymentWebhookEvent.objects.create(
+            gateway="razorpay", gateway_mode="live", event_id="evt_other",
+            event_type="payment.captured", payload_sha256="b" * 64,
+            status="FAILED",
+        )
+        preview = customer_account_deletion_disposition(self.submit().deletion_request)
+        counts = {name: count for name, count, treatment in preview.inventory}
+        self.assertEqual(counts["Webhook events"], 0)
+
+    def test_disposition_pending_checkout_and_zero_balance_agreement_need_review(self):
+        account, _ = self.preview_account()
+        Contribution.objects.create(
+            scheme_account=account, amount="100.00",
+            contribution_period=timezone.localdate().replace(day=1),
+            frequency_rule_snapshot="FLEXIBLE", status="PENDING",
+            payment_gateway="razorpay", payment_channel=PaymentChannel.RAZORPAY,
+            gateway_mode="live", gateway_order_id="order_pending_preview",
+            checkout_expires_at=timezone.now() - timedelta(days=1),
+        )
+        empty_account = enroll_customer(
+            customer=self.customer, plan=account.plan, metal_grade=account.metal_grade,
+        )
+        preview = customer_account_deletion_disposition(self.submit().deletion_request)
+        flags = " ".join(preview.review_flags)
+        self.assertIn("Pending contributions: 1", flags)
+        self.assertIn("zero-balance agreement", flags)
+        empty_balance = next(b for b in preview.account_balances if b.scheme_number == empty_account.scheme_number)
+        self.assertEqual(empty_balance.metal_quantity, Decimal("0.000000"))
+
+    def test_disposition_legacy_cash_principal_is_not_mixed_with_metal(self):
+        metal_account, _ = self.preview_account()
+        # Historical cash contracts remain supported for reads, not new enrolment.
+        cash_account = SchemeAccount.objects.create(
+            scheme_number="JSK-LEGACY-PREVIEW", customer=self.customer,
+            plan=metal_account.plan, start_date=timezone.localdate(),
+            eligible_from=timezone.localdate() + timedelta(days=366),
+            agreed_months=12, savings_mode="CASH", amount_rule_snapshot="VARIABLE",
+            frequency_rule_snapshot="FLEXIBLE", minimum_amount_snapshot="100.00",
+        )
+        Contribution.objects.create(
+            scheme_account=cash_account, amount="1250.25",
+            contribution_period=timezone.localdate().replace(day=1),
+            frequency_rule_snapshot="FLEXIBLE", status="PAID",
+            payment_gateway="mock", payment_channel=PaymentChannel.MOCK,
+            gateway_reference="mock_preview_cash", paid_at=timezone.now(),
+        )
+        preview = customer_account_deletion_disposition(self.submit().deletion_request)
+        cash = next(b for b in preview.account_balances if b.grade == "CASH (legacy)")
+        self.assertEqual(cash.cash_principal, Decimal("1250.25"))
+        self.assertEqual(cash.cash_earned_bonus, Decimal("0.00"))
+        self.assertEqual(cash.metal_quantity, Decimal("0.000000"))
+        metal = next(b for b in preview.account_balances if b.grade == "GOLD_22K_916")
+        self.assertEqual(metal.cash_principal, Decimal("0.00"))
+        self.assertEqual(metal.metal_quantity, Decimal("0.010227"))
+
+    def test_disposition_owner_page_is_uncached_and_has_no_completion_button(self):
+        self.preview_account()
+        deletion_request = self.submit().deletion_request
+        self.client.force_login(self.owner)
+        response = self.client.get(reverse("customer_account_deletion_detail", args=[deletion_request.pk]))
+        self.assertContains(response, "Data disposition preview")
+        self.assertContains(response, "0.010227")
+        self.assertContains(response, "External checks")
+        self.assertContains(response, "Financial history is preserved")
+        self.assertIn("no-store", response["Cache-Control"])
+        self.assertEqual(deletion_request.decisions.count(), 0)
+
+    def test_disposition_customer_and_staff_cannot_view_owner_inventory(self):
+        deletion_request = self.submit().deletion_request
+        url = reverse("customer_account_deletion_detail", args=[deletion_request.pk])
+        for role in ["CUSTOMER", "STAFF"]:
+            self.user.role = role
+            self.user.save(update_fields=["role"])
+            self.client.force_login(self.user)
+            self.assertEqual(self.client.get(url).status_code, 403)
+        self.client.force_login(self.owner)
+        with override_settings(CUSTOMER_ACCOUNT_DELETION_ENABLED=False):
+            self.assertEqual(self.client.get(url).status_code, 404)
 
 
 class CustomerAccountDeletionDisabledTests(TestCase):
