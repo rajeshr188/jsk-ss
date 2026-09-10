@@ -154,13 +154,13 @@ recorded limitations are not lost.
 
 ## Rates, media, and catalogue
 
-- **FW-CMS-004 — Launch the bounded Jewellery journal:** ADR-0016 accepts a separate
-  Wagtail blog root, article type, dedicated staff groups/media/workflow, Bootstrap 5
-  public presentation, and a disabled-first public gate. Complete local regression,
-  merge and immutable-image rollout, create and approve genuine business-authored
-  articles, verify mobile/accessibility/metadata/R2 behavior, and retain production
-  evidence before marking this item complete. Scheme Rates, plans, products, policies,
-  customer advice, and financial records remain outside the journal.
+- **FW-CMS-004 — Complete the bounded Jewellery journal launch:** The separate
+  Wagtail root/article model, dedicated staff groups/media/workflow, Bootstrap 5
+  presentation, and disabled-first gate are deployed and production-accepted. Create
+  and approve genuine business-authored articles, then verify direct routes, mobile,
+  accessibility, metadata, pagination, and R2 renditions before separately enabling
+  public discovery. Scheme Rates, plans, products, policies, customer advice, and
+  financial records remain outside the journal.
 - **FW-RATE-003 — Keep external rates informational:** If market data is later useful,
   add it only as owner-facing reference information. It must not control customer
   allocation without a new ADR and explicit pricing/disclosure rules.
