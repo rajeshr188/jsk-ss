@@ -214,6 +214,20 @@ class DeletionCompletionTests(CompletionFixtures, TestCase):
         self.assertEqual(client.post(url).status_code, 403)
         self.assertFalse(Decision.objects.exists())
 
+    def test_owner_reauthentication_uses_project_layout(self):
+        request = self.contain()
+        self.client.force_login(self.owner)
+        response = self.client.get(
+            reverse("customer_account_deletion_complete", args=[request.pk])
+        )
+        self.assertEqual(response.status_code, 302)
+        reauthentication = self.client.get(response.url)
+        self.assertEqual(reauthentication.status_code, 200)
+        self.assertTemplateUsed(reauthentication, "account/reauthenticate.html")
+        self.assertContains(reauthentication, "site-navbar")
+        self.assertContains(reauthentication, "Confirm secure access")
+        self.assertContains(reauthentication, "Confirm and continue")
+
     def test_owner_form_completes_and_repeated_post_does_not_resend(self):
         request = self.contain()
         self.client.force_login(self.owner)

@@ -25,6 +25,20 @@ recorded limitations are not lost.
 
 ## Production operations
 
+- **FW-PROD-007 — Budget-conscious security-log preservation:** Inventory and phased
+  plan documented on 10 September 2026; implementation and production acceptance
+  pending. Use the 180-day security-log planning baseline in the
+  [production guide](PRODUCTION_DEPLOYMENT.md#budget-conscious-security-log-preservation-plan-fw-prod-007),
+  not the withdrawn standalone 14-day journal proposal. This bounded preservation
+  work does not close `FW-PROD-002` monitoring/alerts or certify legal compliance.
+
+  - [x] Inspect repository logging and record owner-supplied Docker/journal/syslog/UFW evidence.
+  - [ ] Resolve rotation/provider/event-coverage gaps and verify clock synchronization.
+  - [ ] Measure daily compressed volume, choose private storage and approve cost/access/custodians.
+  - [ ] Implement tested, bounded incremental capture, encrypted archives, checkpoints and failure reporting.
+  - [ ] Exercise rotation/restart/outage recovery, independent retrieval, access denial and hold-aware expiry.
+  - [ ] Accept production coverage without claiming unavailable historical logs; only then review shorter local retention.
+
 - **FW-PROD-002 — Activate and exercise external observability:** Caddy already
   provides masked structured logs, release-labelled health endpoints, and the
   repository includes a five-minute financial-exception heartbeat. Configure the
@@ -131,9 +145,15 @@ recorded limitations are not lost.
   read-only owner disposition preview is implemented with separated financial
   balances, related-record counts, local review flags and explicit external unknowns.
   Structured category/field decisions, atomic minimization/completion, retryable
-  notices and retained-record reviews are now implemented locally with migration
-  `accounts.0006`. Next review real retention procedures, policy wording, manual
-  external disposal/restore suppression and synthetic rollout evidence. No automatic financial-evidence
+  notices and retained-record reviews are deployed with migration `accounts.0006`.
+  The disabled rollout is accepted on release `7819fd9552825c61ebc34a7844ba346c7ad92488`;
+  deletion request intake is now enabled; end-to-end completion acceptance remains
+  open. Independent Drive/USB access and the fictional decision
+  sequence exercise passed; custody roles and the restore-isolation rule are accepted.
+  Next record actual pilot dispositions and before/after recovery evidence, approve
+  enablement and perform controlled synthetic Play-app acceptance. The separate
+  `FW-PROD-007` archive implementation is not a Google Play-specific submission gate;
+  applicable security obligations remain open. No automatic financial-evidence
   destruction or blanket statutory period is approved. Public Play release remains
   blocked until the completion workflow, policy/deletion URL, synthetic rollout, and
   production evidence are complete. Never cascade-delete `CustomUser`, `Customer`, or

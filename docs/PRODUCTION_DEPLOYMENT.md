@@ -356,15 +356,124 @@ explicit failure heartbeats, escalation, and exercised evidence.
 
 The Compose profile still bounds local Docker logs so a collector outage cannot fill
 the host disk. Local rotation is not durable retention. Before sending logs off-host,
-approve the data region and retention period. A 30-day searchable baseline is
-recommended for incident investigation; this is operational evidence, not a
-substitute for immutable financial records or the separately approved legal record
-retention policy. Caddy access logs mask IPv4 addresses to `/24`, IPv6 addresses to
+approve the data region and retention period. A 30-day searchable window may be
+useful for investigation but is not the full preservation period. The 180-day
+security-log planning baseline below supersedes any interpretation of 30 days as
+sufficient total retention. Logs do not replace immutable financial records.
+Caddy access logs mask IPv4 addresses to `/24`, IPv6 addresses to
 `/48`, remove user-agent headers, retain the release label, and rely on Caddy's
 default credential-header redaction. Request/response bodies, cookies, payment
 signatures, and database URLs must never be added.
 
+### Budget-conscious security-log preservation plan (`FW-PROD-007`)
+
+Status on 10 September 2026: **inventory and execution plan documented; no
+collector, archive destination, retention change or production cleanup deployed**.
+This is a bounded preservation workstream related to `FW-PROD-002`, not acceptance
+of external monitoring/alerts. Paid monitoring remains deferred. The earlier
+14-day/256-MB journal proposal is withdrawn as a standalone retention policy.
+
+Planning basis: CERT-In Direction (iv) specifies rolling 180-day ICT-log
+preservation; FAQ Q25 includes sole proprietorships within the relevant entity
+definition. For this business, design for at least 180 days rather than assume an
+exemption. This is not a legal compliance certification or a claim that Google Play
+specifies 180 days. Review applicable log coverage, access, storage jurisdiction
+and incident holds; do not generalize security-log retention to financial records,
+email bodies or throttle tables.
+[CERT-In directions](https://www.cert-in.org.in/PDF/CERT-In_Directions_70B_28.04.2022.pdf),
+[official FAQ](https://www.cert-in.org.in/PDF/FAQs_on_CyberSecurityDirections_May2022.pdf).
+
+#### Source inventory and current evidence
+
+| Source | Observed setup | Preservation gap / next verification |
+| --- | --- | --- |
+| Django/Gunicorn | Console logging; known sensitive auth paths filtered | Not a universal scrubber, including arbitrary exceptions; audit synthetic error paths and security-event coverage |
+| Caddy | JSON stdout, release label, masked IPs, user-agent removed, sensitive auth routes skipped | Preserve secret exclusions; assess safe event metadata for skipped routes and query-string leakage; masked addresses may limit investigation |
+| Docker web/Caddy | Owner verified `local`, `max-size=20m`, `max-file=5` | Disk cap only; rotation or container removal can lose the sole copy; no durable export verified |
+| Journald | Owner reports 798.2 MB; vendor drop-in sets `ForwardToSyslog=yes`; no explicit age override shown | Capture/export coverage and recoverability untested |
+| Rsyslog / host security | Active; local auth/syslog/kernel/mail/UFW/cloud-init destinations; no remote action shown | Identify duplicates; supplied configuration does not rule out other exporting agents/providers |
+| Host rotation | Syslog group and UFW weekly/four archives; daily timer triggered and scheduled | Service success unproven; no explicit cloud-init/mail.err match; inspect effective wildcard/include coverage |
+| Managed DB / Cloudflare / Postmark | DB backups exist; website Logpush unavailable on Free; Postmark activity reported 45 days | Backups are not DB audit logs; inventory accessible security logs and export/retention options; provider defaults do not establish 180 days |
+
+Repository evidence: `compose.production.yml`, `deploy/Caddyfile`,
+`django_project/settings.py`, and `accounts/logging.py`. Host observations are
+owner-supplied, not remote agent inspection. Missing historical logs cannot be
+recreated; document earliest recoverable coverage and gaps honestly.
+
+#### Proposed design and budget boundary
+
+- Bounded local operational logs plus a separate encrypted, compressed archive;
+  no searchable log database on the 1-GB serving host.
+- A root-managed, resource-limited host collection/spooling job using supported
+  journal/Docker interfaces, not Docker's private binary files. A daily `docker logs`
+  snapshot alone can miss rotation and removed containers. Require incremental
+  cursors, overlap/deduplication and source-identity handling before claiming continuity.
+- Daily archive chunks (sooner for size), with encrypted manifests recording source,
+  UTC interval, host/container/release, count, bytes, checksum and gaps. Commit
+  checkpoints only after durable capture; acknowledge off-host preservation only
+  after verifying the destination copy. A checksum alone does not prove authenticity
+  against someone able to rewrite the manifest; require versioning or equivalent
+  independently protected evidence.
+- Preserve a chunk until at least 180 days after its newest event; retain longer
+  under an applicable incident/legal hold. Encrypt before upload, with key recovery
+  separate from storage credentials. No raw tokens, cookies, signatures, request
+  bodies or environment files. Treat IPs/pseudonymous identifiers as restricted.
+  Test synthetic samples before exporting; quarantine unexpected sensitive material
+  for controlled handling rather than silently editing incident evidence.
+- Destination is **unselected**. Existing business Workspace Drive with encrypted
+  archives and independent USB is a reuse candidate, not authorization to upload
+  logs there. Confirm capacity, automated access, key recovery, residency/legal
+  requirements and retrieval timeliness. A separate private object store is an
+  alternative only after a capped cost is approved. Never use the public catalogue
+  R2 bucket or public Git/GHCR; do not assume Drive/R2 guarantees an Indian region.
+- Daily manual review is not an unattended archive/alert guarantee. Explicitly
+  assign log-operations cover and missed-export escalation; the deletion-record
+  custody approval does not automatically assign these additional responsibilities.
+
+#### Tracked execution sequence
+
+1. **Inventory (partially complete):** confirm remaining host rotation, provider
+   security-log scope, clock synchronization and redaction/event coverage. No purge,
+   forced rotation, driver switch or container recreation solely for this audit.
+2. **Measure and select (pending):** measure source bytes and compressed daily volume
+   over representative days, including a busy day; record resource use. Estimate
+   `daily compressed bytes × 180 × 1.5`, plus manifests, spool and independent copies.
+   The 1.5 factor is a sizing assumption. Set disk headroom, outage spool, collection/
+   upload frequency and budget from measurements. Collect before local rotation can
+   lose data; one directory-size snapshot is not a daily growth measurement.
+3. **Implement separately (pending):** select destination/access, then bounded
+   collection, encryption, manifests, restart-safe checkpoints, retries, failure
+   reporting, key recovery and hold-aware expiry. Test with synthetic data locally
+   before production changes. Preserve existing logs during cutover; no automatic
+   purge in the first rollout. No server-side image builds.
+4. **Exercise (pending):** prove capture across restart/rotation/container replacement,
+   duplicates/late records, destination outage, disk pressure, corrupt chunks and
+   missing keys. Recover a chosen UTC interval independently; verify counts/checksums
+   and unauthorized-access denial. Test expiry/holds with synthetic aged chunks,
+   not real-log destruction. Record actual rotation-service success separately.
+5. **Accept (pending):** owner approves scope/cost/custodians; enable capture in a
+   controlled rollout and verify oldest/newest coverage, gaps and resource impact.
+   Only then consider shorter local retention where verified archives preserve the
+   required period. Do not claim 180 days of history until it actually exists.
+
+Next read-only host checks (share metadata/configuration only, never log bodies):
+
+```bash
+sudo systemctl show logrotate.service -p Result -p ExecMainStatus
+sudo logrotate --debug /etc/logrotate.conf
+timedatectl status
+df -h / /var/log
+sudo du -sh /var/log/journal
+```
+
+`--debug` does not rotate logs or update state. Inspect wildcard coverage, errors
+and affected files; redact private configuration details before sharing.
+[Logrotate reference](https://man7.org/linux/man-pages/man5/logrotate.conf.5.html).
+
 ### Configure Better Stack monitoring and retained logs
+
+This paid-service procedure remains deferred for this pilot; it is not required
+for the inventory/measurement stages of `FW-PROD-007`.
 
 1. Create a Better Stack team protected by multi-factor authentication. Name a
    primary incident responder and a backup responder using private operational
@@ -3023,6 +3132,111 @@ coordinated overlap is unavailable.
 
 ## `FW-PRIV-001A` account-deletion foundation rollout
 
+### `FW-PRIV-001B` disabled production acceptance — 10 September 2026
+
+Evidence source: owner-supplied terminal output and explicit confirmation of both
+public health endpoints and ordinary customer journeys; no direct host operation
+or independent browser acceptance was performed by the agent in this rollout.
+
+| Item | Accepted evidence |
+| --- | --- |
+| PR / release | PR #72; `7819fd9552825c61ebc34a7844ba346c7ad92488` |
+| Image | `ghcr.io/rajeshr188/jsk-savings@sha256:4f07a2b4a274130cca8bd079d6ffba60547cb2d49e3e9bf4aff39cfdbccaa806` |
+| CI | Run `34461760984`; Django and published-image fixable-critical scan passed |
+| Previous release | `6396371fa71cc4b53c2e4a92ee31b329a5c9419b` |
+| Previous image | `ghcr.io/rajeshr188/jsk-savings@sha256:55c8f840cb023ff8760bdbb0f602472787cfac2186c01bbc7d608c630d32db7c`; local presence verified |
+| Recovery point | Owner confirmed available in Linode: 10 September 2026, 13:00 IST (07:30 UTC), not the earlier proposed 15:00 timestamp |
+| Candidate identity | Pulled digest and OCI revision matched the approved candidate |
+| Preflight | Auth email integrity passed; planned only accounts `0006`; financial exception baseline clean |
+| Capacity after pull | 438 MiB available RAM; 260 MiB swap used; 7.3 GiB free disk, 69% used |
+| Migration | `accounts.0006_customer_deletion_completion` applied OK and marked `[X]` |
+| Running checks | Web running/healthy; deletion check `enabled=false`, zero requests/completions and zero integrity/notice errors; financial exceptions all zero |
+| Edge / public | Caddy valid; live and ready HTTPS responses `ok` on candidate; deletion route 404 |
+| Customer smoke tests | Login, customer dashboard and Savings Plans confirmed working |
+
+Production deploy-check output was not included in the supplied evidence; the
+candidate's CI deployment check passed. No claim of a new full liability snapshot,
+fresh real-money test, real deletion, external-copy disposal or enabled acceptance
+is made. Keep deletion disabled. The former release is a recorded rollback identity,
+not permission to reverse schema or restore a database; any later completion changes
+the recovery boundary as described below.
+
+### Independent recovery record — proposed operating procedure, not yet established
+
+Use a restricted, encrypted record outside Git, the serving host and the managed
+database being restored. Maintain a separately recoverable copy; do not put it in
+the public catalogue R2 bucket. A private versioned JSON record per request/decision
+is sufficient for this small pilot; do not introduce a second customer database.
+Storage location, encryption/key recovery, authorized owner and backup custodian
+must be explicitly selected and tested before the first real completion.
+
+Responsibility split accepted by the owner on 10 September 2026: the showroom
+owner reviews customer/financial obligations and approves deletion decisions;
+Rajesh maintains the technical recovery record and verifies encrypted Drive and
+USB copies after each completion or retention-decision change. The privately
+identified backup custodian provides recovery cover when Rajesh is unavailable.
+Keep the key-recovery instructions and contact/access details private. This role
+acceptance did not itself approve restore handling or log limits. After separate
+clarification, the owner accepted keeping restored databases isolated from public
+access, payments, email and jobs until latest deletion decisions and newer financial
+facts are reconciled. Missing evidence means remaining isolated. This is procedural
+approval, not an executed production restore or authorization to restore now.
+
+Record only request/customer/user identifiers, source database identity, application
+release, policy version, verification/containment timestamps, completion timestamp,
+decision IDs, retained/removed field names, category purposes/release conditions and
+latest review date. Review free text for unnecessary personal details. These keys
+remain sensitive/pseudonymous: restrict access. Never include original names,
+addresses, phone numbers, email addresses, passwords or verification tokens.
+
+For every completion or further minimization:
+
+1. Independently save the reviewed intent and exact request identifiers **before**
+   the mutation. Label it pending, not completed. If this write cannot be verified,
+   stop the completion operation.
+2. After the database commits, append the actual decision/outcome IDs and timestamp;
+   verify the independent copy can be read. Preserve older versions and the latest
+   field-removal decision. A failed notice does not mean minimization failed.
+3. If a crash occurs between these steps, treat the pending record as unresolved:
+   check database/audit evidence before recording an outcome. Do not invent success,
+   restore login, or erase records solely because an intent exists.
+4. Review the request queue daily. After each completion or review changes a
+   decision, reconcile the database outcome with the independent record and update
+   and verify both encrypted copies. No daily USB recopy is required when decisions
+   have not changed. Freeze further completion if either copy or reconciliation
+   is unreliable. The current application does not enforce or automate these steps.
+5. On recovery, keep the restore isolated with providers/jobs/public access disabled.
+   Reconcile the independent record against restored requests and current financial
+   evidence. Missing verified requests, stale decisions or mismatched financial state
+   require supervised recovery; the synthetic rehearsal is not a universal replay
+   tool. Do not reopen until login/identity suppression and financial integrity pass.
+
+Owner-confirmed storage test: the business Google Workspace Drive location is
+restricted and a backup custodian has been identified privately. Following the
+7-Zip encrypted synthetic-file exercise, both the downloaded Drive copy and the
+independent USB copy decrypted successfully; an unauthorized account was denied
+Drive access. This is owner-reported evidence, not an agent inspection. No passwords,
+private links, custodian identity or customer records were supplied or recorded here.
+
+Storage access and synthetic file recovery are verified to that scope. Still required:
+maintain the accepted roles and separately recoverable key instructions privately;
+exercise the before/after decision-record procedure with a synthetic deletion;
+reconcile its latest review against both copies; and approve the handling of backups
+predating a verified request. A readable test text file does not by itself establish
+that the real decision register is complete/current. The agent created no external
+storage, uploaded no records and changed no sharing settings.
+
+Completed tabletop exercise: three explicitly fictional, non-customer JSON records were prepared
+locally for pending intent, completion and latest retention review. They are not a
+database export or substitute for actual decision IDs/timestamps. Preserve each
+version as a separately named encrypted archive in Drive and on USB. The custodian
+must recover all three, identify the latest review as authoritative for removed
+fields, and recognize that a pending intent alone does not prove execution. Storage
+access/decryption already passed. The owner confirmed sequence recognition:
+version 3 is the latest decision; version 1 alone does not prove deletion occurred;
+version 2 must not restore fields removed by version 3.
+It does not close real before/after reconciliation or pre-request restore handling.
+
 ### Local `FW-PRIV-001B` completion increment — not an enablement approval
 
 Migration `accounts.0006_customer_deletion_completion` adds the erased-login marker,
@@ -3138,11 +3352,22 @@ procedure. Do not mark production restore suppression accepted from this result 
   expiry does not establish deletion of suppressions or support mailbox copies.
 - No retained customer CSV exports, downloaded statements, paper records or customer
   documents in R2 (owner confirmed). Reassess if these practices change.
-- Latest reported Linode recovery point: 10 September 2026 at 14:00 IST.
+- Confirmed available Linode recovery point: 10 September 2026 at 13:00 IST,
+  superseding the earlier 14:00 report.
   The reported 18 August cluster creation date is not confirmed backup availability;
   oldest available recovery point remains unknown.
 - Journals occupy 798.2 MB (owner output). This is usage, not a time-retention policy.
-  Effective Docker log configuration and journal/Cloudflare retention remain unverified.
+  Both running web and Caddy containers use the `local` log driver with
+  `max-size=20m` and `max-file=5` (owner-supplied inspection). These are size/rotation
+  limits, not an age-based retention guarantee. A subsequent vendor drop-in shows
+  `ForwardToSyslog=yes`; rsyslog is active with local destinations. Syslog and UFW
+  rotation are weekly/four archives; a daily logrotate timer exists but its service
+  success and cloud-init/mail.err coverage are not yet verified. The 14-day/256-MB
+  proposal is withdrawn as a standalone policy; follow `FW-PROD-007` above before
+  shortening retention. Cloudflare website Logpush is unavailable on the reported
+  Free plan; this does not prove no Cloudflare-held logs or other export mechanisms.
+  The owner subsequently accepted the restore-isolation rule; this is procedural
+  approval, not evidence of an executed production restore/reconciliation.
 
 Provider references: [Postmark retention](https://postmarkapp.com/support/article/how-does-the-retention-add-on-work)
 and [Akamai backup management](https://techdocs.akamai.com/cloud-computing/docs/aiven-manage-database).

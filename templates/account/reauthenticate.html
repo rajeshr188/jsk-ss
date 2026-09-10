@@ -1,0 +1,30 @@
+{% extends "_base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}Confirm secure access | Jai Sri Krishna Jewellery{% endblock %}
+
+{% block content %}
+<div class="auth-shell">
+  <div class="card auth-card">
+    <p class="page-eyebrow">Protected account action</p>
+    <h1>Confirm secure access</h1>
+    <p class="text-secondary mb-4">Enter your password again before continuing with this sensitive action.</p>
+    <form method="post" action="{% url 'account_reauthenticate' %}">
+      {% csrf_token %}
+      {{ form|crispy }}
+      {{ redirect_field }}
+      <button class="btn btn-jsk w-100" type="submit">Confirm and continue</button>
+    </form>
+    {% if reauthentication_alternatives %}
+      <div class="mt-4">
+        <p class="small text-secondary mb-2">Other confirmation options</p>
+        <div class="d-grid gap-2">
+          {% for alternative in reauthentication_alternatives %}
+            <a class="btn btn-outline-dark" href="{{ alternative.url }}">{{ alternative.description }}</a>
+          {% endfor %}
+        </div>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

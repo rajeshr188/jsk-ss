@@ -16,6 +16,77 @@ release gates remain open.**
 
 ## Product boundary
 
+### Immediate submission path — owner-prioritized 10 September 2026
+
+Keep release work bounded to this checklist. `FW-PROD-007` is a separate
+operational/compliance workstream, not a prescribed Play archive design or permission
+to disregard security obligations. Do not shorten/delete logs during the pilot.
+Reuse the already-confirmed core customer journeys.
+
+| Step | Evidence needed | Current status |
+| --- | --- | --- |
+| Recovery rule | Restores isolated until latest deletion and financial reconciliation passes; missing evidence blocks reopening | Owner accepted; earlier local synthetic restore passed, not a production restore |
+| Deletion preflight | Running release, flag/policy version, integrity and financial checks; disposable test identities | Passed on `7819fd9552825c61ebc34a7844ba346c7ad92488`: enabled, both policy versions `2026-09-10`, route 200, deletion/financial checks clean; two disposable accounts owner-confirmed ready |
+| Controlled deletion | App and external request paths, actual minimization, notice, unusable login and independent before/after record | Feature enabled; first app-path request contained and placed under hold: two active 24K agreements and one failed Test-mode contribution, no allocation/redemption/completion. Second zero-history identity ready. Bootstrap reauthentication fix passes locally but is not deployed |
+| Reviewer access | Dedicated non-privileged account, reusable password, accurate English access instructions | Not confirmed; keep separate from disposable deletion-test accounts |
+| Console submission | Working deletion URL, Privacy/Data Safety/financial declarations, listing/build and remaining bounded device checks | Pending review; no upload/submission authorized by this checklist |
+
+Prepare two disposable owner-controlled customer identities through normal invitations:
+one for the app path, one for the external path. Use working controlled inboxes;
+never supply passwords in Git/chat. Do not create schemes, enrolment requests,
+payments, allocations or paper receipts for them. Confirm actual previews show no
+obligations; an empty balance alone does not authorize erasing a real customer.
+
+Before activation, owner reviews the deployed Privacy/deletion wording and chooses
+the matching policy version; align registration privacy version without rewriting
+historical consent or unnecessarily changing Terms. The current flag is global:
+enabling exposes the path to all eligible customers, not only pilot accounts. Have
+the owner ready to handle legitimate requests. Activation and irreversible completion
+require explicit approval. No new build/migration is expected if the last accepted
+release is still running.
+
+Pilot sequence after approval:
+
+1. Enable through the existing Compose procedure; verify public `/accounts/deletion/`
+   and authenticated `/accounts/deletion/request/`, public health and integrity.
+2. In the Play-installed app, first disposable customer submits a request. In a
+   signed-out browser, second customer uses the public page and confirms the email
+   verification link. Never share tokens/raw URLs. Verify containment and owner queue;
+   submission is not completion.
+3. Inspect the seven-category owner preview; record genuine fields, purposes, release
+   conditions and review dates. Retain no unnecessary zero-history profile fields.
+   Disclose remaining minimal privacy evidence, notices, provider/log/backup copies.
+   Financial/export categories are not applicable only after checks; do not copy
+   synthetic test retention text or claim external erasure not actually performed.
+4. Save independent pending intent before completion. Complete using recent owner
+   authentication and exact request confirmation; append actual decision IDs, time
+   and disposition to verified encrypted Drive/USB copies. Retry failed notices,
+   never repeat removal just to resend mail. No copied erased PII in the register.
+5. Verify `COMPLETED_WITH_RETENTION`, intended profile/credential minimization,
+   unusable old password/sessions and absent Google binding if one existed; outcome
+   email, one completion decision, unchanged financial facts. Run
+   `check_customer_account_deletions`, `check_auth_email_integrity`,
+   `check_financial_exceptions` and `check_graded_metal_rates`; resolve notice and
+   external-copy follow-ups honestly.
+6. Keep reviewer credentials intact. Record app version/device, both paths, aggregate
+   results and owner confirmation. Only then accept the deletion journey and provide
+   the working public URL in Console. Applicant-only/ambiguous-identity cases remain
+   a separate associated-data handling gap; do not claim this customer pilot covers them.
+
+On failure stop completions and investigate. Disabling is not undo and must not
+strand pending requests: continue owner support and resolve before submission.
+Never restore erased identity as rollback. Deletion-specific procedure acceptance
+does not mark every legal obligation, provider action or Play declaration complete.
+
+Retention follow-up (10 September 2026): `FW-PROD-007` in
+[Future work](FUTURE_WORK.md) tracks security-log coverage and a budget-conscious
+archive plan. The earlier standalone 14-day journal suggestion is withdrawn in
+favour of a 180-day CERT-In planning baseline; no archive is implemented or storage
+destination approved. This is not a Google Play-specific duration requirement or
+a legal compliance certification. Deletion/retention and Data Safety acceptance
+remain open; do not claim that all operational/provider records are erased when
+a customer account is minimized.
+
 The first mobile product is an installable web application followed by a
 customer-only Android Trusted Web Activity (TWA). It provides convenient access to
 the existing Django application; it is not a second financial or identity system.
@@ -374,8 +445,13 @@ documented before execution and accurately reflected in the privacy notice and D
 Safety form. Seek professional advice where applicability is uncertain; an AI-assisted
 implementation is not legal/accounting certification.
 
-Current status: **disabled request/containment foundation deployed; completion implemented locally.**
-Owner preview, completion/minimization, retryable notices and retention reviews are tested locally.
+Current status: **completion deployed and disabled-stage rollout accepted on 10 September 2026.**
+Release `7819fd9552825c61ebc34a7844ba346c7ad92488` passed owner-reported health,
+integrity and ordinary customer smoke tests. Request intake was subsequently enabled
+with policy version `2026-09-10`; the first app-path request was contained and placed
+under reviewed hold because it had synthetic financial history. Owner preview,
+completion/minimization, retryable notices and retention reviews are automatically
+tested; irreversible completion and end-to-end Play-app acceptance have not occurred.
 Public wording and an implementation-aligned category baseline are now prepared in
 ADR-0015, Privacy and the two feature-gated deletion entry pages. Actual provider
 settings, per-category release conditions, restore suppression and applicant disposal
