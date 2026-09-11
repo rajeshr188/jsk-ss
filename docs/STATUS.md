@@ -8,8 +8,8 @@ restored systems remain private with payment/email/jobs disabled until latest
 deletion decisions and newer financial facts are reconciled; missing evidence keeps
 the restore isolated. This approves the procedure, not a production restore.
 Next: the bounded deletion acceptance pilot, reviewer access and final Console
-declarations in `docs/MOBILE_RELEASE_READINESS.md`. Enablement and irreversible
-completions still require explicit approval. After the reauthentication UI regression
+declarations in `docs/MOBILE_RELEASE_READINESS.md`. Any irreversible deletion
+completion still requires explicit approval. After the reauthentication UI regression
 was added, all 38 account-deletion/final-completion tests passed locally on
 10 September; Django system checks found no issues.
 The test runner recreated and removed its local `test_jsk_ss` database; no production
@@ -32,11 +32,27 @@ This containment result is partial pilot evidence, not end-to-end deletion accep
 
 The owner also reported that django-allauth's reauthentication page appeared as an
 unstyled fallback during that review. Root cause: the project customized ordinary
-account templates but had no `account/reauthenticate.html` override. A Bootstrap 5
-project-layout override and focused regression test are now implemented locally;
-both the layout test and existing recent-authentication/CSRF guard test pass. This
-presentation fix is not yet committed, merged or deployed; security semantics are
+account templates but had no `account/reauthenticate.html` override. PR #73 merged
+the Bootstrap 5 project-layout override and regression test as release
+`b349a84fdc716a87e85110386868923fad95326e`; protected-main CI, container publication
+and the fixable-critical vulnerability scan passed. Production now runs immutable
+image
+`ghcr.io/rajeshr188/jsk-savings@sha256:d40c2875fd9ac6b42fb9f21528b392456151232ce0d0f5ecd3f40dd040ddc543`.
+There was no migration. Both health endpoints, account-deletion integrity,
+authentication-email integrity and financial exceptions passed, and the owner
+confirmed the reauthentication page is styled correctly. Security semantics remain
 unchanged.
+
+The intended second zero-history deletion identity also proved to have one scheme
+account and one enrolment request; it is not eligible as zero-history evidence and no
+completion decision exists. Both inspected requests used the authenticated path, so
+the public email-verification path still requires a fresh identity. Two
+owner-controlled Workspace aliases were created and are awaiting mail propagation.
+No verification bypass or database marking is permitted. In parallel, the canonical
+mobile-readiness guide now contains copy-ready Play listing text, store-asset and
+screenshot specifications, a Play Console worksheet, reviewer instructions and a
+manual-owner task boundary. This is submission preparation, not authorization to
+upload assets, complete a deletion or submit the app for production review.
 
 `FW-PRIV-001B` **disabled-stage production rollout accepted** on 10 September 2026
 from owner-supplied Linode output and explicit smoke-test confirmation. PR #72 merged

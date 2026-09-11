@@ -7,12 +7,13 @@ financial logic.
 
 Status: **in progress — `FW-MOBILE-002` is production-accepted, the verified
 organization owns the registered Play package and Play-managed app-signing identity,
-and Play accepted a GitHub-built, upload-key-signed AAB for Internal Testing. Device
-inspection proved that the installed build uses an additional Google-managed Play
-app-signing certificate. The additive keyset is production-published, Google and
-Android verification pass, and the app opens without browser chrome. Financial
-classification, retention/deletion, Data Safety, device-journey, and broader Play
-release gates remain open.**
+and Play accepted a GitHub-built, upload-key-signed AAB for Internal Testing. The
+additive Digital Asset Links keyset is production-published, Google and Android
+verification pass, and the Play-installed app opens without browser chrome. The
+account-deletion paths are enabled and the owner reauthentication UI is
+production-accepted. The genuine zero-history completion awaits delivery to new
+owner-controlled Workspace aliases. Store listing, reviewer access, Data Safety,
+financial classification and final Play submission remain open.**
 
 ## Product boundary
 
@@ -26,10 +27,10 @@ Reuse the already-confirmed core customer journeys.
 | Step | Evidence needed | Current status |
 | --- | --- | --- |
 | Recovery rule | Restores isolated until latest deletion and financial reconciliation passes; missing evidence blocks reopening | Owner accepted; earlier local synthetic restore passed, not a production restore |
-| Deletion preflight | Running release, flag/policy version, integrity and financial checks; disposable test identities | Passed on `7819fd9552825c61ebc34a7844ba346c7ad92488`: enabled, both policy versions `2026-09-10`, route 200, deletion/financial checks clean; two disposable accounts owner-confirmed ready |
-| Controlled deletion | App and external request paths, actual minimization, notice, unusable login and independent before/after record | Feature enabled; first app-path request contained and placed under hold: two active 24K agreements and one failed Test-mode contribution, no allocation/redemption/completion. Second zero-history identity ready. Bootstrap reauthentication fix passes locally but is not deployed |
-| Reviewer access | Dedicated non-privileged account, reusable password, accurate English access instructions | Not confirmed; keep separate from disposable deletion-test accounts |
-| Console submission | Working deletion URL, Privacy/Data Safety/financial declarations, listing/build and remaining bounded device checks | Pending review; no upload/submission authorized by this checklist |
+| Deletion preflight | Running release, flag/policy version, integrity and financial checks; disposable test identities | Passed on `b349a84fdc716a87e85110386868923fad95326e`: enabled, both policy versions `2026-09-10`, public route and health checks 200, deletion/auth/financial checks clean |
+| Controlled deletion | App and external request paths, actual minimization, notice, unusable login and independent before/after record | Reauthentication UI is production-accepted. Two attempted disposable identities unexpectedly have agreement/enrolment history and must not be used as zero-history completion proof. Workspace aliases are pending propagation for a fresh controlled identity |
+| Reviewer access | Dedicated non-privileged account, reusable password, accurate English access instructions | Instructions prepared below; account creation waits for an independently receiving Workspace alias and must remain separate from deletion identities |
+| Console submission | Working deletion URL, Privacy/Data Safety/financial declarations, listing/build and remaining bounded device checks | Copy-ready worksheet prepared below; owner must enter/save drafts in Play Console and upload reviewed assets; submission remains separately authorized |
 
 Prepare two disposable owner-controlled customer identities through normal invitations:
 one for the app path, one for the external path. Use working controlled inboxes;
@@ -247,33 +248,152 @@ certificate fingerprint to the production statement.
 
 ## Store listing copy draft
 
-Short description:
+Use English (India) as the default listing language. The following text is
+copy-ready but must still be previewed in Play Console against its current length and
+metadata validation.
 
-> View jewellery savings plans, track contributions and access scheme records.
+**App name**
 
-Full-description foundation:
+> Jai Sri Krishna Jewellery
 
-> Jai Sri Krishna Jewellery customers can browse showroom jewellery and savings
-> plans, request enrolment, view approved scheme accounts, make INR contributions
-> through Razorpay, and review contribution receipts, accumulated grade-specific
-> metal quantity and eligibility information. Scheme approval, jewellery selection,
-> fulfilment and redemption remain controlled by the Vellore showroom and the
-> customer's recorded terms. This is not a bank deposit, interest-bearing account,
-> investment or metal-trading application.
+**Short description**
+
+> Manage jewellery savings plans, contributions and accumulated metal records.
+
+**Full description**
+
+> Plan your future jewellery purchase with Jai Sri Krishna Jewellery in Vellore.
+>
+> The app gives approved customers a convenient way to:
+>
+> - browse available jewellery savings plans and eligible metal grades;
+> - apply for customer access and request plan enrolment;
+> - view approved scheme accounts and contribution history;
+> - make scheduled INR contributions securely through Razorpay;
+> - see the grade-specific metal quantity recorded from verified contributions;
+> - access contribution receipts, scheme statements and eligibility information; and
+> - contact the showroom or request account deletion.
+>
+> Registration and enrolment requests are reviewed by the showroom. Plan approval,
+> jewellery selection, fulfilment and redemption follow the customer's recorded
+> terms and are completed with the Vellore showroom. Jewellery availability and the
+> final showroom invoice are separate from the savings-plan record.
+>
+> The app does not provide a bank deposit, interest, lending, securities or
+> cryptocurrency trading, a transferable metal wallet, person-to-person transfer, or
+> cash withdrawal. Metal quantities recorded under an approved plan are intended for
+> application toward eligible jewellery or permitted items under that plan's terms.
+>
+> Support: admin@jaishrikrishnajewellery.com · +91 94894 81436
+> Showroom: No. 155, Azad Road, Thorapadi, Vellore, Tamil Nadu 632001
 
 Public listing links:
 
 | Purpose | URL/status |
 | --- | --- |
-| Website | `https://jaishrikrishnajewellery.com/` — available |
-| Privacy policy | `https://jaishrikrishnajewellery.com/privacy/` — available; must be updated for the app and deletion process |
-| Terms | `https://jaishrikrishnajewellery.com/terms/` — available |
-| Support | `https://jaishrikrishnajewellery.com/contact/` and `admin@jaishrikrishnajewellery.com` — available |
-| Account deletion | **Missing — public release blocker** |
+| Website | `https://jaishrikrishnajewellery.com/` — production available |
+| Privacy policy | `https://jaishrikrishnajewellery.com/privacy/` — production available with app/deletion wording under policy version `2026-09-10` |
+| Terms | `https://jaishrikrishnajewellery.com/terms/` — production available |
+| Support | `https://jaishrikrishnajewellery.com/contact/` and `admin@jaishrikrishnajewellery.com` — production available |
+| Account deletion | `https://jaishrikrishnajewellery.com/accounts/deletion/` — production available; authenticated path exercised, end-to-end public verification and zero-history completion pending |
 
-Store screenshots, feature graphics, icon assets, and final copy belong to
-`FW-MOBILE-002`/`FW-MOBILE-003`, after the real mobile presentation exists. Do not
-submit desktop mockups as release evidence.
+### Store asset specification
+
+Use the existing production visual identity rather than inventing a second mobile
+brand. `static/images/pwa-icon-512.png` is the source candidate for the required
+512-by-512 Play icon; export and inspect it outside the repository before upload.
+Prepare a 1024-by-500 JPEG or 24-bit PNG feature graphic with no alpha, little or no
+text, a central jewellery focal point, and the existing brown/gold/cream palette.
+Do not include ratings, rankings, discounts, returns, guaranteed-value language,
+Razorpay/Google endorsement, or claims that the app is an investment.
+
+Capture phone screenshots from the Play-installed build, not a desktop mockup. Use a
+controlled reviewer identity and remove or crop every customer name, email, mobile,
+address, scheme number, receipt number, payment/order identifier and deletion token.
+Recommended order:
+
+1. Home — business identity and primary Savings Plans action.
+2. Savings Plans — representative Gold 22K/Gold 24K/Silver choices without a price or
+   benefit claim not present in the live app.
+3. Enrolment request — non-binding request and showroom-approval explanation.
+4. Customer dashboard — synthetic, privacy-safe account summary.
+5. Contributions — synthetic history and separate INR/grade-specific quantities.
+6. Receipts/statements — privacy-safe document access.
+7. Account and privacy — support and deletion-request entry point.
+
+Give each uploaded screenshot a unique plain-language alternative description. Keep
+the focal UI legible on a phone and avoid decorative device frames that imply a
+different operating system or unavailable feature.
+
+## Copy-ready Play Console worksheet
+
+Save each section as a draft until the alias-dependent deletion completion and stable
+reviewer account pass. The owner must answer current Console wording truthfully if it
+differs from this worksheet.
+
+| Console item | Recommended value | Manual gate |
+| --- | --- | --- |
+| App or game | App | Confirm in Console |
+| Pricing | Free | Confirm; do not configure Play Billing |
+| Default language | English (India) | Confirm |
+| Category | Shopping | Confirm available category/tags; this does not replace the financial declaration |
+| Countries/regions | India only for initial production | Owner confirms business availability before saving |
+| Contains ads | No | Reconfirm exact AAB has no advertising SDK or advertising ID |
+| Privacy policy | `https://jaishrikrishnajewellery.com/privacy/` | Open publicly in a signed-out browser |
+| Account deletion | `https://jaishrikrishnajewellery.com/accounts/deletion/` | Submit only after completed zero-history evidence |
+| App access | Some functionality is restricted | Add the durable reviewer credentials and English steps only in Play Console |
+| Target audience | Adults; not designed for children | Owner confirms minors are not offered app accounts before selecting age groups |
+| Financial features | Other | Use the reviewed explanation below; do not select no financial features |
+| Ads/UGC/social/gambling | None in this release | Answer the exact content-rating questions from observed behavior |
+
+**Financial-features explanation**
+
+> Customer portal for showroom jewellery purchase savings plans. Customers make INR
+> contributions through Razorpay and receive non-tradable, grade-specific metal
+> quantity records for later application under their approved plan terms. The app
+> does not provide lending, a bank deposit, interest, securities or cryptocurrency
+> trading, a wallet, person-to-person transfer, crowdfunding, a chit fund, or cash
+> withdrawal.
+
+**App-access instructions template**
+
+> 1. Open the app and select Sign in.
+> 2. Enter the reusable reviewer email address and password supplied in the protected
+>    credential fields below.
+> 3. The account is an ordinary customer account. It has no owner, staff, Django admin
+>    or CMS permissions.
+> 4. Use Dashboard to review the synthetic plan/account information and open
+>    Contributions and Documents from the customer navigation.
+> 5. Savings-plan enrolment is a non-binding request that normally requires showroom
+>    approval. Do not submit a real payment; the production Razorpay screen can move
+>    real funds.
+> 6. Account deletion is available from the signed-in account area. The external
+>    deletion page is also available at
+>    https://jaishrikrishnajewellery.com/accounts/deletion/.
+> 7. For review assistance contact admin@jaishrikrishnajewellery.com or
+>    +91 94894 81436 during published business hours.
+
+Never put the reviewer email or password in this file. The reviewer account must be
+separate from deletion-test identities and remain stable for the complete review
+window.
+
+### Manual-only owner queue
+
+These actions cannot be completed safely by repository automation:
+
+- wait for each Workspace alias to receive an independently sent message; reactivate
+  a Postmark hard-bounce suppression only after delivery works;
+- enter and save Play Console forms under the verified organization account;
+- confirm that app accounts are limited to the selected adult audience before saving
+  the Target audience declaration;
+- capture privacy-safe screenshots from the Play-installed app and upload the icon,
+  feature graphic and screenshots;
+- create and privately store the stable reviewer credentials after its alias works;
+- review the Data Safety preview, financial declaration and country availability;
+- press Submit for production review only after an explicit final release decision.
+
+Repository work covers copy, evidence, field mapping and review. It never needs the
+owner's Play password, recovery codes, OAuth secret, signing key or reviewer password.
 
 ## Play organization and signing ownership
 
@@ -369,12 +489,16 @@ recommended conservative draft is **Other**, described as:
 
 Do not select "no financial features" merely because the plan is not presented as an
 investment. Do not select lending, wallet, transfer, trading, crowdfunding, or chit
-fund categories unless a qualified review establishes that they apply. Save the form
-as a draft until the business's legal/accounting adviser and Razorpay have reviewed
-the actual app flow and wording.
+fund categories unless the actual service changes or a review establishes that they
+apply. The owner may use the conservative **Other** classification above after
+checking it against the exact current Console choices. Seek professional advice if
+the business cannot confidently distinguish its service from a listed regulated
+category; external sign-off is recommended but is not a blanket repository or form-
+drafting prerequisite.
 
-Current status: **provisional classification; qualified review is a public-release
-blocker.** This does not replace `FW-PROD-005`.
+Current status: **copy-ready owner-reviewed working classification; Play Console
+entry and final owner submission remain manual release gates.** This does not replace
+the deferred wider production controls under `FW-PROD-005`.
 
 ## Data Safety working inventory
 
@@ -445,18 +569,24 @@ documented before execution and accurately reflected in the privacy notice and D
 Safety form. Seek professional advice where applicability is uncertain; an AI-assisted
 implementation is not legal/accounting certification.
 
-Current status: **completion deployed and disabled-stage rollout accepted on 10 September 2026.**
-Release `7819fd9552825c61ebc34a7844ba346c7ad92488` passed owner-reported health,
-integrity and ordinary customer smoke tests. Request intake was subsequently enabled
-with policy version `2026-09-10`; the first app-path request was contained and placed
-under reviewed hold because it had synthetic financial history. Owner preview,
+Current status: **completion is deployed and request intake is enabled.** Release
+`b349a84fdc716a87e85110386868923fad95326e` passed owner-reported Live/Ready,
+deletion, authentication-email and financial checks with policy version `2026-09-10`.
+The Bootstrap owner reauthentication page is production-accepted. The first app-path
+request is held because it has two agreements and a failed Test-mode contribution;
+a second authenticated request also proved unsuitable for the zero-history exercise
+because it has one agreement and one enrolment request. Neither has a completion
+decision. New owner-controlled Workspace aliases are awaiting mail propagation for a
+fresh public-path, zero-history completion test. Owner preview,
 completion/minimization, retryable notices and retention reviews are automatically
-tested; irreversible completion and end-to-end Play-app acceptance have not occurred.
+tested; irreversible production completion and end-to-end Play deletion acceptance
+have not occurred.
 Public wording and an implementation-aligned category baseline are now prepared in
 ADR-0015, Privacy and the two feature-gated deletion entry pages. Actual provider
 settings, per-category release conditions, restore suppression and applicant disposal
-are not verified by that wording. Actual retention procedures, production acceptance
-and enablement remain public-release blockers.
+are not verified by that wording. Actual completion evidence, provider follow-up and
+recovery-record reconciliation remain public-release blockers; enablement itself is
+complete.
 The preview is not proof that any records may be erased. No bulk `CustomUser`
 deletion or hidden database edits are permitted.
 
@@ -497,7 +627,10 @@ independently of OTP or a developer's personal Google account. Before submission
 - verify the account before every submission and rotate it after the review window if
   policy permits while keeping the next submission maintainable.
 
-Current status: **not created; required before Play review.**
+Current status: **instructions prepared; account creation waits for a receiving
+Workspace alias.** The account must remain distinct from every deletion-test identity
+and must be verified from the Play-installed app before its credentials are entered
+only in Play Console.
 
 ## Internal Testing customer-journey matrix
 
@@ -612,6 +745,8 @@ public release may pass while any of the final five gates remains open.
 - [Financial features declaration](https://support.google.com/googleplay/android-developer/answer/13849271)
 - [Play account deletion requirements](https://support.google.com/googleplay/android-developer/answer/13327111)
 - [Play Data Safety guidance](https://support.google.com/googleplay/android-developer/answer/10787469)
+- [Play App content requirements](https://support.google.com/googleplay/android-developer/answer/9859455)
+- [Play store-listing preview asset requirements](https://support.google.com/googleplay/android-developer/answer/9866151)
 - [Play reviewer sign-in requirements](https://support.google.com/googleplay/android-developer/answer/15748846)
 - [Play target API requirements](https://support.google.com/googleplay/android-developer/answer/11926878)
 - [Registering Android package names](https://support.google.com/googleplay/android-developer/answer/16761053)
