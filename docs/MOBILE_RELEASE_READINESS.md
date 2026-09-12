@@ -28,7 +28,7 @@ Reuse the already-confirmed core customer journeys.
 | --- | --- | --- |
 | Recovery rule | Restores isolated until latest deletion and financial reconciliation passes; missing evidence blocks reopening | Owner accepted; earlier local synthetic restore passed, not a production restore |
 | Deletion preflight | Running release, flag/policy version, integrity and financial checks; disposable test identities | Passed on `b349a84fdc716a87e85110386868923fad95326e`: enabled, both policy versions `2026-09-10`, public route and health checks 200, deletion/auth/financial checks clean |
-| Controlled deletion | App and external request paths, actual minimization, notice, unusable login and independent before/after record | Reauthentication UI is production-accepted. Two attempted disposable identities unexpectedly have agreement/enrolment history and must not be used as zero-history completion proof. Workspace aliases are pending propagation for a fresh controlled identity |
+| Controlled deletion | App and external request paths, actual minimization, notice, unusable login and independent before/after record | Reauthentication UI is production-accepted. A fresh authenticated-path candidate is contained with zero agreements, enrolments, contributions, allocations and redemptions, but has no completion decision yet. The separate signed-out email-verification path still waits for Workspace alias delivery |
 | Reviewer access | Dedicated non-privileged account, reusable password, accurate English access instructions | Instructions prepared below; account creation waits for an independently receiving Workspace alias and must remain separate from deletion identities |
 | Console submission | Working deletion URL, Privacy/Data Safety/financial declarations, listing/build and remaining bounded device checks | Copy-ready worksheet prepared below; owner must enter/save drafts in Play Console and upload reviewed assets; submission remains separately authorized |
 
@@ -575,9 +575,11 @@ deletion, authentication-email and financial checks with policy version `2026-09
 The Bootstrap owner reauthentication page is production-accepted. The first app-path
 request is held because it has two agreements and a failed Test-mode contribution;
 a second authenticated request also proved unsuitable for the zero-history exercise
-because it has one agreement and one enrolment request. Neither has a completion
-decision. New owner-controlled Workspace aliases are awaiting mail propagation for a
-fresh public-path, zero-history completion test. Owner preview,
+because it has one agreement and one enrolment request. A later authenticated-path
+candidate is now contained with zero agreements, enrolments, contributions,
+allocations and redemptions; it has no completion decision yet. New owner-controlled
+Workspace aliases are awaiting mail propagation for a separate public-path,
+zero-history completion test. Owner preview,
 completion/minimization, retryable notices and retention reviews are automatically
 tested; irreversible production completion and end-to-end Play deletion acceptance
 have not occurred.

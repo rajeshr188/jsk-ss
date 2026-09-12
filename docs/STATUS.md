@@ -48,6 +48,11 @@ account and one enrolment request; it is not eligible as zero-history evidence a
 completion decision exists. Both inspected requests used the authenticated path, so
 the public email-verification path still requires a fresh identity. Two
 owner-controlled Workspace aliases were created and are awaiting mail propagation.
+On 13 September the owner reported a new authenticated-path candidate in `CONTAINED`
+state with zero scheme accounts, enrolment requests, contributions, allocations and
+redemptions and zero completion decisions. This is suitable for the authenticated
+zero-history completion exercise after explicit irreversible approval and an actual
+seven-category owner review; it does not prove the signed-out email-verification path.
 No verification bypass or database marking is permitted. In parallel, the canonical
 mobile-readiness guide now contains copy-ready Play listing text, store-asset and
 screenshot specifications, a Play Console worksheet, reviewer instructions and a
