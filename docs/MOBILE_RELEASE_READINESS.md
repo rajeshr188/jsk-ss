@@ -11,8 +11,9 @@ and Play accepted a GitHub-built, upload-key-signed AAB for Internal Testing. Th
 additive Digital Asset Links keyset is production-published, Google and Android
 verification pass, and the Play-installed app opens without browser chrome. The
 account-deletion paths are enabled and the owner reauthentication UI is
-production-accepted. The genuine zero-history completion awaits delivery to new
-owner-controlled Workspace aliases. Store listing, reviewer access, Data Safety,
+production-accepted. A zero-history authenticated-path completion is production-
+accepted; the separate signed-out email-verification path awaits a receiving
+owner-controlled Workspace alias. Store listing, reviewer access, Data Safety,
 financial classification and final Play submission remain open.**
 
 ## Product boundary
@@ -28,7 +29,7 @@ Reuse the already-confirmed core customer journeys.
 | --- | --- | --- |
 | Recovery rule | Restores isolated until latest deletion and financial reconciliation passes; missing evidence blocks reopening | Owner accepted; earlier local synthetic restore passed, not a production restore |
 | Deletion preflight | Running release, flag/policy version, integrity and financial checks; disposable test identities | Passed on `b349a84fdc716a87e85110386868923fad95326e`: enabled, both policy versions `2026-09-10`, public route and health checks 200, deletion/auth/financial checks clean |
-| Controlled deletion | App and external request paths, actual minimization, notice, unusable login and independent before/after record | Reauthentication UI is production-accepted. A fresh authenticated-path candidate is contained with zero agreements, enrolments, contributions, allocations and redemptions, but has no completion decision yet. The separate signed-out email-verification path still waits for Workspace alias delivery |
+| Controlled deletion | App and external request paths, actual minimization, notice, unusable login and independent before/after record | Authenticated zero-history completion accepted 15 September 2026: no profile fields retained, one immutable completion decision, outcome notice accepted and delivered, credentials unusable, Google unable to restore the account, and owner-confirmed integrity checks. The separate signed-out email-verification path still waits for Workspace alias delivery |
 | Reviewer access | Dedicated non-privileged account, reusable password, accurate English access instructions | Instructions prepared below; account creation waits for an independently receiving Workspace alias and must remain separate from deletion identities |
 | Console submission | Working deletion URL, Privacy/Data Safety/financial declarations, listing/build and remaining bounded device checks | Copy-ready worksheet prepared below; owner must enter/save drafts in Play Console and upload reviewed assets; submission remains separately authorized |
 
@@ -295,7 +296,7 @@ Public listing links:
 | Privacy policy | `https://jaishrikrishnajewellery.com/privacy/` — production available with app/deletion wording under policy version `2026-09-10` |
 | Terms | `https://jaishrikrishnajewellery.com/terms/` — production available |
 | Support | `https://jaishrikrishnajewellery.com/contact/` and `admin@jaishrikrishnajewellery.com` — production available |
-| Account deletion | `https://jaishrikrishnajewellery.com/accounts/deletion/` — production available; authenticated path exercised, end-to-end public verification and zero-history completion pending |
+| Account deletion | `https://jaishrikrishnajewellery.com/accounts/deletion/` — production available; authenticated zero-history completion accepted, separate signed-out email-verification completion pending |
 
 ### Store asset specification
 
@@ -575,14 +576,17 @@ deletion, authentication-email and financial checks with policy version `2026-09
 The Bootstrap owner reauthentication page is production-accepted. The first app-path
 request is held because it has two agreements and a failed Test-mode contribution;
 a second authenticated request also proved unsuitable for the zero-history exercise
-because it has one agreement and one enrolment request. A later authenticated-path
-candidate is now contained with zero agreements, enrolments, contributions,
-allocations and redemptions; it has no completion decision yet. New owner-controlled
+because it has one agreement and one enrolment request. On 15 September a later
+authenticated-path candidate with zero agreements, enrolments, contributions,
+allocations and redemptions completed successfully with no profile fields retained,
+one immutable completion decision, an accepted and delivered outcome notice,
+unusable credentials and no Google recovery path. The owner confirmed the deletion,
+authentication, Google, financial and graded-metal checks. New owner-controlled
 Workspace aliases are awaiting mail propagation for a separate public-path,
 zero-history completion test. Owner preview,
 completion/minimization, retryable notices and retention reviews are automatically
-tested; irreversible production completion and end-to-end Play deletion acceptance
-have not occurred.
+tested; the authenticated production completion is accepted, while end-to-end public
+email-verification deletion acceptance has not occurred.
 Public wording and an implementation-aligned category baseline are now prepared in
 ADR-0015, Privacy and the two feature-gated deletion entry pages. Actual provider
 settings, per-category release conditions, restore suppression and applicant disposal

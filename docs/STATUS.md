@@ -48,11 +48,14 @@ account and one enrolment request; it is not eligible as zero-history evidence a
 completion decision exists. Both inspected requests used the authenticated path, so
 the public email-verification path still requires a fresh identity. Two
 owner-controlled Workspace aliases were created and are awaiting mail propagation.
-On 13 September the owner reported a new authenticated-path candidate in `CONTAINED`
-state with zero scheme accounts, enrolment requests, contributions, allocations and
-redemptions and zero completion decisions. This is suitable for the authenticated
-zero-history completion exercise after explicit irreversible approval and an actual
-seven-category owner review; it does not prove the signed-out email-verification path.
+On 15 September the new authenticated-path candidate completed its seven-category
+owner disposition with zero scheme accounts, enrolment requests, contributions,
+allocations and redemptions. Production displayed one completed-with-retention
+decision, no retained profile fields, accepted outcome notice with cleared recipient,
+and the expected minimization/completion actions. The owner confirmed inbox delivery,
+unusable password, failed Google recovery and clean deletion, authentication, Google,
+financial and graded-metal checks. This accepts the authenticated zero-history path;
+it does not prove the signed-out email-verification path.
 No verification bypass or database marking is permitted. In parallel, the canonical
 mobile-readiness guide now contains copy-ready Play listing text, store-asset and
 screenshot specifications, a Play Console worksheet, reviewer instructions and a
@@ -915,25 +918,14 @@ and rejection of unsafe/non-Google URLs. Django checks and migration-drift check
 
 ## Next recommended step
 
-Review the implemented `FW-PRIV-001B` owner disposition and run a synthetic local
-owner journey. Complete the real category-specific retention policy, external
-provider/export handling and backup/restore suppression procedure, then review/CI
-and a separately approved disabled-first production rollout of `accounts.0006`.
-Keep production deletion disabled until synthetic acceptance and policy/procedures
-are complete. No automatic financial purge or blanket statutory retention period
-has been approved; do not use pilot customers for destructive acceptance tests.
-In parallel, finish the remaining Internal Testing cases: checkout
-cancellation/expiry/pause, unlinked-identity rejection, process death, network/offline,
-updates/browser fallback, accessibility, and no-secret logs. Core authentication,
-registration, enrolment, payment and document journeys are owner-confirmed through
-the Play-installed app; collect missing build/device metadata and reuse that evidence.
-Use `docs/MOBILE_RELEASE_READINESS.md` and stop on any critical/high,
-financial-integrity, identity-boundary, or data-exposure failure. Resolve
-server-enforced protection for
-the private Android repository. Finish the Financial-features classification review,
-owner-approved retention procedures and `FW-PRIV-001B`
-before making a public-store account-deletion claim. No public store release may
-bypass the remaining policy/deletion gates. The independent
-fund-safety priority remains the two no-mutation `FW-PAY-003` Razorpay recovery
-exercises, and the first genuine `FW-ELIG-002` reminder observation must not be
-manufactured.
+Complete the separate signed-out public email-verification deletion journey once an
+owner-controlled Workspace alias reliably receives mail. Use another genuinely
+zero-history disposable customer, never bypass verification, and repeat the same
+owner preview, completion, notice, credential and integrity evidence. In parallel,
+enter the copy-ready store listing and App-content answers as Play Console drafts,
+prepare a stable non-privileged reviewer account, capture privacy-safe screenshots,
+and finish the release-candidate Data Safety/provider review. Do not submit the app
+for production review until these remaining gates are reconciled in
+`docs/MOBILE_RELEASE_READINESS.md`. Keep the existing financial, recovery-isolation
+and no-secret boundaries; no additional real payment is required merely to complete
+store preparation.
