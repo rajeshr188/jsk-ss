@@ -17,6 +17,8 @@
       <div class="alert alert-secondary mb-0">Google sign-in is available only for approved customer accounts.</div>
     {% elif not customer_google_login_enabled %}
       <div class="alert alert-secondary mb-0">Google sign-in is temporarily unavailable. Your password login remains available.</div>
+    {% elif not customer_google_connection_eligible %}
+      <div class="alert alert-secondary">First activate your approved customer login with a password and verified email. Sign in with that password before connecting Google.</div><a href="{% url 'customer_activation_help' %}">Login setup help</a>
     {% else %}
       {% get_social_accounts user as social_accounts %}
       {% if social_accounts.google %}
@@ -25,7 +27,7 @@
         </div>
         <p class="text-secondary mb-0">You can now use Continue with Google on the customer login page. Password login and password reset remain available.</p>
         <hr>
-        <p class="small text-secondary mb-0">Online removal is intentionally unavailable in this first release so identity history cannot be silently erased. Contact the showroom if this Google account may be compromised.</p>
+        <p class="small text-secondary mb-0">Contact the showroom if this Google account may be compromised. Online removal is unavailable.</p>
       {% else %}
         <p class="text-secondary">Connect the Google account whose verified email exactly matches <strong>{{ user.email }}</strong>.</p>
         {% provider_login_url "google" process="connect" as google_connect_url %}

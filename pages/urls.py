@@ -15,6 +15,7 @@ from .views import (
     live_health,
     offline_page,
     pwa_manifest,
+    plan_apply,
     ready_health,
     service_worker,
 )
@@ -31,6 +32,7 @@ urlpatterns = [
     path("our-story/", OurStoryPageView.as_view(), name="our_story"),
     path("contact/", ContactPageView.as_view(), name="contact"),
     path("plans/", PricingPageView.as_view(), name="pricing"),
+    path("plans/<int:plan_id>/apply/", plan_apply, name="plan_apply"),
     path("terms/", TermsPageView.as_view(), name="terms"),
     path("privacy/", PrivacyPageView.as_view(), name="privacy"),
     path(

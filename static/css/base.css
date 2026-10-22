@@ -39,6 +39,10 @@ html {
   }
 }
 
+.application-journey {
+  overflow-wrap: anywhere;
+}
+
 body {
   min-height: 100vh;
   display: flex;
@@ -1910,6 +1914,18 @@ dl.row dt {
   }
 }
 
+.offer-header { max-width: 52rem; }
+.offer-details summary { padding: .5rem 0; cursor: pointer; font-weight: 600; }
+@media (max-width: 575.98px) {
+  .offer-header h1 { font-size: 1.8rem; }
+  .offer-header > .text-secondary { font-size: .95rem; }
+  .hero-card--home { padding: 1.25rem; }
+  .hero-card--home h1 { font-size: 2.1rem; }
+  .hero-card--home .lead { font-size: 1rem; }
+  .home-hero-photo { max-height: 18rem; }
+  .home-hero-photo img { min-height: 0; height: 18rem; }
+}
+
 @media print {
   body {
     display: block;
@@ -1924,4 +1940,18 @@ dl.row dt {
   .table-responsive {
     box-shadow: none;
   }
+}
+/* Owner work remains readable without horizontal scrolling on mobile. */
+.owner-queue-copy,
+.owner-customer-context { min-width: 0; overflow-wrap: anywhere; }
+#today-financial, #today-applications { scroll-margin-top: 6rem; }
+@media (max-width: 767.98px) {
+  .table-responsive .owner-records-table { min-width: 0; }
+  .owner-records-table, .owner-records-table tbody,
+  .owner-records-table tr, .owner-records-table td { display: block; width: 100%; }
+  .owner-records-table thead { display: none; }
+  .owner-records-table tr { margin-bottom: 1rem; border: 1px solid var(--bs-border-color); border-radius: .75rem; padding: .5rem; }
+  .owner-records-table td { border: 0; overflow-wrap: anywhere; padding: .5rem; }
+  .owner-records-table td[data-label]::before { content: attr(data-label); display: block; font-size: .8rem; font-weight: 600; color: var(--bs-secondary-color); margin-bottom: .2rem; }
+  .owner-records-table .btn { min-height: 44px; display: inline-flex; align-items: center; }
 }

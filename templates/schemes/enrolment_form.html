@@ -4,6 +4,7 @@
 {% block title %}Enrol {{ customer.full_name }} | Jai Sri Krishna Jewellery{% endblock %}
 
 {% block content %}
+{% include 'schemes/includes/customer_context.html' %}
 <div class="row justify-content-center"><div class="col-lg-7">
   <div class="page-header"><div><p class="page-eyebrow">New agreement</p><h1>Enrol {{ customer.full_name }}</h1><p class="page-subtitle">The selected plan terms are snapshotted into this customer agreement.</p></div></div>
   {% if form.fields.plan.queryset.exists %}

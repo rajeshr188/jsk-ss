@@ -3,6 +3,7 @@ from django.http import HttpResponseNotFound
 
 
 SENSITIVE_AUTH_PATH_PREFIXES = (
+    "/accounts/applications/",
     "/accounts/password/reset/key/",
     "/accounts/invitations/",
     "/accounts/registrations/verify/",

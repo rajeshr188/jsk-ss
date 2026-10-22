@@ -1,0 +1,11 @@
+{% extends '_base.html' %}
+{% block title %}Login setup help | Jai Sri Krishna Jewellery{% endblock %}
+{% block content %}
+<div class="auth-shell"><div class="card auth-card">
+  <p class="page-eyebrow">Customer login setup</p><h1>Setup help</h1>
+  <p>For an expired setup link, use Request setup help on that link or contact the showroom. The showroom must issue a replacement; this page does not activate an account.</p>
+  <p>Check your email for the latest setup link. If you already set a password, sign in or use password reset.</p>
+  <div class="d-grid gap-2"><a class="btn btn-jsk" href="{% url 'contact' %}">Contact the showroom</a><a class="btn btn-outline-dark" href="{% url 'account_login' %}">Sign in</a><a href="{% url 'account_reset_password' %}">Reset password</a></div>
+  <p class="small text-secondary mt-3 mb-0">{{ showroom.name }} · <a href="tel:{{ showroom.telephone }}">{{ showroom.telephone_display }}</a></p>
+</div></div>
+{% endblock %}

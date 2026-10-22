@@ -3,6 +3,7 @@ import re
 
 
 SENSITIVE_AUTH_PATH_PATTERNS = (
+    re.compile(r"/accounts/applications/[^\s?#]+(?:\?[^\s]*)?"),
     re.compile(r"/accounts/invitations/[^\s?#]+(?:\?[^\s]*)?"),
     re.compile(r"/accounts/registrations/verify/[^\s?#]+(?:\?[^\s]*)?"),
     re.compile(r"/accounts/deletion/verify/[^\s?#]+(?:\?[^\s]*)?"),
@@ -22,6 +23,8 @@ def redact_sensitive_auth_paths(message):
 
 
 def _redacted_auth_path(path):
+    if path.startswith("/accounts/applications/"):
+        return "/accounts/applications/[REDACTED]/"
     if path.startswith("/accounts/invitations/"):
         return "/accounts/invitations/[REDACTED]/"
     if path.startswith("/accounts/registrations/verify/"):

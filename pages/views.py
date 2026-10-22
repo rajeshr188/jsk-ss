@@ -4,13 +4,17 @@ from django.conf import settings
 from django.db import DatabaseError, connection
 from django.http import Http404, HttpResponse, JsonResponse
 from django.template.loader import render_to_string
+from django.shortcuts import get_object_or_404, redirect
+from django.urls import reverse
+from django.views.decorators.cache import never_cache
 from django.templatetags.static import static
 from django.views.decorators.http import require_GET
 from django.views.generic import ListView, TemplateView
 
 from schemes.selectors import get_public_scheme_plans
 from .business import showroom_structured_data
-from .models import AboutPage, OurStoryPage
+from .models import AboutPage, OurStoryPage, PublicFunnelDailyCount
+from .services import record_public_funnel_step
 from .selectors import public_editorial_page
 
 logger = logging.getLogger(__name__)
@@ -138,6 +142,10 @@ def ready_health(request):
 class HomePageView(TemplateView):
     template_name = "pages/home.html"
 
+    def get(self, request, *args, **kwargs):
+        record_public_funnel_step(request, PublicFunnelDailyCount.Step.HOME)
+        return super().get(request, *args, **kwargs)
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["featured_plans"] = get_public_scheme_plans(limit=3)
@@ -182,6 +190,10 @@ class PricingPageView(ListView):
     template_name = "pages/pricing.html"
     context_object_name = "plans"
 
+    def get(self, request, *args, **kwargs):
+        record_public_funnel_step(request, PublicFunnelDailyCount.Step.PLANS)
+        return super().get(request, *args, **kwargs)
+
     def get_queryset(self):
         return get_public_scheme_plans()
 
@@ -195,6 +207,21 @@ class PricingPageView(ListView):
 
 class HowItWorksPageView(TemplateView):
     template_name = "pages/how_it_works.html"
+
+
+@never_cache
+@require_GET
+def plan_apply(request, plan_id):
+    plan = get_object_or_404(get_public_scheme_plans(), pk=plan_id)
+    if request.user.is_authenticated:
+        if request.user.role == "CUSTOMER" and settings.CUSTOMER_ENROLMENT_REQUESTS_ENABLED:
+            record_public_funnel_step(request, PublicFunnelDailyCount.Step.SELECTED)
+            return redirect("schemes:scheme_enrolment_request_create", plan_id=plan.pk)
+        return redirect("pricing")
+    if settings.PUBLIC_CUSTOMER_REGISTRATION_ENABLED:
+        record_public_funnel_step(request, PublicFunnelDailyCount.Step.SELECTED)
+        return redirect(f'{reverse("customer_registration")}?plan={plan.pk}')
+    return redirect("contact")
 
 
 class TermsPageView(TemplateView):

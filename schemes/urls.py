@@ -7,6 +7,9 @@ app_name = "schemes"
 urlpatterns = [
     path("start/", views.post_login, name="post_login"),
     path("owner/", views.owner_dashboard, name="owner_dashboard"),
+    path("owner/today/", views.owner_today, name="owner_today"),
+    path("owner/applications/", views.owner_applications, name="owner_applications"),
+    path("owner/activation/", views.owner_activation_queue, name="owner_activation_queue"),
     path(
         "owner/payment-operations/",
         views.payment_operations,
@@ -159,6 +162,7 @@ urlpatterns = [
         views.razorpay_confirm,
         name="razorpay_confirm",
     ),
+    path("mine/payments/<int:contribution_id>/status/", views.payment_status, name="payment_status"),
     path(
         "payments/razorpay/webhook/",
         views.razorpay_webhook,

@@ -2,8 +2,83 @@
 
 ## Status
 
+Product amendment approved 5 October 2026: plan-first public entry and one coordinated
+showroom review replace the customer-facing two-application journey in phases documented
+in `docs/MVP_PLAN.md`. Phase 1 routes an approved customer to the existing plan-request
+form and a visitor to staged registration with a validated offer summary. Phase 3,
+now implemented and verified locally as amended below, retains public
+plan/grade/preferences and offer evidence, protects progress tracking, requires renewed
+customer confirmation after material changes, and coordinates approval through one
+owner workflow. Separate identity/agreement records, owner authorization, idempotency,
+historical request evidence and all financial boundaries remain required. The decision
+below preserves the authenticated existing-customer request conversion contract.
+
+Phase 2 implementation (5 October 2026) places plan requests alongside registrations
+in the owner Applications inbox. Review, recorded offer/preferences, confirmation,
+agreement creation and decline/expiry now share one workspace. The earlier conversion
+URL renders that workspace, and its POST continues calling the same transactional,
+idempotent conversion service. Changed/closed offers and expired requests do not show
+a conversion action; authoritative service checks remain mandatory on submission.
+Today includes expired pending requests until an explicit closure records the
+decision. Separate requests/agreements, customer isolation and historical evidence
+remain intact; Phase 3 now implements cross-verification plan continuity and coordinated
+approval for newly linked public applications as amended below.
+
 Accepted for implementation under `FW-ENROL-001`. Production enablement remains a
 separate, disabled-by-default rollout decision.
+
+### Phase 3 implementation amendment (5 October 2026)
+
+The earlier decisions below remain the historical access-only and existing-customer
+contracts. Phase 3 supersedes their two-review public journey for newly linked plan
+applications only; it does not merge identity with the financial agreement or migrate
+historical registrations into plan intent.
+
+`PlanApplication` links one registration to its selected offer/preferences and at most
+one separate `SchemeAccount`. Append-only `PlanApplicationConfirmation` revisions
+retain initial and renewed customer evidence. Contact submission retains plan, exact
+grade, amount, duration and message; postal address and explicit current policy/offer
+and requested start-date confirmation follow protected email verification. A changed
+offer or a start date that passes before approval requires renewed customer confirmation.
+The form digest binds consent to displayed terms; money is serialized as decimal strings.
+
+Owner coordinated approval locks registration, application, plan and offering, rechecks
+identity conflicts and customer evidence, and calls the existing identity/invitation and
+`enroll_customer` services in one transaction. Any financial failure rolls back identity
+and invitation too. The one-to-one agreement link and row locks make retries/concurrent
+approval return the same agreement. Identity actor/reason/contact evidence and the
+financial audit/agreement snapshots remain distinct. Legacy identity-only approval
+cannot bypass this service for linked applications.
+
+Activation delivery occurs after commit; failed/absent delivery remains recoverable
+from the existing customer invitation controls. Progress access has a separate random,
+digest-only credential, the application expiry and a CSRF-confirmed session grant.
+Verification remains one-use; progress access is resumable within its scope/expiry.
+Owner replacement revokes old progress links/sessions without extending expiry. Progress
+emails opt out of tracking; edge/Django logs exclude/redact these paths. No progress
+route sends identifiers or tokens to analytics. Disabled/erased customers lose access.
+
+Existing customers keep the authenticated request flow using the held profile; they do
+not repeat contact/address intake. Current disclosure changes or a different duration
+require withdrawal/closure and a new customer request. Legacy records, authentication,
+permissions, liabilities and historical financial evidence remain unchanged. No new
+worker, API, frontend framework, authentication system or production rollout is added.
+Phase 4 still owns activation continuation, dashboard prominence and expired-activation
+recovery. Production migration/deployment requires separate approval.
+
+### Phase 4 implementation amendment (5 October 2026)
+
+Dashboard application progress precedes balances and remains customer-scoped and
+bounded. Linked approvals lead to their separate agreement; existing-customer request
+stages show review, changed terms, expiry or conversion and the appropriate next action.
+Agreement continuation reads recorded payment states and existing availability. Pending
+confirmation or metal allocation directs to protected status; Test/practice is explicit
+and cannot establish a live first payment. A saved variable amount can prefill the first
+payment form while existing agreement/service validation remains authoritative.
+No financial history, offer or agreement snapshot is changed. Google copy explains
+activated, verified, explicitly connected credential eligibility. Tamil testing is
+prepared in English; unreviewed translations remain unpublished. Production rollout
+remains a separate decision.
 
 ## Context
 

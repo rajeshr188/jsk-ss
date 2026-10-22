@@ -13,6 +13,7 @@
 {% endblock %}
 
 {% block content %}
+{% if user.is_superuser or user.role == 'OWNER' %}{% include 'schemes/includes/customer_context.html' with customer=receipt.contribution.scheme_account.customer scheme_account=receipt.contribution.scheme_account %}{% endif %}
 <div class="d-flex justify-content-end mb-3 d-print-none"><button class="btn btn-jsk" type="button" onclick="window.print()">Print receipt</button></div>
 <article class="card receipt-document"><div class="card-body p-4 p-md-5">
   <div class="text-center border-bottom pb-3 mb-4">

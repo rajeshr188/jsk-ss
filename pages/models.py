@@ -9,6 +9,26 @@ from wagtail.search import index
 EDITORIAL_RICH_TEXT_FEATURES = ["h2", "h3", "bold", "italic", "ol", "ul", "link"]
 
 
+class PublicFunnelDailyCount(models.Model):
+    """Aggregate navigation counts only: no visitor, account or URL fields."""
+    class Step(models.TextChoices):
+        HOME = "HOME", "Homepage requests"
+        PLANS = "PLANS", "Plan comparison requests"
+        SELECTED = "SELECTED", "Plan selections"
+        APPLICATION = "APPLICATION", "Application form requests"
+
+    day = models.DateField()
+    step = models.CharField(max_length=16, choices=Step.choices)
+    count = models.PositiveBigIntegerField(default=1)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["day", "step"], name="public_funnel_day_step_unique"),
+            models.CheckConstraint(condition=models.Q(step__in=["HOME", "PLANS", "SELECTED", "APPLICATION"]), name="public_funnel_step_valid"),
+            models.CheckConstraint(condition=models.Q(count__gte=1), name="public_funnel_count_positive"),
+        ]
+
+
 class AboutPage(Page):
     eyebrow = models.CharField(max_length=80, default="About us")
     introduction = models.TextField(

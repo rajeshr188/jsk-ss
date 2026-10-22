@@ -14,7 +14,9 @@ class CustomerInvitationMigrationTests(TransactionTestCase):
         self.old_apps = executor.loader.project_state([self.migrate_from]).apps
 
     def tearDown(self):
-        MigrationExecutor(connection).migrate([self.migrate_to])
+        # Later transactional tests must see the complete current schema.
+        executor = MigrationExecutor(connection)
+        executor.migrate(executor.loader.graph.leaf_nodes())
         super().tearDown()
 
     def test_duplicate_case_insensitive_emails_stop_before_constraint(self):

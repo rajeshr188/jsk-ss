@@ -2,6 +2,216 @@
 
 ## Current milestone
 
+**Customer conversion redesign, Phase 4 implemented and verified locally
+(5 October 2026).** Linked-plan activation now continues through password sign-in to
+the scoped agreement. Dashboard application updates precede agreement balances;
+payment next actions use server records and availability, with Test/practice labels.
+Expired setup links can request owner help through a CSRF-protected, idempotent POST;
+owner-only invitation replacement is preserved and Today has bounded recovery queues.
+Additive `accounts.0008` adds one nullable recovery-request timestamp. Google eligibility
+copy is clarified and Tamil testing is prepared in English without publishing translations.
+All **514 serial full-suite tests** passed in 469.374 seconds, followed by all **130
+focused regressions** in 72.856 seconds after final dashboard/copy refinements. This
+includes invitation replay/CSRF/expiry, scoped activation-to-password-login continuity,
+owner recovery/failure/pagination, social eligibility, legacy access, plan approval
+concurrency and financial/payment operations. Django checks, migration consistency
+and whitespace checks pass. Fixed contribution form defaults remain intact; only
+linked variable first-payment preferences are prefilled, with normal validation.
+
+Desktop (1440x1000) and mobile (390x844) inspection covered approved-plan setup without
+entering new credentials, expired-link/help confirmation, password login with its
+approved agreement destination, prominent dashboard review/payment stages, the saved
+first-payment amount, Test/pending status, Google connection instructions and owner
+Today/recovery queue/customer resend evidence. Document widths match the viewport
+(mobile 375/375px and desktop 1425/1425px). Final dashboard proof is retained in
+`.uv-cache/phase4-dashboard-desktop.jpg` and `.uv-cache/phase4-dashboard-mobile.jpg`.
+Financial actions, new credentials and provider/Google connection were not submitted
+in browser inspection; service/HTTP regressions verify outcomes. All fixtures were
+synthetic in separately named local preview PostgreSQL with in-memory mail. The preview
+database/server was removed, viewport reset and temporary tab closed.
+
+ADR-0011/0012, domain rules, architecture, testing and deployment guidance are updated.
+`accounts.0008` is additive metadata only; no historical or financial backfill is
+performed. No production deployment, normal-database migration, actual environment
+configuration change or feature enablement is made. The earlier Phase 1/3 pending
+migrations remain combined release dependencies where not yet deployed.
+
+All four approved implementation phases are now complete locally. Remaining release
+work is owner review and separately approved staging/production rollout. The prepared
+Tamil protocol in `TESTING.md` still needs reviewed terminology/translations and actual
+participant testing; no unreviewed translation is published. Approved marketing
+descriptions/benefits and a showroom response window remain missing business inputs;
+none were invented. No additional implementation phase is prescribed by this plan.
+
+### Phase 3 baseline (completed locally)
+
+**Customer conversion redesign, Phase 3 implemented and verified locally
+(5 October 2026).** Contact-first intake now persists selected plan/grade/preferences,
+remaining address and current-offer/start-date confirmation follow email verification,
+and protected progress uses a separate expiring credential/session. Coordinated owner
+approval links separate identity and agreement records transactionally, with retained
+confirmations, after-commit activation delivery and legacy/existing-customer access.
+Additive migration `accounts.0007` creates the application/confirmation tables only;
+no historical intent backfill, production deployment or production data change is made.
+All **494 serial full-suite tests** passed in 444.595 seconds, including PostgreSQL
+concurrent approval and rollback checks. After the final copy, cache and expiry
+refinements, all **136 focused regressions** passed in 104.440 seconds. Django checks,
+migration consistency and whitespace checks pass. The older invitation migration
+test now restores all current schema leaves at teardown; this fixes test isolation,
+not production data or migrations.
+
+Desktop (1440x1000) and mobile (390x844) inspection covered contact intake and retained
+validation values, protected email verification, remaining details, private progress
+access, completed review/support, owner queue and coordinated review/confirmation
+history, and existing-customer requests without repeated profile fields. The affected
+pages fit their viewport without document overflow. Financial approval/payment and
+new credentials were not submitted in the browser; service/HTTP regressions verify
+those outcomes. Synthetic records and in-memory email used a separate local preview
+database, removed with the preview server after inspection. Review screenshots remain
+in `.uv-cache/phase3-owner-review-desktop.jpg` and the Phase 3 mobile preview images.
+
+`MVP_PLAN.md` records completed acceptance criteria; ADR-0011/0012, domain rules,
+architecture, testing and `PRODUCTION_DEPLOYMENT.md` describe the new boundaries and
+additive migration/rollback precautions. The existing feature flags were not enabled
+in production; the normal database and actual environment configuration are unchanged.
+Material offer/policy changes or a missed requested start date require renewed customer
+confirmation. Expired applications cannot receive unusable replacement links or be
+approved, and progress replacement never extends expiry. Notification failures remain
+visible and recoverable; provider acceptance is not claimed as customer receipt.
+
+At the Phase 3 checkpoint, the next scope was Phase 4: activation continuation into the approved plan and first-payment
+state, prominent dashboard progress, expired activation recovery, linked-Google
+eligibility and preparation for reviewed Tamil testing, now implemented above. Approved offer descriptions/
+benefits and an achievable showroom response window remain missing business inputs;
+none were invented. Production deployment and production data changes await approval.
+
+### Phase 2 baseline (completed locally)
+
+**Customer conversion redesign, Phase 2 — owner workflow implemented and verified
+locally (5 October 2026).** The owner authorized this phase after Phase 1.
+The implementation checklist and acceptance
+criteria are in `MVP_PLAN.md`; production rollout remains separately approved.
+
+Owner sign-in now opens Today. It shows financial exceptions and applications needing
+attention, with counts, jump links and at most 8 records per queue. Verified identity
+reviews precede plan reviews and verification delivery/expiry recovery; unresolved
+expired plan requests remain visible until explicitly closed. The unified Applications
+inbox supports stage/type filters and fixed 25-record pages across both record types.
+Financial exceptions also paginate in SQL before loading evidence and link directly
+to the affected contribution or supported recovery screen. Unsupported webhook types
+remain visible without a broken recovery action; Test/method labels remain explicit.
+
+Customer search covers name, email, mobile, customer number and scheme number, capped
+at 100 characters with 25-record pages and stable ordering. Agreement counts use an
+aggregate; the customer list/detail no longer loads every contribution. Historical
+registration/request lists remain available and paginated. Registration and agreement
+review share one layout/next action; plan snapshots, preferences, confirmation and
+conversion form are on one page. Current offer, expiry and customer-login eligibility
+govern action visibility, with all authoritative service guards retained. Approval
+and rejection reason labels have distinct targets on the shared identity screen.
+
+Customer context links related reviews, payments, recovery, cash recording/correction,
+redemption and statements/receipts. Applicant linkage uses the explicit approved-user
+relationship, never an unverified email match. Inactive customer login is labelled
+accurately and has no resend invitation action. Owner access explicitly requires an
+active owner/superuser; CMS/staff access alone grants no permission. Owner navigation
+is Today, Applications, Overview, Customers and Operations; public/customer navigation
+and existing customer access remain supported. Mobile payment/history tables render
+as labelled rows; no duplicate financial forms or financial history changes are added.
+
+Verification: the 54 existing focused regressions and 14 new workspace tests passed,
+followed by all **460 serial full-suite tests** in 484.288 seconds. After the final
+distinct-label and customer-login eligibility refinements, all **68 focused tests**
+passed again in 33.019 seconds. Django checks, migration consistency and whitespace
+checks pass. Desktop (1440×1000) and mobile (390×844) inspection covered owner landing,
+queue jumps, inbox/filtering, identity/inline agreement review, customer search with
+retained-query page navigation, customer records, exact-payment review, receipts,
+statements and recovery controls. Both owner payment table dimensions fit their
+containers (mobile 351/351px, desktop 1154/1154px) after overriding the inherited
+table minimum width. Customer dashboard/history/documents have no owner context;
+direct customer access to the Applications inbox returns 403. Financial forms were
+not submitted in the browser and no provider operation or real email was performed.
+Fictional fixtures lived only in a separately named local preview database, removed
+with the preview server after inspection. Screenshots are retained in
+`.uv-cache/phase2-review-desktop.jpg` and `.uv-cache/phase2-today-mobile.jpg`.
+Printable statement/recovery evidence tables retain their existing inner horizontal
+scrolling on mobile; owner payment and historical review rows use the new mobile layout.
+No Phase 2 migration, new architecture component or feature enablement is required.
+The normal application database and production configuration/data were not changed. The
+Phase 1 aggregate migration remains pending for a combined release; release/rollback
+guidance is in `PRODUCTION_DEPLOYMENT.md`.
+
+At the Phase 2 checkpoint, the next scope was Phase 3: durable plan/grade/preferences through verification, contact-first
+intake, coordinated transactional identity/agreement approval, material-offer
+reconfirmation and protected progress, now implemented above. Phase 2 shared the workspace while retaining
+separate approval services and historical records. Activation continuation/recovery
+and Tamil testing remain Phase 4. Approved offer benefits/descriptions and an achievable
+review window remain business inputs; none were invented. Production deployment and
+production data changes await separate approval.
+
+## Phase 1 baseline and verification
+
+**Customer conversion redesign, Phase 1 — implemented and verified locally
+(5 October 2026).** The owner approved the four-phase product direction
+and requested Phase 1 as a reviewable change. Acceptance criteria and dependencies
+are in `docs/MVP_PLAN.md`. This supersedes the previous immediate implementation
+priority; the historical mobile/deletion release evidence below remains valid.
+
+Review against current code confirmed separate registration and enrolment reviews,
+public links that lost selected-plan context, unreviewed free-text offer descriptions,
+and payment-operation gating on agreement detail but not dashboard cards. Phase 1
+adds a shared compact offer card using live plan amounts, frequency, duration and
+active grades, plan-specific entry with a truthful registration summary, and factual
+jewellery copy. Existing account/registration/enrolment routes remain supported.
+Stored plan descriptions and agreement snapshots are not rewritten.
+
+Daily public GET counters store only day/stage/count, default off behind
+`PUBLIC_FUNNEL_MEASUREMENT_ENABLED`. `report_customer_funnel` combines these totals
+with source-record period throughput, separating verified Live online payments from
+Test payments and showroom cash. It reports first payments against full history and
+current allocation backlog. Counts are origin requests (including repeats/bots), not
+unique visitors or a joined conversion cohort; cached traffic is not counted. Known
+synthetic application records cannot yet be reliably excluded automatically.
+
+Customer dashboard/detail use one read-only payment-availability selector. Customer
+and owner history explicitly label `ABANDONED` attempts as closed after review.
+Lost/rejected callback responses, checkout cancellation/failure and expiry lead to
+recorded-status guidance without claiming financial success/failure from browser
+events. The private no-store status page reads existing records and never verifies,
+retries or mutates payments on GET; history links support later recovery. Financial
+confirmation/allocation services, immutable evidence and permission boundaries stay
+unchanged.
+
+Verification: 106 focused tests passed, followed by all **446 serial full-suite
+tests** in 499.708 seconds. The obsolete sign-in-primary copy assertion was updated
+for the approved direction. After the final factual pending-credit wording and
+privacy-version amendment, all 29 payment-presentation/registration regressions
+passed, including the rendered JavaScript behavior test and closed-attempt status.
+The parallel attempt could not complete because of an
+existing migration-test isolation issue; serial results are the release evidence.
+Django checks, migration consistency, migration SQL inspection and whitespace checks
+pass. Browser inspection at 390×844 and 1440×1000 covered home/plan comparison,
+expanded terms, selected-plan registration entry, customer pause/history/status and
+owner dashboard/contributions. Preview fixtures were fictional and isolated; the
+preview server and its database, plus the parallel test clones, were removed. A
+mobile screenshot is retained in `.uv-cache/phase1-plan-mobile.jpg` for review.
+The normal application database and production configuration/data were not changed.
+The new privacy notice/default consent version is `2026-10-05`; release guidance
+requires matching the explicit environment version without rewriting old evidence.
+
+At the Phase 1 checkpoint, Phase 2 was next: Today queue, bounded customer search/
+pagination and a unified owner review workspace. Cross-verification plan/grade/preferences, contact-first intake,
+coordinated transactional approval, changed-offer reconfirmation and protected
+progress remain Phase 3; activation continuation/recovery and Tamil testing remain
+Phase 4. Owner mobile contribution tables still require horizontal scrolling.
+No new benefits, support contacts, response promises or translations were invented.
+Approved offer descriptions/benefits and an achievable review window remain business
+inputs. The only new migration creates an empty aggregate table; rollout/rollback
+guidance is in `docs/PRODUCTION_DEPLOYMENT.md`. Production deployment, migrations,
+measurement activation and production data edits await separate owner approval.
+
+## Previous milestone and deployment evidence
+
 Immediate priority: **Google Play release preparation**, not implementation of
 `FW-PROD-007`. The owner accepted the recovery-isolation rule after clarification:
 restored systems remain private with payment/email/jobs disabled until latest

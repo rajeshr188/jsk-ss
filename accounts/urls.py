@@ -1,9 +1,15 @@
 from django.urls import path
 
 from . import views
+from . import application_views
 
 
 urlpatterns = [
+    path("activation/help/", views.customer_activation_help, name="customer_activation_help"),
+    path("applications/<uuid:application_id>/progress/", application_views.application_progress_view, name="plan_application_progress"),
+    path("applications/access/<uuid:application_id>/<str:token>/", application_views.application_access, name="plan_application_access"),
+    path("owner/registrations/<uuid:application_id>/approve-plan/", application_views.application_approve, name="plan_application_approve"),
+    path("owner/registrations/<uuid:application_id>/resend-progress/", application_views.application_resend_progress, name="plan_application_resend_progress"),
     path("owner/deletion-requests/<uuid:request_id>/review-retention/", views.customer_account_deletion_complete, {"review": True}, name="customer_account_deletion_review_retention"),
     path("owner/deletion-requests/<uuid:request_id>/complete/", views.customer_account_deletion_complete, name="customer_account_deletion_complete"),
     path("owner/deletion-requests/<uuid:request_id>/notices/<int:notice_id>/retry/", views.customer_account_deletion_retry_notice, name="customer_account_deletion_retry_notice"),

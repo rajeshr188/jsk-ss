@@ -1,0 +1,8 @@
+{% extends '_base.html' %}
+{% block title %}Login setup recovery | Jai Sri Krishna Jewellery{% endblock %}
+{% block content %}
+<a href="{% url 'schemes:owner_today' %}">← Today</a>
+<div class="page-header"><div><p class="page-eyebrow">Owner workspace</p><h1>Login setup recovery</h1><p class="page-subtitle">Latest eligible invitations needing delivery or expiry recovery. Replacement remains owner-issued; financial agreements are unchanged.</p></div></div>
+{% include 'schemes/includes/activation_items.html' %}
+{% include 'schemes/includes/pagination.html' %}
+{% endblock %}

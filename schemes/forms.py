@@ -307,6 +307,8 @@ class EnrolmentRequestConversionForm(EnrolmentForm):
         )
         self.fields["plan"].disabled = True
         self.fields["metal_grade"].disabled = True
+        self.fields["agreed_months"].disabled = True
+        self.fields["agreed_months"].help_text = "Uses the customer's confirmed duration. A different duration requires a new customer request."
         self.fields["audit_reason"].label = "Confirmation and enrolment reason"
         self.fields["audit_reason"].help_text = (
             "Record how the current terms were confirmed with the customer."

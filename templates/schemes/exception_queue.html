@@ -4,21 +4,7 @@
 
 {% block content %}
 <div class="page-header"><div><p class="page-eyebrow">Operational review</p><h1>Exception queue</h1><p class="page-subtitle">Unresolved allocation and payment-reconciliation issues requiring owner review.</p></div></div>
-<div class="table-responsive">
-  <table class="table align-middle">
-    <thead><tr><th scope="col">Detected</th><th scope="col">Category</th><th scope="col">Customer / scheme</th><th scope="col">Provider reference</th><th scope="col">Detail</th><th scope="col">Action</th></tr></thead>
-    <tbody>
-      {% for item in exceptions %}
-      <tr>
-        <td>{{ item.detected_at|date:'d M Y, g:i A' }}</td>
-        <td><span class="badge text-bg-warning">{{ item.category }}</span></td>
-        <td>{% if item.scheme_account %}{{ item.scheme_account.customer.full_name }}<br><small>{{ item.scheme_account.scheme_number }}</small>{% else %}Unmatched{% endif %}</td>
-        <td>{% if item.contribution %}{{ item.contribution.gateway_reference|default:item.contribution.gateway_order_id|default:'—' }}{% else %}{{ item.webhook_event.gateway_reference|default:item.webhook_event.gateway_order_id|default:item.webhook_event.event_id }}{% endif %}</td>
-        <td>{{ item.detail }}</td>
-        <td>{% if item.webhook_event %}<a class="btn btn-sm btn-outline-dark" href="{% url 'schemes:webhook_recovery' item.webhook_event.pk %}">Review recovery</a>{% elif item.contribution %}<a class="btn btn-sm btn-outline-dark" href="{% url 'schemes:contribution_list' %}">Review / retry</a>{% else %}<span class="text-muted">Manual reconciliation required</span>{% endif %}</td>
-      </tr>
-      {% empty %}<tr><td colspan="6" class="text-center text-muted py-4">No unresolved exceptions.</td></tr>{% endfor %}
-    </tbody>
-  </table>
-</div>
+<h2 class="visually-hidden">Unresolved financial records</h2>
+{% include 'schemes/includes/exception_items.html' %}
+{% include 'schemes/includes/pagination.html' %}
 {% endblock %}

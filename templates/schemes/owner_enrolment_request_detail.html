@@ -1,21 +1,9 @@
-{% extends '_base.html' %}
+{% extends 'schemes/application_review.html' %}
 {% load crispy_forms_tags %}
 
 {% block title %}Review enrolment request | Jai Sri Krishna Jewellery{% endblock %}
 
-{% block content %}
-<div class="page-header">
-  <div>
-    <p class="page-eyebrow">Owner review</p>
-    <h1>{{ enrolment_request.customer.full_name }}</h1>
-    <p class="page-subtitle">{{ enrolment_request.plan_name_snapshot }} · {{ enrolment_request.metal_grade.display_name }}</p>
-  </div>
-  <div class="page-actions">
-    <a class="btn btn-outline-dark" href="{% url 'schemes:owner_enrolment_request_list' %}">All requests</a>
-    <a class="btn btn-outline-dark" href="{% url 'schemes:customer_detail' enrolment_request.customer.pk %}">Customer record</a>
-  </div>
-</div>
-
+{% block review_content %}
 {% if not offer_is_current and enrolment_request.status == 'PENDING_OWNER_REVIEW' %}
 <div class="alert alert-warning"><strong>The public offer changed or closed.</strong> Do not silently substitute terms. Close this request and ask the customer to review the current offer.</div>
 {% endif %}
@@ -33,24 +21,29 @@
           <dt class="col-sm-5">Plan at request</dt><dd class="col-sm-7">{{ enrolment_request.plan_name_snapshot }} ({{ enrolment_request.plan_code_snapshot }})</dd>
           <dt class="col-sm-5">Preferred contribution</dt><dd class="col-sm-7">₹{{ enrolment_request.requested_contribution_amount|floatformat:2 }}</dd>
           <dt class="col-sm-5">Preferred duration</dt><dd class="col-sm-7">{{ enrolment_request.requested_months }} months</dd>
+          <dt class="col-sm-5">Recorded amount rule</dt><dd class="col-sm-7">{% if enrolment_request.amount_rule_snapshot == 'FIXED' %}₹{{ enrolment_request.fixed_contribution_amount_snapshot|floatformat:2 }} fixed{% else %}Minimum ₹{{ enrolment_request.minimum_contribution_snapshot|floatformat:2 }}{% if enrolment_request.maximum_contribution_snapshot %}; maximum ₹{{ enrolment_request.maximum_contribution_snapshot|floatformat:2 }}{% endif %}{% endif %}</dd>
+          <dt class="col-sm-5">Recorded minimum duration</dt><dd class="col-sm-7">{{ enrolment_request.minimum_months_snapshot }} months</dd>
+          <dt class="col-sm-5">After eligibility</dt><dd class="col-sm-7">{% if enrolment_request.allow_post_eligibility_contributions_snapshot %}Contributions permitted under recorded terms{% else %}Further contributions not permitted{% endif %}</dd>
           <dt class="col-sm-5">Offer frequency</dt><dd class="col-sm-7">{{ enrolment_request.get_frequency_rule_snapshot_display }}</dd>
           <dt class="col-sm-5">Submitted</dt><dd class="col-sm-7">{{ enrolment_request.created_at|date:"d M Y, h:i A" }}</dd>
           <dt class="col-sm-5">Valid until</dt><dd class="col-sm-7">{{ enrolment_request.expires_at|date:"d M Y, h:i A" }}</dd>
           {% if enrolment_request.customer_message %}<dt class="col-sm-5">Customer message</dt><dd class="col-sm-7">{{ enrolment_request.customer_message|linebreaksbr }}</dd>{% endif %}
           {% if enrolment_request.decision_reason %}<dt class="col-sm-5">Decision</dt><dd class="col-sm-7">{{ enrolment_request.decision_reason }}<div class="small text-secondary">{{ enrolment_request.decided_by_label }} · {{ enrolment_request.decided_at|date:"d M Y, h:i A" }}</div></dd>{% endif %}
-          {% if enrolment_request.scheme_account %}<dt class="col-sm-5">Created scheme</dt><dd class="col-sm-7"><a href="{% url 'schemes:customer_detail' enrolment_request.customer.pk %}">{{ enrolment_request.scheme_account.scheme_number }}</a></dd>{% endif %}
+          {% if enrolment_request.scheme_account %}<dt class="col-sm-5">Created scheme</dt><dd class="col-sm-7"><a href="{% url 'schemes:scheme_statement' enrolment_request.scheme_account.scheme_number %}">{{ enrolment_request.scheme_account.scheme_number }}</a></dd>{% endif %}
         </dl>
       </div>
     </div>
   </div>
   <div class="col-lg-5">
     {% if enrolment_request.status == 'PENDING_OWNER_REVIEW' %}
-      {% if enrolment_request.effective_status != 'EXPIRED' and offer_is_current %}
-      <div class="card form-card mb-3">
-        <h2 class="h4">Create agreement</h2>
-        <p>This opens the final owner-controlled enrolment form. The request itself grants no payment access.</p>
-        <a class="btn btn-jsk" href="{% url 'schemes:owner_enrolment_request_enroll' enrolment_request.pk %}">Review current terms and enrol</a>
-      </div>
+      {% if enrolment_request.effective_status != 'EXPIRED' and offer_is_current and enrolment_request.customer.user.is_active and enrolment_request.customer.user.role == 'CUSTOMER' %}
+      <form method="post" action="{% url 'schemes:owner_enrolment_request_enroll' enrolment_request.pk %}" class="card form-card mb-3" novalidate>
+        {% csrf_token %}<h2 class="h4">Create agreement</h2>
+        <p>The request grants no payment access. Confirm current terms with the customer before creating a savings agreement.</p>
+        <p class="small text-secondary">For variable plans, the requested amount is a preference and does not change the agreement's recorded range.</p>
+        {{ form|crispy }}
+        <button class="btn btn-jsk" type="submit">Create savings agreement</button>
+      </form>
       {% endif %}
       <form method="post" action="{% if enrolment_request.effective_status == 'EXPIRED' %}{% url 'schemes:owner_enrolment_request_expire' enrolment_request.pk %}{% else %}{% url 'schemes:owner_enrolment_request_decline' enrolment_request.pk %}{% endif %}" class="card form-card">
         {% csrf_token %}

@@ -10,8 +10,14 @@ def public_customer_registration(request):
 
 
 def customer_google_login(request):
+    from .adapters import SocialAccountAdapter
+    enabled = settings.CUSTOMER_GOOGLE_LOGIN_ENABLED
+    eligible = bool(enabled and request.user.is_authenticated and
+                    SocialAccountAdapter._is_eligible_customer(request.user) and
+                    SocialAccountAdapter._has_verified_login_email(request.user))
     return {
-        "customer_google_login_enabled": settings.CUSTOMER_GOOGLE_LOGIN_ENABLED,
+        "customer_google_login_enabled": enabled,
+        "customer_google_connection_eligible": eligible,
     }
 
 

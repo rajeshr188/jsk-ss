@@ -13,17 +13,17 @@
 </div>
 
 <div class="table-responsive">
-  <table class="table align-middle">
+  <table class="table align-middle owner-records-table">
     <thead><tr><th>Customer</th><th>Plan and grade</th><th>Preference</th><th>Status</th><th>Submitted</th><th><span class="visually-hidden">Action</span></th></tr></thead>
     <tbody>
       {% for enrolment_request in enrolment_requests %}
       <tr>
-        <td><strong>{{ enrolment_request.customer.full_name }}</strong><div class="small text-secondary">{{ enrolment_request.customer.customer_number }}</div></td>
-        <td>{{ enrolment_request.plan_name_snapshot }}<div class="small text-secondary">{{ enrolment_request.metal_grade.display_name }}</div></td>
-        <td>₹{{ enrolment_request.requested_contribution_amount|floatformat:2 }}<div class="small text-secondary">{{ enrolment_request.requested_months }} months</div></td>
-        <td><span class="badge text-bg-secondary">{{ enrolment_request.effective_status_label }}</span></td>
-        <td>{{ enrolment_request.created_at|date:"d M Y, h:i A" }}</td>
-        <td class="text-end"><a class="btn btn-sm btn-outline-dark" href="{% url 'schemes:owner_enrolment_request_detail' enrolment_request.pk %}">Review</a></td>
+        <td data-label="Customer"><strong>{{ enrolment_request.customer.full_name }}</strong><div class="small text-secondary">{{ enrolment_request.customer.customer_number }}</div></td>
+        <td data-label="Plan and grade">{{ enrolment_request.plan_name_snapshot }}<div class="small text-secondary">{{ enrolment_request.metal_grade.display_name }}</div></td>
+        <td data-label="Preference">₹{{ enrolment_request.requested_contribution_amount|floatformat:2 }}<div class="small text-secondary">{{ enrolment_request.requested_months }} months</div></td>
+        <td data-label="Status"><span class="badge text-bg-secondary">{{ enrolment_request.effective_status_label }}</span></td>
+        <td data-label="Submitted">{{ enrolment_request.created_at|date:"d M Y, h:i A" }}</td>
+        <td data-label="Action" class="text-end"><a class="btn btn-sm btn-outline-dark" href="{% url 'schemes:owner_enrolment_request_detail' enrolment_request.pk %}">Review</a></td>
       </tr>
       {% empty %}
       <tr><td colspan="6"><div class="empty-state"><h2 class="h5">No enrolment requests</h2><p class="mb-0">Customer plan requests will appear here.</p></div></td></tr>
@@ -31,4 +31,6 @@
     </tbody>
   </table>
 </div>
+<p class="mt-3"><a href="{% url 'schemes:owner_applications' %}">Open Applications inbox</a></p>
+{% include 'schemes/includes/pagination.html' %}
 {% endblock %}

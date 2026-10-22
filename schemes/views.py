@@ -13,12 +13,14 @@ from django.core.exceptions import (
     PermissionDenied,
     ValidationError,
 )
+from django.core.paginator import Paginator
 from django.db import transaction
 from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_GET, require_POST
+from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import csrf_exempt
 
 from accounts.models import CustomUser
@@ -87,6 +89,10 @@ from .selectors import (
     get_owner_contribution_daily_summary,
     get_owner_contributions,
     get_owner_customers,
+    get_owner_application_keys,
+    get_owner_application_items,
+    get_owner_exception_keys,
+    get_financial_exception_counts,
     get_owner_enrolment_requests,
     get_owner_liability_summary,
     get_owner_exception_queue,
@@ -134,7 +140,7 @@ logger = logging.getLogger(__name__)
 @login_required
 def post_login(request):
     if request.user.is_superuser or request.user.role == CustomUser.Role.OWNER:
-        return redirect("schemes:owner_dashboard")
+        return redirect("schemes:owner_today")
     return redirect("schemes:my_schemes")
 
 
@@ -162,7 +168,6 @@ def _local_iso(value):
 @owner_required
 def owner_dashboard(request):
     activity = get_owner_activity_summary()
-    exceptions = get_owner_exception_queue()
     payment_availability = {
         grade.code: {
             "grade": grade,
@@ -172,7 +177,7 @@ def owner_dashboard(request):
     }
     context = {
         "activity": activity,
-        "exception_count": len(exceptions),
+        "exception_count": get_financial_exception_counts().total,
         "eligibility": get_redemption_eligibility_summary(),
         "liabilities": get_owner_liability_summary(),
         "payment_availability": payment_availability,
@@ -183,6 +188,60 @@ def owner_dashboard(request):
         "pending_enrolment_request_count": get_pending_enrolment_request_count(),
     }
     return render(request, "schemes/owner_dashboard.html", context)
+
+
+@owner_required
+@require_GET
+@never_cache
+def owner_today(request):
+    from accounts.selectors import get_activation_attention
+    application_keys = get_owner_application_keys()
+    exception_keys = get_owner_exception_keys(oldest_first=True)
+    activations = get_activation_attention()
+    return render(request, "schemes/owner_today.html", {
+        "application_count": application_keys.count(),
+        "applications": get_owner_application_items(application_keys[:8]),
+        "exception_count": exception_keys.count(),
+        "exceptions": get_owner_exception_queue(keys=exception_keys[:8]),
+        "activation_count": activations.count(), "activations": activations[:8],
+    })
+
+
+@owner_required
+@require_GET
+@never_cache
+def owner_activation_queue(request):
+    from accounts.selectors import get_activation_attention
+    page = Paginator(get_activation_attention(), 25).get_page(request.GET.get("page"))
+    return render(request, "schemes/owner_activation_queue.html", {"activations": page.object_list, "page_obj": page})
+
+
+def _owner_customer_filter(request):
+    value = request.GET.get("customer", "")
+    if not value:
+        return None
+    if not value.isascii() or not value.isdecimal() or len(value) > 10:
+        raise Http404
+    return get_object_or_404(Customer.objects.select_related("user"), pk=int(value))
+
+
+@owner_required
+@require_GET
+@never_cache
+def owner_applications(request):
+    focus = request.GET.get("focus", "attention")
+    if focus not in {"attention", "waiting", "closed", "all"}:
+        focus = "attention"
+    kind = request.GET.get("kind", "all")
+    if kind not in {"all", "registration", "plan"}:
+        kind = "all"
+    customer = _owner_customer_filter(request)
+    keys = get_owner_application_keys(focus=focus, kind=kind, customer=customer)
+    page = Paginator(keys, 25).get_page(request.GET.get("page"))
+    return render(request, "schemes/owner_applications.html", {
+        "applications": get_owner_application_items(page.object_list),
+        "page_obj": page, "focus": focus, "kind": kind, "customer": customer,
+    })
 
 
 @owner_required
@@ -373,10 +432,11 @@ def reminder_delivery_log(request):
 
 @owner_required
 def exception_queue(request):
+    page = Paginator(get_owner_exception_keys(), 25).get_page(request.GET.get("page"))
     return render(
         request,
         "schemes/exception_queue.html",
-        {"exceptions": get_owner_exception_queue()},
+        {"exceptions": get_owner_exception_queue(keys=page.object_list), "page_obj": page},
     )
 
 
@@ -722,10 +782,12 @@ def redemption_reverse(request, redemption_number):
 
 @owner_required
 def customer_list(request):
+    search = request.GET.get("q", "").strip()[:100]
+    page = Paginator(get_owner_customers(search=search), 25).get_page(request.GET.get("page"))
     return render(
         request,
         "schemes/customer_list.html",
-        {"customers": get_owner_customers()},
+        {"customers": page.object_list, "page_obj": page, "search": search},
     )
 
 
@@ -781,7 +843,7 @@ def customer_add(request):
 def customer_detail(request, customer_id):
     customer = get_object_or_404(
         get_owner_customers().prefetch_related(
-            "scheme_accounts__plan", "scheme_accounts__contributions"
+            "scheme_accounts__plan", "scheme_accounts__metal_grade"
         ),
         pk=customer_id,
     )
@@ -953,6 +1015,7 @@ def scheme_enrolment_request_create(request, plan_id):
 
 
 @login_required
+@never_cache
 def my_enrolment_requests(request):
     _customer_for_request_user(request.user)
     return render(
@@ -966,6 +1029,7 @@ def my_enrolment_requests(request):
 
 
 @login_required
+@never_cache
 def my_enrolment_request_detail(request, request_id):
     _customer_for_request_user(request.user)
     enrolment_request = get_customer_enrolment_request(request.user, request_id)
@@ -1007,10 +1071,11 @@ def my_enrolment_request_withdraw(request, request_id):
 
 @owner_required
 def owner_enrolment_request_list(request):
+    page = Paginator(get_owner_enrolment_requests(), 25).get_page(request.GET.get("page"))
     return render(
         request,
         "schemes/owner_enrolment_request_list.html",
-        {"enrolment_requests": get_owner_enrolment_requests()},
+        {"enrolment_requests": page.object_list, "page_obj": page},
     )
 
 
@@ -1027,6 +1092,7 @@ def owner_enrolment_request_detail(request, request_id):
             "enrolment_request": enrolment_request,
             "offer_is_current": enrolment_request_offer_is_current(enrolment_request),
             "decision_form": EnrolmentRequestDecisionForm(),
+            "form": EnrolmentRequestConversionForm(enrolment_request=enrolment_request),
         },
     )
 
@@ -1071,6 +1137,7 @@ def _owner_request_decision(request, request_id, status):
             "enrolment_request": enrolment_request,
             "offer_is_current": enrolment_request_offer_is_current(enrolment_request),
             "decision_form": form,
+            "form": EnrolmentRequestConversionForm(enrolment_request=enrolment_request),
         },
         status=400,
     )
@@ -1148,6 +1215,7 @@ def owner_enrolment_request_enroll(request, request_id):
             "enrolment_request": enrolment_request,
             "offer_is_current": enrolment_request_offer_is_current(enrolment_request),
             "form": form,
+            "decision_form": EnrolmentRequestDecisionForm(),
         },
     )
 
@@ -1211,22 +1279,33 @@ def plan_edit(request, plan_id):
 
 
 @login_required
+@never_cache
 def my_schemes(request):
+    from .selectors import get_customer_payment_availability, get_customer_plan_next_action, get_customer_request_progress
+    from accounts.application_selectors import get_customer_plan_applications
+
     accounts = list(get_customer_scheme_summary(request.user))
     for account in accounts:
+        account.payment_availability = get_customer_payment_availability(account)
+        account.next_action = get_customer_plan_next_action(account, account.payment_availability)
         if account.savings_mode == SchemeAccount.SavingsMode.CASH:
             account.cash_bonus = get_cash_bonus_summary(account)
         else:
             account.current_scheme_rate = get_current_scheme_rate(account.metal_grade)
+    applications = list(get_customer_plan_applications(request.user)[:3])
+    actions = {account.pk: account.next_action for account in accounts}
+    for application in applications:
+        application.next_action = actions.get(application.scheme_account_id)
     return render(
         request,
         "schemes/my_schemes.html",
         {
             "scheme_accounts": accounts,
+            "plan_applications": applications,
+            "application_updates": get_customer_request_progress(request.user),
             "mock_payment_enabled": mock_payment_is_enabled(),
             "payment_gateway_enabled": payment_gateway_is_configured(),
             "cash_scheme_activity_enabled": cash_scheme_activity_is_enabled(),
-            "enrolment_requests": get_customer_enrolment_requests(request.user),
             "enrolment_requests_enabled": (
                 settings.CUSTOMER_ENROLMENT_REQUESTS_ENABLED
             ),
@@ -1235,7 +1314,10 @@ def my_schemes(request):
 
 
 @login_required
+@never_cache
 def my_scheme_detail(request, scheme_number):
+    from .selectors import get_customer_payment_availability, get_customer_plan_next_action
+
     account = get_customer_scheme_account(request.user, scheme_number)
     if account is None:
         raise Http404
@@ -1244,12 +1326,7 @@ def my_scheme_detail(request, scheme_number):
         if account.savings_mode != SchemeAccount.SavingsMode.CASH
         else None
     )
-    payment_availability = (
-        get_payment_availability(metal_grade=account.metal_grade)
-        if account.savings_mode
-        in {SchemeAccount.SavingsMode.GOLD, SchemeAccount.SavingsMode.SILVER}
-        else None
-    )
+    payment_availability = get_customer_payment_availability(account)
     return render(
         request,
         "schemes/my_scheme_detail.html",
@@ -1268,6 +1345,7 @@ def my_scheme_detail(request, scheme_number):
             "current_scheme_rate": current_scheme_rate,
             "cash_scheme_activity_enabled": cash_scheme_activity_is_enabled(),
             "payment_availability": payment_availability,
+            "next_action": get_customer_plan_next_action(account, payment_availability),
         },
     )
 
@@ -1300,7 +1378,10 @@ def pay_contribution(request, scheme_number):
     )
 
     response_status = 200
-    form = ContributionForm(request.POST or None, scheme_account=account)
+    from accounts.application_selectors import first_payment_preference
+    preference = first_payment_preference(account, request.user)
+    initial = {"amount": preference} if preference is not None else {}
+    form = ContributionForm(request.POST or None, scheme_account=account, initial=initial)
     payment_availability = (
         get_payment_availability(metal_grade=account.metal_grade)
         if account.savings_mode
@@ -1451,7 +1532,7 @@ def razorpay_checkout(request, contribution_id):
     if contribution.razorpay_checkout_expired:
         messages.warning(
             request,
-            "This Checkout window has expired. No payment was credited. The "
+            "This Checkout window has expired. Payment status must be checked. The "
             "showroom must reconcile the provider order before another attempt.",
         )
         return redirect(
@@ -1549,6 +1630,20 @@ def razorpay_confirm(request, contribution_id):
     )
 
 
+@never_cache
+@login_required
+@require_GET
+def payment_status(request, contribution_id):
+    """A customer-scoped, server-rendered outcome; never verify or retry on GET."""
+    contribution = get_object_or_404(
+        Contribution.objects.select_related("scheme_account__customer", "scheme_account__metal_grade"),
+        pk=contribution_id,
+        payment_gateway="razorpay",
+        scheme_account__customer__user=request.user,
+    )
+    return render(request, "schemes/payment_status.html", {"contribution": contribution})
+
+
 @csrf_exempt
 @require_POST
 def razorpay_webhook(request):
@@ -1592,11 +1687,25 @@ def razorpay_webhook(request):
 
 @owner_required
 def contribution_list(request):
+    customer = _owner_customer_filter(request)
+    contributions = get_owner_contributions()
+    if customer:
+        contributions = contributions.filter(scheme_account__customer=customer)
+    contribution_id = request.GET.get("contribution", "")
+    if contribution_id:
+        if not contribution_id.isascii() or not contribution_id.isdecimal() or len(contribution_id) > 10:
+            raise Http404
+        contribution = get_object_or_404(contributions, pk=int(contribution_id))
+        customer = contribution.scheme_account.customer
+        contributions = contributions.filter(pk=contribution.pk)
+    page = Paginator(contributions.order_by("-created_at", "-pk"), 25).get_page(request.GET.get("page"))
     return render(
         request,
         "schemes/contribution_list.html",
         {
-            "contributions": get_owner_contributions(),
+            "contributions": page.object_list,
+            "page_obj": page,
+            "customer": customer,
             "daily_summary": get_owner_contribution_daily_summary(),
             "in_store_cash_enabled": in_store_cash_contributions_are_enabled(),
         },
@@ -1765,10 +1874,11 @@ def retry_contribution_allocation(request, contribution_id):
             SchemeAccount.SavingsMode.SILVER,
         ],
     )
+    review_url = reverse("schemes:contribution_list") + f"?contribution={contribution.pk}"
     form = AuditReasonForm(request.POST)
     if not form.is_valid():
         messages.error(request, "Enter a reason for retrying the allocation.")
-        return redirect("schemes:contribution_list")
+        return redirect(review_url)
     try:
         allocation = retry_metal_allocation(
             contribution=contribution,
@@ -1784,4 +1894,4 @@ def retry_contribution_allocation(request, contribution_id):
             f"{allocation.metal_grade.display_name} "
             f"for {contribution.scheme_account.customer.full_name}.",
         )
-    return redirect("schemes:contribution_list")
+    return redirect(review_url)

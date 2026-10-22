@@ -13,15 +13,10 @@
   </div>
   <div class="page-actions d-print-none">
   <a class="btn btn-outline-dark" href="{% url 'schemes:scheme_statement' scheme_account.scheme_number %}">Print statement</a>
-  {% if payment_gateway_enabled and scheme_account.effective_status != 'REDEEMED' %}
-    {% if scheme_account.savings_mode == 'CASH' and cash_scheme_activity_enabled %}
-    <a class="btn btn-jsk" href="{% url 'schemes:pay_contribution' scheme_account.scheme_number %}">Pay now</a>
-    {% elif current_scheme_rate and payment_availability.allowed %}
-    <a class="btn btn-jsk" href="{% url 'schemes:pay_contribution' scheme_account.scheme_number %}">Pay now</a>
-    {% endif %}
-  {% endif %}
   </div>
 </div>
+
+{% include 'schemes/includes/plan_next_action.html' %}
 
 {% if scheme_account.effective_status == 'REDEMPTION_ELIGIBLE' %}
 <div class="alert alert-success" role="alert">
@@ -85,11 +80,15 @@
           {% elif contribution.status == 'PAID_UNALLOCATED' %}<span class="badge text-bg-warning">Paid — allocation pending</span>
           {% elif contribution.status == 'FAILED' %}<span class="badge text-bg-danger">Failed</span>
           {% elif contribution.status == 'REVERSED' %}<span class="badge text-bg-secondary">Reversed</span>
+          {% elif contribution.status == 'ABANDONED' %}<span class="badge text-bg-secondary">Checkout closed after review</span>
           {% else %}<span class="badge text-bg-warning">Pending</span>{% endif %}
         </td>
         <td><small>{{ contribution.gateway_reference|default:'—' }}{% if contribution.gateway_reference %}<br>{{ contribution.payment_method_display }}{% endif %}</small>
           {% if contribution.status == 'PAID' or contribution.status == 'PAID_UNALLOCATED' or contribution.status == 'REVERSED' %}
           <br><a href="{% url 'schemes:contribution_receipt' contribution.pk %}">Receipt</a>
+          {% endif %}
+          {% if contribution.payment_gateway == 'razorpay' and contribution.status != 'PAID' %}
+          <br><a href="{% url 'schemes:payment_status' contribution.pk %}">Check recorded payment status</a>
           {% endif %}
           {% if contribution.status == 'PENDING' and contribution.payment_gateway == 'razorpay' and contribution.gateway_order_id and contribution.gateway_mode == razorpay_mode %}
           {% if contribution.razorpay_checkout_expired %}
@@ -117,6 +116,7 @@
         {% elif contribution.status == 'PAID_UNALLOCATED' %}<span class="badge text-bg-warning">Paid — allocation pending</span>
         {% elif contribution.status == 'FAILED' %}<span class="badge text-bg-danger">Failed</span>
         {% elif contribution.status == 'REVERSED' %}<span class="badge text-bg-secondary">Reversed</span>
+        {% elif contribution.status == 'ABANDONED' %}<span class="badge text-bg-secondary">Checkout closed after review</span>
         {% else %}<span class="badge text-bg-warning">Pending</span>{% endif %}
       </div>
     </div>
@@ -129,6 +129,9 @@
     </dl>
     {% if contribution.status == 'PAID' or contribution.status == 'PAID_UNALLOCATED' or contribution.status == 'REVERSED' %}
     <a class="btn btn-sm btn-outline-dark" href="{% url 'schemes:contribution_receipt' contribution.pk %}">View receipt</a>
+    {% endif %}
+    {% if contribution.payment_gateway == 'razorpay' and contribution.status != 'PAID' %}
+    <a class="btn btn-sm btn-outline-dark" href="{% url 'schemes:payment_status' contribution.pk %}">Check recorded payment status</a>
     {% endif %}
     {% if contribution.status == 'PENDING' and contribution.payment_gateway == 'razorpay' and contribution.gateway_order_id and contribution.gateway_mode == razorpay_mode %}
     {% if contribution.razorpay_checkout_expired %}

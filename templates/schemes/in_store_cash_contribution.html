@@ -3,6 +3,7 @@
 {% block title %}Record in-store cash | Jai Sri Krishna Jewellery{% endblock %}
 
 {% block content %}
+{% include 'schemes/includes/customer_context.html' with customer=scheme_account.customer %}
 <div class="page-header">
   <div>
     <a class="small d-inline-block mb-2" href="{% url 'schemes:customer_detail' scheme_account.customer.pk %}">← Customer record</a>

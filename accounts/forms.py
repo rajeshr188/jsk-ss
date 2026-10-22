@@ -90,6 +90,11 @@ class CustomerRegistrationRejectionForm(forms.Form):
         widget=forms.Textarea(attrs={"rows": 3}),
     )
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Approval and rejection share a page, but must have distinct label targets.
+        self.auto_id = "id_registration_rejection_%s"
+
 
 class CustomerAccountDeletionPublicForm(forms.Form):
     email = forms.EmailField(max_length=254)

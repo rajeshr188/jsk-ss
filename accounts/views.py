@@ -1,4 +1,5 @@
 from functools import wraps
+from urllib.parse import urlencode
 
 from allauth.account.decorators import reauthentication_required
 from django.contrib import messages
@@ -6,11 +7,12 @@ from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.exceptions import ObjectDoesNotExist
+from django.core.paginator import Paginator
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.cache import never_cache
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_POST, require_GET, require_http_methods
 
 from .forms import (
     CustomerDeletionCompletionForm,
@@ -39,6 +41,7 @@ from .selectors import (
     customer_account_deletion_detail,
     customer_account_deletion_disposition,
     customer_account_deletion_queue,
+    get_owner_registration_applications,
 )
 from .services import (
     InvalidCustomerAccountDeletion,
@@ -48,6 +51,7 @@ from .services import (
     approve_customer_registration,
     issue_registration_verification,
     invitation_is_available,
+    request_customer_invitation_recovery,
     registration_is_verifiable,
     reject_customer_registration,
     record_customer_account_deletion_hold,
@@ -73,7 +77,12 @@ def _invitation_or_none(invitation_id):
 
 
 @never_cache
+@require_http_methods(["GET", "POST"])
 def customer_invitation_accept(request, invitation_id, token):
+    if request.method == "POST" and request.POST.get("action") == "request_recovery":
+        request_customer_invitation_recovery(invitation_id=invitation_id, raw_token=token)
+        messages.info(request, "If the link is eligible, your setup-help request is recorded for showroom review.")
+        return redirect("customer_activation_help")
     invitation = _invitation_or_none(invitation_id)
     if invitation is None or not invitation_is_available(invitation, token):
         return render(
@@ -85,7 +94,7 @@ def customer_invitation_accept(request, invitation_id, token):
     form = CustomerInvitationPasswordForm(invitation.user, request.POST or None)
     if request.method == "POST" and form.is_valid():
         try:
-            accept_customer_invitation(
+            user = accept_customer_invitation(
                 invitation_id=invitation.pk,
                 raw_token=token,
                 new_password=form.cleaned_data["new_password1"],
@@ -100,13 +109,24 @@ def customer_invitation_accept(request, invitation_id, token):
             request,
             "Your password is set. You can now sign in with your email address.",
         )
+        from .application_selectors import activated_plan_url
+        destination = activated_plan_url(user)
+        if destination:
+            return redirect(reverse("account_login") + "?" + urlencode({"next": destination}))
         return redirect("account_login")
 
+    from .application_selectors import get_activated_plan
     return render(
         request,
         "account/customer_invitation_accept.html",
-        {"form": form, "invitation": invitation},
+        {"form": form, "invitation": invitation, "approved_application": get_activated_plan(invitation.user)},
     )
+
+
+@never_cache
+@require_GET
+def customer_activation_help(request):
+    return render(request, "account/customer_activation_help.html")
 
 
 def _public_registration_enabled():
@@ -135,6 +155,20 @@ def customer_registration(request):
     if not _public_registration_enabled():
         raise Http404
 
+    from pages.models import PublicFunnelDailyCount
+    from pages.services import record_public_funnel_step
+    from schemes.selectors import get_public_scheme_plans
+
+    record_public_funnel_step(request, PublicFunnelDailyCount.Step.APPLICATION)
+    plan_id = request.GET.get("plan", "")
+    selected_plan = None
+    if plan_id.isascii() and plan_id.isdecimal() and len(plan_id) <= 10:
+        selected_plan = get_public_scheme_plans().filter(pk=int(plan_id)).first()
+
+    if selected_plan and settings.CUSTOMER_ENROLMENT_REQUESTS_ENABLED:
+        from .application_views import application_start
+        return application_start(request, selected_plan.pk)
+
     form = CustomerRegistrationForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
         if not form.cleaned_data["website"]:
@@ -161,7 +195,7 @@ def customer_registration(request):
     return render(
         request,
         "account/customer_registration.html",
-        {"form": form},
+        {"form": form, "selected_plan": selected_plan},
     )
 
 
@@ -186,11 +220,21 @@ def customer_registration_verify(request, application_id, token):
 
     if request.method == "POST":
         try:
+            from .models import PlanApplication
+            if PlanApplication.objects.filter(registration=application).exists():
+                from .applications import verify_plan_application
+                from .application_views import grant_application_access
+                journey = verify_plan_application(
+                    registration_id=application.pk, raw_token=token,
+                    base_url=request.build_absolute_uri("/"),
+                )
+                grant_application_access(request, journey)
+                return redirect("plan_application_progress", application_id=application.pk)
             verify_customer_registration_email(
                 application_id=application.pk,
                 raw_token=token,
             )
-        except (InvalidCustomerRegistration, ObjectDoesNotExist):
+        except (ValidationError, ObjectDoesNotExist):
             return render(
                 request,
                 "account/customer_registration_verification_invalid.html",
@@ -222,22 +266,23 @@ def owner_required(view_func):
 
 @owner_required
 def customer_registration_list(request):
-    applications = CustomerRegistration.objects.select_related(
-        "reviewed_by", "approved_user__customer_profile"
-    )
+    page = Paginator(get_owner_registration_applications(), 25).get_page(request.GET.get("page"))
     return render(
         request,
         "account/customer_registration_list.html",
-        {"applications": applications},
+        {"applications": page.object_list, "page_obj": page},
     )
 
 
 @owner_required
 def customer_registration_detail(request, application_id):
+    from .application_selectors import get_plan_application
+    from .application_views import owner_application_context
+    journey = get_plan_application(application_id)
+    if journey:
+        return render(request, "account/plan_application_review.html", owner_application_context(journey))
     application = get_object_or_404(
-        CustomerRegistration.objects.select_related(
-            "reviewed_by", "approved_user__customer_profile"
-        ),
+        get_owner_registration_applications(),
         pk=application_id,
     )
     return render(
@@ -264,6 +309,10 @@ def _add_validation_errors(form, error):
 @owner_required
 @require_POST
 def customer_registration_approve(request, application_id):
+    from .models import PlanApplication
+    if PlanApplication.objects.filter(registration_id=application_id).exists():
+        from .application_views import application_approve
+        return application_approve(request, application_id)
     application = get_object_or_404(CustomerRegistration, pk=application_id)
     approval_form = CustomerRegistrationApprovalForm(request.POST)
     if approval_form.is_valid():
@@ -331,6 +380,13 @@ def customer_registration_reject(request, application_id):
             messages.success(request, "Registration rejected and retained for audit.")
             return redirect("customer_registration_list")
 
+    from .application_selectors import get_plan_application
+    from .application_views import owner_application_context
+    journey = get_plan_application(application_id)
+    if journey:
+        context = owner_application_context(journey)
+        context["rejection_form"] = rejection_form
+        return render(request, "account/plan_application_review.html", context, status=400)
     return render(
         request,
         "account/customer_registration_detail.html",

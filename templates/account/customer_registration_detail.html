@@ -1,15 +1,9 @@
-{% extends '_base.html' %}
+{% extends 'schemes/application_review.html' %}
 {% load crispy_forms_tags %}
 
 {% block title %}Registration review | Jai Sri Krishna Jewellery{% endblock %}
 
-{% block content %}
-<div class="page-header"><div>
-  <p class="page-eyebrow">Customer access</p>
-  <h1>Registration review</h1>
-  <p class="page-subtitle">{{ application.full_name }} · {{ application.lifecycle_status }}</p>
-</div><div class="page-actions"><a class="btn btn-outline-dark" href="{% url 'customer_registration_list' %}">All requests</a></div></div>
-
+{% block review_content %}
 <div class="row g-4">
   <div class="col-lg-7"><div class="card"><div class="card-body p-4">
     <h2 class="h4">Applicant details</h2>

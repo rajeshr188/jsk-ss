@@ -13,6 +13,7 @@
 {% endblock %}
 
 {% block content %}
+{% if user.is_superuser or user.role == 'OWNER' %}{% include 'schemes/includes/customer_context.html' with customer=statement.scheme_account.customer scheme_account=statement.scheme_account %}{% endif %}
 <div class="d-flex justify-content-end mb-3 d-print-none"><button class="btn btn-jsk" type="button" onclick="window.print()">Print statement</button></div>
 <article class="card statement-document"><div class="card-body p-4 p-md-5">
   <div class="text-center border-bottom pb-3 mb-4">

@@ -2,12 +2,13 @@ from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db.models import Case, Count, DecimalField, F, OuterRef, Q, Subquery, Sum, Value, When
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 
-from accounts.models import CustomerInvitation
+from accounts.models import CustomerInvitation, CustomerRegistration
 
 from .bonuses import cash_bonus_policy_for_account
 from .eligibility import eligibility_days_until, is_redemption_eligible
@@ -150,6 +151,13 @@ class OwnerExceptionItem:
         if self.webhook_event and self.webhook_event.contribution_id:
             return self.webhook_event.contribution.scheme_account
         return None
+
+    @property
+    def recovery_available(self):
+        return bool(
+            self.webhook_event and self.webhook_event.gateway == "razorpay"
+            and self.webhook_event.event_type == "payment.captured"
+        )
 
 
 @dataclass(frozen=True)
@@ -295,8 +303,136 @@ def get_customer_scheme_summary(user):
     )
 
 
-def get_owner_customers():
-    return Customer.objects.select_related("user").prefetch_related("scheme_accounts")
+def get_owner_customers(*, search=""):
+    customers = Customer.objects.select_related("user").annotate(
+        scheme_account_count=Count("scheme_accounts", distinct=True)
+    )
+    if search:
+        customers = customers.filter(
+            Q(full_name__icontains=search) | Q(email__icontains=search)
+            | Q(mobile_number__icontains=search) | Q(customer_number__icontains=search)
+            | Q(scheme_accounts__scheme_number__icontains=search)
+        ).distinct()
+    return customers.order_by("full_name", "pk")
+
+
+def get_owner_application_keys(*, focus="attention", kind="all", customer=None, at=None):
+    """Paginate both historical record types in SQL before loading review evidence."""
+    at = at or timezone.now()
+    registrations = CustomerRegistration.objects.all()
+    plans = SchemeEnrolmentRequest.objects.all()
+    awaiting_details = Q(status="AWAITING_OWNER_APPROVAL", plan_application__completed_at__isnull=True,
+                         plan_application__isnull=False, plan_application__expires_at__gt=at,
+                         plan_application__progress_delivery_failed_at__isnull=True,
+                         plan_application__progress_sent_at__isnull=False)
+    registration_attention = (Q(status=CustomerRegistration.Status.AWAITING_OWNER_APPROVAL) & ~awaiting_details) | (
+        Q(status=CustomerRegistration.Status.PENDING_EMAIL_VERIFICATION)
+        & (Q(delivery_failed_at__isnull=False) | Q(email_verification_expires_at__lte=at))
+    )
+    if focus == "attention":
+        registrations = registrations.filter(registration_attention)
+        plans = plans.filter(status=SchemeEnrolmentRequest.Status.PENDING_OWNER_REVIEW)
+    elif focus == "waiting":
+        registrations = registrations.filter(awaiting_details | Q(
+            status=CustomerRegistration.Status.PENDING_EMAIL_VERIFICATION,
+            email_verification_expires_at__gt=at, delivery_failed_at__isnull=True,
+        ))
+        plans = plans.none()
+    elif focus == "closed":
+        registrations = registrations.filter(status__in=["APPROVED", "REJECTED", "EXPIRED"])
+        plans = plans.exclude(status=SchemeEnrolmentRequest.Status.PENDING_OWNER_REVIEW)
+    if customer:
+        # Only the explicit approval link identifies an applicant as this customer.
+        registrations = registrations.filter(approved_user_id=customer.user_id)
+        plans = plans.filter(customer=customer)
+    if kind == "registration":
+        plans = plans.none()
+    elif kind == "plan":
+        registrations = registrations.filter(plan_application__isnull=False)
+    registrations = registrations.order_by().annotate(
+        queue_kind=Value("registration"), queue_date=F("submitted_at"),
+        queue_priority=Case(
+            When(status="AWAITING_OWNER_APPROVAL", then=Value(0)),
+            When(registration_attention, then=Value(2)),
+            When(status="PENDING_EMAIL_VERIFICATION", then=Value(3)), default=Value(4),
+        ),
+    ).values("pk", "queue_kind", "queue_date", "queue_priority")
+    plans = plans.order_by().annotate(
+        queue_kind=Value("plan"), queue_date=F("created_at"),
+        queue_priority=Case(When(status="PENDING_OWNER_REVIEW", then=Value(1)), default=Value(4)),
+    ).values("pk", "queue_kind", "queue_date", "queue_priority")
+    return registrations.union(plans, all=True).order_by(
+        "queue_priority", "queue_date", "queue_kind", "pk"
+    )
+
+
+@dataclass(frozen=True)
+class OwnerApplicationItem:
+    kind: str
+    record: CustomerRegistration | SchemeEnrolmentRequest
+    submitted_at: datetime
+    next_action: str
+
+
+def get_owner_application_items(keys):
+    keys = tuple(keys)
+    registrations = CustomerRegistration.objects.select_related(
+        "approved_user__customer_profile", "reviewed_by", "plan_application__plan", "plan_application__metal_grade"
+    ).in_bulk(key["pk"] for key in keys if key["queue_kind"] == "registration")
+    plans = get_owner_enrolment_requests().in_bulk(
+        key["pk"] for key in keys if key["queue_kind"] == "plan"
+    )
+    items = []
+    for key in keys:
+        kind = key["queue_kind"]
+        record = (registrations if kind == "registration" else plans).get(key["pk"])
+        if record is None:  # A concurrent retention operation may remove an unverified record.
+            continue
+        if kind == "registration":
+            if record.status == record.Status.AWAITING_OWNER_APPROVAL:
+                journey = getattr(record, "plan_application", None)
+                if journey:
+                    if journey.expires_at <= timezone.now():
+                        action = "Review expired application; no approval available"
+                    elif journey.progress_delivery_failed_at or not journey.progress_sent_at:
+                        action = "Recover application progress email delivery"
+                    elif not journey.completed_at:
+                        action = "Await customer details and plan confirmation"
+                    else:
+                        action = "Review identity and customer-confirmed plan together"
+                else:
+                    action = "Verify showroom contact and review identity"
+            elif record.status == record.Status.PENDING_EMAIL_VERIFICATION:
+                journey = getattr(record, "plan_application", None)
+                action = "Ask the applicant to start a new plan application" if journey and journey.expires_at <= timezone.now() else "Review verification delivery" if record.delivery_failed_at else (
+                    "Replace expired verification" if record.email_verification_expires_at <= timezone.now()
+                    else "Await customer email verification"
+                )
+            else:
+                action = "View decision and customer record"
+        else:
+            action = "Review plan and confirm terms" if record.status == record.Status.PENDING_OWNER_REVIEW else "View recorded decision"
+            if record.status == record.Status.PENDING_OWNER_REVIEW and record.effective_status == record.Status.EXPIRED:
+                action = "Review and record expiry"
+            elif record.status == record.Status.PENDING_OWNER_REVIEW and (
+                not record.customer.user.is_active or record.customer.user.role != "CUSTOMER"
+            ):
+                action = "Review customer login eligibility"
+        items.append(OwnerApplicationItem(kind, record, key["queue_date"], action))
+    return tuple(items)
+
+
+def get_owner_exception_keys(*, oldest_first=False):
+    allocations = Contribution.objects.filter(status=Contribution.Status.PAID_UNALLOCATED).order_by().annotate(
+        queue_kind=Value("allocation"),
+        queue_date=Coalesce("allocation_attempted_at", "paid_at", "created_at"),
+    ).values("pk", "queue_kind", "queue_date")
+    webhooks = PaymentWebhookEvent.objects.filter(status__in=["FAILED", "REVIEW_REQUIRED"]).order_by().annotate(
+        queue_kind=Value("webhook"), queue_date=Coalesce("processed_at", "received_at"),
+    ).values("pk", "queue_kind", "queue_date")
+    return allocations.union(webhooks, all=True).order_by(
+        "queue_date" if oldest_first else "-queue_date", "queue_kind", "pk"
+    )
 
 
 def get_public_scheme_plans(*, limit=None):
@@ -416,6 +552,129 @@ def get_contribution_history(scheme_account):
         "cash_reversal",
         "cash_reversal__processed_by",
     )
+
+
+def get_customer_payment_availability(scheme_account):
+    """Read-only presentation of initiation rules; services still enforce them."""
+    # Local import avoids operations -> selectors -> operations at module load.
+    from .operations import OPEN, PaymentAvailability, get_payment_availability
+    from .payments import payment_gateway_is_configured
+    from .services import cash_scheme_activity_is_enabled
+
+    def blocked(code, message):
+        return PaymentAvailability(False, code, message)
+
+    if not payment_gateway_is_configured():
+        return blocked("UNCONFIGURED", "Online payments are currently unavailable. Contact the showroom for assistance.")
+    today = timezone.localdate()
+    if scheme_account.status == SchemeAccount.Status.REDEEMED:
+        return blocked("REDEEMED", "This agreement has been redeemed.")
+    if today < scheme_account.start_date:
+        return blocked("NOT_STARTED", "Contributions become available on the agreement start date.")
+    if is_redemption_eligible(eligible_from=scheme_account.eligible_from, as_of=today) and not scheme_account.allow_post_eligibility_contributions_snapshot:
+        return blocked("ELIGIBLE", "Contributions are complete. Contact the showroom to arrange redemption.")
+    if scheme_account.savings_mode == SchemeAccount.SavingsMode.CASH:
+        if not cash_scheme_activity_is_enabled():
+            return blocked("LEGACY_CASH", "This legacy cash agreement is retained for reference. New contributions are unavailable.")
+        availability = OPEN
+    else:
+        availability = get_payment_availability(metal_grade=scheme_account.metal_grade)
+        if not availability.allowed:
+            return availability
+    if scheme_account.frequency_rule_snapshot == SchemePlan.FrequencyRule.ONCE_PER_MONTH:
+        period = today.replace(day=1)
+        contributions = Contribution.objects.filter(scheme_account=scheme_account, contribution_period=period)
+        if contributions.filter(status__in=SUCCESSFUL_PAYMENT_STATUSES).exists():
+            return blocked("MONTH_PAID", "Your contribution for this calendar month has been received.")
+        pending = contributions.filter(status=Contribution.Status.PENDING, payment_gateway="razorpay").first()
+        if pending is not None:
+            if pending.gateway_mode != settings.RAZORPAY_MODE:
+                return blocked("MODE_MISMATCH", "The showroom must review an earlier payment attempt before you can continue.")
+            if pending.razorpay_checkout_expired:
+                return blocked("EXPIRED_PENDING", "Checkout expired — awaiting provider reconciliation. Contact the showroom if your account was debited.")
+    return availability
+
+
+def get_customer_plan_next_action(scheme_account, availability=None):
+    """Derive continuation from recorded agreement/payment state, never URL hints."""
+    from django.urls import reverse
+    availability = availability or get_customer_payment_availability(scheme_account)
+    history_url = reverse("schemes:my_scheme_detail", args=[scheme_account.scheme_number])
+    contributions = Contribution.objects.filter(scheme_account=scheme_account)
+    unresolved = contributions.filter(
+        Q(status=Contribution.Status.PAID_UNALLOCATED)
+        | Q(status=Contribution.Status.PENDING, payment_gateway="razorpay"),
+    ).order_by(
+        Case(When(status=Contribution.Status.PAID_UNALLOCATED, then=Value(0)), default=Value(1)),
+        "created_at", "pk",
+    ).first()
+    if unresolved is not None:
+        mode = "Test payment" if unresolved.gateway_mode == GatewayMode.TEST else (
+            "Practice payment" if unresolved.payment_gateway == "mock" else "Payment"
+        )
+        if unresolved.status == Contribution.Status.PAID_UNALLOCATED:
+            stage = f"{mode} recorded — metal credit pending"
+            message = "Do not pay again for this contribution. View its recorded status or contact the showroom."
+        elif unresolved.razorpay_checkout_expired:
+            stage = f"{mode} checkout expired — confirmation pending"
+            message = "Checkout expired — awaiting provider reconciliation. If your account was debited, do not pay again; contact the showroom."
+        else:
+            stage = f"{mode} confirmation pending"
+            message = "Check the recorded status before starting another payment. If debited, do not pay again while confirmation is pending."
+        return dict(stage=stage, message=message, label="View payment status",
+                    url=reverse("schemes:payment_status", args=[unresolved.pk]), can_pay=False)
+    received = contributions.filter(status__in=SUCCESSFUL_PAYMENT_STATUSES).exists()
+    real_received = contributions.filter(status__in=SUCCESSFUL_PAYMENT_STATUSES).filter(
+        Q(payment_gateway="in_store_cash") | Q(payment_gateway="razorpay", gateway_mode=GatewayMode.LIVE),
+    ).exists()
+    if not availability.allowed:
+        message = availability.message
+        if availability.code == "NOT_STARTED":
+            message += f" Start date: {scheme_account.start_date:%d %b %Y}."
+        return dict(stage=("First payment recorded" if real_received else (
+                    "Test or practice payment recorded" if received else "Approved plan")),
+                    message=message, label="Contact the showroom", url=reverse("contact"), can_pay=False)
+    from .payments import get_payment_gateway
+    gateway = get_payment_gateway()
+    test_checkout = gateway.name == "razorpay" and gateway.mode == "test"
+    practice_checkout = gateway.name == "mock"
+    label = "Make a contribution" if real_received else "Make first payment"
+    if test_checkout:
+        label = "Open test checkout"
+    elif practice_checkout:
+        label = "Open practice payment"
+    return dict(stage=("First payment recorded" if real_received else (
+                    "Test or practice payment recorded" if received else "Ready for first payment")),
+                message=("Your agreement is approved. Online payments use Razorpay Test Mode; this is not a live payment."
+                         if test_checkout else "Practice payments do not collect money." if practice_checkout
+                         else "Continue with your approved agreement. Payment is recorded only after server confirmation."),
+                label=label, url=reverse("schemes:pay_contribution", args=[scheme_account.scheme_number]), can_pay=True)
+
+
+def get_customer_request_progress(user, limit=3):
+    from django.urls import reverse
+    from .services import enrolment_request_offer_is_current
+    requests = get_customer_enrolment_requests(user).annotate(
+        priority=Case(When(status=SchemeEnrolmentRequest.Status.PENDING_OWNER_REVIEW, then=Value(0)), default=Value(1)),
+    ).order_by("priority", "-created_at", "-pk")[:limit]
+    result = []
+    for item in requests:
+        stage = item.effective_status_label
+        if item.status == SchemeEnrolmentRequest.Status.ENROLLED and item.scheme_account_id:
+            action = get_customer_plan_next_action(item.scheme_account)
+        else:
+            message = "Contact the showroom to discuss the recorded decision."
+            if item.effective_status == SchemeEnrolmentRequest.Status.PENDING_OWNER_REVIEW:
+                message = "The showroom must review your application. No payment is due before an agreement is created."
+                if not enrolment_request_offer_is_current(item):
+                    stage = "Confirm current terms"
+                    message = "The offer changed. Open your application to withdraw it and submit a fresh confirmation."
+            elif item.effective_status == SchemeEnrolmentRequest.Status.EXPIRED:
+                message = "Contact the showroom before applying again."
+            action = dict(stage=stage, message=message, label="View application",
+                          url=reverse("schemes:my_enrolment_request_detail", args=[item.pk]), can_pay=False)
+        result.append(dict(name=item.plan_name_snapshot, grade=item.metal_grade, action=action))
+    return result
 
 
 def get_redemption_history(scheme_account):
@@ -583,11 +842,14 @@ def get_owner_audit_events():
     )
 
 
-def get_owner_exception_queue():
+def get_owner_exception_queue(*, keys=None):
     items = []
     unallocated = Contribution.objects.filter(
         status=Contribution.Status.PAID_UNALLOCATED
     ).select_related("scheme_account", "scheme_account__customer")
+    if keys is not None:
+        keys = tuple(keys)
+        unallocated = unallocated.filter(pk__in=[key["pk"] for key in keys if key["queue_kind"] == "allocation"])
     for contribution in unallocated:
         items.append(
             OwnerExceptionItem(
@@ -614,6 +876,8 @@ def get_owner_exception_queue():
         "contribution__scheme_account",
         "contribution__scheme_account__customer",
     )
+    if keys is not None:
+        failed_webhooks = failed_webhooks.filter(pk__in=[key["pk"] for key in keys if key["queue_kind"] == "webhook"])
     for event in failed_webhooks:
         is_mismatch = (
             "MISMATCH" in event.failure_code.upper()
@@ -635,6 +899,12 @@ def get_owner_exception_queue():
                 webhook_event=event,
             )
         )
+    if keys is not None:
+        by_key = {
+            ("allocation", item.contribution.pk) if item.contribution else ("webhook", item.webhook_event.pk): item
+            for item in items
+        }
+        return tuple(by_key[(key["queue_kind"], key["pk"])] for key in keys if (key["queue_kind"], key["pk"]) in by_key)
     return tuple(sorted(items, key=lambda item: item.detected_at, reverse=True))
 
 

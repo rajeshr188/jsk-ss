@@ -4,7 +4,7 @@ from decimal import Decimal
 
 from allauth.account.models import EmailAddress
 from allauth.socialaccount.models import SocialAccount, SocialToken
-from django.db.models import Count, Q
+from django.db.models import Count, Q, OuterRef, Subquery
 from django.utils import timezone
 
 from .models import (
@@ -12,6 +12,26 @@ from .models import (
     CustomerInvitation,
     CustomerRegistration,
 )
+
+
+def get_owner_registration_applications():
+    return CustomerRegistration.objects.select_related(
+        "reviewed_by", "approved_user__customer_profile"
+    ).order_by("-submitted_at", "-pk")
+
+
+def get_activation_attention():
+    latest = CustomerInvitation.objects.filter(user_id=OuterRef("user_id")).order_by(
+        "-created_at", "-pk",
+    ).values("pk")[:1]
+    return CustomerInvitation.objects.filter(
+        pk=Subquery(latest), accepted_at__isnull=True, revoked_at__isnull=True,
+        user__is_active=True, user__role="CUSTOMER", user__privacy_erased_at__isnull=True,
+        user__password__startswith="!", user__customer_profile__isnull=False,
+    ).filter(
+        Q(recovery_requested_at__isnull=False) | Q(expires_at__lte=timezone.now())
+        | Q(delivery_failed_at__isnull=False) | Q(email_sent_at__isnull=True),
+    ).select_related("user__customer_profile").order_by("created_at", "pk")
 
 
 @dataclass(frozen=True)

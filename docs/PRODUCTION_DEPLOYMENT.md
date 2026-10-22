@@ -7,6 +7,59 @@ explicit Razorpay Test/Live modes, and manually published Scheme Rate build. Dev
 
 ## Production-readiness boundary
 
+### Pending customer conversion Phases 1–2 release (5 October 2026)
+
+This section prepares a local change for review; it does not authorize deployment,
+production migrations, feature activation or edits to production plan records.
+
+1. Review the image/code diff and normal release gates. The only new migration is
+   `pages.0002_publicfunneldailycount`: an empty aggregate measurement table with
+   day/stage/count constraints. It performs no data migration and touches no customer
+   or financial table. Review `migrate --plan`; do not apply unrelated pending vendor
+   migrations as part of this change. After approval, the bounded migration command
+   is `python manage.py migrate pages 0002_publicfunneldailycount --noinput`.
+2. Keep `PUBLIC_FUNNEL_MEASUREMENT_ENABLED=False` through cutover. Verify home/plans,
+   selected-plan entry, disabled-feature fallbacks and existing login/request routes.
+   The revised privacy notice is dated 5 October 2026. Review it and set
+   `PUBLIC_REGISTRATION_PRIVACY_VERSION=2026-10-05` for new registration evidence
+   during the approved release; explicit environment values override the code
+   default. Do not rewrite previously accepted policy versions or change the
+   separate deletion/terms versions as part of this notice amendment.
+   When the schema and policy text are accepted, the owner may separately approve
+   `PUBLIC_FUNNEL_MEASUREMENT_ENABLED=True`. No beacon/provider configuration is needed.
+   Existing edge analytics injection/exclusion must be checked independently: tokens,
+   authentication, customer/owner and payment paths must not leak through that provider.
+3. Check mobile/desktop paused/no-rate/month-paid agreement cards, abandoned history,
+   private payment-status authorization/no-store, and test-mode uncertain callback
+   recovery. Callback/webhook verification stays enabled during initiation pauses.
+   No real payment is necessary merely to inspect the status presentation.
+4. Read aggregates with `python manage.py report_customer_funnel --start 2026-10-05
+   --end 2026-10-05` (enter on one line). Output is JSON totals only. Report dates are
+   inclusive India-local dates, at most 366 days. First-payment identity is determined
+   across full history, not just the requested period. Outstanding allocation count
+   is a current backlog snapshot. Counts are not unique visitors or a joined cohort.
+   Navigation history starts at enablement; existing source-record throughput can be
+   queried earlier. Manually account for known synthetic application identities.
+5. Rollback: disable measurement and return to the prior immutable image. Keep the
+   additive aggregate table; no customer/financial history rollback or deletion is
+   needed. Public free-text plan descriptions remain stored; this release stops
+   displaying them rather than rewriting production content. Cross-email selected
+   plan continuity and combined owner approval are Phase 3, not part of this release.
+
+Phase 2 is a code/template/static release and has no additional migration, feature
+flag or production data backfill. The Phase 1 aggregate-table migration above is
+still required if both phases ship together. After separate release approval,
+include collected static assets and smoke-test owner login to `/scheme/owner/today/`,
+Applications filters/pages, bounded customer search, historical registration/request
+links, inline agreement review and exact-payment exception recovery. Check owner-only
+permissions and customer-scoped document navigation with separate identities. No
+real agreement approval or provider/payment recovery is needed for a read-only UI
+smoke; any such production mutation needs the usual deliberate owner workflow.
+Owner sign-in now starts on Today; the previous `/scheme/owner/` financial overview
+and historical URLs remain available. Counts may include Test records and multiple
+exception records for one payment, as labelled. Rollback restores the earlier image
+and static assets; no identity, request, agreement or financial records need rewriting.
+
 Production release `315f836ac0717fbaaf2d8d90268471ac1670e5b1` runs the accepted
 Live Razorpay path, provider-backed abandoned-order lifecycle, exact-grade metal
 contracts, payment-operations circuit breaker, snapshotted Checkout expiry, and
@@ -3812,3 +3865,104 @@ not a completed control.
 - [Razorpay payment capture settings](https://razorpay.com/docs/payments/payments/capture-settings/)
 - [Razorpay payment Dashboard actions](https://razorpay.com/docs/payments/payments/dashboard/)
 - [Razorpay dispute Dashboard actions](https://razorpay.com/docs/payments/disputes/dashboard/)
+
+
+## Customer conversion Phase 3: prepared release, not production authorization
+
+Phase 3 adds `accounts.0007_planapplication_planapplicationconfirmation_and_more`.
+It creates two empty tables, protected foreign keys, one-to-one agreement/registration
+links and confirmation/preference constraints. It performs no historical registration,
+customer, request, agreement or financial backfill. The earlier Phase 1 `pages.0002`
+aggregate table remains a separate pending migration if not already deployed.
+
+Rollout dependencies and acceptance (execute on production only after owner approval):
+
+1. Review the complete pending migration plan, take the standard recoverable backup,
+   and rehearse on a restored non-production PostgreSQL database. Run Django checks,
+   migration consistency, the registration/invitation/enrolment/payment regressions
+   and the new application/concurrency tests. Confirm consent/disclosure versions match
+   the reviewed public Terms/Privacy copy; the developer's local `.env` is unchanged.
+2. Apply additive migrations before the new web code receives traffic. Deploy the
+   updated Caddy configuration before issuing progress links: `/accounts/applications/*`
+   must be omitted from access logs along with verification/invitation paths. Validate
+   Caddy configuration with the existing deployment tooling. Ensure any other edge or
+   log-export layer obeys the same exclusions. No new runtime service is required.
+3. Deploy the reviewed Django release. New plan-first intake uses the existing public
+   registration and customer enrolment-request switches together. It adds no new
+   automatic feature enablement or payment flag. Existing-customer requests and legacy
+   access-only registrations remain supported; allauth direct signup remains closed.
+4. Use synthetic applicants in the controlled acceptance environment: contact intake,
+   one-use email POST, retained plan/grade/preferences, separate private progress email,
+   session-gated address/current-offer confirmation, owner contact verification and
+   coordinated approval. Verify changed terms/policy versions/start dates require
+   customer reconfirmation; expired applications cannot be approved or have verification
+   reissued. A missed start date requires today/a future date, not silent backdating.
+5. Check distinct registration review, invitation, agreement and financial audit evidence;
+   retry approval and verify the same agreement. Simulate mail failure: approval must
+   persist and owner invitation recovery must work. Missing/failed progress delivery
+   enters owner attention; verified incomplete applicants otherwise wait for customer
+   details. Replacement progress links invalidate prior links and sessions and do not
+   extend the original application expiry. No customer payment is tested on production
+   without explicit authorization and the existing payment acceptance procedure.
+6. Run `check_public_customer_registrations` (now includes missing/mismatched coordinated
+   agreement checks) and the existing identity/enrolment integrity commands. The funnel
+   report adds aggregate plan-application submissions and distinct customer-confirmed
+   applications in the reporting period. These are subsets of registration throughput,
+   not additional unique visitors or a joined conversion cohort. Reconfirmations count
+   once per application in that period. No identity, link or reference is emitted.
+
+Recovery/rollback: prefer disabling new public intake and deploying a forward fix.
+Retain application/confirmation tables and every linked agreement, invitation and
+identity review. Do not reverse `accounts.0007` after accepting applications: that would
+remove retained evidence and relationships. Rolling back to old code can expose its
+legacy identity-only approval path for newly linked records; do not use that old owner
+approval endpoint or manual enrolment on those records. Put affected owner approval in
+maintenance until a compatible fix is deployed. Existing financial reconciliation,
+provider callbacks and historical customer access must remain available.
+
+An interrupted after-commit email callback may leave delivery unrecorded; it must not
+cause another agreement or invite on approval retry. Recover activation delivery through
+the existing owner customer invitation replacement; recover progress through its
+explicit owner replacement. No raw credential is retained for replay and no email
+worker/outbox infrastructure is introduced. Original registration/consent timestamps
+remain evidence; final policy/offer consent is retained in append-only confirmations.
+
+Phase 4 implementation/release guidance follows below. Missing approved marketing benefits/descriptions and
+showroom response-window input remain business follow-ups; no promises are added here.
+
+## Customer conversion Phase 4: prepared release, not production authorization
+
+`accounts.0008_customerinvitation_recovery_requested_at` adds one nullable timestamp
+to the existing invitation table. It performs no historical or financial data backfill.
+Review the complete pending migration plan including Phase 1/3 dependencies, back up
+and rehearse on restored staging, and apply additive migrations before serving new code.
+The developer's normal database and actual environment configuration remain unchanged.
+No new flag or runtime service is required; existing intake/Google/payment switches
+retain their independent rollout and fail-closed behavior. Do not enable Google merely
+to inspect copy: use synthetic configuration in isolated local/staging acceptance.
+
+Acceptance before approved rollout:
+
+1. Exercise linked-plan password setup and subsequent password sign-in into the exact
+   customer-owned agreement. Verify legacy setup, password reset and replaced/used
+   invitations still work. Activation must not create financial records or auto-login.
+2. Inspect customer dashboard/application stages and first-payment actions for future
+   start dates, missing rates, pauses, monthly paid, uncertain/expired checkout,
+   unallocated metal and Test versus Live records. GETs must call no payment provider.
+3. POST setup-help from an eligible expired private link, then replay it. Only one
+   timestamp is retained; no new invitation/mail/access is issued. Unknown/wrong/used/
+   superseded/inactive/erased links show the same generic outcome. Verify CSRF, no-cache,
+   strict-origin and existing token-path log exclusions at every edge/export layer.
+4. Review Today/full login recovery queue and existing owner resend. Check latest-only
+   records, 8-record preview and 25-record pages, retained recovery evidence, invitation
+   supersession and delivery failure. Activated customers use password reset instead.
+5. Review Google eligibility copy with connected/unconnected/disabled/ineligible
+   fixtures; preserve adapter checks and closed signup. Follow the prepared Tamil
+   protocol in `TESTING.md`; do not publish translations without business review.
+
+Rollback: retain the new nullable column and recovery history; prefer disabling new
+intake and a forward fix. Older compatible code may ignore recovery metadata, so owners
+must manually review outstanding setup requests until the queue is restored. Phase 3's
+warnings about old identity-only approval still apply. No agreement, registration,
+financial record or invitation evidence is deleted for rollback. Production deployment
+and production data changes require separate owner approval.

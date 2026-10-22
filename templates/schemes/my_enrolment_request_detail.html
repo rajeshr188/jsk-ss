@@ -12,6 +12,14 @@
   <div class="page-actions"><a class="btn btn-outline-dark" href="{% url 'schemes:my_enrolment_requests' %}">All requests</a></div>
 </div>
 
+<div class="alert alert-secondary"><strong>Next action:</strong>
+{% if enrolment_request.status == 'ENROLLED' %}Open your linked plan to review the approved agreement.
+{% elif enrolment_request.effective_status == 'EXPIRED' %}Contact the showroom about expiry or review current plans before submitting again.
+{% elif enrolment_request.status == 'PENDING_OWNER_REVIEW' and not offer_is_current %}Withdraw this request and confirm a current offer in a new application.
+{% elif enrolment_request.status == 'PENDING_OWNER_REVIEW' %}Your application is awaiting showroom review. The showroom must review current terms and the start date with you before approval.
+{% else %}This request is closed. Contact the showroom if you need help choosing another plan.{% endif %}
+<a href="{% url 'contact' %}">Showroom support</a></div>
+
 {% if enrolment_request.status == 'PENDING_OWNER_REVIEW' and not offer_is_current %}
 <div class="alert alert-warning">
   <strong>The displayed offer has changed or closed.</strong>
@@ -49,7 +57,7 @@
         {% elif enrolment_request.effective_status == 'EXPIRED' %}
         <p>This request is no longer active. No scheme or payment permission was created.</p>
         {% elif enrolment_request.status == 'PENDING_OWNER_REVIEW' %}
-        <p>The showroom will contact you before any agreement is created.</p>
+        <p>The showroom must review your request and confirm the terms with you before creating an agreement.</p>
         <form method="post" action="{% url 'schemes:my_enrolment_request_withdraw' enrolment_request.pk %}">
           {% csrf_token %}
           <button class="btn btn-outline-danger" type="submit">Withdraw request</button>

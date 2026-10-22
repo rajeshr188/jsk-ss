@@ -1,0 +1,27 @@
+{% extends '_base.html' %}
+{% block title %}Payment status | Jai Sri Krishna Jewellery{% endblock %}
+{% block content %}
+<div class="auth-shell"><div class="card auth-card">
+  <p class="page-eyebrow">{{ contribution.scheme_account.plan.name }}</p>
+  <h1>Payment status</h1>
+  {% if contribution.gateway_mode == 'test' %}<p class="badge text-bg-warning">Razorpay Test payment · not a live payment</p>{% elif contribution.payment_gateway == 'mock' %}<p class="badge text-bg-secondary">Practice payment · no money collected</p>{% endif %}
+  <p class="lead">₹{{ contribution.amount|floatformat:2 }} contribution</p>
+  {% if contribution.status == 'PAID' %}
+  <div class="alert alert-success" role="status"><strong>Payment received.</strong> Your contribution{% if contribution.scheme_account.metal_grade %} and metal credit are{% else %} is{% endif %} recorded.</div>
+  {% elif contribution.status == 'PAID_UNALLOCATED' %}
+  <div class="alert alert-info" role="status"><strong>Payment received. Metal credit is pending.</strong> The showroom can resolve this safely. Do not pay again for this contribution.</div>
+  {% elif contribution.status == 'ABANDONED' %}
+  <div class="alert alert-secondary" role="status"><strong>Checkout closed after review.</strong> This attempt has no recorded contribution credit. Closing checkout does not cancel a provider order. Contact the showroom about any unexpected debit.</div>
+  {% elif contribution.status == 'FAILED' %}
+  <div class="alert alert-warning" role="status"><strong>No verified contribution is recorded for this attempt.</strong> If your bank account was debited, contact the showroom before trying again.</div>
+  {% else %}
+  <div class="alert alert-info" role="status"><strong>Payment confirmation is pending.</strong> Refresh to check the recorded status. If your bank account was debited, do not pay again while confirmation is pending.</div>
+  {% endif %}
+  <div class="d-grid gap-2 mt-3">
+    {% if contribution.status == 'PENDING' or contribution.status == 'PAID_UNALLOCATED' %}<a class="btn btn-jsk" href="{% url 'schemes:payment_status' contribution.pk %}">Refresh payment status</a>{% endif %}
+    {% if contribution.status == 'PAID' or contribution.status == 'PAID_UNALLOCATED' %}<a class="btn btn-outline-dark" href="{% url 'schemes:contribution_receipt' contribution.pk %}">View receipt</a>{% endif %}
+    <a class="btn btn-outline-dark" href="{% url 'schemes:my_scheme_detail' contribution.scheme_account.scheme_number %}">View my plan</a>
+    <a class="btn btn-outline-dark" href="{% url 'contact' %}">Contact the showroom</a>
+  </div>
+</div></div>
+{% endblock %}

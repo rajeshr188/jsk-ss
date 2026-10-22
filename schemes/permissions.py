@@ -10,7 +10,7 @@ def owner_required(view_func):
     @login_required
     @wraps(view_func)
     def wrapped(request, *args, **kwargs):
-        if not (request.user.is_superuser or request.user.role == CustomUser.Role.OWNER):
+        if not request.user.is_active or not (request.user.is_superuser or request.user.role == CustomUser.Role.OWNER):
             raise PermissionDenied
         return view_func(request, *args, **kwargs)
 

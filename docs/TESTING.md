@@ -1,5 +1,58 @@
 # Testing
 
+## Customer conversion Phase 2
+
+Run `schemes.tests.test_owner_workspace`, `schemes.tests.test_views`,
+`schemes.tests.test_enrolment_requests`, `schemes.tests.test_audit_exceptions` and
+`accounts.test_public_registration`, followed by the serial full suite. Workspace
+tests cover guest/customer/CMS denial, explicit inactive-owner denial, no-store/read-only
+Today, stage ordering, failed/expired verification, unresolved request expiry,
+8-item Today bounds, mixed-source 25-item pagination, fixed customer search/pagination,
+all supported search identifiers, duplicate-free agreement joins, approved-identity
+linkage and customer-scoped payment context. Review tests retain CSRF and changed-offer
+guards, historical decisions and inactive-login wording; exception tests cover exact
+payment links, context on failed retry, supported recovery links and safe unsupported
+event presentation. Queue GETs must create no agreement, payment, allocation or notice.
+Shared identity-screen reason fields have distinct labels/IDs; pending request reviews
+hide conversion when the customer login is no longer eligible and surface that next
+action instead. Existing conversion POST services retain their independent rechecks.
+
+Inspect owner landing, Today, inbox/filtering, both review types, search/page navigation,
+customer-scoped payments, recovery and related documents at 390px and desktop. Inspect
+the customer dashboard/document journey to confirm owner controls do not appear. Use
+fictional fixtures in a separately named local preview test database with in-memory
+email and no real provider operations. Keep visual financial forms unsubmitted;
+service/POST behavior is covered by regression tests. Stop the preview and remove its
+database after inspection. Phase 2 adds no migration.
+
+## Customer conversion Phase 1
+
+Relevant suites: `pages`, `accounts.test_public_registration`,
+`schemes.tests.test_payment_presentation`, `schemes.tests.test_payment_operations`
+and `schemes.tests.test_razorpay`; run the full suite before handoff. New tests cover
+validated/disabled selected-plan entry, private offerings, exact decimal display,
+removal of unreviewed description copy, anonymous allowlisted counter contents,
+HEAD/owner exclusions, disabled/failing measurement, source-record verification and
+full-history first Live payment counting. Payment presentation tests cover pause,
+missing rates, monthly payment/expiry, abandoned desktop/mobile history, customer
+isolation, no-store/read-only status, confirmed and paid-unallocated outcomes.
+Node is used by one behavior test to execute the rendered checkout JavaScript with
+fake DOM/provider/network objects for lost/rejected confirmation, cancellation,
+provider failure and expiry. It adds no application runtime dependency. This test
+skips if Node is unavailable; require its successful local execution for Phase 1.
+
+Inspect home/plans/application entry at 390px and desktop, including details disclosure
+and disabled features. Use fictional isolated local PostgreSQL fixtures for customer
+pause/history/status and owner context inspection; never create real payments just
+for visual QA. The normal `.env` application database and production data are not
+preview fixtures.
+
+Use the default serial runner for release verification. A Windows `--parallel 4`
+run hit duplicate seeded metal-grade data in the existing
+`CheckoutExpiryMigrationTests` fixture and then could not serialize its traceback;
+that attempt is not a successful full-suite result. Do not change production
+settings or financial migration behavior to work around test-runner isolation.
+
 All commands require the environment variables documented in the README and a PostgreSQL role able to create a test database.
 
 ```powershell
@@ -128,3 +181,97 @@ Milestone 9 exercised authenticated owner/customer forms inside a rollback-only 
 Milestone 10 exercised an owner workflow inside a rollback-only PostgreSQL transaction. Audited enrolment, a ₹100 completed cash redemption, and its compensating reversal produced exactly three immutable audit events; the original redemption remained, the account reopened, and the ₹100 entitlement was restored. Authenticated owner audit and exception pages returned successfully, and no tagged smoke records persisted.
 
 Milestone 11 exercised authenticated customer and owner document reads inside a rollback-only PostgreSQL transaction. A ₹1,000 mock gold contribution produced a stable printable receipt and a scheme statement showing the captured ₹12,500/g rate and 0.080000 g entitlement; owner contribution/redemption CSV exports returned successfully with separated denomination fields. No tagged smoke records persisted.
+
+
+## Customer conversion Phase 3 regression and responsive acceptance
+
+Local acceptance on 5 October 2026 passed 494 serial full-suite tests in 444.595
+seconds, then 136 focused regressions in 104.440 seconds after final refinements.
+Django checks and migration consistency checks passed. The responsive inspection
+below was completed and its disposable preview database/server removed.
+
+Use local/restored PostgreSQL and run tests serially. `accounts.test_plan_applications`
+covers contact-first persisted preferences, digest-bound current offer confirmation,
+separate one-use verification and resumable session-gated progress, CSRF/no-cache/log
+redaction, owner permissions, changed/closed offers and policies, missed start dates,
+identity conflicts, database expiry, distinct audit evidence, immutable linkage and
+confirmations, rollback and recorded after-commit email failures. Its PostgreSQL threads
+prove two simultaneous approvals create one identity/invitation/agreement/audit and
+return the same agreement. An outer rollback proves activation is not delivered.
+Existing customer request tests also reject substituted duration and changed disclosure.
+Privacy regressions cover the retained identity/financial graph; containment now revokes
+plan progress and completion minimizes the optional application message.
+
+Run the migration regression before the application concurrency tests. The older
+invitation migration test now restores all current leaf migrations at teardown, so it
+cannot leave later transactional tests using its deliberately old schema. This is test
+isolation, not a production migration change. Keep the known parallel migration-fixture
+limitation in mind; full regression remains serial.
+
+Desktop (1440x1000) and mobile (390x844) acceptance uses an isolated disposable preview
+PostgreSQL database, synthetic customers and in-memory email. Inspect record-driven
+intake, validation preserving values, email confirmation and retained preferences,
+remaining address/consent form, private-link confirmation, completed showroom-review
+stage/support, owner queue waiting/attention filters, coordinated identity/plan review
+and confirmation history, and the existing customer's second-plan form without contact
+or address fields. Inspect approval/rejection label targets and document width/long-text
+wrapping. Do not submit financial approval/payment or change credentials through browser
+inspection; service/HTTP regressions verify these outcomes. Remove the preview database
+and close/reset the temporary browser surfaces after acceptance.
+
+## Customer conversion Phase 4 acceptance
+
+Local acceptance on 5 October 2026 passed all 514 serial full-suite tests in 469.374
+seconds, then all 130 focused regressions in 72.856 seconds after final refinements.
+Django checks, migration consistency and whitespace checks passed. The responsive
+journeys below were inspected and the isolated preview database/server removed.
+
+Run `accounts.test_activation_continuation` with invitation/social/application,
+payment-presentation/operations, owner-workspace, existing-request and privacy
+regressions, then the complete serial suite. Cover linked activation to a scoped
+agreement through password login, no auto-login/financial write, external destination
+rejection, legacy invitations, saved variable amount with fixed-amount compatibility,
+non-cacheable dashboard and agreement pages, protected expired-token recovery/CSRF,
+generic unknown/ineligible results, repeated help requests, owner resend failure,
+latest-only recovery queue and customer isolation. Recorded Test/practice, pending,
+unallocated, closed attempts, future dates and operational pauses must produce truthful
+next actions. Simulate providers; never use live transactions for these regressions.
+
+Responsive inspection uses isolated synthetic PostgreSQL and in-memory email. Inspect
+valid setup (without entering new credentials), expired setup/help, password login with
+the approved agreement destination, dashboard stages/next actions, first-payment form,
+pending status and owner recovery queue/detail at 390x844 and 1440x1000. Verify document
+width, long text and label targets. HTTP tests verify setup/financial outcomes; do not
+submit a financial transaction or new password in browser inspection. Remove the
+preview database/server, reset viewport and close temporary tabs.
+
+### Prepared Tamil customer testing (English protocol; not published translations)
+
+Dependencies: owner-reviewed Tamil terminology and translations of plan disclosures,
+consent, identity/setup instructions, support copy and payment states; a Tamil-speaking
+reviewer; synthetic accounts and sandbox payments. Keep amount/grade/duration/date and
+policy versions synchronized with recorded offers. Do not infer benefits or an SLA.
+
+Ask Tamil-speaking prospective and existing customers to complete these scenarios on
+their phones using a reviewed prototype/staging build, without coaching:
+
+1. Compare offers; explain the contribution amount, exact grade, duration and what the
+   application does. Choose a plan and provide contact details.
+2. Verify email, resume the private link, complete remaining details and explain the
+   showroom review/next action. Reconfirm a changed offer without mistaking it for an
+   approved agreement.
+3. Set up an approved login and find that plan's first-payment action. Explain future
+   start, paused payment, Test checkout and pending confirmation/allocation correctly.
+4. Recover an expired setup link; explain that the showroom issues replacement access.
+   Existing customers apply again without repeating held profile details.
+5. Explain why an unconnected Google identity cannot sign in, and how to connect the
+   matching verified email after password login.
+
+Record task completion, wrong turns, misunderstood terms and requested help separately
+from public funnel counters. Use no contact details, private URLs, passwords, payment
+references or identifiable session recordings in analytics/test notes. Acceptance:
+participants can identify stage/next action and distinguish application, approved
+agreement, login and verified payment; the reviewer confirms accurate financial and
+consent language, mobile fit and no untranslated essential steps. Resolve observed
+confusion and obtain owner language review before any translation rollout. This phase
+prepares the protocol; participant testing and translation publication remain follow-up.
