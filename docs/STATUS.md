@@ -2,7 +2,7 @@
 
 ## Current milestone
 
-**Release security fixes prepared (22 October 2026); remote verification required.** Draft UI PR
+**Release candidate in draft PR #75 (22 October 2026).** Draft UI PR
 [#75](https://github.com/rajeshr188/jsk-ss/pull/75) is isolated on
 agent/customer-owner-ux-release, stacked on the existing Google Play foundation (#74),
 which is unchanged. Implementation commit 7aeb3e3 includes the accepted workspace refinements;
@@ -23,6 +23,15 @@ pass in 17.688 seconds**. The dependency-only image passed the internal restore/
 Gunicorn/static checks; a final image includes the legacy-format correction. Follow PR #75's
 current-head checks for the authoritative full regression/security result. No scan bypass or
 severity suppression was added.
+
+Replacement local image: jsk-savings:ui-release-20261022-rc-f57a8bb44665, local image ID
+sha256:4052110e1e50d1ad674a79e027bc91d832a6da1c66095a975f50ffd39e2a743a. Its uv.lock SHA-256 is
+2dc3fbeadd82 (prefix); full source/lock/package fingerprints and container evidence are retained
+in .uv-cache/ui-release-security-20261022/. The old b1607523 image is not a deploy candidate.
+Fix commit 71eb8c6 contains only the three dependency floors/lock changes, legacy offer grouping,
+explicit flag-state test coverage and release evidence. PR checks remain authoritative for its
+current head; neither a local image ID nor a passing synthetic config check is a published digest
+or approval for production. No merge, production migration/deployment or provider change occurred.
 
 Maintainer references: [certifi advisory](https://github.com/certifi/python-certifi/security/advisories/GHSA-6q48-6c7w-9gw2),
 [Pillow 13.0.0](https://github.com/python-pillow/Pillow/releases/tag/13.0.0),

@@ -92,8 +92,11 @@ by running this local drill.
 The initial image identity below is superseded: PR #75's first security scan found fixable
 critical advisories in certifi/Pillow/PyJWT. The release branch updates only those locked
 packages to certifi 2026.10.19, Pillow 13.0.0 and PyJWT 2.15.1, with explicit minimum constraints.
-Do not promote the original b1607523 image. Record the replacement image identity and passing
-security CI result before progressing; production is unchanged. See STATUS.md for current gates.
+Do not promote the original b1607523 image. Replacement local tag is
+`jsk-savings:ui-release-20261022-rc-f57a8bb44665`, image ID
+`sha256:4052110e1e50d1ad674a79e027bc91d832a6da1c66095a975f50ffd39e2a743a`.
+Read [PR #75 checks](https://github.com/rajeshr188/jsk-ss/pull/75/checks) for the current-head
+CI/security conclusion before progressing. Production is unchanged. See STATUS.md for gates.
 
 The accepted code fingerprint is
 `03ece8a68849506f012217c2ccfe2a95f982b0a27d251760586966b905814c40`.
