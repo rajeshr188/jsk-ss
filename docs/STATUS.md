@@ -8,8 +8,8 @@ restored systems remain private with payment/email/jobs disabled until latest
 deletion decisions and newer financial facts are reconciled; missing evidence keeps
 the restore isolated. This approves the procedure, not a production restore.
 Next: the bounded deletion acceptance pilot, reviewer access and final Console
-declarations in `docs/MOBILE_RELEASE_READINESS.md`. Enablement and irreversible
-completions still require explicit approval. After the reauthentication UI regression
+declarations in `docs/MOBILE_RELEASE_READINESS.md`. Any irreversible deletion
+completion still requires explicit approval. After the reauthentication UI regression
 was added, all 38 account-deletion/final-completion tests passed locally on
 10 September; Django system checks found no issues.
 The test runner recreated and removed its local `test_jsk_ss` database; no production
@@ -32,11 +32,35 @@ This containment result is partial pilot evidence, not end-to-end deletion accep
 
 The owner also reported that django-allauth's reauthentication page appeared as an
 unstyled fallback during that review. Root cause: the project customized ordinary
-account templates but had no `account/reauthenticate.html` override. A Bootstrap 5
-project-layout override and focused regression test are now implemented locally;
-both the layout test and existing recent-authentication/CSRF guard test pass. This
-presentation fix is not yet committed, merged or deployed; security semantics are
+account templates but had no `account/reauthenticate.html` override. PR #73 merged
+the Bootstrap 5 project-layout override and regression test as release
+`b349a84fdc716a87e85110386868923fad95326e`; protected-main CI, container publication
+and the fixable-critical vulnerability scan passed. Production now runs immutable
+image
+`ghcr.io/rajeshr188/jsk-savings@sha256:d40c2875fd9ac6b42fb9f21528b392456151232ce0d0f5ecd3f40dd040ddc543`.
+There was no migration. Both health endpoints, account-deletion integrity,
+authentication-email integrity and financial exceptions passed, and the owner
+confirmed the reauthentication page is styled correctly. Security semantics remain
 unchanged.
+
+The intended second zero-history deletion identity also proved to have one scheme
+account and one enrolment request; it is not eligible as zero-history evidence and no
+completion decision exists. Both inspected requests used the authenticated path, so
+the public email-verification path still requires a fresh identity. Two
+owner-controlled Workspace aliases were created and are awaiting mail propagation.
+On 15 September the new authenticated-path candidate completed its seven-category
+owner disposition with zero scheme accounts, enrolment requests, contributions,
+allocations and redemptions. Production displayed one completed-with-retention
+decision, no retained profile fields, accepted outcome notice with cleared recipient,
+and the expected minimization/completion actions. The owner confirmed inbox delivery,
+unusable password, failed Google recovery and clean deletion, authentication, Google,
+financial and graded-metal checks. This accepts the authenticated zero-history path;
+it does not prove the signed-out email-verification path.
+No verification bypass or database marking is permitted. In parallel, the canonical
+mobile-readiness guide now contains copy-ready Play listing text, store-asset and
+screenshot specifications, a Play Console worksheet, reviewer instructions and a
+manual-owner task boundary. This is submission preparation, not authorization to
+upload assets, complete a deletion or submit the app for production review.
 
 `FW-PRIV-001B` **disabled-stage production rollout accepted** on 10 September 2026
 from owner-supplied Linode output and explicit smoke-test confirmation. PR #72 merged
@@ -894,25 +918,14 @@ and rejection of unsafe/non-Google URLs. Django checks and migration-drift check
 
 ## Next recommended step
 
-Review the implemented `FW-PRIV-001B` owner disposition and run a synthetic local
-owner journey. Complete the real category-specific retention policy, external
-provider/export handling and backup/restore suppression procedure, then review/CI
-and a separately approved disabled-first production rollout of `accounts.0006`.
-Keep production deletion disabled until synthetic acceptance and policy/procedures
-are complete. No automatic financial purge or blanket statutory retention period
-has been approved; do not use pilot customers for destructive acceptance tests.
-In parallel, finish the remaining Internal Testing cases: checkout
-cancellation/expiry/pause, unlinked-identity rejection, process death, network/offline,
-updates/browser fallback, accessibility, and no-secret logs. Core authentication,
-registration, enrolment, payment and document journeys are owner-confirmed through
-the Play-installed app; collect missing build/device metadata and reuse that evidence.
-Use `docs/MOBILE_RELEASE_READINESS.md` and stop on any critical/high,
-financial-integrity, identity-boundary, or data-exposure failure. Resolve
-server-enforced protection for
-the private Android repository. Finish the Financial-features classification review,
-owner-approved retention procedures and `FW-PRIV-001B`
-before making a public-store account-deletion claim. No public store release may
-bypass the remaining policy/deletion gates. The independent
-fund-safety priority remains the two no-mutation `FW-PAY-003` Razorpay recovery
-exercises, and the first genuine `FW-ELIG-002` reminder observation must not be
-manufactured.
+Complete the separate signed-out public email-verification deletion journey once an
+owner-controlled Workspace alias reliably receives mail. Use another genuinely
+zero-history disposable customer, never bypass verification, and repeat the same
+owner preview, completion, notice, credential and integrity evidence. In parallel,
+enter the copy-ready store listing and App-content answers as Play Console drafts,
+prepare a stable non-privileged reviewer account, capture privacy-safe screenshots,
+and finish the release-candidate Data Safety/provider review. Do not submit the app
+for production review until these remaining gates are reconciled in
+`docs/MOBILE_RELEASE_READINESS.md`. Keep the existing financial, recovery-isolation
+and no-secret boundaries; no additional real payment is required merely to complete
+store preparation.
