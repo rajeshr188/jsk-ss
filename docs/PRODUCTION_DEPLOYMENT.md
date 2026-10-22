@@ -89,6 +89,12 @@ by running this local drill.
 
 ### Accepted UI release candidate (22 October 2026)
 
+The initial image identity below is superseded: PR #75's first security scan found fixable
+critical advisories in certifi/Pillow/PyJWT. The release branch updates only those locked
+packages to certifi 2026.10.19, Pillow 13.0.0 and PyJWT 2.15.1, with explicit minimum constraints.
+Do not promote the original b1607523 image. Record the replacement image identity and passing
+security CI result before progressing; production is unchanged. See STATUS.md for current gates.
+
 The accepted code fingerprint is
 `03ece8a68849506f012217c2ccfe2a95f982b0a27d251760586966b905814c40`.
 Local build tag: `jsk-savings:ui-release-20261022-03ece8a68849`.

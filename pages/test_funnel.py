@@ -29,16 +29,20 @@ class PublicFunnelTests(TestCase):
         self.plan = self.make_plan(code="FUNNEL", publicly_listed=True)
 
     def test_selected_plan_is_primary_and_validated_at_registration(self):
-        response = self.client.get(reverse("plan_apply", args=[self.plan.pk]), follow=True)
-        self.assertContains(response, f"Selected plan: {self.plan.name}")
-        if response.context["form"].__class__.__name__ == "PlanApplicationContactForm":
-            self.assertContains(response, "Share your contact details and preferences")
-        else:
-            self.assertContains(response, "After approval and login setup")
-        self.assertContains(response, "₹1,000.00")
-        self.assertTrue(response["Cache-Control"].find("no-store") >= 0)
-        self.assertEqual(PublicFunnelDailyCount.objects.get(step="SELECTED").count, 1)
-        self.assertEqual(PublicFunnelDailyCount.objects.get(step="APPLICATION").count, 1)
+        for count, enabled in enumerate((False, True), start=1):
+            with self.subTest(plan_first=enabled), override_settings(CUSTOMER_ENROLMENT_REQUESTS_ENABLED=enabled):
+                response = self.client.get(reverse("plan_apply", args=[self.plan.pk]), follow=True)
+                self.assertContains(response, f"Selected plan: {self.plan.name}")
+                if enabled:
+                    self.assertEqual(response.context["form"].__class__.__name__, "PlanApplicationContactForm")
+                    self.assertContains(response, "Share your contact details and preferences")
+                else:
+                    self.assertNotEqual(response.context["form"].__class__.__name__, "PlanApplicationContactForm")
+                    self.assertContains(response, "After approval and login setup")
+                self.assertContains(response, "₹1,000.00")
+                self.assertTrue(response["Cache-Control"].find("no-store") >= 0)
+                self.assertEqual(PublicFunnelDailyCount.objects.get(step="SELECTED").count, count)
+                self.assertEqual(PublicFunnelDailyCount.objects.get(step="APPLICATION").count, count)
         self.assertEqual(self.client.get(reverse("plan_apply", args=[99999])).status_code, 404)
         self.plan.publicly_listed = False
         self.plan.save()

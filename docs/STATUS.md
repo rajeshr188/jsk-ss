@@ -2,6 +2,32 @@
 
 ## Current milestone
 
+**Release security fixes prepared (22 October 2026); remote verification required.** Draft UI PR
+[#75](https://github.com/rajeshr188/jsk-ss/pull/75) is isolated on
+agent/customer-owner-ux-release, stacked on the existing Google Play foundation (#74),
+which is unchanged. Implementation commit 7aeb3e3 includes the accepted workspace refinements;
+7d07cf2 contains the earlier plan-first conversion phases. No PR has been merged.
+
+Initial PR CI run 39761162836 built the image but rejected five fixable critical findings:
+PyJWT 2.10.0 (CVE-2026-102268), certifi 2024.8.30 (GHSA-6q48-6c7w-9gw2), and Pillow 12.3.0
+(CVE-2026-112393, CVE-2026-112403, CVE-2026-112900). The initial local image below is
+superseded and must not be promoted. Targeted lock resolution changes only certifi to
+2026.10.19, Pillow to 13.0.0 and PyJWT to 2.15.1; explicit uv security floors prevent fresh
+resolution from selecting older vulnerable versions. Django, Wagtail, allauth and the
+financial architecture are unchanged. All **116 media/CMS/Google-auth/storage regressions pass
+in 64.247 seconds** with the patched dependencies. CI also exposed a preserved legacy-form
+amount that still lacked grouping when enrolment requests were disabled. The legacy template
+now uses the same INR formatter; the funnel test explicitly covers both switch states, instead
+of inheriting local .env behavior. All **64 funnel/legacy-registration/plan-application regressions
+pass in 17.688 seconds**. The dependency-only image passed the internal restore/upgrade and
+Gunicorn/static checks; a final image includes the legacy-format correction. Follow PR #75's
+current-head checks for the authoritative full regression/security result. No scan bypass or
+severity suppression was added.
+
+Maintainer references: [certifi advisory](https://github.com/certifi/python-certifi/security/advisories/GHSA-6q48-6c7w-9gw2),
+[Pillow 13.0.0](https://github.com/python-pillow/Pillow/releases/tag/13.0.0),
+[PyJWT 2.15.1](https://github.com/jpadilla/pyjwt/releases/tag/2.15.1).
+
 **Owner/customer local acceptance recorded; local release candidate verified
 (22 October 2026).** The owner reported testing both owner and customer roles locally and
 being satisfied. This closes local stakeholder acceptance; no independent customer study,

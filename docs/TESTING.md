@@ -81,6 +81,14 @@ unaccepted until actual observations are recorded and material confusion is reso
 
 ## Exact local image verification (22 October 2026)
 
+Release CI exposed dependencies that the local environment had not scanned and one flag-
+dependent fallback display assertion. The release branch fixes only certifi/Pillow/PyJWT via
+uv constraints/lockfile, then reruns media/CMS/Google-auth/storage regressions (116 passed in
+64.247 seconds) and funnel/public-registration/plan-application regressions (64 passed in
+17.688 seconds). The funnel case explicitly runs enrolment requests off/on; the legacy access
+form shares INR grouping with the plan-first form. Keep CI's full 536-test and fixable-critical
+scan gates intact; use the current PR head's checks, not an earlier local result, for release.
+
 After the owner accepted both local roles, the unchanged production Dockerfile/lockfile built
 from the accepted source fingerprint. The local candidate passed the synthetic predecessor
 schema seed, actual PostgreSQL dump/restore and pending upgrade in containers. The app used

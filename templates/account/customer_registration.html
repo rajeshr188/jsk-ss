@@ -1,5 +1,5 @@
 {% extends '_base.html' %}
-{% load crispy_forms_tags %}
+{% load crispy_forms_tags workspace %}
 
 {% block title %}Request customer access | Jai Sri Krishna Jewellery{% endblock %}
 {% block meta_description %}Request a Jai Sri Krishna Jewellery customer login for owner review. A request is not a scheme enrolment.{% endblock %}
@@ -14,7 +14,7 @@
   {% if selected_plan %}
   <div class="card mb-3"><div class="card-body">
     <p class="fw-semibold mb-1">Selected plan: {{ selected_plan.name }}</p>
-    <p class="small mb-1">{% if selected_plan.amount_rule == 'FIXED' %}₹{{ selected_plan.fixed_contribution_amount|floatformat:2 }}{% else %}From ₹{{ selected_plan.minimum_contribution|floatformat:2 }}{% endif %} · {{ selected_plan.get_frequency_rule_display }} · {{ selected_plan.default_months }} months</p>
+    <p class="small mb-1">{% if selected_plan.amount_rule == 'FIXED' %}₹{{ selected_plan.fixed_contribution_amount|inr }}{% else %}From ₹{{ selected_plan.minimum_contribution|inr }}{% endif %} · {{ selected_plan.get_frequency_rule_display }} · {{ selected_plan.default_months }} months</p>
     <p class="small text-secondary mb-0">First, request your customer login below. After approval and login setup, confirm this plan and your metal grade from Savings plans. The showroom then reviews enrolment.</p>
     <a class="small d-inline-block mt-2" href="{% url 'pricing' %}">Change plan</a>
   </div></div>
