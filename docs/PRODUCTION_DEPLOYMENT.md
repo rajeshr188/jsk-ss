@@ -7,6 +7,47 @@ explicit Razorpay Test/Live modes, and manually published Scheme Rate build. Dev
 
 ## Production-readiness boundary
 
+### Approved simpler rollout — 22 October 2026
+
+The owner approved deploying release `4d92b57588d0714eb2e9b48661df1878824953d0`
+without separate staging, after CI/security checks and the exact published-image
+synthetic restore/upgrade rehearsal on PostgreSQL 18.6. This explicit exception
+supersedes the separate-staging prerequisite for this release only; it does not
+claim external staging/provider/log-sink acceptance. Track separate staging under
+`FW-PROD-009`. Do not provision another stack on the 1 GB production host.
+
+Target: owner-identified `ubuntu-in-maa-jsk`, `172.235.9.77`, serving www/apex
+jaishrikrishnajewellery.com. Recovery point nominated by owner: 22 October 2026,
+13:00 IST (07:30 UTC), not independently verified as latest PITR. Use only the
+CI-published digest in STATUS.md; never build on the serving host.
+
+Retain the old image/configuration, check current capacity and financial state,
+temporarily restrict user mutations while preserving payment confirmation/webhooks,
+review the exact migration plan, apply only approved additive migrations, and
+verify health/private-route controls/static assets and financial invariants before
+reopening normal operations. Preserve existing provider credentials and feature
+settings; keep optional funnel measurement disabled. Do not reverse migrations or
+restore an older financial database as routine rollback. Once linked plan-first
+records exist, old identity-only approval must not resume; prefer a forward fix.
+
+### Bounded production image housekeeping
+
+After an accepted release, inspect `df -h /`, `docker system df`, all containers
+(including stopped containers), and full image references. Preserve every image
+referenced by a container, the running application, the designated rollback image,
+and Caddy. Retaining one additional recent registry release is inexpensive insurance;
+image retention alone does not establish database/workflow rollback compatibility.
+
+Remove only explicitly inventoried obsolete references using `docker image rm`
+without force, after checking their immutable manifests remain available in GHCR.
+Recheck container references immediately before removal. Retain an image-reference
+inventory so a removed download can be pulled again if the registry retains it.
+Keep locally built images unless their recovery/disposal is separately reviewed.
+Never use a blanket `docker system prune -a --volumes`; volumes, database CA files,
+environment/rollback backups, Caddy certificate data and logs are not image cleanup.
+Recheck disk space, container identities and public live/readiness after cleanup;
+no application restart is needed. Do not build on the serving host.
+
 ### Prepared workflow refinement release (22 October 2026)
 
 This is a local review candidate, not production authorization. No new migration, environment

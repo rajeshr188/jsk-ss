@@ -2,7 +2,155 @@
 
 ## Current milestone
 
-**Release candidate in draft PR #75 (22 October 2026).** Draft UI PR
+**Bounded production image cleanup completed (22 October 2026).** Owner-authorized
+housekeeping removed only 13 explicitly inventoried obsolete GHCR image downloads
+from `172.235.9.77`, using exact references without force. Each was unused by any
+container and its immutable manifest was available in GHCR before removal. Disk use
+fell from **80% to 60%**, with available space rising from **4.7 GiB to 9.3 GiB**
+(approximately 4.6 GiB reclaimed). Docker image count fell from 36 to 23.
+
+Retained current digest `5aa95b72...`, designated rollback `d40c2875...`, and an
+additional previous registry image `4f07a2b4...`; also retained Caddy and all older
+locally built images. Both existing containers and both Caddy volumes remained in
+place without restart. No database, environment, credentials, media, logs or backup
+was removed. Public live/readiness still return healthy release `4d92b575`; the
+production worktree is clean. Removed digest references are recorded in the host's
+restricted `/home/deploy/jsk-rollout-4d92b575-20261022/image-cleanup.json` and can be
+pulled again while GHCR retains them. No blanket prune or automatic cleanup job was
+introduced; the production guide now documents bounded image housekeeping.
+
+**Production rollout completed (22 October 2026).** Deployed approved release
+`4d92b57588d0714eb2e9b48661df1878824953d0` to `172.235.9.77`, using
+`ghcr.io/rajeshr188/jsk-savings@sha256:5aa95b72241952740f4d787808b1a448b4d075d98d8824c1d8f443e49b4d2074`.
+Both www/apex health checks return the new release; web is healthy and Caddy is
+running. No build ran on the serving host. Accounts 0007/0008 and pages 0002 applied
+successfully. A temporary proxy mutation guard blocked user submissions while
+exempting Razorpay webhook/confirmation routes; it was removed after verification.
+Normal operations are restored. The production Git checkout is clean at the approved
+merge commit. Existing reminder/background jobs were not reconfigured.
+
+Preflight and deployed auth, payment operations, financial exceptions, Razorpay live
+readiness, graded metal, in-store cash, registration, enrolment-request and Google-login
+checks passed. The pre/post financial-record digest is identical:
+`ce358a1b50c7e8e3c22db2ddaa77167b0325002fb7459dfe2c157745d8babc78`.
+The compared snapshot includes agreements, contributions, allocations, rates,
+redemptions/reversals, cash receipts/reversals, audits, webhook events and payment
+controls/schedules. Counts remained 13 customers, 12 agreements, 19 contributions,
+9 allocations, 28 rates and 23 webhook events; pending Razorpay remained zero.
+Recorded allocations remained GOLD_22K_916 2.361172 g and GOLD_24K_9999 0.329272 g.
+These are preserved allocation totals, not a claim that all historical test balances
+are live liabilities. No real payment, customer approval, invitation or email was
+created as a deployment test.
+
+Homepage/plans/login, manifest, assetlinks and six homepage static assets returned
+200; signed-out owner/customer pages redirected to login. Synthetic probes confirmed
+query/Referer/Hx-Current-Url redaction and private application-path exclusion in the
+actual Caddy logs, plus application secret-path redaction. This does not certify an
+external log archive or new provider delivery. Authenticated production visual and
+business acceptance remains an owner follow-up; earlier local role acceptance stands.
+
+Environment edits were limited to APP_IMAGE, APP_RELEASE, keeping
+PUBLIC_FUNNEL_MEASUREMENT_ENABLED=False, and setting
+PUBLIC_REGISTRATION_PRIVACY_VERSION=2026-10-05 to match the released notice.
+Terms version and provider credentials/settings were preserved. Existing HSTS
+include-subdomains/preload warnings were intentionally not changed. Legacy expired
+registration/enrolment requests remain operator review work, not deployment-created
+integrity errors. Post-rollout capacity: 348 MiB available RAM, 417 MiB free swap,
+4.7 GiB free disk (80% used); bounded old-image housekeeping is a follow-up, not an
+automatic destructive prune.
+
+Rollback image remains
+`ghcr.io/rajeshr188/jsk-savings@sha256:d40c2875fd9ac6b42fb9f21528b392456151232ce0d0f5ecd3f40dd040ddc543`
+(release `b349a84fdc716a87e85110386868923fad95326e`). Restricted rollback configuration
+and baseline evidence are retained on the host in
+`/home/deploy/jsk-rollout-4d92b575-20261022/`; its environment backup is secret material,
+must not be committed, and was not downloaded. Keep additive migrations and financial
+history; do not restore an old database or resume old approval code for linked new
+applications. The owner-nominated recovery point remains 22 October 2026 13:00 IST.
+
+**Controlled production rollout approved (22 October 2026).** The owner explicitly
+accepted the simpler CI + exact-image local rehearsal + controlled-production
+approach, including production deployment, and deferred separate staging to
+`FW-PROD-009`. External staging is not falsely marked passed. Rollout is completed above;
+the previous staging/approval gates below describe earlier checkpoints.
+
+**Exact published-image PostgreSQL 18.6 rehearsal passed (22 October 2026).**
+The owner explicitly pinned the deployment destination to Linode
+`ubuntu-in-maa-jsk`, IP `172.235.9.77`, serving
+`www.jaishrikrishnajewellery.com` (the prepared proxy redirects www to the apex).
+Read-only SSH to that IP reports OS hostname `localhost`; this is not independent
+verification of the Cloud Manager instance label. The www readiness check and
+running containers still report healthy release `b349a84fdc716a87e85110386868923fad95326e`.
+The owner nominated **22 October 2026, 13:00 IST / 07:30 UTC** as the managed
+PostgreSQL recovery point. This is owner-supplied evidence, not an independently
+verified latest PITR timestamp or a new completed restore drill.
+
+Locally pulled the exact CI-published application digest
+`sha256:5aa95b72241952740f4d787808b1a448b4d075d98d8824c1d8f443e49b4d2074`;
+its OCI revision matches `4d92b57588d0714eb2e9b48661df1878824953d0`.
+The disposable PostgreSQL image was
+`postgres@sha256:edb0c08dc33befd0262ab3b5cf1c4f3f8cfd8b09e88c05b45adee29d6761ddb6`,
+and SQL reported **18.6**, matching the inspected production server version.
+The database used network-none and temporary memory-backed storage. Application
+containers shared only that isolated namespace, ran read-only/non-root with dropped
+capabilities, and used fictional fixtures, in-memory email and synthetic payment
+credentials. No production environment file, data or credentials were used.
+
+Dump/restore baseline hashes matched. The only pending migrations were
+accounts.0007, accounts.0008 and pages.0002; all applied without changing historical
+identity/financial rows. Eight owner pages, historical customer statements, four
+owner fragments, permission checks, separate INR/gold/silver entitlements, changed-offer
+reconfirmation, repeat-safe approval, mail-failure recovery and activation continuation
+passed. Activation created no payment; five integrity commands and Django checks passed.
+The prepared Caddyfile also validates in the exact deployed Caddy 2.11.4 digest with
+networking disabled. Temporary databases, dump and container were removed successfully;
+ignored rehearsal helpers remain in `.uv-cache/release-pg18-20261022/`.
+
+Production remains unchanged. Separate staging, sanitized-backup rehearsal,
+external provider/log-sink acceptance have **not** been completed by this local test.
+Before cutover, resolve the runbook's external-staging gate explicitly: provision an
+agreed isolated target, or obtain an owner-accepted, documented release-specific
+exception with a controlled production rollout. Deployment authorization is not
+being treated as implicit acceptance of unperformed checks.
+
+**Approved release merges completed (22 October 2026).** PR #74 merged as
+`dc029fcc164942002795b46df742ce0453b44e3d`. PR #75 was retargeted to `main`, marked
+ready, and updated with the new base using a merge commit. Its updated head
+`6c287ab75667ac31aaeabed19b78449978350913` has exactly the same source tree as the
+reviewed `b61d324` candidate. Both fresh CI runs passed Django and container/security
+checks before the protected merge; no administrator bypass was used. PR #75 merged as
+`4d92b57588d0714eb2e9b48661df1878824953d0`.
+
+The merge-readiness review reran 104 focused application, activation, workspace,
+payment-presentation and funnel regressions locally: all passed in 27.759 seconds.
+Django checks, migration drift and diff whitespace checks passed. Post-merge CI run
+[`39766104681`](https://github.com/rajeshr188/jsk-ss/actions/runs/39766104681)
+passed Django tests/checks, image publication and the fixable-critical scan of the
+published digest. The immutable staging candidate for release
+`4d92b57588d0714eb2e9b48661df1878824953d0` is
+`ghcr.io/rajeshr188/jsk-savings@sha256:5aa95b72241952740f4d787808b1a448b4d075d98d8824c1d8f443e49b4d2074`.
+Production is unchanged. The staging target,
+target-specific rehearsal and separate production approval
+remain open; approval to merge did not authorize deployment or production data changes.
+
+**Read-only Linode discovery (22 October 2026).** Owner-authorized SSH checks verified
+the running release is `b349a84fdc716a87e85110386868923fad95326e`, on image
+`ghcr.io/rajeshr188/jsk-savings@sha256:d40c2875fd9ac6b42fb9f21528b392456151232ce0d0f5ecd3f40dd040ddc543`.
+The web container and both public health endpoints are healthy on that release;
+financial exceptions report zero paid-unallocated, failed-webhook and mismatched-webhook
+records. `SHOW server_version` returned **18.6**; the Linode
+`postgres-jsk` console independently displays PostgreSQL v18.6. Previous CI/local
+PostgreSQL 16 rehearsal evidence is not a same-major-version rehearsal. Production
+has accounts through 0006, pages through 0001 and schemes through 0020 applied.
+Only the production web/Caddy containers are running on the inspected host; no
+separate staging environment was established by these checks. Capacity at inspection:
+349 MiB available RAM, 353 MiB free swap, 5.2 GiB free disk (78% used).
+The managed database Backups UI offers newest-full-plus-incremental recovery and
+describes a 14-day PITR window, but shows no exact latest recovery timestamp. No
+timestamp or completed restore is inferred from that option. No production files,
+credentials, migrations, services, backups or infrastructure were changed.
+
+**Pre-merge release candidate record (22 October 2026).** Draft UI PR
 [#75](https://github.com/rajeshr188/jsk-ss/pull/75) is isolated on
 agent/customer-owner-ux-release, stacked on the existing Google Play foundation (#74),
 which is unchanged. Implementation commit 7aeb3e3 includes the accepted workspace refinements;

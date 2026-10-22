@@ -55,7 +55,8 @@ remaining implementation items, then record release/user acceptance separately.
 
 ## Release rehearsal and stakeholder acceptance (22 October 2026)
 
-This follows the completed local UI work; it does not enable production deployment.
+This follows the completed local UI work. Production approval and the explicit
+separate-staging exception were subsequently given on 22 October 2026; see STATUS.md.
 
 - [x] Add and execute an opt-in local synthetic dump/restore/upgrade drill. Dependencies:
   loopback PostgreSQL with CREATE DATABASE permission and pg_dump/pg_restore. Acceptance:
@@ -65,10 +66,16 @@ This follows the completed local UI work; it does not enable production deployme
 - [x] Prepare the customer/owner task protocol and evidence fields in TESTING.md, with
   release/restore prerequisites in PRODUCTION_DEPLOYMENT.md. No invented business terms,
   support promises, participant results or translations.
+- [x] Rehearse the exact CI-published merged image locally on PostgreSQL 18.6,
+  matching inspected production: synthetic dump/restore, additive upgrade, historical
+  invariants and owner/customer workflows passed on 22 October 2026. Validate the
+  prepared proxy with the deployed Caddy digest. This does not close external staging.
 - [ ] Confirm the non-production staging target, candidate image/revision and approved
   sanitized backup provenance; rehearse the exact immutable image and proxy on that target.
   Acceptance: scoped feature/configuration review, normal and enhanced browser journeys,
   disabled-JavaScript fallback, log-sink redaction, operational checks and recoverable rollback.
+  Deferred to `FW-PROD-009`: owner explicitly accepted the local-rehearsal/controlled
+  production alternative for release `4d92b575` on 22 October 2026; not a staging pass.
 - [x] Prepare an isolated fictional local usability preview and verify both role logins and
   starting pages. Leave participant observations unaccepted until supplied; keep lifecycle/stop
   details in TESTING.md and the ignored session manifest.
@@ -78,9 +85,14 @@ This follows the completed local UI work; it does not enable production deployme
 - [ ] Broader prospective/existing customer observations and reviewed Tamil testing remain
   follow-up research. Record completion, help/confusion and wrong turns when actually observed;
   Tamil work requires reviewed terminology and a Tamil-speaking reviewer.
-- [ ] Obtain separate production deployment/data-change approval for the concrete candidate.
+- [x] Obtain separate production deployment/data-change approval for the concrete candidate
+  `4d92b57588d0714eb2e9b48661df1878824953d0` (owner approval 22 October 2026).
   After release, measure funnel outcomes using existing aggregate measurement; local tests
   cannot establish conversion uplift.
+- [x] Deploy that exact published digest to the approved Linode, apply the three reviewed
+  migrations, preserve financial snapshots, verify health/access/static/redaction/integrity,
+  and remove the temporary submission guard. Optional measurement remains disabled;
+  subsequent owner/customer production visual acceptance is still a follow-up.
 
 ## Customer conversion redesign (approved 5 October 2026)
 

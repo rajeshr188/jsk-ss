@@ -21,7 +21,7 @@ implementation is absent.
 
 | Workstream | Completed evidence | Still pending |
 | --- | --- | --- |
-| Customer conversion redesign | All four phases implemented, tested locally and committed; see the local completion index below | Staging rehearsal, owner-approved production rollout and observed customer results (`FW-UX-001`) |
+| Customer conversion redesign | Implemented, tested and deployed as `4d92b575` on 22 October 2026; integrity/smoke checks passed | Owner production visual acceptance and observed customer results (`FW-UX-001`); separate staging deferred to `FW-PROD-009` |
 | Offer and language follow-up | Record-derived offers, factual copy and English Tamil-testing protocol | Approved additional marketing descriptions/benefits and review window (`FW-UX-002`); reviewed Tamil translations and participant testing (`FW-UX-003`) |
 | Account deletion | Completion/minimization and notices deployed; authenticated zero-history production completion accepted 15 September | Separate signed-out verification journey, provider follow-up and independent recovery reconciliation (`FW-PRIV-001B`) |
 | Android distribution | PWA accepted; signed TWA accepted in Internal Testing; origin association and installed app verified | Remaining device/negative cases, reviewer access, declarations, store assets and submission (`FW-MOBILE-001`, `003`, `004`) |
@@ -44,9 +44,14 @@ authorize implementation, production changes, a financial transaction or a store
   - [ ] Rehearse the combined release on restored staging, including `pages.0002`,
     `accounts.0007` and `accounts.0008` where not already applied; confirm reviewed
     policy versions, private-route log exclusions and independent feature switches.
-  - [ ] Obtain owner approval for the concrete production release/migration plan,
-    deploy, and retain scoped customer/owner acceptance and rollback evidence under
+    Deferred to `FW-PROD-009` by explicit owner decision on 22 October 2026; exact-image
+    PostgreSQL 18.6 local rehearsal and guarded production checks passed instead.
+  - [x] Obtain owner approval for the concrete production release/migration plan,
+    deploy, and retain operational verification and rollback evidence under
     [the production guide](PRODUCTION_DEPLOYMENT.md#customer-conversion-phase-3-prepared-release-not-production-authorization).
+    Release `4d92b575` deployed on 22 October 2026; see STATUS.md for evidence.
+  - [ ] Obtain post-deployment owner/customer visual acceptance of the released UI;
+    local acceptance and production integrity checks do not establish conversion uplift.
   - [ ] Separately approve/enable optional aggregate measurement and record a comparable
     reporting period with `report_customer_funnel`. Compare navigation and authoritative
     application/verified Live first-payment throughput; report showroom cash separately.
@@ -239,6 +244,20 @@ outcome by itself. Source: [official HTMX documentation](https://htmx.org/docs/)
    native API, duplicated financial presentation, or cross-platform framework.
 
 ## Production operations
+
+- **FW-PROD-009 — Optional isolated staging for higher-risk releases:** Deferred by
+  owner decision on 22 October 2026 in favour of CI, an exact-image local PostgreSQL
+  rehearsal and a controlled production rollout. Separate staging is not a blanket
+  prerequisite for every release. Reconsider for payment/authentication architecture,
+  destructive migrations, provider changes or substantial deployment changes.
+  - [ ] Agree a budget and isolated temporary or persistent host, database, hostname,
+    media and sandbox-provider credentials. Do not add a competing stack to the 1 GB
+    serving host or reuse production data/secrets without an approved isolation and
+    sanitization procedure.
+  - [ ] Rehearse the same published digest, HTTPS/proxy/CSRF, normal and enhanced
+    browser journeys, provider delivery, log redaction and recovery; retain evidence.
+  - [ ] Define teardown/cost controls and a risk-based rule for when staging is needed.
+  The 22 October release exception does not mark these external checks completed.
 
 - **FW-PROD-007 — Budget-conscious security-log preservation:** Inventory and phased
   plan documented on 10 September 2026; implementation and production acceptance
