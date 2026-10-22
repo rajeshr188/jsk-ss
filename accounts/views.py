@@ -10,6 +10,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.core.paginator import Paginator
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
+from schemes.navigation import application_inbox_url, review_destination
 from django.urls import reverse
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_POST, require_GET, require_http_methods
@@ -378,7 +379,7 @@ def customer_registration_reject(request, application_id):
             _add_validation_errors(rejection_form, error)
         else:
             messages.success(request, "Registration rejected and retained for audit.")
-            return redirect("customer_registration_list")
+            return redirect(application_inbox_url(request) if request.POST.get("return_to") else "customer_registration_list")
 
     from .application_selectors import get_plan_application
     from .application_views import owner_application_context
@@ -430,7 +431,7 @@ def customer_registration_resend_verification(request, application_id):
                 request,
                 "The replacement verification email could not be sent.",
             )
-    return redirect("customer_registration_detail", application_id=application.pk)
+    return redirect(review_destination(request, "customer_registration_detail", application_id=application.pk))
 
 
 def _customer_account_deletion_enabled():

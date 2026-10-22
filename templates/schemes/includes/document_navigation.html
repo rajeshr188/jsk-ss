@@ -1,0 +1,3 @@
+<nav class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3 d-print-none" aria-label="Document actions"><div class="d-flex flex-wrap gap-2">
+{% if workspace_owner %}<a class="btn btn-outline-dark" href="{% url 'schemes:customer_detail' document_account.customer.pk %}?section=documents">Back to customer documents</a>{% else %}<a class="btn btn-outline-dark" href="{% url 'schemes:my_scheme_detail' document_account.scheme_number %}">Back to this plan</a><a class="btn btn-outline-dark" href="{% url 'schemes:customer_documents' %}">All documents</a>{% endif %}
+</div><button class="btn btn-jsk" type="button" onclick="window.print()">{{ print_label }}</button></nav>

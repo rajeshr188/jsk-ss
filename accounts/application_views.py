@@ -1,6 +1,7 @@
 from django.contrib import messages
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_POST, require_http_methods
 from django.core.exceptions import ValidationError
@@ -8,9 +9,10 @@ from django.utils import timezone
 from django.utils.crypto import constant_time_compare
 
 from schemes.permissions import owner_required
+from schemes.navigation import review_destination
 from schemes.selectors import get_public_scheme_plans
 from .application_forms import PlanApplicationContactForm, PlanApplicationCompletionForm, PlanApplicationApprovalForm
-from .application_selectors import get_plan_application, application_progress
+from .application_selectors import get_plan_application, application_progress, application_timeline
 from .applications import (
     application_enabled, application_terms_current, complete_plan_application,
     offer_form_digest, progress_token_available, progress_identity_available, reissue_progress_access,
@@ -114,6 +116,12 @@ def application_progress_view(request, application_id):
                 return redirect("plan_application_progress", application_id=application_id)
     elif request.method == "POST":
         raise Http404
+    timeline = application_timeline(application)
+    if application.scheme_account_id and application.scheme_account.customer.user.has_usable_password():
+        from schemes.selectors import get_customer_plan_next_action
+        action = get_customer_plan_next_action(application.scheme_account)
+        stage = action["stage"]
+        next_action = action["message"] + " Sign in to continue with your approved plan."
     continuation_url = None
     if application.scheme_account_id:
         from urllib.parse import urlencode
@@ -123,7 +131,7 @@ def application_progress_view(request, application_id):
     return render(request, "account/plan_application_progress.html", {
         "journey": application, "stage": stage, "next_action": next_action, "form": form,
         "needs_confirmation": editable and not application_terms_current(application),
-        "continuation_url": continuation_url,
+        "continuation_url": continuation_url, "timeline": timeline,
     })
 
 
@@ -158,7 +166,7 @@ def application_approve(request, application_id):
             _errors(form, error)
         else:
             messages.success(request, "Identity and plan approved." if created else "This application was already approved; the same agreement is retained.")
-            return redirect("customer_registration_detail", application_id=application_id)
+            return redirect(review_destination(request, "customer_registration_detail", application_id=application_id))
     return render(request, "account/plan_application_review.html", owner_application_context(application, form), status=400)
 
 
@@ -173,7 +181,7 @@ def application_resend_progress(request, application_id):
         messages.error(request, "Unable to replace progress access. Review verification and application expiry.")
     else:
         messages.info(request, "Replacement progress access issued. Check its delivery status below; earlier access is invalidated.")
-    return redirect("customer_registration_detail", application_id=application_id)
+    return redirect(review_destination(request, "customer_registration_detail", application_id=application_id))
 
 
 def _application_source_ip(request):

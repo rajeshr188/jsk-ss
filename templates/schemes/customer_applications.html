@@ -1,0 +1,11 @@
+{% extends '_base.html' %}
+{% block title %}Applications | Jai Sri Krishna Jewellery{% endblock %}
+{% block content %}
+<div class="page-header"><div><p class="page-eyebrow">Your saved requests</p><h1>Applications</h1><p class="page-subtitle">Track showroom decisions and open the related plan. An application does not mean payment is due.</p></div>{% if enrolment_requests_enabled %}<a class="btn btn-outline-dark" href="{% url 'pricing' %}">Apply for another plan</a>{% endif %}</div>
+{% include 'schemes/includes/pagination.html' %}
+<div class="d-grid gap-2">{% for item in applications %}<article class="card card-body">
+{% if item.kind == 'registration' %}<h2 class="h5">{{ item.record.plan_application.plan.name }} · {{ item.record.plan_application.metal_grade.display_name }}</h2><p>{{ item.record.lifecycle_status }} · Confirmed {{ item.record.plan_application.completed_at|date:'d M Y' }}</p>{% if item.record.plan_application.scheme_account %}<a href="{% url 'schemes:my_scheme_detail' item.record.plan_application.scheme_account.scheme_number %}">View approved plan</a>{% endif %}
+{% else %}<h2 class="h5">{{ item.record.plan_name_snapshot }} · {{ item.record.metal_grade.display_name }}</h2><p>{{ item.record.effective_status_label }} · Submitted {{ item.record.created_at|date:'d M Y' }}</p><a href="{% url 'schemes:my_enrolment_request_detail' item.record.pk %}">View application and next action</a>{% endif %}
+</article>{% empty %}<div class="card empty-state"><h2 class="h5">No applications recorded</h2><p>Your existing plans remain available in My plans. You can browse current offers to apply again.</p><a href="{% url 'schemes:customer_plans' %}">My plans</a></div>{% endfor %}</div>
+{% include 'schemes/includes/pagination.html' %}
+{% endblock %}

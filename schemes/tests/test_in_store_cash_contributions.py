@@ -192,8 +192,8 @@ class InStoreCashContributionTests(TestCase):
         self.assertContains(response, "In-store cash received today")
         self.assertContains(response, "Razorpay captured today")
         self.assertContains(response, "Total verified today")
-        self.assertContains(response, "₹4000.00")
-        self.assertContains(response, "₹4500.00")
+        self.assertContains(response, "₹4,000.00")
+        self.assertContains(response, "₹4,500.00")
         self.assertNotContains(response, ">Cash received today<")
 
     def test_submission_token_is_idempotent_and_cannot_be_reused_differently(self):

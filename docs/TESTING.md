@@ -1,5 +1,142 @@
 # Testing
 
+## Release rehearsal and stakeholder task protocol (22 October 2026)
+
+Run the opt-in synthetic local drill described in PRODUCTION_DEPLOYMENT.md:
+
+```powershell
+uv --cache-dir .uv-cache run --no-sync --env-file .env python -m schemes.rehearse_workflow_release --synthetic-local
+```
+
+The drill creates a pre-conversion synthetic baseline at accounts.0006 / schemes.0020 /
+pages.0001, dumps it, restores a fresh database and applies the current pending migrations.
+It compares every legacy identity/registration/enrolment and financial row before/after the
+upgrade, checks INR/gold/silver separately, reads restored owner/customer/history pages and
+four owner fragments, and verifies permissions/no financial writes on reads. It then exercises
+changed-term rejection, renewed confirmation, idempotent coordinated approval, failed-mail
+recovery, replacement invitation, activation and continuation without inventing first payment.
+Five existing integrity commands must pass. CLI guards reject non-local/option-overridden
+connections and unsupported arguments before creating any database. Run the guards and relevant
+application/activation/audit regressions with schemes.tests.test_release_rehearsal.
+
+This is a synthetic schema-upgrade rehearsal, not a restored production-backup exercise. It
+uses Django HTTPS test-client requests with DEBUG=False and local static storage; it does not
+prove the built production image, collected manifest, Caddy/edge/log-sink behavior, delivery
+through Postmark, Google OAuth, sandbox capture, JS-disabled browser use or participant usability.
+The earlier responsive browser evidence remains in STATUS.md; no UI changed in this drill.
+
+A preliminary local feedback session is prepared at http://127.0.0.1:8100/ on the owner's
+computer, with fictional owner/customer accounts supplied in the session hand-off. It uses the
+current uncommitted source, not a released image. Record preliminary observations separately
+from exact-image staging acceptance. Source fingerprint and lifecycle details are in the ignored
+.uv-cache/usability-session.json, with no credentials added to canonical documentation. The
+preview remains active for participant review until its stop file or eight-hour limit; emails
+stay in memory, server-side external connections are blocked and Google sign-in is disabled.
+Use the existing customer tasks first, then sign out and use the owner tasks. Record completed /
+help needed / not completed plus confusion. On 22 October 2026 the owner reported testing
+both owner and customer roles locally and being satisfied. Task-level timings, device details,
+wrong-turn counts and independent customer/Tamil observations were not supplied and are not
+inferred. This records local stakeholder acceptance; external staging/provider checks remain open.
+
+To stop this session and allow its normal cleanup, run from the project directory:
+
+```powershell
+.\.venv\Scripts\python.exe -c "import json; from pathlib import Path; s=json.loads(Path('.uv-cache/usability-session.json').read_text(encoding='utf-8')); Path(s['stop_file']).write_text('stop',encoding='utf-8')"
+```
+
+Confirm PREVIEW_DATABASE_REMOVED in .uv-cache/usability-preview.log before considering cleanup
+complete. This local exploratory session does not close external staging/provider acceptance.
+
+Before participant testing, record the staging hostname, exact candidate revision/image digest,
+approved sanitized backup origin/time, migration baseline/result, reviewer/date, device/browser,
+feature flags and Test/provider isolation. Use synthetic accounts and fixture receipts. Do not
+use live money, real identity details, or send private tokens to notes/analytics. Keep any setup
+credential hand-off outside shared notes. The owner supplies approved business copy and any
+Tamil reviewer; no response window, benefit or unreviewed translation may be invented.
+
+Give these tasks without describing the menu path. Observe rather than coach; record help
+needed and confusion even when the final task is completed. Sandbox workflow steps requiring
+terms, credentials or financial actions are performed by the participant under the applicable
+confirmation policy, not automatically by a browser agent.
+
+| Role | Task | Acceptance evidence to record |
+| --- | --- | --- |
+| Prospective customer | Compare plans on a phone and choose one | Explains amount rule, exact grade and duration from the shown offer; understands application versus approval; selected preferences survive continuation. |
+| Applicant | Verify email, resume progress and finish required details | Finds the current stage, next action and supplied support details; explains renewed confirmation after a material offer change. |
+| Approved customer | Activate, sign in and find the approved plan | Continues to that plan; distinguishes Test checkout, future/paused availability and pending confirmation from received payment. Uses recovery guidance for expired setup access. |
+| Existing customer | Find a receipt/statement, return to the plan and apply again | Finds recorded evidence and Test/practice labels; navigates back without losing customer context; held profile details are reused appropriately. |
+| Customer | Explain one unresolved payment | Finds recorded status/support and understands why another payment must not be assumed necessary while confirmation is pending. |
+| Owner | Start the day and find a customer/application | Uses Today readiness/exceptions, scoped search and stage counts; can return from review with the same search/filter context. |
+| Owner | Review an application and changed terms | Identifies contact verification, identity evidence, agreement snapshot and need for renewed confirmation; sees one coordinated action without losing separate audit evidence. |
+| Owner | Inspect financial exceptions and export payment records | Distinguishes exception records from unique payments; selected customer/method/mode/date and exported scope agree; separates real received, Test/practice and corrections. |
+| Owner | Review customer privacy and documents | Finds exact-customer privacy history, review and return; understands that viewing does not contain/delete an account or change financial history. |
+| Both | Recover from empty/invalid filters, a failed read and expired session | Retains usable controls and correct scope; sees readable guidance; normal navigation works with JavaScript disabled on staging. |
+
+Use one row per observed task in the acceptance record: scenario code, role, device/browser,
+completed / completed with help / not completed, elapsed time if observed, wrong turns,
+misunderstanding, severity, follow-up issue and retest result. Use aggregate counts and scenario
+codes, not names, emails, customer IDs, private links or payment references. Do not fill these
+fields with automated-test results. Customer/owner tasks and staging-specific checks remain
+unaccepted until actual observations are recorded and material confusion is resolved.
+
+## Exact local image verification (22 October 2026)
+
+After the owner accepted both local roles, the unchanged production Dockerfile/lockfile built
+from the accepted source fingerprint. The local candidate passed the synthetic predecessor
+schema seed, actual PostgreSQL dump/restore and pending upgrade in containers. The app used
+its default app user with read-only root, dropped capabilities, no-new-privileges and a /tmp
+tmpfs. The network was internal-only and no ports were published; all resources were removed.
+Existing rehearsal selectors/services checked historical rows, independent cash/gold/silver
+liabilities, old customer access, owner fragment/permission behavior, new application terms,
+retry-safe approval and recoverable activation/continuation. Production static manifest lookup,
+Gunicorn health/ready, health/live and hashed static HTTP responses passed. Provider journeys
+used in-memory mail; a separate dummy SMTP/R2 config check is not external-provider acceptance.
+See STATUS.md for source/image identity and the final full-suite result. No customer/owner UI
+changed after the accepted preview, and no additional participant results are inferred.
+
+## Workflow refinement and HTMX acceptance (22 October 2026)
+
+Run the serial full suite, schemes.tests.test_workflow_refinement and
+schemes.tests.test_audit_completion. Relevant existing
+coverage includes owner_workspace, payment_presentation, in_store_cash_contributions,
+metal_only_boundary, metal_views, redemptions, documents, views, reminders and accounts
+activation_continuation / plan_applications / public registration and logging protections.
+New regressions verify shared list/CSV scope and export exclusions, fail-closed invalid
+filters, separate Live/Test totals, exact-payment/customer intersection, pending cash GET
+without financial/provider effects, combined applicant search, allowlisted review return,
+fragment authorization/cache/history-restore/login behavior, customer document/application
+isolation, bounded histories, one primary pending-payment action and private-query redaction.
+INR grouping retains two-place money/four-place rates and stored financial precision.
+Remaining-audit tests cover stage counts with search/customer/type scope and linked-record
+deduplication; application/payment/exception full-page/fragment parity and fallback; CSV/totals/
+errors; category/order and fixed-page exceptions; scoped privacy history/review context; six
+milestones, changed terms, approved snapshots, Test/live separation and a showroom-cash
+correction through financial services; role-aware print navigation and Test/practice labels.
+Provider/audit/financial writes are checked absent on reads.
+
+Inspect desktop 1440x1000/mobile 390x844 in an isolated synthetic preview. Check drawer,
+role links, customer sections/documents, applicant filters/review return, clear payment scope,
+blocked cash entry, contact tel/autofill/month units, optional message, error focus, protected
+progress, Home vs Plans, receipts/statements and status check time vs payment receipt time.
+Use invalid empty forms for error inspection; do not submit terms/approvals/payments or
+new credentials/Google connections. Normal full-page/GET regression requests verify fallback
+without executing JavaScript. Browser checks cover partial search/pagination, focus after
+replacement and status refresh. A preview-only 503 responder verifies prior-result retention
+and visible retry guidance, without changing application production code or contacting a
+provider. Full login recovery must replace the page, not appear inside a results panel.
+
+Node syntax checks and Django checks/migration consistency/static dry-run are required.
+The official HTMX 2.0.11 SHA-384 matches the vendored bytes and the script SRI; license is
+included. Caddy validation runs locally with networking disabled, then the exact prepared
+filters are exercised with a loopback responder and synthetic query/Referer/HX-Current-URL.
+The accepted access record retains a masked IP, /scheme/owner/customers/?[REDACTED] and
+status 200, with no fixture query/header values. Production/external-sink validation still
+belongs to approved staging/release. See STATUS.md for the final counts and screenshot proof.
+No claim of actual screen-reader certification, participant testing or conversion lift.
+Synthetic fixture full/fragment HTML sizes: Applications 12,058/5,422 bytes; Payments
+12,782/6,152 bytes; Exceptions 8,266/1,634 bytes. This measures HTML transfer size, not latency
+or task completion. See STATUS.md for final regression results.
+
 ## Customer conversion Phase 2
 
 Run `schemes.tests.test_owner_workspace`, `schemes.tests.test_views`,
@@ -275,3 +412,28 @@ agreement, login and verified payment; the reviewer confirms accurate financial 
 consent language, mobile fit and no untranslated essential steps. Resolve observed
 confusion and obtain owner language review before any translation rollout. This phase
 prepares the protocol; participant testing and translation publication remain follow-up.
+
+## Customer and owner workflow audit — 22 October 2026
+
+Qualitative browser inspection of the committed local candidate used Chrome at
+1440x1000 and 390x844 with isolated synthetic PostgreSQL, in-memory email and dummy
+Razorpay Test configuration. Scope/findings, proposed organization and the optional
+HTMX pilot are recorded in
+[Future work](FUTURE_WORK.md#browser-workflow-audit--22-october-2026), `FW-UX-004`/`005`.
+Thirty customer fixtures exercised the existing 25-record pagination: search returned
+26 matching records and page two retained the query. Recorded mobile document widths
+for intake, customer dashboard and owner Today were 375/375px; long stacked content
+remains a usability finding. No provider/browser timing is presented as performance
+evidence and no participant or conversion results are claimed.
+
+Inspection used existing synthetic password login, GET forms/navigation/search and
+the existing protected progress-access POST. It did not submit approval, payment,
+rate publication, cash recording/correction, invitation resend, account deletion or
+new credentials. Service-created financial fixtures were confined to the disposable
+audit database. Saved screenshots include `.uv-cache/audit-customer-desktop.png`,
+`audit-customer-mobile.png`, `audit-owner-today-desktop.png`,
+`audit-owner-today-mobile.png`, `audit-owner-payments-mobile.png` and
+`audit-progress-mobile.png` (all under `.uv-cache`). The audit server/database was
+removed, viewport reset and temporary tab closed. No application code or production
+configuration changed; this does not replace regression tests for a future UI/HTMX
+implementation or a complete keyboard/screen-reader/accessibility acceptance run.

@@ -9,7 +9,7 @@
   <div class="card auth-card text-center">
     <p class="page-eyebrow">Account</p>
     <h1>Sign out?</h1>
-    <p class="text-secondary">You will need to enter your credentials to access your schemes again.</p>
+    <p class="text-secondary">You will need to enter your credentials to access your plans again.</p>
     <form method="post" action="{% url 'account_logout' %}">
       {% csrf_token %}
       {{ form|crispy }}

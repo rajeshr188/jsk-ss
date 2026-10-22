@@ -2,17 +2,14 @@
 {% block title %}Customers | Jai Sri Krishna Jewellery{% endblock %}
 {% block content %}
 <div class="page-header"><div><p class="page-eyebrow">Owner workspace</p><h1>Customers</h1><p class="page-subtitle">Find the customer, then continue into their applications, agreements or payments.</p></div><div class="page-actions"><a class="btn btn-outline-dark" href="{% url 'schemes:owner_applications' %}">Applications</a><a class="btn btn-jsk" href="{% url 'schemes:customer_add' %}">Add customer</a></div></div>
-<form method="get" class="card card-body mb-4" role="search">
+<section id="customer-search-region" hx-sync="this:replace">
+<form method="get" hx-get="{% url 'schemes:customer_list' %}" hx-target="#customer-results" hx-swap="outerHTML" hx-replace-url="true" hx-indicator="#customer-loading" class="card card-body mb-4" role="search">
   <label class="form-label" for="customer-search">Name, email, mobile, customer number or scheme number</label>
-  <div class="d-flex flex-column flex-sm-row gap-2"><input class="form-control" id="customer-search" name="q" type="search" maxlength="100" value="{{ search }}"><button class="btn btn-jsk" type="submit">Search customers</button>{% if search %}<a class="btn btn-outline-dark" href="{% url 'schemes:customer_list' %}">Clear</a>{% endif %}</div>
-</form>
-<div class="d-grid gap-3">
-{% for customer in customers %}
-<article class="card"><div class="card-body d-flex flex-column flex-md-row justify-content-between gap-3">
-  <div class="owner-queue-copy"><h2 class="h5 mb-1">{{ customer.full_name }}</h2><p class="small text-secondary mb-1">{{ customer.customer_number }} · {{ customer.mobile_number }}<br>{{ customer.email }}</p><p class="mb-0">{{ customer.scheme_account_count }} agreement{{ customer.scheme_account_count|pluralize }}{% if not customer.user.is_active %} · Login inactive{% endif %}</p></div>
-  <div class="align-self-md-center"><a class="btn btn-outline-dark" href="{% url 'schemes:customer_detail' customer.pk %}">View customer</a></div>
-</div></article>
-{% empty %}<div class="card empty-state"><h2 class="h5">{% if search %}No matching customers{% else %}No customers yet{% endif %}</h2><p class="mb-0">{% if search %}Try another name, email, mobile or record number.{% else %}Approved registrations and owner-created profiles appear here.{% endif %}</p></div>{% endfor %}
-</div>
-{% include 'schemes/includes/pagination.html' %}
+  <div class="d-flex flex-column flex-sm-row gap-2"><input class="form-control" id="customer-search" name="q" type="search" maxlength="100" value="{{ search }}" hx-get="{% url 'schemes:customer_list' %}" hx-trigger="input changed delay:400ms, search" hx-include="closest form"><button class="btn btn-jsk" type="submit">Search customers</button><a class="btn btn-outline-dark" href="{% url 'schemes:customer_list' %}">Clear</a></div>
+<span class="small htmx-indicator" id="customer-loading" role="status">Searching&hellip;</span>
+</form><p class="alert alert-warning enhancement-error" role="alert" data-read-error></p>
+{% include 'schemes/includes/customer_results.html' %}
+</section>
 {% endblock %}
+{% block enhancements_head %}{% include 'includes/read_enhancement_config.html' %}{% endblock %}
+{% block enhancements %}{% include 'includes/read_enhancement.html' %}{% endblock %}

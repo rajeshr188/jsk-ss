@@ -184,7 +184,7 @@ class OwnerWorkspaceTests(TestCase):
         review = self.client.get(reverse("schemes:owner_enrolment_request_detail", args=[request_record.pk]))
         self.assertContains(review, "Create savings agreement")
         self.assertContains(review, "current_terms_confirmed")
-        self.assertContains(review, "Minimum ₹100.00; maximum ₹10000.00")
+        self.assertContains(review, "Minimum ₹100.00; maximum ₹10,000.00")
         self.assertFalse(SchemeAccount.objects.exists())
         self.customer.user.is_active = False
         self.customer.user.save(update_fields=["is_active"])

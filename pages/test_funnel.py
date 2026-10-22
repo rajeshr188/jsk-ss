@@ -35,7 +35,7 @@ class PublicFunnelTests(TestCase):
             self.assertContains(response, "Share your contact details and preferences")
         else:
             self.assertContains(response, "After approval and login setup")
-        self.assertContains(response, "₹1000.00")
+        self.assertContains(response, "₹1,000.00")
         self.assertTrue(response["Cache-Control"].find("no-store") >= 0)
         self.assertEqual(PublicFunnelDailyCount.objects.get(step="SELECTED").count, 1)
         self.assertEqual(PublicFunnelDailyCount.objects.get(step="APPLICATION").count, 1)

@@ -213,6 +213,7 @@ TEMPLATES = [
                 "accounts.context_processors.public_customer_registration",
                 "accounts.context_processors.customer_google_login",
                 "accounts.context_processors.customer_account_deletion",
+                "schemes.navigation.workspace_context",
                 "blog.context_processors.public_blog_navigation",
                 "catalog.context_processors.public_catalogue_navigation",
                 "pages.context_processors.pwa",

@@ -1,4 +1,5 @@
 {% extends '_base.html' %}
+{% load workspace %}
 
 {% block title %}Receipt {{ receipt.receipt_number }} | Jai Sri Krishna Jewellery{% endblock %}
 
@@ -14,12 +15,13 @@
 
 {% block content %}
 {% if user.is_superuser or user.role == 'OWNER' %}{% include 'schemes/includes/customer_context.html' with customer=receipt.contribution.scheme_account.customer scheme_account=receipt.contribution.scheme_account %}{% endif %}
-<div class="d-flex justify-content-end mb-3 d-print-none"><button class="btn btn-jsk" type="button" onclick="window.print()">Print receipt</button></div>
+{% include 'schemes/includes/document_navigation.html' with document_account=receipt.contribution.scheme_account print_label='Print receipt' %}
 <article class="card receipt-document"><div class="card-body p-4 p-md-5">
   <div class="text-center border-bottom pb-3 mb-4">
     <h1 class="h2 mb-1">Jai Sri Krishna Jewellery</h1>
     <p class="text-muted mb-0">Savings contribution acknowledgement — not a tax invoice</p>
   </div>
+  {% if receipt.contribution.gateway_mode == 'test' %}<div class="alert alert-warning">Test payment acknowledgement &mdash; no live payment. This record does not establish money collected.</div>{% elif receipt.contribution.payment_gateway == 'mock' %}<div class="alert alert-warning">Practice payment acknowledgement &mdash; no money collected.</div>{% endif %}
   {% if receipt.contribution.status == 'REVERSED' %}
   <div class="alert alert-secondary">
     <strong>Reversed financial record.</strong> This receipt remains preserved, but its metal entitlement is no longer part of the active scheme balance.<br>
@@ -34,7 +36,7 @@
     <dt class="col-sm-4">Customer</dt><dd class="col-sm-8">{{ receipt.contribution.scheme_account.customer.full_name }} ({{ receipt.contribution.scheme_account.customer.customer_number }})</dd>
     <dt class="col-sm-4">Scheme number</dt><dd class="col-sm-8">{{ receipt.contribution.scheme_account.scheme_number }}</dd>
     <dt class="col-sm-4">Entitlement</dt><dd class="col-sm-8">{{ receipt.contribution.scheme_account.entitlement_name }}</dd>
-    <dt class="col-sm-4">Amount received</dt><dd class="col-sm-8 fw-semibold">₹{{ receipt.contribution.amount|floatformat:2 }}</dd>
+    <dt class="col-sm-4">{% if receipt.contribution.gateway_mode == "test" or receipt.contribution.payment_gateway == "mock" %}Recorded amount{% else %}Amount received{% endif %}</dt><dd class="col-sm-8 fw-semibold">₹{{ receipt.contribution.amount|inr }}</dd>
     <dt class="col-sm-4">Payment reference</dt><dd class="col-sm-8">{{ receipt.contribution.gateway_reference }}</dd>
     <dt class="col-sm-4">Payment method</dt><dd class="col-sm-8">{{ receipt.contribution.payment_method_display }}</dd>
     {% if receipt.contribution.cash_receipt %}
@@ -47,7 +49,7 @@
     <h2 class="h5">Metal allocation</h2>
     <dl class="row mb-0">
       <dt class="col-sm-4">Metal</dt><dd class="col-sm-8">{{ receipt.allocation.get_metal_display }}</dd>
-      <dt class="col-sm-4">Scheme Rate</dt><dd class="col-sm-8">₹{{ receipt.allocation.scheme_rate.rate_per_gram|floatformat:4 }} per g</dd>
+      <dt class="col-sm-4">Scheme Rate</dt><dd class="col-sm-8">₹{{ receipt.allocation.scheme_rate.rate_per_gram|inr:4 }} per g</dd>
       <dt class="col-sm-4">Quantity allocated</dt><dd class="col-sm-8 fw-semibold">{{ receipt.allocation.quantity|floatformat:3 }} g {{ receipt.allocation.metal_grade.display_name }}</dd>
     </dl>
   </div>

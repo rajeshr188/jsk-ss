@@ -1,22 +1,25 @@
 {% extends '_base.html' %}
+{% load workspace %}
 
 {% block title %}{{ customer.full_name }} | Jai Sri Krishna Jewellery{% endblock %}
 
 {% block content %}
 {% include 'schemes/includes/customer_context.html' %}
 <div class="page-header">
-  <div><p class="page-eyebrow">Customer profile</p><h1>{{ customer.full_name }}</h1><div class="page-subtitle">{{ customer.customer_number }}</div></div>
+  <div><p class="page-eyebrow">Customer profile</p><h1>Customer record</h1><div class="page-subtitle">{{ customer.customer_number }}</div></div>
   <div class="page-actions"><a class="btn btn-jsk" href="{% url 'schemes:customer_enroll' customer.pk %}">Enrol customer</a></div>
 </div>
 
+{% if section == "summary" %}
 <div class="card mb-4"><div class="card-body p-4">
   <dl class="row mb-0">
-    <dt class="col-sm-3">Email</dt><dd class="col-sm-9">{{ customer.email }}</dd>
-    <dt class="col-sm-3">Mobile</dt><dd class="col-sm-9">{{ customer.mobile_number }}</dd>
+    <dt class="col-sm-3">Agreements</dt><dd class="col-sm-9">{{ customer.scheme_account_count }} &middot; <a href="?section=plans">View plans</a></dd>
     <dt class="col-sm-3">Address</dt><dd class="col-sm-9">{{ customer.address|default:'—'|linebreaksbr }}</dd>
   </dl>
 </div></div>
 
+{% endif %}
+{% if section == "access" %}
 <div class="card mb-4"><div class="card-body p-4">
   <div class="d-flex flex-column flex-md-row justify-content-between gap-3">
     <div>
@@ -42,17 +45,21 @@
   </div>
 </div></div>
 
-<div class="section-heading"><div><h2>Scheme accounts</h2><p>Agreement terms and current lifecycle status.</p></div></div>
+<section aria-labelledby="customer-privacy-title" class="mb-4"><h2 class="h4" id="customer-privacy-title">Account privacy requests</h2><p class="small text-secondary">Requests linked to this customer. Review identity, access, settlement and retention in the existing privacy workflow; opening this section changes nothing.</p>
+{% if customer_account_deletion_enabled %}<div class="list-group">{% for item in privacy_page %}<a class="list-group-item list-group-item-action" href="{% url 'customer_account_deletion_detail' item.pk %}"><strong>{{ item.get_status_display }}</strong><span class="d-block small">Requested {{ item.requested_at|date:'d M Y, g:i A' }}{% if item.verified_at %} &middot; Verified {{ item.verified_at|date:'d M Y' }}{% else %} &middot; Verification not recorded{% endif %}{% if item.owner_review_due_at %} &middot; Review due {{ item.owner_review_due_at|date:'d M Y' }}{% endif %}</span>Review request</a>{% empty %}<div class="card card-body"><p class="mb-0">No account privacy requests are linked to this customer. Their applications, agreements and recorded payments remain in the corresponding sections above.</p></div>{% endfor %}</div>{% include 'schemes/includes/pagination.html' with page_obj=privacy_page page_param='privacy_page' %}{% else %}<p>Online account-deletion requests are currently unavailable. Existing records are retained.</p>{% endif %}</section>
+{% endif %}
+{% if section == "plans" or section == "documents" %}
+<div class="section-heading"><div><h2>Plan agreements</h2><p>Agreement terms and current lifecycle status.</p></div></div>
 <div class="row g-3">
-  {% for account in customer.scheme_accounts.all %}
+  {% for account in page_obj.object_list %}
   <div class="col-12 col-lg-6"><article class="card stat-card {% if account.savings_mode == 'CASH' %}stat-card--cash{% elif account.savings_mode == 'GOLD' %}stat-card--gold{% else %}stat-card--silver{% endif %} h-100"><div class="card-body p-4">
     <div class="d-flex justify-content-between gap-3"><div><p class="page-eyebrow mb-1">{{ account.entitlement_name }}</p><h3 class="h5 mb-1">{{ account.scheme_number }}</h3></div><span class="badge text-bg-secondary align-self-start">{{ account.effective_status_label }}</span></div>
     <div class="mt-3">{{ account.plan.name }}</div>
-    <small class="text-secondary">Started {{ account.start_date }} · eligible {{ account.eligible_from }} · {{ account.agreed_months }} months</small>
+    <small class="text-secondary">Started {{ account.start_date|date:"d M Y" }} · eligible {{ account.eligible_from|date:"d M Y" }} · {{ account.agreed_months }} months</small>
     {% if account.savings_mode == 'CASH' and not cash_scheme_activity_enabled %}<div class="alert alert-secondary small mt-3 mb-0">Legacy record; new cash contributions are unavailable.</div>{% endif %}
     <div class="mt-3 d-flex flex-wrap gap-2">
       <a class="btn btn-sm btn-outline-dark" href="{% url 'schemes:scheme_statement' account.scheme_number %}">View statement</a>
-      {% if in_store_cash_enabled and account.savings_mode != 'CASH' and account.status != 'REDEEMED' %}
+      {% if section == 'plans' and in_store_cash_enabled and account.savings_mode != 'CASH' and account.status != 'REDEEMED' %}
       <a class="btn btn-sm btn-jsk" href="{% url 'schemes:in_store_cash_contribution' account.scheme_number %}">Record in-store cash</a>
       {% endif %}
     </div>
@@ -61,4 +68,7 @@
   <div class="col-12"><div class="card empty-state"><h3 class="h5">No scheme accounts yet</h3><p>This customer has a login profile but has not been enrolled in a savings agreement.</p><div><a class="btn btn-jsk" href="{% url 'schemes:customer_enroll' customer.pk %}">Enrol customer</a></div></div></div>
   {% endfor %}
 </div>
+{% include 'schemes/includes/pagination.html' %}
+{% endif %}
+{% if section == 'documents' %}<h2 class="h4 mt-4">Payment acknowledgements</h2><p class="small text-secondary">Recorded payments and preserved corrections; pending attempts have no receipt.</p><div class="list-group">{% for payment in document_receipts %}<a class="list-group-item list-group-item-action" href="{% url 'schemes:contribution_receipt' payment.pk %}">{{ payment.scheme_account.scheme_number }} &middot; ₹{{ payment.amount|inr }} &middot; {{ payment.payment_method_display }} {% if payment.gateway_mode %}{{ payment.get_gateway_mode_display }}{% endif %} &middot; {{ payment.get_status_display }} &middot; {{ payment.paid_at|date:'d M Y' }}</a>{% empty %}<p>No recorded payment acknowledgements.</p>{% endfor %}</div>{% include 'schemes/includes/pagination.html' with page_obj=document_receipts page_param='receipt_page' %}{% endif %}
 {% endblock %}

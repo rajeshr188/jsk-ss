@@ -19,7 +19,9 @@ def redact_sensitive_auth_paths(message):
             lambda match: _redacted_auth_path(match.group(0)),
             redacted,
         )
-    return redacted
+    # Search terms and return destinations can contain private customer identifiers.
+    return re.sub(r'(/(?:scheme|accounts)/[^\s?"<>]*)(?:\?[^\s"<>]*)',
+                  lambda match: match.group(1) + "?[REDACTED]", redacted)
 
 
 def _redacted_auth_path(path):

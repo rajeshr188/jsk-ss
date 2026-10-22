@@ -118,6 +118,30 @@ This is the canonical source for stable business rules.
   terminology/translation review process. Unreviewed translations are not published and
   recorded financial terms, consent versions and support contacts are not invented.
 
+- **UX-006:** Payment-list totals and exports share validated customer, exact-payment,
+  query, status, method, mode and creation-date filters. Invalid filters fail closed.
+  Received Live/cash amounts remain separate from Test/practice. Export exclusions are
+  explicit; pending/failed/closed attempts never become recorded money through UI copy.
+- **UX-007:** Cash-entry GET may explain blockers but cannot create a record or call
+  the provider. Final preview/commit services recheck all financial rules independently.
+  No frontend state or fragment response can establish payment receipt or entitlement.
+- **UX-008:** Read-only fragments preserve existing authentication and scope. Private
+  HTML/history snapshots are never cached by HTMX; expired sessions navigate to login.
+  Normal URLs/forms remain usable. No auto-retry of consequential POSTs, optimistic
+  financial result, private-token enhancement, mixed-grade total or client financial calculation.
+- **UX-009:** Owner review return destinations are bounded, allowlisted local inbox
+  URLs, not arbitrary next URLs. Customer applications use explicit approved identity
+  links; histories/documents use the authenticated customer's FK. Navigation does not
+  confer permissions. Search terms, private URLs and HX-Current-URL are not analytics
+  events and must be redacted from prepared access/application logging.
+
+- **UX-010:** Application milestones derive from saved verification, current unapproved terms,
+  coordinated agreement, usable login and successful real-method payment records. Approved
+  snapshots are not invalidated by later offer edits. Test/practice/pending/failed/abandoned
+  or reversed attempts cannot complete real first payment; print documents label Test/practice.
+  Exact-customer privacy history remains bounded, feature-gated and owner-only. Counts and
+  enhanced filters retain the same scoped selector as ordinary GET.
+
 - **SCH-001:** Historical liabilities remain separated into `CASH` and exact Gold or
   Silver grade dimensions; new production enrolments are limited to explicitly
   offered metal grades.

@@ -1,0 +1,3 @@
+<ol class="application-steps" aria-label="Application stages">
+{% for step in timeline %}<li class="application-step--{{ step.state }}" {% if step.current %}aria-current="step"{% endif %}><span>{{ step.label }}</span> <span class="small">{% if step.state == 'complete' %}Complete{% elif step.current %}Current{% elif step.state == "unavailable" %}Not reached{% else %}Next{% endif %}</span>{% if step.detail %}<p class="small mb-0">{{ step.detail }}</p>{% endif %}</li>{% endfor %}
+</ol>

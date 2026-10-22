@@ -3,8 +3,7 @@
 {% block title %}Exception queue | Jai Sri Krishna Jewellery{% endblock %}
 
 {% block content %}
-<div class="page-header"><div><p class="page-eyebrow">Operational review</p><h1>Exception queue</h1><p class="page-subtitle">Unresolved allocation and payment-reconciliation issues requiring owner review.</p></div></div>
-<h2 class="visually-hidden">Unresolved financial records</h2>
-{% include 'schemes/includes/exception_items.html' %}
-{% include 'schemes/includes/pagination.html' %}
+{% include 'schemes/includes/exception_workspace.html' %}
 {% endblock %}
+{% block enhancements_head %}{% include 'includes/read_enhancement_config.html' %}{% endblock %}
+{% block enhancements %}{% include 'includes/read_enhancement.html' %}{% endblock %}

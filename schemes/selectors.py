@@ -4,7 +4,7 @@ from decimal import ROUND_HALF_UP, Decimal
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.db.models import Case, Count, DecimalField, F, OuterRef, Q, Subquery, Sum, Value, When
+from django.db.models import Case, Count, DecimalField, Exists, F, OuterRef, Q, Subquery, Sum, Value, When
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 
@@ -192,6 +192,8 @@ class StatementEntry:
     restoration: Decimal | None = None
     entitlement_unit: str = ""
     contribution_id: int | None = None
+    payment_label: str = ""
+    practice_record: bool = False
 
 
 @dataclass(frozen=True)
@@ -202,6 +204,10 @@ class SchemeStatement:
     remaining_entitlement: Decimal
     entitlement_unit: str
     cash_bonus: CashBonusSummary | None = None
+
+    @property
+    def includes_practice_activity(self):
+        return any(entry.practice_record for entry in self.entries)
 
 
 def get_customer_scheme_summary(user):
@@ -316,11 +322,80 @@ def get_owner_customers(*, search=""):
     return customers.order_by("full_name", "pk")
 
 
-def get_owner_application_keys(*, focus="attention", kind="all", customer=None, at=None):
+def get_filtered_owner_payments(*, customer=None, contribution_id=None, filters=None):
+    """One read scope shared by on-screen records and the recorded-payment export."""
+    rows = get_owner_contributions()
+    if customer is not None:
+        rows = rows.filter(scheme_account__customer=customer)
+    if contribution_id is not None:
+        rows = rows.filter(pk=contribution_id)
+    values = filters or {}
+    if values.get("q"):
+        value = values["q"]
+        rows = rows.filter(
+            Q(scheme_account__customer__full_name__icontains=value)
+            | Q(scheme_account__customer__email__icontains=value)
+            | Q(scheme_account__customer__customer_number__icontains=value)
+            | Q(scheme_account__scheme_number__icontains=value)
+            | Q(scheme_account__plan__name__icontains=value)
+            | Q(scheme_account__plan__code__icontains=value)
+            | Q(gateway_reference__icontains=value) | Q(gateway_order_id__icontains=value)
+            | Q(cash_receipt__paper_receipt_number__icontains=value)
+        )
+    for field, key in (("status", "status"), ("payment_gateway", "method"), ("gateway_mode", "mode")):
+        if values.get(key):
+            rows = rows.filter(**{field: values[key]})
+    if values.get("start"):
+        rows = rows.filter(created_at__date__gte=values["start"])
+    if values.get("end"):
+        rows = rows.filter(created_at__date__lte=values["end"])
+    return rows.order_by("-created_at", "-pk")
+
+
+def get_payment_scope_summary(rows):
+    return rows.aggregate(
+        record_count=Count("pk"),
+        received_amount=Coalesce(Sum("amount", filter=Q(status__in=SUCCESSFUL_PAYMENT_STATUSES) & (Q(payment_gateway="in_store_cash") | Q(payment_gateway="razorpay", gateway_mode="live"))), Decimal("0.00")),
+        test_amount=Coalesce(Sum("amount", filter=Q(status__in=SUCCESSFUL_PAYMENT_STATUSES) & (Q(payment_gateway="mock") | Q(payment_gateway="razorpay", gateway_mode="test"))), Decimal("0.00")),
+        reversed_amount=Coalesce(Sum("amount", filter=Q(status="REVERSED")), Decimal("0.00")),
+    )
+
+
+def get_cash_entry_blocker(account):
+    """Read-only early guidance. The existing preview/commit services remain authority."""
+    from django.core.exceptions import ValidationError
+    from .services import preview_in_store_cash_contribution
+    pending = Contribution.objects.filter(scheme_account=account, status="PENDING", payment_gateway="razorpay").order_by("created_at", "pk").first()
+    if pending:
+        return {"message": "An online payment is awaiting reconciliation. Resolve that recorded attempt before accepting cash for this plan.", "contribution": pending}
+    try:
+        preview_in_store_cash_contribution(
+            scheme_account=account,
+            amount=account.fixed_amount_snapshot if account.amount_rule_snapshot == "FIXED" else account.minimum_amount_snapshot,
+        )
+    except ValidationError as error:
+        return {"message": " ".join(error.messages), "contribution": None}
+    return None
+
+
+def get_owner_readiness():
+    from .operations import get_payment_availability
+    grades = MetalGrade.objects.filter(
+        Q(plan_offerings__active=True, plan_offerings__plan__active=True, plan_offerings__plan__publicly_listed=True)
+        | Q(scheme_accounts__status="ACTIVE")
+    ).distinct()
+    return [{"grade": grade, "availability": get_payment_availability(metal_grade=grade)} for grade in grades]
+
+
+def get_owner_application_keys(*, focus="attention", kind="all", customer=None, at=None, search=""):
     """Paginate both historical record types in SQL before loading review evidence."""
     at = at or timezone.now()
     registrations = CustomerRegistration.objects.all()
     plans = SchemeEnrolmentRequest.objects.all()
+    if search:
+        search = search.strip()[:100]
+        registrations = registrations.filter(Q(full_name__icontains=search) | Q(email__icontains=search) | Q(mobile_number__icontains=search))
+        plans = plans.filter(Q(customer__full_name__icontains=search) | Q(customer__email__icontains=search) | Q(customer__mobile_number__icontains=search) | Q(customer__customer_number__icontains=search))
     awaiting_details = Q(status="AWAITING_OWNER_APPROVAL", plan_application__completed_at__isnull=True,
                          plan_application__isnull=False, plan_application__expires_at__gt=at,
                          plan_application__progress_delivery_failed_at__isnull=True,
@@ -364,6 +439,32 @@ def get_owner_application_keys(*, focus="attention", kind="all", customer=None, 
     return registrations.union(plans, all=True).order_by(
         "queue_priority", "queue_date", "queue_kind", "pk"
     )
+
+
+def get_owner_application_stage_counts(*, kind="all", customer=None, search="", at=None):
+    # Reuse the exact union/scope rules: a plan application is one queue record,
+    # not its linked registration plus a second synthetic agreement application.
+    at = at or timezone.now()
+    return {focus: get_owner_application_keys(focus=focus, kind=kind, customer=customer,
+                                             search=search, at=at).count()
+            for focus in ("attention", "waiting", "closed", "all")}
+
+
+def get_customer_privacy_requests(customer):
+    return customer.account_deletion_requests.only(
+        "id", "customer_id", "status", "requested_at", "verified_at",
+        "owner_review_due_at", "closed_at",
+    ).order_by("-requested_at", "-pk")
+
+
+def get_recorded_first_payment(account):
+    """Read-only milestone: never infer receipt from checkout or a URL hint."""
+    received = account.contributions.filter(status__in=SUCCESSFUL_PAYMENT_STATUSES)
+    real = received.filter(Q(payment_gateway="in_store_cash") |
+                           Q(payment_gateway="razorpay", gateway_mode=GatewayMode.LIVE)).exists()
+    practice = received.filter(Q(payment_gateway="mock") |
+                               Q(payment_gateway="razorpay", gateway_mode=GatewayMode.TEST)).exists()
+    return {"complete": real, "practice_recorded": practice}
 
 
 @dataclass(frozen=True)
@@ -422,7 +523,7 @@ def get_owner_application_items(keys):
     return tuple(items)
 
 
-def get_owner_exception_keys(*, oldest_first=False):
+def get_owner_exception_keys(*, oldest_first=False, category="all"):
     allocations = Contribution.objects.filter(status=Contribution.Status.PAID_UNALLOCATED).order_by().annotate(
         queue_kind=Value("allocation"),
         queue_date=Coalesce("allocation_attempted_at", "paid_at", "created_at"),
@@ -430,6 +531,10 @@ def get_owner_exception_keys(*, oldest_first=False):
     webhooks = PaymentWebhookEvent.objects.filter(status__in=["FAILED", "REVIEW_REQUIRED"]).order_by().annotate(
         queue_kind=Value("webhook"), queue_date=Coalesce("processed_at", "received_at"),
     ).values("pk", "queue_kind", "queue_date")
+    if category == "allocation":
+        webhooks = webhooks.none()
+    elif category == "webhook":
+        allocations = allocations.none()
     return allocations.union(webhooks, all=True).order_by(
         "queue_date" if oldest_first else "-queue_date", "queue_kind", "pk"
     )
@@ -554,6 +659,18 @@ def get_contribution_history(scheme_account):
     )
 
 
+def get_customer_document_payments(user):
+    return get_owner_contributions().filter(scheme_account__customer__user=user, status__in=RECEIPT_PAYMENT_STATUSES).order_by("-created_at", "-pk")
+
+
+def get_customer_attention_accounts(user):
+    rows = Contribution.objects.filter(scheme_account=OuterRef("pk"))
+    return get_customer_scheme_summary(user).annotate(
+        workspace_received=Exists(rows.filter(status__in=SUCCESSFUL_PAYMENT_STATUSES)),
+        workspace_unresolved=Exists(rows.filter(Q(status="PAID_UNALLOCATED") | Q(status="PENDING", payment_gateway="razorpay"))),
+    ).filter(Q(workspace_received=False) | Q(workspace_unresolved=True)).exclude(status="REDEEMED").order_by("-workspace_unresolved", "start_date", "pk")[:6]
+
+
 def get_customer_payment_availability(scheme_account):
     """Read-only presentation of initiation rules; services still enforce them."""
     # Local import avoids operations -> selectors -> operations at module load.
@@ -622,7 +739,7 @@ def get_customer_plan_next_action(scheme_account, availability=None):
             stage = f"{mode} confirmation pending"
             message = "Check the recorded status before starting another payment. If debited, do not pay again while confirmation is pending."
         return dict(stage=stage, message=message, label="View payment status",
-                    url=reverse("schemes:payment_status", args=[unresolved.pk]), can_pay=False)
+                    url=(reverse("schemes:payment_status", args=[unresolved.pk]) if unresolved.payment_gateway == "razorpay" else history_url), can_pay=False)
     received = contributions.filter(status__in=SUCCESSFUL_PAYMENT_STATUSES).exists()
     real_received = contributions.filter(status__in=SUCCESSFUL_PAYMENT_STATUSES).filter(
         Q(payment_gateway="in_store_cash") | Q(payment_gateway="razorpay", gateway_mode=GatewayMode.LIVE),
@@ -651,10 +768,13 @@ def get_customer_plan_next_action(scheme_account, availability=None):
                 label=label, url=reverse("schemes:pay_contribution", args=[scheme_account.scheme_number]), can_pay=True)
 
 
-def get_customer_request_progress(user, limit=3):
+def get_customer_request_progress(user, limit=3, attention_only=False):
     from django.urls import reverse
     from .services import enrolment_request_offer_is_current
-    requests = get_customer_enrolment_requests(user).annotate(
+    requests = get_customer_enrolment_requests(user)
+    if attention_only:
+        requests = requests.filter(status=SchemeEnrolmentRequest.Status.PENDING_OWNER_REVIEW)
+    requests = requests.annotate(
         priority=Case(When(status=SchemeEnrolmentRequest.Status.PENDING_OWNER_REVIEW, then=Value(0)), default=Value(1)),
     ).order_by("priority", "-created_at", "-pk")[:limit]
     result = []
@@ -986,6 +1106,9 @@ def get_scheme_statement(scheme_account):
                 metal_allocation=allocation.quantity if allocation else None,
                 entitlement_unit=unit,
                 contribution_id=contribution.pk,
+                payment_label=("Test payment - no live payment" if contribution.gateway_mode == GatewayMode.TEST else
+                               "Practice payment - no money collected" if contribution.payment_gateway == "mock" else contribution.payment_method_display),
+                practice_record=(contribution.gateway_mode == GatewayMode.TEST or contribution.payment_gateway == "mock"),
             )
         )
         if contribution.status == Contribution.Status.REVERSED:

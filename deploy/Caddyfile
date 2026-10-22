@@ -14,6 +14,9 @@ jaishrikrishnajewellery.com {
 			request>remote_ip ip_mask 24 48
 			request>client_ip ip_mask 24 48
 			request>headers>User-Agent delete
+			request>headers>Hx-Current-Url delete
+			request>headers>Referer delete
+			request>uri regexp "[?].*" "?[REDACTED]"
 			wrap json
 		}
 	}

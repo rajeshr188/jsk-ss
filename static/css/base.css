@@ -1955,3 +1955,60 @@ dl.row dt {
   .owner-records-table td[data-label]::before { content: attr(data-label); display: block; font-size: .8rem; font-weight: 600; color: var(--bs-secondary-color); margin-bottom: .2rem; }
   .owner-records-table .btn { min-height: 44px; display: inline-flex; align-items: center; }
 }
+
+/* Task-focused workspaces: compact desktop rail and mobile drawer. */
+.workspace .page-header h1 { font-size: clamp(1.65rem, 3vw, 2.3rem); }
+.workspace .page-header { margin-bottom: 1.5rem; }
+.workspace .section-heading h2 { font-size: 1.3rem; }
+.workspace .card-body.p-4 { padding: 1.25rem !important; }
+.workspace .page-shell { padding-top: 1.5rem; }
+.workspace-nav-link { display: block; padding: .55rem .75rem; color: #442b21; text-decoration: none; border-radius: .4rem; }
+.workspace-nav-link:hover, .workspace-nav-link.active { background: #eee3d1; color: #27170f; }
+.workspace-nav-link.active { font-weight: 700; }
+.workspace-nav-heading { margin: 1.1rem .75rem .3rem; color: #70645c; font-size: .75rem; text-transform: uppercase; letter-spacing: .05em; }
+.workspace-sidebar { --bs-offcanvas-width: 17rem; background: #faf7f1 !important; }
+.workspace-sidebar .offcanvas-body { display: block; padding: .75rem; }
+.customer-navigation { display: flex; flex-wrap: wrap; gap: .25rem; }
+.customer-navigation a { color: #fff; padding: .65rem .7rem; text-decoration: none; border-radius: .4rem; }
+.customer-navigation a:hover, .customer-navigation a[aria-current] { background: #ffffff20; text-decoration: underline; text-underline-offset: .3rem; }
+.customer-tabs { display: flex; flex-wrap: wrap; gap: .35rem; margin-bottom: 1rem; }
+.customer-tabs a { padding: .5rem .75rem; border: 1px solid #d8cbb9; border-radius: .4rem; color: #442b21; text-decoration: none; }
+.customer-tabs a[aria-current] { background: #442b21; color: #fff; }
+.htmx-indicator { display: none; }
+.htmx-request .htmx-indicator, .htmx-request.htmx-indicator { display: inline; }
+.enhancement-error:empty { display: none; }
+.application-steps { display: flex; flex-wrap: wrap; gap: .5rem 1.25rem; padding: .8rem 1rem; background: #f2ece1; border-radius: .5rem; font-size: .875rem; }
+.application-steps li { margin-left: 1.1rem; padding-left: .15rem; }
+.application-steps [aria-current] { font-weight: 700; color: #442b21; }
+@media (min-width: 992px) {
+ .workspace--owner .workspace-sidebar { position: fixed; top: 5rem; bottom: 0; left: 0; width: 15rem; overflow-y: auto; border-right: 1px solid #e5dccc; }
+ .workspace--owner .page-shell, .workspace--owner .footer { margin-left: 15rem; width: calc(100% - 15rem); max-width: none; }
+ .workspace--owner .page-shell { padding-left: 2rem; padding-right: 2rem; }
+}
+@media (max-width: 991.98px) {
+ .workspace--customer .customer-navigation { order: 3; width: 100%; flex-wrap: nowrap; overflow-x: auto; }
+ .workspace--customer .customer-navigation a { white-space: nowrap; }
+ .workspace .brand-name { max-width: 9rem; font-size: .9rem; }
+ .workspace .page-header .page-subtitle { font-size: 1rem; }
+}
+@media print { .workspace--owner .page-shell { margin: 0; width: 100%; } }
+
+@media (max-width: 575.98px) { .workspace--owner .brand-name { display: none; } }
+.attention-item { display: flex; flex-direction: row; align-items: center; justify-content: space-between; gap: 1rem; }
+.attention-item .btn { flex-shrink: 0; }
+.balance-value { font-size: 1.7rem; font-weight: 600; }
+@media (max-width: 575.98px) { .attention-item { flex-direction: column; align-items: stretch; } }
+
+@media (max-width: 991.98px) { .customer-navigation a { flex: 1; display: flex; align-items: center; justify-content: center; font-size: .85rem; padding: .6rem .35rem; min-height: 44px; } .customer-navigation { gap: 0; } }
+
+.owner-customer-context .customer-tabs { align-self: center; }
+
+.application-steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
+.application-steps li { min-width: 0; }
+.application-step--complete > .small { color: #365929; }
+.application-step--current { border-bottom: 2px solid #754729; padding-bottom: .5rem; }
+.application-steps li > span:first-child { display: block; }
+.stage-tabs a { min-height: 44px; }
+@media (max-width: 575.98px) { .application-steps { grid-template-columns: 1fr; } }
+
+@media (max-width: 575.98px) { .stage-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); } .stage-tabs a { display: flex; align-items: center; justify-content: space-between; gap: .25rem; font-size: .85rem; } }

@@ -40,6 +40,7 @@ from .forms import (
     InStoreCashContributionForm,
     InStoreCashContributionReversalForm,
     PaymentOperationsForm,
+    OwnerPaymentFilterForm,
     RedemptionForm,
     RedemptionReversalForm,
     SchemeRatePublishForm,
@@ -71,6 +72,7 @@ from .payments import (
     razorpay_payment_is_enabled,
 )
 from .permissions import owner_required
+from .navigation import fragment_session, private_read_template, application_inbox_url, review_destination
 from .selectors import (
     get_cash_balance,
     get_cash_bonus_summary,
@@ -88,6 +90,10 @@ from .selectors import (
     get_owner_audit_events,
     get_owner_contribution_daily_summary,
     get_owner_contributions,
+    get_filtered_owner_payments,
+    get_payment_scope_summary,
+    get_cash_entry_blocker,
+    get_owner_readiness,
     get_owner_customers,
     get_owner_application_keys,
     get_owner_application_items,
@@ -195,6 +201,7 @@ def owner_dashboard(request):
 @never_cache
 def owner_today(request):
     from accounts.selectors import get_activation_attention
+    from accounts.selectors import customer_account_deletion_queue
     application_keys = get_owner_application_keys()
     exception_keys = get_owner_exception_keys(oldest_first=True)
     activations = get_activation_attention()
@@ -204,6 +211,9 @@ def owner_today(request):
         "exception_count": exception_keys.count(),
         "exceptions": get_owner_exception_queue(keys=exception_keys[:8]),
         "activation_count": activations.count(), "activations": activations[:8],
+        "readiness": get_owner_readiness(),
+        "privacy_due_count": customer_account_deletion_queue().filter(owner_review_due_at__lte=timezone.now()).count() if settings.CUSTOMER_ACCOUNT_DELETION_ENABLED else 0,
+        "settlement_due_count": SchemeAccount.objects.filter(status="ACTIVE", eligible_from__lte=timezone.localdate()).count(),
     })
 
 
@@ -225,6 +235,7 @@ def _owner_customer_filter(request):
     return get_object_or_404(Customer.objects.select_related("user"), pk=int(value))
 
 
+@fragment_session
 @owner_required
 @require_GET
 @never_cache
@@ -236,11 +247,15 @@ def owner_applications(request):
     if kind not in {"all", "registration", "plan"}:
         kind = "all"
     customer = _owner_customer_filter(request)
-    keys = get_owner_application_keys(focus=focus, kind=kind, customer=customer)
+    search = request.GET.get("q", "").strip()[:100]
+    keys = get_owner_application_keys(focus=focus, kind=kind, customer=customer, search=search)
     page = Paginator(keys, 25).get_page(request.GET.get("page"))
-    return render(request, "schemes/owner_applications.html", {
+    from .selectors import get_owner_application_stage_counts
+    counts = get_owner_application_stage_counts(kind=kind, customer=customer, search=search)
+    return render(request, private_read_template(request, "schemes/owner_applications.html", "schemes/includes/application_workspace.html"), {
         "applications": get_owner_application_items(page.object_list),
-        "page_obj": page, "focus": focus, "kind": kind, "customer": customer,
+        "page_obj": page, "focus": focus, "kind": kind, "customer": customer, "search": search,
+        "stage_tabs": [{"key": key, "label": label, "count": counts[key]} for key, label in (("attention", "Needs attention"), ("waiting", "Waiting for customer"), ("closed", "Recorded decisions"), ("all", "All records"))],
     })
 
 
@@ -430,14 +445,19 @@ def reminder_delivery_log(request):
     )
 
 
+@fragment_session
 @owner_required
+@require_GET
 def exception_queue(request):
-    page = Paginator(get_owner_exception_keys(), 25).get_page(request.GET.get("page"))
-    return render(
-        request,
-        "schemes/exception_queue.html",
-        {"exceptions": get_owner_exception_queue(keys=page.object_list), "page_obj": page},
-    )
+    category = request.GET.get("category", "all")
+    if category not in {"all", "allocation", "webhook"}:
+        category = "all"
+    oldest = request.GET.get("order") == "oldest"
+    page = Paginator(get_owner_exception_keys(category=category, oldest_first=oldest), 25).get_page(request.GET.get("page"))
+    return render(request, private_read_template(request, "schemes/exception_queue.html", "schemes/includes/exception_workspace.html"), {
+        "exceptions": get_owner_exception_queue(keys=page.object_list), "page_obj": page,
+        "category": category, "oldest_first": oldest,
+    })
 
 
 @owner_required
@@ -512,6 +532,7 @@ def webhook_recovery(request, event_id):
     )
 
 
+@never_cache
 @login_required
 def contribution_receipt(request, contribution_id):
     contribution = get_object_or_404(
@@ -542,6 +563,7 @@ def contribution_receipt(request, contribution_id):
     )
 
 
+@never_cache
 @login_required
 def scheme_statement(request, scheme_number):
     account = get_object_or_404(
@@ -558,7 +580,11 @@ def scheme_statement(request, scheme_number):
 
 
 @owner_required
+@never_cache
 def contribution_export(request):
+    customer, contributions, filter_form = _owner_payment_scope(request)
+    if not filter_form.is_valid():
+        return HttpResponse("Invalid payment filters. Review the selected dates and filters.", status=400)
     response = HttpResponse(content_type="text/csv; charset=utf-8")
     response["Content-Disposition"] = (
         'attachment; filename="jsk-contributions.csv"'
@@ -588,7 +614,7 @@ def contribution_export(request):
             "cash_reversal_reason_code",
         ]
     )
-    contributions = get_owner_contributions().filter(
+    contributions = contributions.filter(
         status__in=[
             Contribution.Status.PAID,
             Contribution.Status.PAID_UNALLOCATED,
@@ -780,13 +806,15 @@ def redemption_reverse(request, redemption_number):
     )
 
 
+@fragment_session
 @owner_required
+@require_GET
 def customer_list(request):
     search = request.GET.get("q", "").strip()[:100]
     page = Paginator(get_owner_customers(search=search), 25).get_page(request.GET.get("page"))
     return render(
         request,
-        "schemes/customer_list.html",
+        private_read_template(request, "schemes/customer_list.html", "schemes/includes/customer_results.html"),
         {"customers": page.object_list, "page_obj": page, "search": search},
     )
 
@@ -839,20 +867,26 @@ def customer_add(request):
     return render(request, "schemes/customer_form.html", {"form": form})
 
 
+@never_cache
 @owner_required
+@require_GET
 def customer_detail(request, customer_id):
     customer = get_object_or_404(
-        get_owner_customers().prefetch_related(
-            "scheme_accounts__plan", "scheme_accounts__metal_grade"
-        ),
+        get_owner_customers(),
         pk=customer_id,
     )
+    from .selectors import get_customer_document_payments, get_customer_privacy_requests
+    privacy_page = Paginator(get_customer_privacy_requests(customer), 25).get_page(request.GET.get("privacy_page")) if request.GET.get("section") == "access" and settings.CUSTOMER_ACCOUNT_DELETION_ENABLED else None
+    document_receipts = Paginator(get_customer_document_payments(customer.user), 25).get_page(request.GET.get("receipt_page")) if request.GET.get("section") == "documents" else None
+    plans_page = Paginator(customer.scheme_accounts.select_related("plan", "metal_grade").order_by("-start_date", "-pk"), 12).get_page(request.GET.get("page"))
     return render(
         request,
         "schemes/customer_detail.html",
         {
             "customer": customer,
             "latest_invitation": get_latest_customer_invitation(customer),
+            "page_obj": plans_page, "document_receipts": document_receipts, "privacy_page": privacy_page,
+            "section": request.GET.get("section") if request.GET.get("section") in {"plans", "documents", "access"} else "summary",
             "cash_scheme_activity_enabled": cash_scheme_activity_is_enabled(),
             "in_store_cash_enabled": in_store_cash_contributions_are_enabled(),
         },
@@ -1129,7 +1163,7 @@ def _owner_request_decision(request, request_id, status):
                     request,
                     f"{message} The customer notice could not be sent.",
                 )
-            return redirect("schemes:owner_enrolment_request_list")
+            return redirect(application_inbox_url(request)) if request.POST.get("return_to") else redirect("schemes:owner_enrolment_request_list")
     return render(
         request,
         "schemes/owner_enrolment_request_detail.html",
@@ -1204,10 +1238,7 @@ def owner_enrolment_request_enroll(request, request_id):
                     )
             else:
                 messages.info(request, f"Scheme {account.scheme_number} already exists.")
-            return redirect(
-                "schemes:owner_enrolment_request_detail",
-                request_id=request_id,
-            )
+            return redirect(review_destination(request, "schemes:owner_enrolment_request_detail", request_id=request_id))
     return render(
         request,
         "schemes/enrolment_request_conversion.html",
@@ -1280,11 +1311,12 @@ def plan_edit(request, plan_id):
 
 @login_required
 @never_cache
-def my_schemes(request):
+def my_schemes(request, section="home"):
     from .selectors import get_customer_payment_availability, get_customer_plan_next_action, get_customer_request_progress
     from accounts.application_selectors import get_customer_plan_applications
 
-    accounts = list(get_customer_scheme_summary(request.user))
+    account_page = Paginator(get_customer_scheme_summary(request.user), 12).get_page(request.GET.get("page"))
+    accounts = list(account_page.object_list)
     for account in accounts:
         account.payment_availability = get_customer_payment_availability(account)
         account.next_action = get_customer_plan_next_action(account, account.payment_availability)
@@ -1296,13 +1328,18 @@ def my_schemes(request):
     actions = {account.pk: account.next_action for account in accounts}
     for application in applications:
         application.next_action = actions.get(application.scheme_account_id)
+    from .selectors import get_customer_attention_accounts
+    attention = list(get_customer_attention_accounts(request.user))
+    for account in attention:
+        account.next_action = get_customer_plan_next_action(account)
     return render(
         request,
         "schemes/my_schemes.html",
         {
             "scheme_accounts": accounts,
+            "page_obj": account_page, "section": section, "attention_accounts": attention,
             "plan_applications": applications,
-            "application_updates": get_customer_request_progress(request.user),
+            "application_updates": get_customer_request_progress(request.user, attention_only=True),
             "mock_payment_enabled": mock_payment_is_enabled(),
             "payment_gateway_enabled": payment_gateway_is_configured(),
             "cash_scheme_activity_enabled": cash_scheme_activity_is_enabled(),
@@ -1311,6 +1348,26 @@ def my_schemes(request):
             ),
         },
     )
+
+
+@login_required
+@require_GET
+@never_cache
+def customer_applications(request):
+    customer = Customer.objects.filter(user=request.user).first()
+    keys = get_owner_application_keys(focus="all", kind="plan", customer=customer) if customer else SchemeEnrolmentRequest.objects.none()
+    page = Paginator(keys, 25).get_page(request.GET.get("page"))
+    return render(request, "schemes/customer_applications.html", {"applications": get_owner_application_items(page.object_list), "page_obj": page, "enrolment_requests_enabled": settings.CUSTOMER_ENROLMENT_REQUESTS_ENABLED})
+
+
+@login_required
+@require_GET
+@never_cache
+def customer_documents(request):
+    from .selectors import get_customer_document_payments
+    plans = Paginator(get_customer_scheme_summary(request.user), 12).get_page(request.GET.get("plan_page"))
+    receipts = Paginator(get_customer_document_payments(request.user), 25).get_page(request.GET.get("page"))
+    return render(request, "schemes/customer_documents.html", {"plans_page": plans, "page_obj": receipts, "receipts": receipts.object_list})
 
 
 @login_required
@@ -1327,6 +1384,8 @@ def my_scheme_detail(request, scheme_number):
         else None
     )
     payment_availability = get_customer_payment_availability(account)
+    payments_page = Paginator(get_contribution_history(account), 25).get_page(request.GET.get("page"))
+    redemptions_page = Paginator(get_redemption_history(account), 25).get_page(request.GET.get("redemption_page"))
     return render(
         request,
         "schemes/my_scheme_detail.html",
@@ -1335,8 +1394,10 @@ def my_scheme_detail(request, scheme_number):
             "cash_balance": get_cash_balance(account),
             "cash_bonus": get_cash_bonus_summary(account),
             "metal_balance": get_metal_balance(account),
-            "contributions": get_contribution_history(account),
-            "redemptions": get_redemption_history(account),
+            "contributions": payments_page.object_list,
+            "page_obj": payments_page,
+            "redemptions_page": redemptions_page,
+            "redemptions": redemptions_page.object_list,
             "mock_payment_enabled": mock_payment_is_enabled(),
             "payment_gateway_enabled": payment_gateway_is_configured(),
             "razorpay_mode": (
@@ -1630,6 +1691,7 @@ def razorpay_confirm(request, contribution_id):
     )
 
 
+@fragment_session
 @never_cache
 @login_required
 @require_GET
@@ -1641,7 +1703,7 @@ def payment_status(request, contribution_id):
         payment_gateway="razorpay",
         scheme_account__customer__user=request.user,
     )
-    return render(request, "schemes/payment_status.html", {"contribution": contribution})
+    return render(request, private_read_template(request, "schemes/payment_status.html", "schemes/includes/payment_status_panel.html"), {"contribution": contribution, "checked_at": timezone.now()})
 
 
 @csrf_exempt
@@ -1685,34 +1747,55 @@ def razorpay_webhook(request):
     return JsonResponse({"status": event.status.lower()})
 
 
-@owner_required
-def contribution_list(request):
+def _owner_payment_scope(request):
     customer = _owner_customer_filter(request)
-    contributions = get_owner_contributions()
-    if customer:
-        contributions = contributions.filter(scheme_account__customer=customer)
+    form = OwnerPaymentFilterForm(request.GET)
+    rows = get_filtered_owner_payments(customer=customer)
     contribution_id = request.GET.get("contribution", "")
     if contribution_id:
         if not contribution_id.isascii() or not contribution_id.isdecimal() or len(contribution_id) > 10:
             raise Http404
-        contribution = get_object_or_404(contributions, pk=int(contribution_id))
+        contribution = get_object_or_404(rows, pk=int(contribution_id))
         customer = contribution.scheme_account.customer
-        contributions = contributions.filter(pk=contribution.pk)
-    page = Paginator(contributions.order_by("-created_at", "-pk"), 25).get_page(request.GET.get("page"))
+    rows = get_filtered_owner_payments(customer=customer, contribution_id=int(contribution_id) if contribution_id else None, filters=form.cleaned_data if form.is_valid() else None)
+    return customer, rows if form.is_valid() else rows.none(), form
+
+
+@owner_required
+@require_GET
+@never_cache
+def owner_payment_detail(request, contribution_id):
+    contribution = get_object_or_404(get_owner_contributions(), pk=contribution_id)
+    return render(request, "schemes/owner_payment_detail.html", {"contribution": contribution, "customer": contribution.scheme_account.customer})
+
+
+@fragment_session
+@owner_required
+@require_GET
+@never_cache
+def contribution_list(request):
+    customer, contributions, filter_form = _owner_payment_scope(request)
+    page = Paginator(contributions, 25).get_page(request.GET.get("page"))
+    query = request.GET.copy()
+    query.pop("page", None)
+    scoped = bool(customer or any(request.GET.get(key) for key in ("q", "status", "method", "mode", "start", "end", "contribution")))
     return render(
         request,
-        "schemes/contribution_list.html",
+        private_read_template(request, "schemes/contribution_list.html", "schemes/includes/payment_workspace.html"),
         {
             "contributions": page.object_list,
             "page_obj": page,
             "customer": customer,
-            "daily_summary": get_owner_contribution_daily_summary(),
+            "daily_summary": None if scoped else get_owner_contribution_daily_summary(),
+            "scope_summary": get_payment_scope_summary(contributions),
+            "filter_form": filter_form, "export_query": query.urlencode(),
             "in_store_cash_enabled": in_store_cash_contributions_are_enabled(),
         },
     )
 
 
 @owner_required
+@never_cache
 def in_store_cash_contribution(request, scheme_number):
     if not in_store_cash_contributions_are_enabled():
         raise Http404
@@ -1730,6 +1813,7 @@ def in_store_cash_contribution(request, scheme_number):
         initial={"idempotency_key": uuid.uuid4()},
     )
     preview = None
+    cash_blocker = get_cash_entry_blocker(account)
     if request.method == "POST" and form.is_valid():
         action = request.POST.get("action")
         token = str(form.cleaned_data["idempotency_key"])
@@ -1819,6 +1903,7 @@ def in_store_cash_contribution(request, scheme_number):
             "scheme_account": account,
             "form": form,
             "preview": preview,
+            "cash_blocker": cash_blocker,
         },
     )
 

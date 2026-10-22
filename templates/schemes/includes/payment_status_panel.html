@@ -1,0 +1,23 @@
+{% load workspace %}
+<section id="payment-status-panel" hx-history="false" tabindex="-1">
+  {% if contribution.gateway_mode == 'test' %}<p class="badge text-bg-warning">Razorpay Test payment · not a live payment</p>{% elif contribution.payment_gateway == 'mock' %}<p class="badge text-bg-secondary">Practice payment · no money collected</p>{% endif %}
+  <p class="lead">₹{{ contribution.amount|inr }} contribution</p>
+  {% if contribution.status == 'PAID' %}
+  <div class="alert alert-success" role="status"><strong>Payment received.</strong> Your contribution{% if contribution.scheme_account.metal_grade %} and metal credit are{% else %} is{% endif %} recorded.</div>
+  {% elif contribution.status == 'PAID_UNALLOCATED' %}
+  <div class="alert alert-info" role="status"><strong>Payment received. Metal credit is pending.</strong> The showroom can resolve this safely. Do not pay again for this contribution.</div>
+  {% elif contribution.status == 'ABANDONED' %}
+  <div class="alert alert-secondary" role="status"><strong>Checkout closed after review.</strong> This attempt has no recorded contribution credit. Closing checkout does not cancel a provider order. Contact the showroom about any unexpected debit.</div>
+  {% elif contribution.status == 'FAILED' %}
+  <div class="alert alert-warning" role="status"><strong>No verified contribution is recorded for this attempt.</strong> If your bank account was debited, contact the showroom before trying again.</div>
+  {% else %}
+  <div class="alert alert-info" role="status"><strong>Payment confirmation is pending.</strong> Refresh to check the recorded status. If your bank account was debited, do not pay again while confirmation is pending.</div>
+  {% endif %}
+  <div class="d-grid gap-2 mt-3">
+    {% if contribution.status == 'PENDING' or contribution.status == 'PAID_UNALLOCATED' %}<a class="btn btn-jsk" href="{% url 'schemes:payment_status' contribution.pk %}" hx-get="{% url 'schemes:payment_status' contribution.pk %}" hx-target="#payment-status-panel" hx-swap="outerHTML" hx-sync="#payment-status-panel:replace" hx-indicator="#status-loading">Refresh payment status</a>{% endif %}
+    {% if contribution.status == 'PAID' or contribution.status == 'PAID_UNALLOCATED' %}<a class="btn btn-outline-dark" href="{% url 'schemes:contribution_receipt' contribution.pk %}">View receipt</a>{% endif %}
+    <a class="btn btn-outline-dark" href="{% url 'schemes:my_scheme_detail' contribution.scheme_account.scheme_number %}">View my plan</a>
+    <a class="btn btn-outline-dark" href="{% url 'contact' %}">Contact the showroom</a>
+  </div>
+<p class="small text-secondary" role="status">Recorded status checked {{ checked_at|date:'d M Y, g:i:s A' }}. This is the check time, not the time money was received.</p><span class="htmx-indicator small" id="status-loading" role="status">Checking recorded status&hellip;</span><p class="alert alert-warning enhancement-error" role="alert" data-read-error></p>
+</section>

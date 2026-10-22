@@ -1,0 +1,5 @@
+<div class="dropdown ms-lg-auto"><button class="btn btn-outline-light dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">Account</button>
+<ul class="dropdown-menu dropdown-menu-end"><li><span class="dropdown-item-text account-email">{{ user.email }}</span></li><li><a class="dropdown-item" href="{% url 'account_change_password' %}">Change password</a></li>
+{% if customer_google_login_enabled and workspace_customer and not user.is_staff %}<li><a class="dropdown-item" href="{% url 'socialaccount_connections' %}">Manage Google sign-in</a></li>{% endif %}
+{% if customer_account_deletion_enabled and workspace_customer and not user.is_staff %}<li><a class="dropdown-item" href="{% url 'customer_account_deletion_authenticated' %}">Delete account</a></li>{% endif %}
+<li><a class="dropdown-item" href="{% url 'account_logout' %}">Sign out</a></li></ul></div>

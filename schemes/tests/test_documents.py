@@ -152,7 +152,7 @@ class ReceiptAndStatementTests(TestCase):
         )
 
         self.assertContains(response, "24K Gold")
-        self.assertContains(response, "₹12500.0000 per g")
+        self.assertContains(response, "₹12,500.0000 per g")
         self.assertContains(response, "0.800 g 24K Gold")
 
     def test_paid_unallocated_receipt_never_invents_rate_or_quantity(self):

@@ -140,3 +140,19 @@ current consent-version settings, and controlled production verification. This A
 does not enable the feature. SMS OTP, automated identity verification, applicant
 self-service status lookup, and edge challenge products remain separate future
 decisions rather than hidden dependencies of this phase.
+
+## Presentation amendment (22 October 2026)
+
+The approved workflow refinement adds role-specific navigation, bounded applicant search,
+safe filtered inbox return paths, customer Applications/Documents destinations and clearer
+contact/duration/stage guidance. The owner customer workspace groups related records;
+customer Home avoids duplicate payment actions for a converted application/agreement.
+HTMX is limited to read-only owner customer/application/payment/exception filtering and manual
+customer recorded-payment status;
+it does not enhance registration/verification/progress, identity approval, agreement
+conversion or credential setup. Transactional orchestration, renewed material-term consent,
+separate identity/agreement evidence, after-commit notices and recoverable delivery remain
+unchanged. Protected progress now shows six record-derived milestones through real first
+payment; Test/practice and reversed records cannot complete it. Scoped stage counts and
+exact-customer privacy context add no schema or financial mutation. See ARCHITECTURE.md and
+DOMAIN_RULES.md UX-006 through UX-010.

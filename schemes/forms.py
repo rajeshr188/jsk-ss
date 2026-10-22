@@ -6,6 +6,7 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 
 from .models import (
+    Contribution,
     InStoreCashContributionReversal,
     MetalGrade,
     PaymentOperationsControl,
@@ -17,6 +18,26 @@ from .models import (
     SchemeRate,
 )
 from .services import cash_scheme_activity_is_enabled, validate_contribution_allowed
+
+
+class OwnerPaymentFilterForm(forms.Form):
+    q = forms.CharField(label="Customer, plan or payment reference", max_length=100, required=False)
+    status = forms.ChoiceField(label="Status", required=False, choices=[("", "All statuses"), *((value, "Checkout closed after review" if value == "ABANDONED" else label) for value, label in Contribution.Status.choices)])
+    method = forms.ChoiceField(label="Method", required=False, choices=[("", "All methods"), ("razorpay", "Razorpay"), ("in_store_cash", "In-store cash"), ("mock", "Practice")])
+    mode = forms.ChoiceField(label="Online mode", required=False, choices=[("", "All modes"), ("live", "Live"), ("test", "Test")])
+    start = forms.DateField(label="Created from", required=False, widget=forms.DateInput(attrs={"type": "date"}))
+    end = forms.DateField(label="Created through", required=False, widget=forms.DateInput(attrs={"type": "date"}))
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            field.widget.attrs["class"] = "form-select" if isinstance(field.widget, forms.Select) else "form-control"
+
+    def clean(self):
+        values = super().clean()
+        if values.get("start") and values.get("end") and values["end"] < values["start"]:
+            raise forms.ValidationError("The to date must be on or after the from date.")
+        return values
 
 
 class CustomerCreateForm(forms.Form):
@@ -191,7 +212,7 @@ class SchemeEnrolmentRequestForm(forms.Form):
         min_value=Decimal("0.01"),
     )
     requested_months = forms.IntegerField(
-        label="Preferred duration",
+        label="Preferred duration (months)",
         min_value=12,
         help_text="This preference is reviewed before an agreement is created.",
     )

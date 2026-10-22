@@ -1,18 +1,7 @@
 {% extends '_base.html' %}
 {% block title %}Applications | Jai Sri Krishna Jewellery{% endblock %}
 {% block content %}
-<div class="page-header"><div><p class="page-eyebrow">Owner workspace</p><h1>Applications</h1><p class="page-subtitle">Identity and agreement reviews in one inbox. Each retains its own decision and evidence.</p></div><div class="page-actions"><a class="btn btn-outline-dark" href="{% url 'schemes:owner_today' %}">Back to Today</a></div></div>
-{% include 'schemes/includes/customer_context.html' %}
-<form method="get" class="card card-body mb-4">
-  {% if customer %}<input type="hidden" name="customer" value="{{ customer.pk }}">{% endif %}
-  <div class="row g-3 align-items-end">
-    <div class="col-sm-6 col-lg-4"><label class="form-label" for="application-focus">Stage</label><select class="form-select" id="application-focus" name="focus"><option value="attention"{% if focus == 'attention' %} selected{% endif %}>Needs owner attention</option><option value="waiting"{% if focus == 'waiting' %} selected{% endif %}>Waiting for customer verification or details</option><option value="closed"{% if focus == 'closed' %} selected{% endif %}>Recorded decisions</option><option value="all"{% if focus == 'all' %} selected{% endif %}>All records</option></select></div>
-    <div class="col-sm-6 col-lg-4"><label class="form-label" for="application-kind">Review type</label><select class="form-select" id="application-kind" name="kind"><option value="all"{% if kind == 'all' %} selected{% endif %}>Identity and agreement</option><option value="registration"{% if kind == 'registration' %} selected{% endif %}>Identity</option><option value="plan"{% if kind == 'plan' %} selected{% endif %}>Agreement</option></select></div>
-    <div class="col-lg-4 d-flex flex-wrap gap-2"><button class="btn btn-jsk" type="submit">Show applications</button><a class="btn btn-outline-dark" href="{% url 'schemes:owner_applications' %}">Reset</a></div>
-  </div>
-</form>
-<p class="small text-secondary">Verified identity reviews first, then pending agreement reviews and verification recovery. Oldest first within each stage. 25 records per page.</p>
-<h2 class="visually-hidden">Application records</h2>
-{% include 'schemes/includes/application_items.html' %}
-{% include 'schemes/includes/pagination.html' %}
+{% include 'schemes/includes/application_workspace.html' %}
 {% endblock %}
+{% block enhancements_head %}{% include 'includes/read_enhancement_config.html' %}{% endblock %}
+{% block enhancements %}{% include 'includes/read_enhancement.html' %}{% endblock %}

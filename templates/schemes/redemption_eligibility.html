@@ -19,7 +19,7 @@
     <span class="badge text-bg-secondary">{{ accounts|length }}</span>
   </div>
   <p class="small text-muted">{{ description }}</p>
-  <div class="table-responsive">
+  {% if accounts %}<div class="table-responsive">
     <table class="table align-middle">
       <thead><tr><th scope="col">Eligible from</th><th scope="col">Scheme</th><th scope="col">Customer</th><th scope="col">Mode</th><th scope="col">Status</th><th scope="col">Action</th></tr></thead>
       <tbody>
@@ -42,7 +42,7 @@
         {% endfor %}
       </tbody>
     </table>
-  </div>
+  </div>{% else %}<p class="small text-secondary mb-0">No agreements in this category.</p>{% endif %}
 </section>
 {% endfor %}
 {% endblock %}

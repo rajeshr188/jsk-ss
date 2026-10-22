@@ -22,17 +22,17 @@
   <div class="col-lg-5">
     {% if application.status == 'PENDING_EMAIL_VERIFICATION' %}
     <div class="card form-card"><h2 class="h4">Email verification pending</h2><p>The owner cannot approve this request until the applicant verifies the email address.</p>
-      <form method="post" action="{% url 'customer_registration_resend_verification' application.pk %}">{% csrf_token %}<button class="btn btn-outline-dark" type="submit">Send replacement verification</button></form>
+      <form method="post" action="{% url 'customer_registration_resend_verification' application.pk %}">{% csrf_token %}{% if request.GET.return_to or request.POST.return_to %}<input type="hidden" name="return_to" value="{{ application_inbox_url }}">{% endif %}<button class="btn btn-outline-dark" type="submit">Send replacement verification</button></form>
     </div>
     {% elif application.status == 'AWAITING_OWNER_APPROVAL' %}
     <form method="post" action="{% url 'customer_registration_approve' application.pk %}" class="card form-card mb-4" novalidate>
-      {% csrf_token %}<h2 class="h4">Approve</h2>
+      {% csrf_token %}{% if request.GET.return_to or request.POST.return_to %}<input type="hidden" name="return_to" value="{{ application_inbox_url }}">{% endif %}<h2 class="h4">Approve</h2>
       <p class="small text-secondary">Approval creates the customer profile and sends a password-setup invitation. It does not create a scheme.</p>
       {{ approval_form|crispy }}
       <button class="btn btn-jsk" type="submit">Approve and invite</button>
     </form>
     <form method="post" action="{% url 'customer_registration_reject' application.pk %}" class="card form-card" novalidate>
-      {% csrf_token %}<h2 class="h4">Reject</h2>
+      {% csrf_token %}{% if request.GET.return_to or request.POST.return_to %}<input type="hidden" name="return_to" value="{{ application_inbox_url }}">{% endif %}<h2 class="h4">Reject</h2>
       {{ rejection_form|crispy }}
       <button class="btn btn-outline-danger" type="submit">Reject request</button>
     </form>

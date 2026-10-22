@@ -68,3 +68,30 @@ def application_progress(application):
     if not application_terms_current(application):
         return "Confirm current terms", "The offer or requested start date needs a fresh confirmation. Review the current terms below."
     return "Showroom review", "The showroom must verify your contact details and review your application. You can contact the showroom for help."
+
+
+def application_timeline(application):
+    """Coarse milestones under the existing private-access/approved-identity guards."""
+    registration = application.registration
+    approved = bool(application.scheme_account_id)
+    confirmed = bool(application.completed_at) and (approved or application_terms_current(application))
+    active = approved and application.scheme_account.customer.user.is_active and application.scheme_account.customer.user.has_usable_password()
+    payment = {"complete": False, "practice_recorded": False}
+    if approved:
+        from schemes.selectors import get_recorded_first_payment
+        payment = get_recorded_first_payment(application.scheme_account)
+    values = [
+        ("contact", "Contact saved", True, ""),
+        ("email", "Email verified", bool(registration.email_verified_at), ""),
+        ("details", "Details and terms confirmed", confirmed, "Confirm current terms again if the offer changes." if application.completed_at and not confirmed else ""),
+        ("review", "Showroom review", approved, ""),
+        ("login", "Login setup", active, ""),
+        ("payment", "First payment", payment["complete"],
+         "Real payment recorded." if payment["complete"] else
+         "Test/practice recorded; no live first payment." if payment["practice_recorded"] else
+         "Complete only after a recorded Live online or showroom-cash payment."),
+    ]
+    terminal = registration.status in {CustomerRegistration.Status.REJECTED, CustomerRegistration.Status.EXPIRED} or (not approved and application.expires_at <= timezone.now())
+    current = next((key for key, _, done, _ in values if not done), None) if not terminal else None
+    return [{"key": key, "label": label, "state": "complete" if done else "unavailable" if terminal else "current" if key == current else "upcoming",
+             "current": key == current, "detail": detail} for key, label, done, detail in values]

@@ -440,7 +440,7 @@ class RedemptionViewTests(TestCase):
             reverse("schemes:my_scheme_detail", args=[self.account.scheme_number])
         )
         self.assertContains(detail, redemption.redemption_number)
-        self.assertContains(detail, "5000.00")
+        self.assertContains(detail, "5,000.00")
         self.assertNotContains(detail, ">Pay now<")
 
     def test_customer_cannot_access_owner_redemption_views(self):

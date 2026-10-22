@@ -1,4 +1,5 @@
 {% extends '_base.html' %}
+{% load workspace %}
 
 {% block title %}My enrolment requests | Jai Sri Krishna Jewellery{% endblock %}
 
@@ -23,7 +24,7 @@
         <div>
           <p class="page-eyebrow mb-1">{{ enrolment_request.plan_name_snapshot }}</p>
           <h2 class="h5 mb-1">{{ enrolment_request.metal_grade.display_name }}</h2>
-          <div class="text-secondary">Requested {{ enrolment_request.created_at|date:"d M Y, h:i A" }} · ₹{{ enrolment_request.requested_contribution_amount|floatformat:2 }} · {{ enrolment_request.requested_months }} months</div>
+          <div class="text-secondary">Requested {{ enrolment_request.created_at|date:"d M Y, h:i A" }} · ₹{{ enrolment_request.requested_contribution_amount|inr }} · {{ enrolment_request.requested_months }} months</div>
         </div>
         <div class="text-end">
           <span class="badge text-bg-secondary mb-2">{{ enrolment_request.effective_status_label }}</span>

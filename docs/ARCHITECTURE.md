@@ -46,6 +46,46 @@ change existing agreements. A metal account also fixes one immutable `MetalGrade
 changing a plan offering affects only future enrolment. Cash agreements snapshot the
 bonus policy version, percentage, and minimum qualifying duration.
 
+## Workspace presentation refinement (22 October 2026)
+
+Role-specific Django includes provide a persistent owner rail/mobile drawer and a
+customer Home / My plans / Applications / Documents / Help navigation. Owner customer
+context links Summary, Applications, Plans, Payments, Documents and Access & privacy. These links
+are presentation only; existing view/service permissions still authorize every request.
+Customer receipts, applications and histories are scoped through approved identity/FKs,
+never an email match. Agreements page at 12 records and histories/receipts at 25; printed
+statements retain their complete financial evidence. Home highlights unresolved attempts
+and first-payment stages once, with compact plan balances and separate application history.
+
+Payment filters share one validated selector between the list and CSV. Dates mean attempt
+creation dates in the configured business timezone. Selected-record totals cover the entire
+filtered set (not only the current page); Live/cash and Test/practice amounts remain separate.
+CSV still excludes pending/failed/closed attempts and does not imply settlement. Cash-entry
+GET preflight reads existing blockers; preview/commit services retain their independent checks.
+
+Application stage tabs/counts share the scoped union selector and count linked identity/plan
+records once. Access & privacy lists exact-customer privacy requests, 25 per page, with shared
+customer context and a return path from review. Protected progress shows six record-derived
+milestones through login and first payment. Successful Live Razorpay or showroom-cash records
+complete first payment; reversed/Test/practice attempts do not. Legacy agreements acquire no
+fabricated intake history. Print documents label Test/practice without changing liabilities.
+
+The read-only HTMX 2.0.11 pilot enhances owner customer search/pagination, application/payment/
+exception filters and manual customer recorded-status refresh. Local static assets (with upstream license and official SHA-384) use
+existing HTML views/includes, not a JSON API. Only those five screens load HTMX; consequential
+POSTs, private progress/verification/setup and checkout remain normal flows. There is no
+background polling, automatic mutation retry or blanket link boosting. Search debounces and
+replaces older requests; normal forms/URLs work without JavaScript. Filter swaps update the
+whole workspace: results, totals, stage counts, customer context and CSV links together, then
+focus the replacement. These reads never contact a provider. Private responses are
+no-store and vary on fragment/history-restore hints. HX-Request never grants authorization;
+expired fragment sessions use HX-Redirect to the existing login. Full history restoration
+gets a complete page. History snapshots are disabled (hx-history=false, historyCacheSize=0),
+script evaluation/swapping is disabled and requests stay on this origin. No analytics/logging
+of fragment headers, search terms or payment references is added. Caddy strips query strings,
+Referer and Hx-Current-Url; Django redacts private search/return queries. Existing secret-path
+exclusions remain. Prepared proxy changes require the approved deployment procedure.
+
 ## Layers
 
 The Phase 2 owner entry is `schemes:owner_today`; `owner_dashboard` remains the

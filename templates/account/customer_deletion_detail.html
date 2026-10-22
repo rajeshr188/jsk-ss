@@ -2,6 +2,8 @@
 {% load crispy_forms_tags %}
 {% block title %}Review deletion request | Jai Sri Krishna Jewellery{% endblock %}
 {% block content %}
+{% include "schemes/includes/customer_context.html" with customer=deletion_request.customer section="access" %}
+<p><a href="{% url 'schemes:customer_detail' deletion_request.customer_id %}?section=access">Back to this customer's access and privacy</a></p>
 <div class="mb-4"><a href="{% url 'customer_account_deletion_list' %}">← Account deletion requests</a><h1 class="h2 mt-2">Review deletion request</h1></div>
 {% if disposition %}
 <section class="card shadow-sm mb-4" aria-labelledby="disposition-title">

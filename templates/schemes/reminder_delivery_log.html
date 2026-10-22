@@ -14,12 +14,12 @@
 {% if reminders_enabled %}
 <div class="alert alert-success" role="status">Scheduled reminder sending is enabled. Eligibility notices are configured for {{ eligibility_days|join:', ' }} days before the contractual date.</div>
 {% else %}
-<div class="alert alert-warning" role="status">Scheduled reminder sending is disabled. Dry-run review remains available from the management command.</div>
+<div class="alert alert-warning" role="status">Scheduled reminder sending is disabled. Existing delivery records remain available.</div>
 {% endif %}
 
 <div class="alert alert-info" role="note">Accepted by the email provider does not prove that the recipient received or read the message. Reminder processing never changes payments, metal allocations, eligibility, or redemptions.</div>
 
-<div class="table-responsive">
+{% if reminders %}<div class="table-responsive">
   <table class="table align-middle">
     <thead>
       <tr>
@@ -53,5 +53,5 @@
       {% endfor %}
     </tbody>
   </table>
-</div>
+</div>{% else %}<div class="card card-body"><h2 class="h5">No reminder delivery records yet.</h2><p>Records appear when notices are processed. You can still review the underlying agreements and payment issues.</p><div class="d-flex flex-wrap gap-2"><a class="btn btn-outline-dark" href="{% url 'schemes:redemption_eligibility' %}">Review eligibility</a><a class="btn btn-outline-dark" href="{% url 'schemes:exception_queue' %}">Review financial exceptions</a></div></div>{% endif %}
 {% endblock %}

@@ -1,0 +1,18 @@
+{% extends '_base.html' %}
+{% load workspace %}
+{% block title %}Payment record | Jai Sri Krishna Jewellery{% endblock %}
+{% block content %}
+{% include 'schemes/includes/customer_context.html' with scheme_account=contribution.scheme_account %}
+<div class="page-header"><div><p class="page-eyebrow">Payment evidence</p><h1>Payment record</h1><p>{{ contribution.scheme_account.scheme_number }} · {{ contribution.scheme_account.entitlement_name }}</p></div><a class="btn btn-outline-dark" href="{% url 'schemes:contribution_list' %}?customer={{ customer.pk }}">Customer payments</a></div>
+<div class="card card-body"><dl class="row">
+<dt class="col-sm-4">Amount</dt><dd class="col-sm-8">₹{{ contribution.amount|inr }}</dd>
+<dt class="col-sm-4">Method</dt><dd class="col-sm-8">{{ contribution.payment_method_display }}{% if contribution.gateway_mode %} · {{ contribution.get_gateway_mode_display }}{% endif %}</dd>
+<dt class="col-sm-4">Recorded status</dt><dd class="col-sm-8">{% if contribution.status == 'ABANDONED' %}Checkout closed after review{% else %}{{ contribution.get_status_display }}{% endif %}</dd>
+<dt class="col-sm-4">Created</dt><dd class="col-sm-8">{{ contribution.created_at|date:'d M Y, g:i A' }}</dd>
+<dt class="col-sm-4">Payment recorded</dt><dd class="col-sm-8">{{ contribution.paid_at|date:'d M Y, g:i A'|default:'Not confirmed' }}</dd>
+<dt class="col-sm-4">Provider order</dt><dd class="col-sm-8 text-break">{{ contribution.gateway_order_id|default:'Not available' }}</dd>
+<dt class="col-sm-4">Payment reference</dt><dd class="col-sm-8 text-break">{{ contribution.gateway_reference|default:'Not available' }}</dd>
+{% if contribution.allocation_error %}<dt class="col-sm-4">Allocation issue</dt><dd class="col-sm-8">{{ contribution.allocation_error }}</dd>{% endif %}
+</dl><p>Payment and metal credit follow verified server records. An attempt or browser message does not confirm money received.</p>
+<div class="d-flex gap-2 flex-wrap">{% if contribution.status == 'PAID' or contribution.status == 'PAID_UNALLOCATED' or contribution.status == 'REVERSED' %}<a class="btn btn-outline-dark" href="{% url 'schemes:contribution_receipt' contribution.pk %}">View receipt</a>{% endif %}<a class="btn btn-outline-dark" href="{% url 'schemes:contribution_list' %}?contribution={{ contribution.pk }}">Review available recovery actions</a></div></div>
+{% endblock %}

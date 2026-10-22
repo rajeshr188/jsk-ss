@@ -73,7 +73,7 @@ class CustomerPaymentPresentationTests(TestCase):
         owner = user_model.objects.create_user(username="presentation-owner", email="presentation-owner@example.com", role=user_model.Role.OWNER)
         self.client.force_login(owner)
         response = self.client.get(reverse("schemes:contribution_list"))
-        self.assertContains(response, "Checkout closed after review", count=1)
+        self.assertContains(response, '<span class="badge text-bg-secondary">Checkout closed after review</span>', count=1, html=True)
         self.assertNotContains(response, ">Pending</span>")
 
     def test_pending_status_is_read_only_private_and_customer_scoped(self):

@@ -100,6 +100,7 @@ urlpatterns = [
     path("owner/plans/add/", views.plan_add, name="plan_add"),
     path("owner/plans/<int:plan_id>/edit/", views.plan_edit, name="plan_edit"),
     path("owner/contributions/", views.contribution_list, name="contribution_list"),
+    path("owner/contributions/<int:contribution_id>/", views.owner_payment_detail, name="owner_payment_detail"),
     path(
         "owner/schemes/<str:scheme_number>/cash-contribution/",
         views.in_store_cash_contribution,
@@ -126,6 +127,9 @@ urlpatterns = [
         name="scheme_statement",
     ),
     path("mine/", views.my_schemes, name="my_schemes"),
+    path("mine/plans/", views.my_schemes, {"section": "plans"}, name="customer_plans"),
+    path("mine/applications/", views.customer_applications, name="customer_applications"),
+    path("mine/documents/", views.customer_documents, name="customer_documents"),
     path(
         "plans/<int:plan_id>/request/",
         views.scheme_enrolment_request_create,
