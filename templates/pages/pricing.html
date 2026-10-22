@@ -1,85 +1,32 @@
 {% extends '_base.html' %}
-
 {% block title %}Gold and silver savings plans | Jai Sri Krishna Jewellery{% endblock %}
-{% block meta_description %}View active gold and silver savings scheme contribution amounts in INR, frequency, duration, and eligibility terms.{% endblock %}
-
+{% block meta_description %}Compare jewellery savings plans, choose your contribution amount and apply with Jai Sri Krishna Jewellery in Vellore.{% endblock %}
 {% block content %}
-<div class="text-center pricing-header mx-auto mb-5">
-  <p class="page-eyebrow">Gold and silver savings schemes</p>
-  <h1 class="display-4">Savings plans with clear terms</h1>
-  <p class="lead text-secondary">All contributions are paid in INR. Choose an available metal grade when the showroom enrols you; each verified contribution is converted to a recorded quantity of that exact grade.</p>
-</div>
-
-<div class="row g-4">
+<header class="offer-header mb-3 mb-lg-4">
+  <p class="page-eyebrow">Jewellery savings in Vellore</p>
+  <h1>Choose how you want to save</h1>
+  <p class="text-secondary mb-2">Contribute in rupees, build a recorded quantity of gold or silver, and choose jewellery at our showroom under your agreed terms.</p>
+  {% if not user.is_authenticated %}<p class="small mb-0">Already a customer? <a href="{% url 'account_login' %}">Sign in</a>.</p>{% endif %}
+</header>
+<div class="row g-3 g-lg-4">
   {% for plan in plans %}
-  <div class="col-md-6">
-    <article class="card plan-card h-100">
-      <div class="card-body p-4">
-        <p class="page-eyebrow mb-2">Available at the showroom</p>
-        <h2 class="h3 mb-3">{{ plan.name }}</h2>
-        {% if plan.description %}<p class="text-secondary">{{ plan.description|linebreaksbr }}</p>{% endif %}
-        <div class="d-flex flex-wrap gap-2 mb-3" aria-label="Available metal grades">
-          {% for offering in plan.metal_offerings.all %}{% if offering.active %}
-          <span class="badge text-bg-light border">{{ offering.metal_grade.display_name }}</span>
-          {% endif %}{% endfor %}
-        </div>
-        <dl class="row plan-facts mb-0 border-top pt-3">
-          <dt class="col-12 col-sm-5">INR contribution</dt>
-          <dd class="col-12 col-sm-7">
-            {% if plan.amount_rule == 'FIXED' %}
-              ₹{{ plan.fixed_contribution_amount|floatformat:2 }}
-            {% elif plan.maximum_contribution %}
-              ₹{{ plan.minimum_contribution|floatformat:2 }}–₹{{ plan.maximum_contribution|floatformat:2 }}
-            {% else %}
-              ₹{{ plan.minimum_contribution|floatformat:2 }} or more
-            {% endif %}
-          </dd>
-          <dt class="col-12 col-sm-5">Frequency</dt><dd class="col-12 col-sm-7">{{ plan.get_frequency_rule_display }}</dd>
-          <dt class="col-12 col-sm-5">Standard duration</dt><dd class="col-12 col-sm-7">{{ plan.default_months }} months</dd>
-          <dt class="col-12 col-sm-5">Minimum duration</dt><dd class="col-12 col-sm-7">{{ plan.minimum_months }} months</dd>
-        </dl>
-        {% if customer_enrolment_requests_enabled %}
-        <div class="plan-card__actions d-flex flex-wrap gap-2 mt-4">
-          {% url 'schemes:scheme_enrolment_request_create' plan.pk as request_url %}
-          {% if user.is_authenticated and user.role == 'CUSTOMER' %}
-          <a class="btn btn-jsk" href="{{ request_url }}">Request enrolment</a>
-          {% elif not user.is_authenticated %}
-          <a class="btn btn-jsk" href="{% url 'account_login' %}?next={{ request_url|urlencode }}">Sign in to request enrolment</a>
-          {% if public_customer_registration_enabled %}<a class="btn btn-outline-dark" href="{% url 'customer_registration' %}">Request customer access</a>{% endif %}
-          {% endif %}
-        </div>
-        {% endif %}
-      </div>
-    </article>
-  </div>
+  <div class="col-md-6">{% include 'pages/includes/plan_offer.html' %}</div>
   {% empty %}
   <div class="col-12"><div class="card empty-state"><h2 class="h4">Plans are being updated</h2><p>No savings plans are currently open for new enrolment. Please contact the showroom for availability.</p><div><a class="btn btn-jsk" href="{% url 'contact' %}">Contact the showroom</a></div></div></div>
   {% endfor %}
 </div>
-
-<section class="card border-0 mt-5">
-  <div class="card-body p-4 p-lg-5">
-    <p class="page-eyebrow">Getting started</p>
-    <h2 class="h3">How to join and contribute</h2>
-    <p>An approved customer login may submit a non-binding request for a displayed plan and metal grade. The request does not create a savings agreement or payment access. The showroom contacts you, reviews the current terms, and separately creates the agreement. You may also contact or visit us instead. Online payment is available only after enrolment and only for amounts allowed by your recorded plan.</p>
-    <p>The current Jai Sri Krishna Jewellery Scheme Rate for your selected grade is shown and locked before payment starts. After verification, your INR contribution is converted to a recorded quantity of that exact grade. A later Scheme Rate does not change quantities already credited.</p>
-    <p>Once the plan becomes eligible, the accumulated metal quantity may be applied toward jewellery or an eligible matching-metal coin at our showroom. It cannot be withdrawn as cash through this website.</p>
-    <div class="mobile-action-group d-flex flex-wrap gap-2">
-      {% if customer_enrolment_requests_enabled and user.is_authenticated and user.role == 'CUSTOMER' %}
-      <a class="btn btn-jsk" href="{% url 'schemes:my_enrolment_requests' %}">My enrolment requests</a>
-      {% elif customer_enrolment_requests_enabled and not user.is_authenticated and public_customer_registration_enabled %}
-      <a class="btn btn-jsk" href="{% url 'customer_registration' %}">Request customer access</a>
-      {% else %}
-      <a class="btn btn-jsk" href="{% url 'contact' %}">Contact us to enrol</a>
-      {% endif %}
-      {% if user.is_authenticated %}
-      <a class="btn btn-outline-dark" href="{% url 'schemes:post_login' %}">Open my dashboard</a>
-      {% else %}
-      <a class="btn btn-outline-dark" href="{% url 'account_login' %}">Existing customer login</a>
-      {% endif %}
-    </div>
+<section class="card mt-4" aria-labelledby="before-applying">
+  <div class="card-body p-3 p-lg-4">
+    <h2 id="before-applying" class="h4">Before you apply</h2>
+    <p>Applying is a non-binding request. It does not create a savings agreement.</p>
+    <ul class="mb-3">
+      <li>The showroom verifies your details and confirms the current terms before creating your agreement. Payment starts after enrolment.</li>
+      <li>Each verified payment credits your enrolled metal grade at the rate locked before payment.</li>
+      <li>Once eligible, use your accumulated metal toward jewellery or an eligible matching-metal coin at our showroom. This plan does not provide voluntary cash withdrawals.</li>
+      <li>Making charges, wastage/value addition and taxes are confirmed at purchase; they are not included in the displayed contribution amount unless expressly stated in your terms.</li>
+    </ul>
+    <div class="d-flex flex-wrap gap-3"><a href="{% url 'how_it_works' %}">How it works</a><a href="{% url 'terms' %}">Terms and conditions</a><a href="{% url 'cancellation_refund' %}">Cancellation and refunds</a><a href="{% url 'contact' %}">Talk to the showroom</a></div>
+    {% if not public_customer_registration_enabled and not customer_enrolment_requests_enabled %}<p class="small mt-3 mb-0">Contact us to enrol. <a href="{% url 'account_login' %}">Existing customer login</a></p>{% endif %}
   </div>
 </section>
-
-<p class="small text-muted mt-4">The displayed INR amount is a plan contribution, not the price of a specific jewellery item. Plan availability and displayed terms apply to new enrolments, while an existing customer's recorded enrolment terms remain applicable. Product availability, prevailing jewellery price, making charges, wastage/value addition, taxes, and invoice terms are determined at the showroom purchase and are not included in the displayed contribution amount unless expressly stated.</p>
 {% endblock %}

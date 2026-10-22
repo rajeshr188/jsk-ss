@@ -2,8 +2,82 @@
 
 ## Status
 
+Product amendment approved 5 October 2026: implement a plan-first application and
+one coordinated showroom review in the four phases in `docs/MVP_PLAN.md`. Phase 1
+changed public entry/copy and measurement: a validated selected plan was shown on
+the existing registration form without durable cross-verification preferences.
+Phase 3 is now implemented and verified locally as amended below. It revises
+AUTH-003/010 for newly linked applications: contact-first intake, remaining fields
+before approval, explicit contact/current-terms review, transactional identity plus
+agreement orchestration, distinct audit evidence and retryable after-commit notices.
+Existing registrations, identity records, agreements and login access are preserved.
+No production enablement is authorized by this amendment.
+
+Phase 2 implementation (5 October 2026) consolidates owner navigation into Today,
+Applications, Customers and the retained financial overview/Operations. Registration
+and plan-request records share a bounded inbox and review layout with an explicit
+next action. Unverified delivery/expiry recovery remains available without approval
+bypass. Approved registrations link to customer context by `approved_user` only.
+The registration approval service, invitation evidence, separate agreement action
+and historical registration URLs remain unchanged in authority. This is workspace
+consolidation; coordinated identity/agreement approval is implemented by the Phase 3
+amendment below.
+
 Accepted for implementation under `FW-AUTH-002`. Public registration remains
 disabled until its separate production rollout is approved.
+
+### Phase 3 implementation amendment (5 October 2026)
+
+The earlier decisions below remain the historical access-only and existing-customer
+contracts. Phase 3 supersedes their two-review public journey for newly linked plan
+applications only; it does not merge identity with the financial agreement or migrate
+historical registrations into plan intent.
+
+`PlanApplication` links one registration to its selected offer/preferences and at most
+one separate `SchemeAccount`. Append-only `PlanApplicationConfirmation` revisions
+retain initial and renewed customer evidence. Contact submission retains plan, exact
+grade, amount, duration and message; postal address and explicit current policy/offer
+and requested start-date confirmation follow protected email verification. A changed
+offer or a start date that passes before approval requires renewed customer confirmation.
+The form digest binds consent to displayed terms; money is serialized as decimal strings.
+
+Owner coordinated approval locks registration, application, plan and offering, rechecks
+identity conflicts and customer evidence, and calls the existing identity/invitation and
+`enroll_customer` services in one transaction. Any financial failure rolls back identity
+and invitation too. The one-to-one agreement link and row locks make retries/concurrent
+approval return the same agreement. Identity actor/reason/contact evidence and the
+financial audit/agreement snapshots remain distinct. Legacy identity-only approval
+cannot bypass this service for linked applications.
+
+Activation delivery occurs after commit; failed/absent delivery remains recoverable
+from the existing customer invitation controls. Progress access has a separate random,
+digest-only credential, the application expiry and a CSRF-confirmed session grant.
+Verification remains one-use; progress access is resumable within its scope/expiry.
+Owner replacement revokes old progress links/sessions without extending expiry. Progress
+emails opt out of tracking; edge/Django logs exclude/redact these paths. No progress
+route sends identifiers or tokens to analytics. Disabled/erased customers lose access.
+
+Existing customers keep the authenticated request flow using the held profile; they do
+not repeat contact/address intake. Current disclosure changes or a different duration
+require withdrawal/closure and a new customer request. Legacy records, authentication,
+permissions, liabilities and historical financial evidence remain unchanged. No new
+worker, API, frontend framework, authentication system or production rollout is added.
+Phase 4 still owns activation continuation, dashboard prominence and expired-activation
+recovery. Production migration/deployment requires separate approval.
+
+### Phase 4 implementation amendment (5 October 2026)
+
+Linked-plan password setup retains the approved agreement destination through the
+existing password login. Activation still creates no financial record and does not
+auto-authenticate; legacy access-only invitations retain their login entry.
+An eligible expired invitation's exact secret may record a CSRF-protected, repeat-safe
+setup-help request. `CustomerInvitation.recovery_requested_at` is additive metadata,
+not an access grant or an automatic invitation. Response pages reveal no account state.
+User-then-invitation locks serialize recovery with issue/accept. Replacement remains
+active-owner-only; existing resend revokes previous unused links, records mail failure
+and leaves agreement/history unchanged. Today includes latest eligible expired or
+failed/pending delivery in a bounded, paginated owner recovery queue.
+The implementation is locally reviewable; production migration/rollout is not authorized.
 
 ## Context
 
@@ -66,3 +140,19 @@ current consent-version settings, and controlled production verification. This A
 does not enable the feature. SMS OTP, automated identity verification, applicant
 self-service status lookup, and edge challenge products remain separate future
 decisions rather than hidden dependencies of this phase.
+
+## Presentation amendment (22 October 2026)
+
+The approved workflow refinement adds role-specific navigation, bounded applicant search,
+safe filtered inbox return paths, customer Applications/Documents destinations and clearer
+contact/duration/stage guidance. The owner customer workspace groups related records;
+customer Home avoids duplicate payment actions for a converted application/agreement.
+HTMX is limited to read-only owner customer/application/payment/exception filtering and manual
+customer recorded-payment status;
+it does not enhance registration/verification/progress, identity approval, agreement
+conversion or credential setup. Transactional orchestration, renewed material-term consent,
+separate identity/agreement evidence, after-commit notices and recoverable delivery remain
+unchanged. Protected progress now shows six record-derived milestones through real first
+payment; Test/practice and reversed records cannot complete it. Scoped stage counts and
+exact-customer privacy context add no schema or financial mutation. See ARCHITECTURE.md and
+DOMAIN_RULES.md UX-006 through UX-010.

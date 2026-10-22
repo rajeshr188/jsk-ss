@@ -3,6 +3,7 @@
 {% block title %}Reverse in-store cash contribution | Jai Sri Krishna Jewellery{% endblock %}
 
 {% block content %}
+{% include 'schemes/includes/customer_context.html' with customer=contribution.scheme_account.customer scheme_account=contribution.scheme_account %}
 <div class="page-header">
   <div>
     <a class="small d-inline-block mb-2" href="{% url 'schemes:contribution_receipt' contribution.pk %}">← Contribution receipt</a>

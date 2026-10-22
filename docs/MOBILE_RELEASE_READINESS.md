@@ -736,11 +736,16 @@ decide whether native Android/API cost and future iOS development are justified.
 - [x] Exact Play signing fingerprint deployed and independently compared on the canonical origin.
 - [ ] Matching payments profile, recovery and least-privilege role evidence recorded.
 - [ ] Financial classification review and owner-approved category-specific retention procedures completed (ADR-0015 revision).
-- [ ] Dedicated deletion workflow implemented, tested, and reflected in public policy.
+- [x] Dedicated deletion workflow implemented, regression-tested, deployed/enabled and reflected in public policy; authenticated zero-history completion accepted 15 September 2026.
+- [ ] Separate signed-out deletion verification/completion, provider follow-up and independent recovery-record reconciliation accepted; authenticated acceptance does not close this gate.
 - [ ] Release-candidate Data Safety answers reviewed against every dependency/provider.
 
-`FW-MOBILE-002` may begin after the product/package defaults are approved, but no Play
-public release may pass while any of the final five gates remains open.
+Reconciled against recorded implementation/acceptance on 22 October 2026; no new
+Console, provider or production inspection was performed. `FW-MOBILE-002` is already
+production-accepted, and the signed TWA is in Internal Testing. Do not repeat those
+foundations as pending work. No Play public release may pass while an outstanding
+exit gate or the immediate submission/device checks above remain open. Recheck
+platform requirements against the release candidate before submission.
 
 ## Authoritative references
 

@@ -16,6 +16,12 @@ dependencies = [
 
 [tool.uv]
 package = false
+# Minimum patched releases for the critical advisories found by release CI.
+constraint-dependencies = [
+  "certifi>=2026.10.19",
+  "pillow>=13.0.0",
+  "pyjwt>=2.15.1",
+]
 
 [dependency-groups]
 dev = [

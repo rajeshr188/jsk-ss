@@ -61,7 +61,7 @@ class MetalContributionViewTests(TestCase):
             follow=True,
         )
         self.assertContains(response, "0.800 g")
-        self.assertContains(response, "12500.0000")
+        self.assertContains(response, "12,500.0000")
         self.assertContains(response, "24K Gold was allocated")
         self.assertEqual(MetalAllocation.objects.count(), 1)
 
@@ -82,4 +82,4 @@ class MetalContributionViewTests(TestCase):
             reverse("schemes:my_scheme_detail", args=[self.account.scheme_number])
         )
         self.assertContains(response, "Current Scheme Rate")
-        self.assertContains(response, "12500.0000")
+        self.assertContains(response, "12,500.0000")

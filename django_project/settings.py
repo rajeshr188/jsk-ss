@@ -213,6 +213,7 @@ TEMPLATES = [
                 "accounts.context_processors.public_customer_registration",
                 "accounts.context_processors.customer_google_login",
                 "accounts.context_processors.customer_account_deletion",
+                "schemes.navigation.workspace_context",
                 "blog.context_processors.public_blog_navigation",
                 "catalog.context_processors.public_catalogue_navigation",
                 "pages.context_processors.pwa",
@@ -543,6 +544,7 @@ CUSTOMER_INVITATION_EXPIRY_HOURS = env_int(
 PUBLIC_CUSTOMER_REGISTRATION_ENABLED = env_bool(
     "PUBLIC_CUSTOMER_REGISTRATION_ENABLED"
 )
+PUBLIC_FUNNEL_MEASUREMENT_ENABLED = env_bool("PUBLIC_FUNNEL_MEASUREMENT_ENABLED")
 PUBLIC_REGISTRATION_EMAIL_EXPIRY_HOURS = env_int(
     "PUBLIC_REGISTRATION_EMAIL_EXPIRY_HOURS",
     24,
@@ -567,7 +569,7 @@ PUBLIC_REGISTRATION_TERMS_VERSION = os.getenv(
 ).strip()
 PUBLIC_REGISTRATION_PRIVACY_VERSION = os.getenv(
     "PUBLIC_REGISTRATION_PRIVACY_VERSION",
-    "2026-09-05",
+    "2026-10-05",
 ).strip()
 if PUBLIC_CUSTOMER_REGISTRATION_ENABLED and not (
     PUBLIC_REGISTRATION_TERMS_VERSION and PUBLIC_REGISTRATION_PRIVACY_VERSION

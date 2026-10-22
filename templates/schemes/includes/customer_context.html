@@ -1,0 +1,15 @@
+{% if customer %}{% with current=request.resolver_match.url_name %}
+<aside class="card mb-4 d-print-none owner-customer-context" aria-label="Customer context"><div class="card-body">
+  <div class="d-flex flex-column flex-lg-row justify-content-between gap-3">
+    <div><strong>{{ customer.full_name }}</strong>{% if not customer.user.is_active %} <span class="badge text-bg-secondary">Login inactive</span>{% endif %}<div class="small text-secondary">{{ customer.customer_number }} · {{ customer.mobile_number }}<br>{{ customer.email }}</div></div>
+    <nav class="customer-tabs mb-0" aria-label="Customer records">
+      <a href="{% url 'schemes:customer_detail' customer.pk %}" {% if section == 'summary' %}aria-current="page"{% endif %}>Summary</a>
+      <a href="{% url 'schemes:owner_applications' %}?customer={{ customer.pk }}&amp;focus=all" {% if current == "owner_applications" %}aria-current="page"{% endif %}>Applications</a>
+      <a href="{% url 'schemes:customer_detail' customer.pk %}?section=plans" {% if section == 'plans' %}aria-current="page"{% endif %}>Plans</a>
+      <a href="{% url 'schemes:contribution_list' %}?customer={{ customer.pk }}" {% if current == "contribution_list" or current == "owner_payment_detail" or current == "in_store_cash_contribution" %}aria-current="page"{% endif %}>Payments</a>
+      <a href="{% url 'schemes:customer_detail' customer.pk %}?section=documents" {% if section == 'documents' or current == 'scheme_statement' or current == 'contribution_receipt' %}aria-current="page"{% endif %}>Documents</a>
+      <a href="{% url 'schemes:customer_detail' customer.pk %}?section=access" {% if section == 'access' %}aria-current="page"{% endif %}>Access &amp; privacy</a>
+    </nav>
+  </div>
+</div></aside>
+{% endwith %}{% endif %}

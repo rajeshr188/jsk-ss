@@ -4,6 +4,7 @@
 {% block title %}Record redemption | Jai Sri Krishna Jewellery{% endblock %}
 
 {% block content %}
+{% include 'schemes/includes/customer_context.html' with customer=scheme_account.customer %}
 <div class="row justify-content-center"><div class="col-lg-7">
   <a class="small d-inline-block mb-2" href="{% url 'schemes:redemption_eligibility' %}">← Redemption eligibility</a>
   <div class="page-header"><div><p class="page-eyebrow">Financial settlement</p><h1>Record redemption</h1><p class="page-subtitle">{{ scheme_account.customer.full_name }} · {{ scheme_account.scheme_number }}</p></div></div>

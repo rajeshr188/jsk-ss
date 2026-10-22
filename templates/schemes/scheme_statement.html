@@ -1,4 +1,5 @@
 {% extends '_base.html' %}
+{% load workspace %}
 
 {% block title %}Statement {{ statement.scheme_account.scheme_number }} | Jai Sri Krishna Jewellery{% endblock %}
 
@@ -13,12 +14,14 @@
 {% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-end mb-3 d-print-none"><button class="btn btn-jsk" type="button" onclick="window.print()">Print statement</button></div>
+{% if user.is_superuser or user.role == 'OWNER' %}{% include 'schemes/includes/customer_context.html' with customer=statement.scheme_account.customer scheme_account=statement.scheme_account %}{% endif %}
+{% include 'schemes/includes/document_navigation.html' with document_account=statement.scheme_account print_label='Print statement' %}
 <article class="card statement-document"><div class="card-body p-4 p-md-5">
   <div class="text-center border-bottom pb-3 mb-4">
     <h1 class="h2 mb-1">Jai Sri Krishna Jewellery</h1>
     <p class="text-muted mb-0">Customer savings scheme statement</p>
   </div>
+  {% if statement.includes_practice_activity %}<div class="alert alert-warning">Contains Test/practice records. They do not represent Live money collected. Check the payment labels below.</div>{% endif %}
   <dl class="row">
     <dt class="col-sm-3">Customer</dt><dd class="col-sm-9">{{ statement.scheme_account.customer.full_name }} ({{ statement.scheme_account.customer.customer_number }})</dd>
     <dt class="col-sm-3">Scheme</dt><dd class="col-sm-9">{{ statement.scheme_account.scheme_number }} · {{ statement.scheme_account.entitlement_name }}</dd>
@@ -28,8 +31,8 @@
 
   <div class="card bg-light my-4"><div class="card-body">
     <div class="text-muted">Remaining entitlement</div>
-    {% if statement.entitlement_unit == 'INR' %}<div class="display-6">₹{{ statement.remaining_entitlement|floatformat:2 }}</div>{% else %}<div class="display-6">{{ statement.remaining_entitlement|floatformat:3 }} {{ statement.entitlement_unit }}</div>{% endif %}
-    {% if statement.cash_bonus %}<div class="small text-muted">Principal ₹{{ statement.cash_bonus.principal_outstanding|floatformat:2 }} · earned bonus ₹{{ statement.cash_bonus.earned_bonus|floatformat:2 }} · projected bonus ₹{{ statement.cash_bonus.projected_bonus|floatformat:2 }} (not redeemable)</div>{% endif %}
+    {% if statement.entitlement_unit == 'INR' %}<div class="display-6">₹{{ statement.remaining_entitlement|inr }}</div>{% else %}<div class="display-6">{{ statement.remaining_entitlement|floatformat:3 }} {{ statement.entitlement_unit }}</div>{% endif %}
+    {% if statement.cash_bonus %}<div class="small text-muted">Principal ₹{{ statement.cash_bonus.principal_outstanding|inr }} · earned bonus ₹{{ statement.cash_bonus.earned_bonus|inr }} · projected bonus ₹{{ statement.cash_bonus.projected_bonus|inr }} (not redeemable)</div>{% endif %}
   </div></div>
 
   <div class="table-responsive"><table class="table table-sm align-middle">
@@ -40,15 +43,15 @@
         <td>{{ entry.occurred_at|date:'d M Y, g:i A' }}</td>
         <td>{{ entry.description }}</td>
         <td>{{ entry.reference|default:'—' }}{% if entry.contribution_id %}<span class="d-print-none"><br><a href="{% url 'schemes:contribution_receipt' entry.contribution_id %}">Receipt</a></span>{% endif %}</td>
-        <td>{% if entry.amount_inr is not None %}₹{{ entry.amount_inr|floatformat:2 }}{% else %}—{% endif %}</td>
-        <td>{% if entry.scheme_rate is not None %}₹{{ entry.scheme_rate|floatformat:4 }}/g{% else %}—{% endif %}</td>
+        <td>{% if entry.amount_inr is not None %}₹{{ entry.amount_inr|inr }}{% else %}—{% endif %}</td>
+        <td>{% if entry.scheme_rate is not None %}₹{{ entry.scheme_rate|inr:4 }}/g{% else %}—{% endif %}</td>
         <td>{% if entry.metal_allocation is not None %}{{ entry.metal_allocation|floatformat:3 }} g{% else %}—{% endif %}</td>
         <td>{% if entry.redemption is not None %}{{ entry.redemption }} {{ entry.entitlement_unit }} redeemed{% elif entry.restoration is not None %}{{ entry.restoration }} {{ entry.entitlement_unit }} restored{% elif entry.metal_reversal is not None %}{{ entry.metal_reversal|floatformat:3 }} {{ entry.entitlement_unit }} removed{% else %}—{% endif %}</td>
-        <td>{{ entry.status }}</td>
+        <td>{{ entry.status }}{% if entry.payment_label %}<span class="small d-block">{{ entry.payment_label }}</span>{% endif %}</td>
       </tr>
       {% empty %}<tr><td colspan="8" class="text-center text-muted py-4">No verified financial activity.</td></tr>{% endfor %}
     </tbody>
   </table></div>
-  <p class="small text-muted border-top pt-3 mt-4 mb-0">This on-demand statement is generated from verified contributions, immutable metal allocations, redemptions, and reversals. Projected bonus is informational and is not part of the remaining redeemable entitlement.</p>
+  <p class="small text-muted border-top pt-3 mt-4 mb-0">This on-demand statement is generated from recorded payments, metal credits, completed redemptions and corrections. Projected bonus is informational and is not part of the remaining redeemable entitlement.</p>
 </div></article>
 {% endblock %}

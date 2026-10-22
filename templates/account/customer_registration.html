@@ -1,5 +1,5 @@
 {% extends '_base.html' %}
-{% load crispy_forms_tags %}
+{% load crispy_forms_tags workspace %}
 
 {% block title %}Request customer access | Jai Sri Krishna Jewellery{% endblock %}
 {% block meta_description %}Request a Jai Sri Krishna Jewellery customer login for owner review. A request is not a scheme enrolment.{% endblock %}
@@ -8,9 +8,17 @@
 <div class="row justify-content-center"><div class="col-lg-8">
   <div class="page-header"><div>
     <p class="page-eyebrow">Customer access</p>
-    <h1>Request customer access</h1>
+    <h1>{% if selected_plan %}Start with {{ selected_plan.name }}{% else %}Request customer access{% endif %}</h1>
     <p class="page-subtitle">Submit your details, verify your email, and wait for showroom review.</p>
   </div></div>
+  {% if selected_plan %}
+  <div class="card mb-3"><div class="card-body">
+    <p class="fw-semibold mb-1">Selected plan: {{ selected_plan.name }}</p>
+    <p class="small mb-1">{% if selected_plan.amount_rule == 'FIXED' %}₹{{ selected_plan.fixed_contribution_amount|inr }}{% else %}From ₹{{ selected_plan.minimum_contribution|inr }}{% endif %} · {{ selected_plan.get_frequency_rule_display }} · {{ selected_plan.default_months }} months</p>
+    <p class="small text-secondary mb-0">First, request your customer login below. After approval and login setup, confirm this plan and your metal grade from Savings plans. The showroom then reviews enrolment.</p>
+    <a class="small d-inline-block mt-2" href="{% url 'pricing' %}">Change plan</a>
+  </div></div>
+  {% endif %}
   <div class="alert alert-info" role="note">
     This request does not enrol you in a savings scheme and does not enable payments. Scheme enrolment is a separate showroom process after approval.
   </div>

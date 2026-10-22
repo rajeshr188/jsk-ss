@@ -1,0 +1,18 @@
+{% extends '_base.html' %}
+{% block content %}
+<div class="page-header"><div><p class="page-eyebrow">Owner workspace · {% if journey %}Plan and identity review{% elif application %}Identity review{% else %}Agreement review{% endif %}</p><h1>Application review</h1><p class="page-subtitle">{% if application %}{{ application.full_name }} · {{ application.lifecycle_status }}{% else %}{{ enrolment_request.customer.full_name }} · {{ enrolment_request.effective_status_label }}{% endif %}</p></div><div class="page-actions"><a class="btn btn-outline-dark" href="{{ application_inbox_url }}">Applications inbox</a><a class="btn btn-outline-dark" href="{% url 'schemes:owner_today' %}">Today</a></div></div>
+{% if application.approved_user %}{% include 'schemes/includes/customer_context.html' with customer=application.approved_user.customer_profile %}{% elif enrolment_request %}{% include 'schemes/includes/customer_context.html' with customer=enrolment_request.customer scheme_account=enrolment_request.scheme_account %}{% endif %}
+<div class="alert alert-secondary">
+  <strong>Next action:</strong>
+  {% if application %}
+    {% if journey %}{% if journey.scheme_account %}Review the identity decision, approved agreement and activation delivery from the customer record.{% elif stage == 'Application expired' %}This application has expired. Review the expiry and contact the applicant; approval is unavailable.{% elif application.status == 'PENDING_EMAIL_VERIFICATION' %}The applicant must verify email before completing their application.{% elif application.status == 'REJECTED' or application.status == 'EXPIRED' %}Review the recorded application decision.{% elif can_approve %}Verify showroom contact and identity, review the customer-confirmed terms, then approve identity and plan together.{% else %}The customer must complete details and confirm a current offer and start date in protected progress. Review progress email delivery below.{% endif %}
+    {% elif application.status == 'AWAITING_OWNER_APPROVAL' %}Contact the applicant, verify identity and mobile, and record the decision. Approval creates login access; agreement review follows separately.
+    {% elif application.status == 'PENDING_EMAIL_VERIFICATION' %}The applicant must verify email before approval. Review delivery or replace an expired verification below.
+    {% else %}Review the recorded identity decision{% if application.approved_user %} and continue from the customer record{% endif %}.{% endif %}
+  {% else %}
+    {% if enrolment_request.status == 'PENDING_OWNER_REVIEW' %}{% if enrolment_request.effective_status == 'EXPIRED' %}Review the expired request and record its closure.{% elif not enrolment_request.customer.user.is_active or enrolment_request.customer.user.role != 'CUSTOMER' %}Customer login is no longer eligible for agreement creation. Review the customer record.{% elif not offer_is_current %}Close this request and ask the customer to confirm a current offer.{% else %}Review the requested preferences and current terms with the customer, then create the agreement below.{% endif %}
+    {% else %}Review the recorded agreement decision{% if enrolment_request.scheme_account %} and its statement{% endif %}.{% endif %}
+  {% endif %}
+</div>
+{% block review_content %}{% endblock %}
+{% endblock %}

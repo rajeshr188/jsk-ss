@@ -1,0 +1,11 @@
+{% extends '_base.html' %}
+{% block title %}Payment status | Jai Sri Krishna Jewellery{% endblock %}
+{% block content %}
+<div class="auth-shell"><div class="card auth-card">
+  <p class="page-eyebrow">{{ contribution.scheme_account.plan.name }}</p>
+  <h1>Payment status</h1>
+{% include 'schemes/includes/payment_status_panel.html' %}
+</div></div>
+{% endblock %}
+{% block enhancements_head %}{% include 'includes/read_enhancement_config.html' %}{% endblock %}
+{% block enhancements %}{% include 'includes/read_enhancement.html' %}{% endblock %}

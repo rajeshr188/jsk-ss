@@ -75,6 +75,7 @@ class CustomerInvitation(models.Model):
     delivery_error = models.CharField(max_length=100, blank=True)
     accepted_at = models.DateTimeField(null=True, blank=True)
     revoked_at = models.DateTimeField(null=True, blank=True)
+    recovery_requested_at = models.DateTimeField(null=True, blank=True, editable=False)
 
     class Meta:
         ordering = ["-created_at", "-pk"]
@@ -271,6 +272,82 @@ class CustomerRegistration(models.Model):
 
     def __str__(self):
         return f"Customer registration for {self.email} — {self.lifecycle_status}"
+
+
+class PlanApplication(models.Model):
+    """Journey coordination only; identity and financial agreements stay separate."""
+
+    registration = models.OneToOneField(
+        CustomerRegistration, on_delete=models.PROTECT, related_name="plan_application",
+    )
+    plan = models.ForeignKey("schemes.SchemePlan", on_delete=models.PROTECT)
+    metal_grade = models.ForeignKey("schemes.MetalGrade", on_delete=models.PROTECT)
+    requested_amount = models.DecimalField(max_digits=14, decimal_places=2)
+    requested_months = models.PositiveSmallIntegerField()
+    customer_message = models.TextField(blank=True)
+    start_date = models.DateField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    expires_at = models.DateTimeField()
+    progress_token_digest = models.CharField(max_length=64, null=True, unique=True, editable=False)
+    progress_sent_at = models.DateTimeField(null=True, blank=True)
+    progress_delivery_failed_at = models.DateTimeField(null=True, blank=True)
+    progress_delivery_error = models.CharField(max_length=100, blank=True)
+    scheme_account = models.OneToOneField(
+        "schemes.SchemeAccount", on_delete=models.PROTECT, null=True, blank=True,
+        related_name="plan_application",
+    )
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(condition=models.Q(requested_amount__gt=0), name="plan_application_amount_positive"),
+            models.CheckConstraint(condition=models.Q(requested_months__gte=12), name="plan_application_months_valid"),
+            models.CheckConstraint(
+                condition=models.Q(completed_at__isnull=True) | models.Q(start_date__isnull=False),
+                name="plan_application_completion_date",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(scheme_account__isnull=True) | models.Q(completed_at__isnull=False),
+                name="plan_application_agreement_completed",
+            ),
+        ]
+
+    def save(self, *args, **kwargs):
+        if self.pk:
+            stored = type(self).objects.filter(pk=self.pk).first()
+            if stored and stored.scheme_account_id:
+                fields = ("registration_id", "plan_id", "metal_grade_id", "requested_amount",
+                          "requested_months", "start_date", "completed_at", "scheme_account_id")
+                if any(getattr(stored, field) != getattr(self, field) for field in fields):
+                    raise ValidationError("Approved application terms and agreement linkage are immutable.")
+        return super().save(*args, **kwargs)
+
+
+class PlanApplicationConfirmation(models.Model):
+    application = models.ForeignKey(PlanApplication, on_delete=models.PROTECT, related_name="confirmations")
+    sequence = models.PositiveIntegerField()
+    final = models.BooleanField(default=False)
+    offer = models.JSONField()
+    requested_amount = models.DecimalField(max_digits=14, decimal_places=2)
+    requested_months = models.PositiveSmallIntegerField()
+    start_date = models.DateField(null=True, blank=True)
+    confirmed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["sequence"]
+        constraints = [
+            models.UniqueConstraint(fields=["application", "sequence"], name="plan_confirmation_sequence_unique"),
+            models.CheckConstraint(condition=models.Q(requested_amount__gt=0), name="plan_confirmation_amount_positive"),
+            models.CheckConstraint(condition=models.Q(requested_months__gte=12), name="plan_confirmation_months_valid"),
+            models.CheckConstraint(condition=models.Q(final=False) | models.Q(start_date__isnull=False), name="plan_confirmation_final_date"),
+        ]
+
+    def save(self, *args, **kwargs):
+        if not self._state.adding:
+            raise ValidationError("Application confirmations are append-only.")
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Application confirmations must be retained.")
 
 
 class CustomerRegistrationAttempt(models.Model):

@@ -1,32 +1,15 @@
 {% extends '_base.html' %}
-
 {% block title %}Customers | Jai Sri Krishna Jewellery{% endblock %}
-
 {% block content %}
-<div class="page-header">
-  <div>
-    <p class="page-eyebrow">Customer management</p>
-    <h1>Customers</h1>
-    <p class="page-subtitle">Review customer profiles and their enrolled scheme accounts.</p>
-  </div>
-  <div class="page-actions"><a class="btn btn-outline-dark" href="{% url 'customer_registration_list' %}">Registration requests</a><a class="btn btn-jsk" href="{% url 'schemes:customer_add' %}">Add customer</a></div>
-</div>
-
-<div class="table-responsive">
-  <table class="table align-middle">
-    <thead><tr><th scope="col">Customer</th><th scope="col">Mobile</th><th scope="col">Schemes</th><th scope="col"><span class="visually-hidden">Action</span></th></tr></thead>
-    <tbody>
-      {% for customer in customers %}
-      <tr>
-        <td><strong>{{ customer.full_name }}</strong><br><small class="text-muted">{{ customer.customer_number }}</small></td>
-        <td>{{ customer.mobile_number }}</td>
-        <td>{{ customer.scheme_accounts.count }}</td>
-        <td class="text-end"><a class="btn btn-sm btn-outline-dark" href="{% url 'schemes:customer_detail' customer.pk %}">View customer</a></td>
-      </tr>
-      {% empty %}
-      <tr><td colspan="4"><div class="empty-state"><h2 class="h5">No customers yet</h2><p class="mb-0">Create the first customer profile to begin enrolment.</p></div></td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
+<div class="page-header"><div><p class="page-eyebrow">Owner workspace</p><h1>Customers</h1><p class="page-subtitle">Find the customer, then continue into their applications, agreements or payments.</p></div><div class="page-actions"><a class="btn btn-outline-dark" href="{% url 'schemes:owner_applications' %}">Applications</a><a class="btn btn-jsk" href="{% url 'schemes:customer_add' %}">Add customer</a></div></div>
+<section id="customer-search-region" hx-sync="this:replace">
+<form method="get" hx-get="{% url 'schemes:customer_list' %}" hx-target="#customer-results" hx-swap="outerHTML" hx-replace-url="true" hx-indicator="#customer-loading" class="card card-body mb-4" role="search">
+  <label class="form-label" for="customer-search">Name, email, mobile, customer number or scheme number</label>
+  <div class="d-flex flex-column flex-sm-row gap-2"><input class="form-control" id="customer-search" name="q" type="search" maxlength="100" value="{{ search }}" hx-get="{% url 'schemes:customer_list' %}" hx-trigger="input changed delay:400ms, search" hx-include="closest form"><button class="btn btn-jsk" type="submit">Search customers</button><a class="btn btn-outline-dark" href="{% url 'schemes:customer_list' %}">Clear</a></div>
+<span class="small htmx-indicator" id="customer-loading" role="status">Searching&hellip;</span>
+</form><p class="alert alert-warning enhancement-error" role="alert" data-read-error></p>
+{% include 'schemes/includes/customer_results.html' %}
+</section>
 {% endblock %}
+{% block enhancements_head %}{% include 'includes/read_enhancement_config.html' %}{% endblock %}
+{% block enhancements %}{% include 'includes/read_enhancement.html' %}{% endblock %}

@@ -19,6 +19,7 @@
   <link rel="apple-touch-icon" href="{% static 'images/pwa-icon-192.png' %}">
   {% endif %}
 
+  {% block enhancements_head %}{% endblock %}
   {% block css %}
   <!-- Bootstrap CSS -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
@@ -28,8 +29,11 @@
   {% endblock %}
 </head>
 
-<body>
+<body hx-history="false"{% if workspace_owner %} class="workspace workspace--owner"{% elif workspace_customer %} class="workspace workspace--customer"{% endif %}>
   <a class="skip-link" href="#main-content">Skip to main content</a>
+  {% if workspace_owner or workspace_customer %}
+  {% include 'includes/workspace_header.html' %}
+  {% else %}
   {% with current_url=request.resolver_match.url_name %}
   <nav class="navbar navbar-expand-lg navbar-dark site-navbar d-print-none" aria-label="Primary navigation">
     <div class="container">
@@ -43,6 +47,7 @@
       </button>
       <div class="collapse navbar-collapse" id="navbarSupportedContent">
         <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+          {% if not user.is_superuser and user.role != 'OWNER' %}
           <li class="nav-item">
             <a class="nav-link{% if current_url == 'home' %} active{% endif %}"{% if current_url == 'home' %} aria-current="page"{% endif %} href="{% url 'home' %}">Home</a>
           </li>
@@ -68,10 +73,13 @@
           <li class="nav-item">
             <a class="nav-link{% if current_url == 'contact' %} active{% endif %}"{% if current_url == 'contact' %} aria-current="page"{% endif %} href="{% url 'contact' %}">Contact</a>
           </li>
+          {% endif %}
           {% if user.is_authenticated %}
             {% if user.is_superuser or user.role == 'OWNER' %}
-            <li class="nav-item"><a class="nav-link{% if current_url == 'owner_dashboard' %} active{% endif %}"{% if current_url == 'owner_dashboard' %} aria-current="page"{% endif %} href="{% url 'schemes:owner_dashboard' %}">Dashboard</a></li>
-            <li class="nav-item"><a class="nav-link{% if current_url == 'customer_list' or current_url == 'customer_detail' or current_url == 'customer_add' or current_url == 'customer_enroll' or current_url == 'owner_enrolment_request_list' or current_url == 'owner_enrolment_request_detail' or current_url == 'owner_enrolment_request_enroll' %} active{% endif %}" href="{% url 'schemes:customer_list' %}">Customers</a></li>
+            <li class="nav-item"><a class="nav-link{% if current_url == 'owner_today' %} active{% endif %}"{% if current_url == 'owner_today' %} aria-current="page"{% endif %} href="{% url 'schemes:owner_today' %}">Today</a></li>
+            <li class="nav-item"><a class="nav-link{% if current_url == 'owner_applications' or current_url == 'customer_registration_detail' or current_url == 'owner_enrolment_request_detail' or current_url == 'owner_enrolment_request_enroll' %} active{% endif %}" href="{% url 'schemes:owner_applications' %}">Applications</a></li>
+            <li class="nav-item"><a class="nav-link{% if current_url == 'owner_dashboard' %} active{% endif %}"{% if current_url == 'owner_dashboard' %} aria-current="page"{% endif %} href="{% url 'schemes:owner_dashboard' %}">Overview</a></li>
+            <li class="nav-item"><a class="nav-link{% if current_url == 'customer_list' or current_url == 'customer_detail' or current_url == 'customer_add' or current_url == 'customer_enroll' %} active{% endif %}" href="{% url 'schemes:customer_list' %}">Customers</a></li>
             <li class="nav-item dropdown">
               <a class="nav-link dropdown-toggle{% if current_url == 'payment_operations' or current_url == 'scheme_rates' or current_url == 'plan_list' or current_url == 'plan_add' or current_url == 'plan_edit' or current_url == 'contribution_list' or current_url == 'redemption_eligibility' or current_url == 'redemption_list' or current_url == 'exception_queue' or current_url == 'reminder_delivery_log' or current_url == 'audit_log' %} active{% endif %}" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">Operations</a>
               <ul class="dropdown-menu">
@@ -121,7 +129,7 @@
         </div>
         {% else %}
         <div class="nav-guest-actions d-flex flex-wrap gap-2">
-          {% if public_customer_registration_enabled %}<a href="{% url 'customer_registration' %}" class="btn btn-sm btn-outline-light px-3">Request access</a>{% endif %}
+          {% if public_customer_registration_enabled %}<a href="{% url 'pricing' %}" class="btn btn-sm btn-outline-light px-3">Choose a plan</a>{% endif %}
           <a href="{% url 'account_login' %}" class="btn btn-sm btn-light px-3">Customer login</a>
         </div>
         {% endif %}
@@ -129,6 +137,7 @@
     </div>
   </nav>
   {% endwith %}
+  {% endif %}
 
   <main class="container page-shell" id="main-content" tabindex="-1">
     {% if messages %}
@@ -185,6 +194,7 @@
   <script src="{% static 'js/pwa.js' %}" data-pwa-enabled="{{ pwa_enabled|yesno:'true,false' }}"></script>
 
   {% endblock javascript %}
+  {% block enhancements %}{% endblock %}
 </body>
 
 </html>

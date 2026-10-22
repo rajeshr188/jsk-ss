@@ -120,6 +120,25 @@ class SchemeEnrolmentRequestTests(TestCase):
         self.assertEqual(second.enrolment_request.pk, first.enrolment_request.pk)
         self.assertEqual(SchemeEnrolmentRequest.objects.count(), 1)
 
+    def test_conversion_cannot_substitute_customer_duration(self):
+        request = self.submit().enrolment_request
+        with self.assertRaisesMessage(ValidationError, "duration differs"):
+            enroll_customer_from_request(
+                enrolment_request=request, actor=self.owner, current_terms_confirmed=True,
+                start_date=timezone.localdate(), agreed_months=14, reason="Reviewed terms",
+            )
+        self.assertFalse(SchemeAccount.objects.exists())
+
+    def test_new_disclosure_version_requires_a_new_customer_request(self):
+        request = self.submit().enrolment_request
+        with override_settings(CUSTOMER_ENROLMENT_REQUEST_DISCLOSURE_VERSION="updated-terms"):
+            with self.assertRaisesMessage(ValidationError, "offer changed"):
+                enroll_customer_from_request(
+                    enrolment_request=request, actor=self.owner, current_terms_confirmed=True,
+                    start_date=timezone.localdate(), agreed_months=12, reason="Reviewed terms",
+                )
+        self.assertFalse(SchemeAccount.objects.exists())
+
     def test_expired_pending_request_is_closed_before_replacement(self):
         first = self.submit().enrolment_request
         submitted_at = timezone.now() - timedelta(days=31)
@@ -391,9 +410,9 @@ class SchemeEnrolmentRequestTests(TestCase):
         self.assertNotContains(pricing, "Request enrolment")
         self.assertEqual(create.status_code, 404)
 
-    def test_logged_out_pricing_prompts_sign_in_without_promising_enrolment(self):
+    def test_logged_out_pricing_keeps_sign_in_secondary_and_discloses_non_binding_request(self):
         response = self.client.get(reverse("pricing"))
 
-        self.assertContains(response, "Sign in to request enrolment")
+        self.assertContains(response, 'href="' + reverse("account_login") + '">Sign in</a>')
         self.assertContains(response, "non-binding request")
         self.assertContains(response, "does not create a savings agreement")

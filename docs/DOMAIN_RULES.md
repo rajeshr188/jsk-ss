@@ -6,14 +6,21 @@ This is the canonical source for stable business rules.
 
 - **AUTH-001:** A login account is not itself an active savings agreement; only a valid `SchemeAccount` represents enrolment.
 - **AUTH-002:** Owners create customer login/profile records and issue a time-limited, one-time password-setup invitation; owners and staff must never choose or transmit a temporary customer password.
-- **AUTH-003:** Public registration is a separate, feature-gated access application, not allauth signup. It records a complete proposed customer profile and versioned policy consent but creates no user, customer, scheme, password, or financial entitlement before review.
+- **AUTH-003:** Public registration remains separate from closed allauth signup. Legacy access-only applications collect a complete profile. Plan-first applications (both registration and enrolment-request switches enabled) collect contact details, selected plan/grade/preferences and policy consent first, then postal address and current offer/start-date confirmation after email verification. Neither intake creates a user, customer, agreement, password or entitlement before owner review.
 - **AUTH-004:** The applicant must verify control of the email address through a bounded one-time token and then remain `AWAITING_OWNER_APPROVAL`. An active owner must confirm the mobile number and record a reason before approval or rejection.
 - **AUTH-005:** Only an active owner may issue or replace a customer invitation. Issuing a replacement revokes every older unused invitation for that customer; an account with a usable password must use password reset instead.
+  A matching expired, unused, unsuperseded invitation secret can record one setup-help
+  request through CSRF POST. It cannot issue/extend credentials, activate login or send
+  replacement mail. Unknown, incorrect, ineligible and used links have the same generic
+  response; inactive/erased logins are ineligible. Owner recovery uses existing services.
 - **AUTH-006:** Invitation secrets are random, stored only as one-way digests, expire within the configured bounded lifetime, and are accepted at most once. Secret-bearing responses are not cacheable, their URL paths are withheld from Referer headers, and their request paths are excluded from edge access logs. The origin-only referrer policy must still permit Django to validate same-origin password submissions.
 - **AUTH-007:** Email-provider acceptance is delivery evidence, not proof that the customer received or used the message. Invitation acceptance establishes login access only and never creates a `SchemeAccount`, contribution, or financial entitlement.
+  Linked-plan activation chooses a server-derived customer-scoped agreement destination
+  for subsequent password sign-in; it never auto-signs in or accepts a supplied external
+  destination. Access-only invitations retain the existing login entry.
 - **AUTH-008:** Nonblank login emails are unique case-insensitively. Historical duplicates must be investigated and resolved deliberately without automatically deleting, merging, or reassigning customer or financial records.
 - **AUTH-009:** Public registration responses do not disclose existing email, mobile, application, or throttle state. Per-source and per-identity database-backed limits and a honeypot provide the baseline abuse boundary; retained attempt identifiers are one-way digests.
-- **AUTH-010:** Approval rechecks identity conflicts, atomically creates the existing customer login/profile, and issues the existing owner-controlled password-setup invitation. Approval never creates a `SchemeAccount`; only a separate owner enrolment grants contribution access.
+- **AUTH-010:** Legacy access-only approval creates identity/profile and invitation only. A linked `PlanApplication` must use coordinated approval: lock registration, application, plan and offering; recheck identity conflicts, verified email, completed address, unexpired application, exact grade and latest customer-confirmed terms/start date; atomically create identity, invitation and one separate `SchemeAccount` through existing services. Retries/concurrent approval return the same agreement. Identity decision fields and immutable financial audit/snapshots remain separate. Invitation delivery runs after commit, with recorded failure and existing owner resend recovery. Login activation still creates no financial records.
 - **AUTH-011:** Public email-verification paths are direct and untracked, excluded from edge access logs, redacted from application logs, non-cacheable, and mutated only by a CSRF-protected confirmation POST.
 - **AUTH-012:** Google is an optional credential for an already-approved customer. It never creates or approves a user, customer profile, scheme agreement, payment permission, or financial entitlement.
 - **AUTH-013:** Only an active, non-privileged customer with a usable password and verified local email may explicitly connect Google after local authentication. The provider must assert the same verified email at connection time.
@@ -25,7 +32,7 @@ This is the canonical source for stable business rules.
   are digest-only, one-time, bounded, direct, non-cacheable, CSRF-confirmed, and
   excluded from application and edge logs.
 - **AUTH-018:** Verification contains the account by disabling customer login,
-  revoking sessions and the Google credential, superseding unused invitations, and
+  revoking sessions, plan-progress access and the Google credential, superseding unused invitations, and
   blocking new customer-initiated actions. Containment never deletes a customer,
   scheme, contribution, rate lock, allocation, receipt, redemption, correction, or
   audit record and never blocks provider callbacks or financial reconciliation.
@@ -51,7 +58,89 @@ This is the canonical source for stable business rules.
   next review date, and support route without claiming that provider, backup, or
   statutory transaction evidence was erased.
 
+- **AUTH-022:** Plan progress is not a public identity lookup or a login credential. A
+  separately minted, digest-only, expiring email secret grants a server-side session
+  only on CSRF-protected POST. GET does not grant access or verify identity. Token-free
+  progress URLs require that grant; replacement invalidates old links and sessions.
+  Both paths are non-cacheable, origin-only referrers, excluded from edge logs,
+  redacted in Django logs and never instrumented by funnel analytics. Deactivated or
+  erased approved logins cannot use progress access. Existing owner recovery replaces
+  progress access only for verified, unexpired applications; no expiry is extended.
+- **AUTH-023:** Initial and final plan confirmations are append-only revisions with
+  decimal-string offer snapshots, grade, preferences, policy/disclosure versions and
+  timestamps. Final confirmation includes the requested start date. Material offer,
+  policy, grade, duration or start-date changes require a new customer confirmation;
+  a stale displayed offer cannot silently confirm current terms. Owners cannot alter
+  the confirmed duration/start date on coordinated approval. A start date that passes
+  before approval requires fresh customer confirmation of today or a future date.
+  Historical records are not backfilled with inferred plan intent.
+
 ## Scheme and contribution rules
+
+- **UX-001:** Public offer amounts, contribution rules, available grades and durations
+  come from active/listed `SchemePlan` records and offerings. Unreviewed free-text plan
+  descriptions are not public marketing authority. A selected-plan entry never creates
+  an agreement, promises a rate/benefit or permits payment.
+- **UX-002:** Customer Pay visibility derives initiation availability and agreement
+  date/frequency/status rules from server reads. Every financial mutation still rechecks
+  its own authoritative rules. Abandoned attempts must not be labelled pending or
+  provider-cancelled. Browser cancellation, expiry or lost confirmation cannot establish
+  a financial outcome; protected status pages read the stored contribution only.
+- **MEASURE-001:** Optional public navigation measurement stores only India-local day,
+  allowlisted stage and aggregate count. No visitor/customer identifiers, request URLs,
+  query strings, verification links, contact details or payment references enter this
+  measurement. It does not instrument token-bearing routes or add third-party scripts.
+- **UX-003:** Owner Today and Applications are read-only projections of existing
+  registration, request and financial-exception records. Only active owners or active
+  superusers may access them; CMS/staff access alone grants no financial/customer
+  permission. Verified identity reviews precede plan reviews and email recovery;
+  unresolved expired plan requests remain visible until explicitly closed. Customer
+  context uses approved-user/customer/agreement foreign keys, never an unverified
+  applicant email match. Lists/search have fixed bounds and stable pagination. A
+  shared review coordinates identity and agreement only for linked plan applications;
+  legacy identity/request flows retain their own services. Verified applicants missing
+  details wait for the customer unless progress delivery needs recovery. Existing
+  services still recheck identity, offer, confirmation and financial rules.
+- **MEASURE-002:** Outcome totals are read-only aggregates of authoritative records;
+  live online and showroom-cash first payments are separate, test/mock/pending/failed
+  payments are excluded, and later payments cannot become first merely because the
+  report date range changes. Navigation totals include repeat/automated requests and
+  are not unique people. Period throughput is not a joined conversion cohort.
+- **UX-004:** Customer dashboard application progress appears before balances, scoped
+  by explicit approved-user/customer/agreement links with bounded application previews.
+  First-payment and continuation actions derive recorded contributions and snapshotted
+  agreement rules/current operational availability. Pending confirmation/allocation
+  directs to protected recorded status, never another first payment. Test/practice
+  records are labelled separately and do not establish a live first payment. A saved
+  variable amount may prefill the first-payment form; authoritative agreement validation
+  still governs submission. Application/activation/payment details never enter analytics.
+- **UX-005:** Tamil customer testing is prepared using English scenarios and an approved
+  terminology/translation review process. Unreviewed translations are not published and
+  recorded financial terms, consent versions and support contacts are not invented.
+
+- **UX-006:** Payment-list totals and exports share validated customer, exact-payment,
+  query, status, method, mode and creation-date filters. Invalid filters fail closed.
+  Received Live/cash amounts remain separate from Test/practice. Export exclusions are
+  explicit; pending/failed/closed attempts never become recorded money through UI copy.
+- **UX-007:** Cash-entry GET may explain blockers but cannot create a record or call
+  the provider. Final preview/commit services recheck all financial rules independently.
+  No frontend state or fragment response can establish payment receipt or entitlement.
+- **UX-008:** Read-only fragments preserve existing authentication and scope. Private
+  HTML/history snapshots are never cached by HTMX; expired sessions navigate to login.
+  Normal URLs/forms remain usable. No auto-retry of consequential POSTs, optimistic
+  financial result, private-token enhancement, mixed-grade total or client financial calculation.
+- **UX-009:** Owner review return destinations are bounded, allowlisted local inbox
+  URLs, not arbitrary next URLs. Customer applications use explicit approved identity
+  links; histories/documents use the authenticated customer's FK. Navigation does not
+  confer permissions. Search terms, private URLs and HX-Current-URL are not analytics
+  events and must be redacted from prepared access/application logging.
+
+- **UX-010:** Application milestones derive from saved verification, current unapproved terms,
+  coordinated agreement, usable login and successful real-method payment records. Approved
+  snapshots are not invalidated by later offer edits. Test/practice/pending/failed/abandoned
+  or reversed attempts cannot complete real first payment; print documents label Test/practice.
+  Exact-customer privacy history remains bounded, feature-gated and owner-only. Counts and
+  enhanced filters retain the same scoped selector as ordinary GET.
 
 - **SCH-001:** Historical liabilities remain separated into `CASH` and exact Gold or
   Silver grade dimensions; new production enrolments are limited to explicitly

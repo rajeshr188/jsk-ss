@@ -4,7 +4,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db.models import F
 from django.utils import timezone
 
-from accounts.models import CustomerRegistration, CustomerRegistrationAttempt
+from accounts.models import CustomerRegistration, CustomerRegistrationAttempt, PlanApplication
 
 
 class Command(BaseCommand):
@@ -32,11 +32,24 @@ class Command(BaseCommand):
             email__iexact=F("approved_user__email")
         ).count()
         attempts = CustomerRegistrationAttempt.objects.count()
+        plan_applications = PlanApplication.objects.all()
+        approved_without_agreement = plan_applications.filter(
+            registration__status="APPROVED", scheme_account__isnull=True,
+        ).count()
+        linked = plan_applications.filter(scheme_account__isnull=False)
+        agreement_identity_mismatches = linked.exclude(
+            registration__status="APPROVED",
+            registration__approved_user_id=F("scheme_account__customer__user_id"),
+            plan_id=F("scheme_account__plan_id"), metal_grade_id=F("scheme_account__metal_grade_id"),
+            requested_months=F("scheme_account__agreed_months"), start_date=F("scheme_account__start_date"),
+        ).count()
 
         errors = (
             approved_missing_customer
             + approved_wrong_role
             + approved_email_mismatches
+            + approved_without_agreement
+            + agreement_identity_mismatches
         )
         status = "ok" if errors == 0 else "error"
         self.stdout.write(
@@ -55,6 +68,9 @@ class Command(BaseCommand):
                     f"approved_missing_customer={approved_missing_customer}",
                     f"approved_wrong_role={approved_wrong_role}",
                     f"approved_email_mismatches={approved_email_mismatches}",
+                    f"plan_applications={plan_applications.count()}",
+                    f"approved_without_agreement={approved_without_agreement}",
+                    f"agreement_identity_mismatches={agreement_identity_mismatches}",
                 ]
             )
         )

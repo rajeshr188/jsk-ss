@@ -7,8 +7,14 @@
   <div class="card auth-card">
     <p class="page-eyebrow">Customer invitation</p>
     <h1>Invitation unavailable</h1>
-    <p class="text-secondary mb-4">This invitation is invalid, expired, superseded, or has already been used. Contact the showroom if you need a new invitation.</p>
+    <p class="text-secondary">This invitation is invalid, expired, superseded, or has already been used. Check your email for the latest setup link.</p>
+    <form method="post" class="mb-3">
+      {% csrf_token %}<input type="hidden" name="action" value="request_recovery">
+      <button class="btn btn-jsk w-100" type="submit">Request setup help</button>
+    </form>
+    <p class="small text-secondary">An eligible expired link can record a request for the showroom to issue a replacement. This does not activate your login or change your plan.</p>
     <a class="btn btn-outline-dark w-100" href="{% url 'contact' %}">Contact the showroom</a>
+    <p class="small mt-3 mb-0">Already set a password? <a href="{% url 'account_login' %}">Sign in</a> or <a href="{% url 'account_reset_password' %}">reset your password</a>.</p>
   </div>
 </div>
 {% endblock %}

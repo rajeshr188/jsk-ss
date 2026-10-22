@@ -8,13 +8,12 @@
   <div class="card auth-card">
     <p class="page-eyebrow">Secure account access</p>
     <h1>Welcome back</h1>
-    <p class="text-secondary mb-4">Sign in with the email address registered by the showroom.</p>
+    <p class="text-secondary mb-4">Sign in with your approved customer email and password. If you are new, first set your password using the latest showroom setup email.</p>
     <form method="post">
       {% csrf_token %}
       {{ form|crispy }}
       <button class="btn btn-jsk w-100" type="submit">Log in</button>
     </form>
-    <div class="text-center small mt-3"><a href="{% url 'account_reset_password' %}">Forgot your password?</a></div>
     {% if customer_google_login_enabled %}
       {% provider_login_url "google" process="login" as google_login_url %}
       <div class="d-flex align-items-center gap-3 my-4" aria-hidden="true">
@@ -32,9 +31,9 @@
           Continue with Google
         </button>
       </form>
-      <p class="small text-secondary mt-3 mb-0">Google works only after you connect it from this customer account. It does not create or approve an account.</p>
+      <p class="small text-secondary mt-3 mb-0">Already connected Google? Use the same Google account. To connect it for the first time, activate your login, sign in with your password, then open Google sign-in from the Account menu. Its verified email must match your customer email. Google does not create or approve an account or plan.</p>
     {% endif %}
   </div>
-  <p class="text-center small text-secondary mt-3 mb-0">A login does not create a savings scheme. {% if public_customer_registration_enabled %}<a href="{% url 'customer_registration' %}">Request customer access</a> or visit the showroom.{% else %}New customer access is arranged through the showroom.{% endif %}</p>
+  <p class="text-center small text-secondary mt-3 mb-0"><a href="{% url 'customer_activation_help' %}">Need login setup help?</a> {% if public_customer_registration_enabled %}<a href="{% url 'pricing' %}">Choose a plan to apply</a>.{% else %}New customer access is arranged through the showroom.{% endif %}</p>
 </div>
 {% endblock content %}

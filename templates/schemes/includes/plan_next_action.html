@@ -1,0 +1,5 @@
+<div class="card mb-4 application-journey"><div class="card-body">
+  <p class="page-eyebrow">Your next action</p><h2 class="h5">{{ next_action.stage }}</h2>
+  <p>{{ next_action.message }}{% if payment_availability.next_opening %} Expected next opening: {{ payment_availability.next_opening|date:'D, d M Y, g:i A' }}.{% endif %}</p>
+  <a class="btn btn-jsk" href="{{ next_action.url }}">{{ next_action.label }}</a>
+</div></div>

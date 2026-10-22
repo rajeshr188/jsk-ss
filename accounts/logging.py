@@ -3,6 +3,7 @@ import re
 
 
 SENSITIVE_AUTH_PATH_PATTERNS = (
+    re.compile(r"/accounts/applications/[^\s?#]+(?:\?[^\s]*)?"),
     re.compile(r"/accounts/invitations/[^\s?#]+(?:\?[^\s]*)?"),
     re.compile(r"/accounts/registrations/verify/[^\s?#]+(?:\?[^\s]*)?"),
     re.compile(r"/accounts/deletion/verify/[^\s?#]+(?:\?[^\s]*)?"),
@@ -18,10 +19,14 @@ def redact_sensitive_auth_paths(message):
             lambda match: _redacted_auth_path(match.group(0)),
             redacted,
         )
-    return redacted
+    # Search terms and return destinations can contain private customer identifiers.
+    return re.sub(r'(/(?:scheme|accounts)/[^\s?"<>]*)(?:\?[^\s"<>]*)',
+                  lambda match: match.group(1) + "?[REDACTED]", redacted)
 
 
 def _redacted_auth_path(path):
+    if path.startswith("/accounts/applications/"):
+        return "/accounts/applications/[REDACTED]/"
     if path.startswith("/accounts/invitations/"):
         return "/accounts/invitations/[REDACTED]/"
     if path.startswith("/accounts/registrations/verify/"):

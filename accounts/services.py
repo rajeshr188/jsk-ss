@@ -292,6 +292,9 @@ def issue_registration_verification(*, application, actor):
     application = CustomerRegistration.objects.select_for_update().get(
         pk=application.pk
     )
+    from .models import PlanApplication
+    if PlanApplication.objects.filter(registration=application, expires_at__lte=timezone.now()).exists():
+        raise InvalidCustomerRegistration("This plan application has expired; do not issue a verification link for it.")
     if application.status != CustomerRegistration.Status.PENDING_EMAIL_VERIFICATION:
         raise InvalidCustomerRegistration(
             "Only an application awaiting email verification can be resent."
@@ -326,6 +329,14 @@ def _validate_registration_owner(actor):
 
 @transaction.atomic
 def approve_customer_registration(*, application, reviewed_by, reason):
+    from .models import PlanApplication
+    if PlanApplication.objects.filter(registration=application).exists():
+        raise ValidationError("Review identity and the plan together from the application workspace.")
+    return _approve_registration_identity(application=application, reviewed_by=reviewed_by, reason=reason)
+
+
+@transaction.atomic
+def _approve_registration_identity(*, application, reviewed_by, reason):
     _validate_registration_owner(reviewed_by)
     application = CustomerRegistration.objects.select_for_update().get(
         pk=application.pk
@@ -432,6 +443,7 @@ def invitation_is_available(invitation, raw_token):
         and invitation.expires_at > timezone.now()
         and user.is_active
         and user.role == user.Role.CUSTOMER
+        and user.privacy_erased_at is None
         and not user.has_usable_password()
         and user.email.lower() == invitation.email.lower()
     )
@@ -580,6 +592,30 @@ def accept_customer_invitation(*, invitation_id, raw_token, new_password):
         revoked_at__isnull=True,
     ).exclude(pk=invitation.pk).update(revoked_at=timezone.now())
     return user
+
+
+@transaction.atomic
+def request_customer_invitation_recovery(*, invitation_id, raw_token):
+    """A matching expired secret can request owner help, never issue credentials."""
+    user_id = CustomerInvitation.objects.filter(pk=invitation_id).values_list(
+        "user_id", flat=True,
+    ).first()
+    if user_id is None:
+        return
+    user = get_user_model().objects.select_for_update().get(pk=user_id)
+    invitation = CustomerInvitation.objects.select_for_update().get(pk=invitation_id)
+    if (
+        not invitation_token_matches(invitation, raw_token)
+        or invitation.accepted_at or invitation.revoked_at
+        or invitation.expires_at > timezone.now()
+        or not user.is_active or user.role != user.Role.CUSTOMER
+        or user.privacy_erased_at is not None or user.has_usable_password()
+        or user.email.casefold() != invitation.email.casefold()
+    ):
+        return
+    if invitation.recovery_requested_at is None:
+        invitation.recovery_requested_at = timezone.now()
+        invitation.save(update_fields=["recovery_requested_at"])
 
 
 def _deletion_actor_label(actor, fallback):
@@ -911,6 +947,8 @@ def _verify_and_contain_customer_account(
         accepted_at__isnull=True,
         revoked_at__isnull=True,
     ).update(revoked_at=now)
+    from .models import PlanApplication
+    PlanApplication.objects.filter(registration__approved_user=user).update(progress_token_digest=None)
     user.is_active = False
     user.save(update_fields=["is_active"])
 

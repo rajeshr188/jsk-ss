@@ -72,25 +72,23 @@ class PublicPageTests(TestCase):
         response = self.client.get(reverse("home"))
         self.assertContains(response, "Jai Sri Krishna Jewellery")
         self.assertContains(
-            response, "Your jewellery goal starts with one clear plan."
+            response, "Save towards jewellery you choose."
         )
-        self.assertContains(response, "Get started")
+        self.assertContains(response, "Choose a savings plan")
         self.assertContains(response, self.plan.name)
         self.assertContains(response, "₹1000")
-        self.assertContains(response, "Get customer access")
+        self.assertContains(response, "Apply for this plan")
         self.assertContains(response, "An enrolment request is non-binding")
         self.assertContains(response, "BIS-hallmarked jewellery")
         self.assertContains(response, "images/home-jewellery.webp")
         self.assertContains(response, "Illustrative jewellery")
         self.assertContains(response, "bi-patch-check-fill")
-        self.assertNotContains(response, "Cash")
-        self.assertNotContains(response, "cash")
         self.assertNotContains(response, "No public signup")
         self.assertNotContains(response, "From contribution to jewellery")
         self.assertNotContains(response, "Lock the rate")
         self.assertContains(response, f'href="{reverse("pricing")}"')
         self.assertContains(response, f'href="{reverse("how_it_works")}"')
-        self.assertContains(response, f'href="{reverse("customer_registration")}"')
+        self.assertContains(response, f'href="{reverse("plan_apply", args=[self.plan.pk])}"')
         self.assertNotContains(response, "Plans &amp; pricing")
         self.assertContains(response, f'href="{reverse("contact")}"')
         self.assertContains(response, f'href="{reverse("account_login")}"')
@@ -118,9 +116,9 @@ class PublicPageTests(TestCase):
         self.assertContains(response, "Track my requests")
         self.assertContains(
             response,
-            f'href="{reverse("schemes:scheme_enrolment_request_create", args=[self.plan.pk])}"',
+            f'href="{reverse("plan_apply", args=[self.plan.pk])}"',
         )
-        self.assertContains(response, "Request this plan")
+        self.assertContains(response, "Apply for this plan")
 
     @override_settings(CUSTOMER_ENROLMENT_REQUESTS_ENABLED=False)
     def test_home_does_not_offer_direct_enrolment_request_when_disabled(self):
@@ -141,7 +139,7 @@ class PublicPageTests(TestCase):
 
         response = self.client.get(reverse("home"))
 
-        self.assertNotContains(response, "Request this plan")
+        self.assertNotContains(response, "Apply for this plan")
         self.assertNotContains(response, "Track my requests")
 
     def test_how_it_works_holds_the_detailed_customer_journey(self):
@@ -298,14 +296,14 @@ class PublicPricingPageTests(TestCase):
         PUBLIC_CUSTOMER_REGISTRATION_ENABLED=True,
     )
     def test_pricing_getting_started_offers_public_customer_access(self):
-        self.make_plan(code="ACCESS", publicly_listed=True)
+        plan = self.make_plan(code="ACCESS", publicly_listed=True)
 
         response = self.client.get(reverse("pricing"))
 
-        self.assertContains(response, "Request customer access", count=2)
+        self.assertContains(response, "Apply for this plan")
         self.assertContains(
             response,
-            f'href="{reverse("customer_registration")}"',
+            f'href="{reverse("plan_apply", args=[plan.pk])}"',
         )
         self.assertNotContains(response, "Contact us to enrol")
 
@@ -321,10 +319,9 @@ class PublicPricingPageTests(TestCase):
 
         response = self.client.get(reverse("pricing"))
 
-        self.assertContains(response, "Gold and silver savings schemes")
-        self.assertContains(response, "Savings plans with clear terms")
-        self.assertContains(response, "The displayed INR amount is a plan contribution")
-        self.assertContains(response, "accumulated metal quantity may be applied")
+        self.assertContains(response, "Choose how you want to save")
+        self.assertContains(response, "Making charges, wastage/value addition and taxes")
+        self.assertContains(response, "accumulated metal toward jewellery")
         self.assertNotContains(response, "Cash-plan bonus")
 
 

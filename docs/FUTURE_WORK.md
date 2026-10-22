@@ -1,14 +1,229 @@
 # Future Work Register
 
-This is the actionable backlog for known limitations that remain unresolved. It does
-not describe implemented behavior and does not relax the financial invariants in
-[Domain rules](DOMAIN_RULES.md).
+This is the actionable backlog for known limitations that remain unresolved, with
+completed foundations distinguished from outstanding acceptance. It does not relax
+the financial invariants in [Domain rules](DOMAIN_RULES.md).
 
 Detailed completed-work evidence belongs in [Project status](STATUS.md), the
 [production runbook](PRODUCTION_DEPLOYMENT.md), and the applicable
 [architecture decisions](decisions/README.md). A compact completed-item index and the
 historical milestone ledger remain here so stable `FW-*` identifiers and previously
 recorded limitations are not lost.
+
+## Review checkpoint — 22 October 2026
+
+Reviewed against the current repository, commit `7d07cf2`, the recorded Phase 1–4
+regression/browser acceptance, and the production/mobile evidence in the canonical
+documents. This is a repository reconciliation, not a fresh inspection of production,
+Play Console, provider delivery, monitoring accounts or external backups. Missing
+external evidence remains pending; an old unchecked box alone does not mean its
+implementation is absent.
+
+| Workstream | Completed evidence | Still pending |
+| --- | --- | --- |
+| Customer conversion redesign | All four phases implemented, tested locally and committed; see the local completion index below | Staging rehearsal, owner-approved production rollout and observed customer results (`FW-UX-001`) |
+| Offer and language follow-up | Record-derived offers, factual copy and English Tamil-testing protocol | Approved additional marketing descriptions/benefits and review window (`FW-UX-002`); reviewed Tamil translations and participant testing (`FW-UX-003`) |
+| Account deletion | Completion/minimization and notices deployed; authenticated zero-history production completion accepted 15 September | Separate signed-out verification journey, provider follow-up and independent recovery reconciliation (`FW-PRIV-001B`) |
+| Android distribution | PWA accepted; signed TWA accepted in Internal Testing; origin association and installed app verified | Remaining device/negative cases, reviewer access, declarations, store assets and submission (`FW-MOBILE-001`, `003`, `004`) |
+| Production operations | Health endpoints, masked logs, financial heartbeat and operational runbooks | External alert exercises/retention, rotation and archive implementation (`FW-PROD-002`, `003`, `007`) |
+| Financial recovery and reminders | Verified payments, manual recovery, payment controls and reminder implementation | Recovery/replay exercises, first genuine reminder delivery and separately defined audit improvements (`FW-PAY-003`, `FW-ELIG-002`, `FW-AUDIT-002`–`005`) |
+| CMS and media | Catalogue and disabled-first journal foundation accepted | Genuine approved journal content/discovery and independent media recovery (`FW-CMS-004`, `FW-MEDIA-002`) |
+
+Active entries below remain open unless explicitly marked as a completed subtask.
+Optional business-policy and architecture work is conditional; inclusion does not
+authorize implementation, production changes, a financial transaction or a store release.
+
+## Customer conversion release and validation
+
+- **FW-UX-001 — Release and validate the completed conversion redesign:** Implementation
+  is complete in `7d07cf2`; do not schedule another implementation phase for the same
+  scope. Release acceptance and evidence of improved conversion remain open.
+
+  - [x] Complete Phases 1–4, relevant regressions and mobile/desktop inspection.
+  - [x] Prepare architecture decisions, migration, deployment and rollback guidance.
+  - [ ] Rehearse the combined release on restored staging, including `pages.0002`,
+    `accounts.0007` and `accounts.0008` where not already applied; confirm reviewed
+    policy versions, private-route log exclusions and independent feature switches.
+  - [ ] Obtain owner approval for the concrete production release/migration plan,
+    deploy, and retain scoped customer/owner acceptance and rollback evidence under
+    [the production guide](PRODUCTION_DEPLOYMENT.md#customer-conversion-phase-3-prepared-release-not-production-authorization).
+  - [ ] Separately approve/enable optional aggregate measurement and record a comparable
+    reporting period with `report_customer_funnel`. Compare navigation and authoritative
+    application/verified Live first-payment throughput; report showroom cash separately.
+    Origin request counts include repeats/bots and omit edge-cached requests. They are
+    neither Cloudflare unique visitors nor a joined conversion cohort. Synthetic records
+    are not reliably excluded automatically; disclose their effect. Do not claim a
+    conversion improvement from implementation or local tests alone.
+
+- **FW-UX-002 — Supply approved offer messaging and review expectations:** Obtain
+  business-approved descriptions/benefits beyond the existing record-derived terms
+  and an achievable showroom response window. Until supplied, keep factual existing
+  copy and support details; do not invent returns, benefits or response promises.
+  Plan records and agreement snapshots remain authoritative. Numeric early-discontinuation
+  benefits still depend on `FW-PRICE-002`; policy review remains `FW-PROD-005`.
+
+- **FW-UX-003 — Run reviewed Tamil customer testing:** The English protocol is prepared
+  in [Testing](TESTING.md#prepared-tamil-customer-testing-english-protocol-not-published-translations).
+  Obtain reviewed terminology/translations and a Tamil-speaking reviewer, then run the
+  defined mobile tasks with prospective and existing customers in staging. Record
+  completion, wrong turns and misunderstood payment/application stages without personal
+  details, private links or payment references. Resolve findings and obtain language
+  approval before publication. No Tamil translations or participant results are complete.
+
+## Browser workflow audit — 22 October 2026
+
+The owner requested a fresh customer/owner browser review and an HTMX assessment.
+This audits the committed local candidate, not the deployed production experience.
+Chrome inspection used 1440x1000 desktop and 390x844 mobile viewports, synthetic
+PostgreSQL fixtures, in-memory email and dummy Razorpay Test configuration. The
+fixtures included approved/awaiting-review applications, three agreements for one
+customer, pending payment, paid showroom-cash receipt, allocation/webhook exceptions,
+expired setup and 30 customer profiles to inspect pagination. These are deliberately
+constructed states, not evidence of actual customer behavior or conversion impact.
+
+Inspected public home/comparison/contact-first intake, private progress entry/review
+stage, login, dashboard, agreement detail, first-payment form, recorded pending status,
+statement/receipt, another-plan request, activation instructions and account-deletion
+entry; owner Today/Operations, overview, rates/payment controls, application filters/
+coordinated review/history, search/page two, customer context, contributions/cash entry,
+eligibility, login recovery and empty reminder/privacy queues. Consequential approval,
+payment, rate, cash, resend, deletion and credential actions were not submitted in the
+browser. Filled fields were limited to existing synthetic login and read-only search.
+Private-progress access used its existing protected POST. Browser timing/automation
+retries are not attributed to application performance. This is a qualitative audit,
+not participant testing, a complete accessibility certification or a provider/device
+acceptance test.
+
+What already works: public plans derive authoritative terms; selected-plan intent is
+retained; existing customers do not repeat contact/address fields; coordinated review
+keeps separate identity/agreement evidence; customer payment states distinguish Test
+and unresolved outcomes; owner search is bounded and retains its query on page two;
+customer links, role boundaries and responsive labelled payment rows are in place.
+Keep these gains. At the audit checkpoint, the recommended next work was presentation
+and navigation refinement, rather than another
+replacement of the completed application architecture.
+
+Priority: **P1** affects task discovery, scope or customer understanding; **P2** improves
+scanability and presentation. Observations below are from the synthetic candidate;
+missing-rate/pending-payment examples do not assert production incidents.
+
+| Priority / area | Observed gap | Recommended improvement |
+| --- | --- | --- |
+| P1 — Customer dashboard | The approved application and its agreement repeat the same payment action in separate sections. Another pending application and three similar-grade agreements create substantial vertical repetition. | A compact Needs your attention area for actionable application/payment states, then identifiable plan summaries. Keep progress prominent; collapse completed steps rather than repeating the full approved application. Never add quantities across grades or imply pending payment is paid. |
+| P1 — Customer navigation | Signed-in navigation still leads with public Home/Plans/How/About/Contact; My schemes, enrolment requests, applications and plan terms use different labels. Documents require navigating through a plan/history. | Give signed-in customers Home, My plans, Applications, Documents and Help; keep account/security/privacy accessible. Apply consistent customer vocabulary while retaining exact legal/financial record distinctions internally. |
+| P1 — Intake/progress | Mobile intake measured 2382px document height including footer. Duration lacks an explicit months unit in the field label; phone is a text input without inputmode/autocomplete hints. Progress shows one heading rather than the completed/current/next sequence. | Label duration in months; add name/email/tel autocomplete and telephone input hints. Keep plan selection/confirmation, disclosure and required contact fields; collapse the optional message and repeated explanatory detail. Show a clear sequence: Contact → Email/details → Showroom review → Login setup → First payment, derived from records. Do not autosave consent or expose an identity-lookup endpoint. |
+| P1 — Customer documents and payment status | Receipts/statements have Print but no explicit return-to-plan link. Pending status requires full-page refresh; the customer has no dedicated cross-plan document list. | Add return links, plan/date context and a Documents destination; preserve full printable documents. Provide a read-only status refresh with an observed/checked timestamp distinct from payment confirmation, bounded refresh and visible recovery guidance. |
+| P1 — Owner discovery/readiness | Ten Operations links mix daily tasks, configuration, communication and privacy. Today has three queues but does not surface the missing offered-grade rate shown on Payment operations; privacy review is elsewhere. | Use grouped persistent desktop navigation and a mobile drawer. Add a compact readiness summary with direct links for blocked grades/payment availability and due privacy/settlement work, derived from existing selectors. Preserve distinct payment exceptions and do not create new automatic actions. |
+| P1 — Owner lookup/return context | Applications has stage/type filters but no applicant text search. Review's Applications inbox link drops the originating filters. Customer search itself already retains the query across pagination. | Add bounded applicant lookup by approved search fields, readable status tabs/counts and safe return-to-results state. Preserve stage/type/customer/page across review; only allow local return URLs. Do not count a plan application and its identity as two customer applications. |
+| P1 — Payment scope/export | A customer-filtered Contributions screen displays business-wide daily totals; Download CSV points to the unfiltered successful/reversed-record export rather than the visible customer/attempt list. This is an owner scope/expectation problem, not a demonstrated permission breach. | Separate business overview from customer totals. Make export scope/status exclusions explicit or supply a correctly scoped export using validated selectors. Add bounded reference/date/status/method lookup and a payment-detail destination. |
+| P1 — Owner cash entry | The customer page offers Record in-store cash for the pending-Razorpay agreement; its GET shows an entry form plus generic pending-order warning. Specific blocking is deferred to preview/service validation. | Show the recorded blocker before data entry and link to the relevant payment evidence. Recheck at preview/commit regardless; do not weaken pending-order, rate, pause or cash-confirmation safeguards. |
+| P2 — Owner/customer context | Owner customer details repeat identity in the context strip, heading and profile, while agreements mainly link to statement/cash. Balances, payment exceptions and review/access history require other screens. | A customer workspace with Summary, Applications, Plans, Payments, Documents and Access/privacy sections; compact persistent identity context and contextual actions. Preserve standalone URLs and permission-scoped reads. |
+| P2 — Density and list navigation | Marketing-style large headings, generous padding and stacked cards make routine owner scanning slow. Synthetic mobile Today measured 4545px; customer dashboard 3496px including footer. Customer pagination/results count is at the bottom of 25 cards. | Retain the brand on public pages; use compact operational typography, rows and short summaries for owner work. Put result counts/page controls above and below lists; keep mobile rows readable and touch targets usable. Page height is diagnostic, not a promised conversion metric. |
+| P2 — Language and hierarchy | Customer copy includes Immutable allocations, outstanding entitlements and implementation details; owner approval says activation email is sent after commit. Amounts lack Indian digit grouping and status badges are visually similar. | Use plain-language customer explanations and outcome-based owner text; retain audit detail behind labelled disclosure. Consistent INR/date/rate formatting, semantic statuses and one primary action per task. Preserve exact grade, authoritative precision and explicit Test/practice disclosure; never hide Test mode to look live. |
+| P2 — Empty states and forms | Settlement eligibility renders repeated empty tables; reminder/privacy empty states offer limited onward guidance. Long forms and document pages use inconsistent Back/Cancel placement. | Compact empty states, meaningful task guidance, consistent breadcrumbs/Back/Cancel and error summary/focus behavior. Keep full confirmation for consequential actions. |
+
+### Approved screen organization
+
+The owner approved this organization on 22 October 2026. It is implemented locally;
+production rollout and measured task completion remain pending. Permissions are unchanged.
+
+| Stakeholder | Main destinations | Contextual organization |
+| --- | --- | --- |
+| Prospective customer | Plans, How it works, Showroom help; customer login secondary | Selected plan → contact/preferences → protected email/details → showroom review → password setup/sign-in → correct first-payment state. Resume through the protected email link, never public identity search. |
+| Existing customer | Home, My plans, Applications, Documents, Help; Account menu | Home shows actionable stages and compact balances. Each plan has Overview/Terms, Payments, Documents and eligibility information, with one state-derived next action. Security/Google/deletion remain discoverable in Account. |
+| Owner | Today, Customers, Applications, Payments, Settlements, Administration | Payments groups contribution evidence/exceptions and cash entry through customer context; Settlements groups eligibility/history. Administration groups rates/plans/payment hours, communications, privacy and audit. Financial overview stays accessible as a report. Mobile uses a drawer; do not cram all destinations into a narrow top bar. |
+
+- **FW-UX-004 — Refine customer and owner organization from browser findings:**
+  Implementation complete locally, including the remaining-audit checklist in MVP_PLAN.md.
+  Release and real-user acceptance remain open. Addresses the P1 findings, typography/density and
+  empty-state polish. Keep Django/Bootstrap, existing authentication and scoped URLs,
+  separate identity/agreement records and all financial safeguards. No React, internal
+  REST API or general frontend rewrite is required. Missing business copy/Tamil input
+  remains `FW-UX-002`/`003`; release evidence remains `FW-UX-001`.
+  Acceptance: both roles find their common tasks through the proposed grouping;
+  customer plans/progress do not duplicate primary actions; scope/export labels agree
+  with actual rows; blocked cash/payment paths explain the recorded reason before
+  entry; search/filter/page context survives review and Back. Regress scoping, consent,
+  snapshots, changed offers, concurrent approval and server payment outcomes where
+  affected, and inspect mobile/desktop plus keyboard/focus/error behavior. Validate
+  task completion with users before claiming conversion or efficiency improvements.
+
+Local implementation covers role navigation/drawer, Today rate/payment readiness and due
+privacy/settlement links, bounded applicant search and safe inbox return, shared payment filters
+and scoped CSV/totals, cash blockers before input, customer sections, compact actionable Home,
+Applications/Documents, bounded histories, snapshot terms, document returns, contact autofill,
+month units, optional message disclosure, stage tabs/counts, six milestones through login/real
+first payment, exact-customer privacy history/review return, document/cancel navigation,
+INR grouping, Test/practice print labels and simpler empty states.
+The earlier audit table is historical evidence of the pre-change gaps. See STATUS.md for actual
+verification. Missing business/Tamil inputs stay open. Real-user task completion and production
+conversion outcomes are not proven by local implementation.
+
+Implementation and acceptance are tracked separately:
+
+- [x] FW-UX-004 local implementation, including stage counts, full milestones, privacy context
+  and document consistency. See STATUS.md for regression/browser evidence.
+- [x] FW-UX-005 approved read-only pilot and owner filter extension. Synthetic full/fragment
+  comparisons show smaller HTML with identical scoped records, not measured task-time savings.
+- [x] Synthetic local dump/restore and pending-migration rehearsal, with preserved legacy records,
+  separated liabilities and new application/activation checks. See PRODUCTION_DEPLOYMENT.md.
+- [x] Local owner acceptance: owner tested both roles and reported satisfaction on 22 October
+  2026. This is stakeholder acceptance, not an independent customer study or conversion result.
+- [ ] Exact-image staging checks and separately approved production rollout.
+- [ ] Broader customer/Tamil research where required; no unobserved task metrics claimed.
+- [ ] Measure production funnel/task outcomes after release; conversion uplift is not established.
+- [ ] Reassess lazy history or bounded polling only when measured interactions warrant it.
+
+### HTMX assessment and bounded pilot
+
+The approved local refinement pins HTMX 2.0.11 for owner customer search/paging, application,
+payment and exception filters, and manual customer recorded-status refresh. Lazy history,
+polling and form-preview candidates below remain conditional. HTMX can request and swap
+server-rendered HTML fragments, fitting the existing Django views, selectors and
+template includes without an internal JSON API. It makes selected interactions less
+disruptive; it does not organize navigation, improve wording or establish a payment
+outcome by itself. Source: [official HTMX documentation](https://htmx.org/docs/).
+
+| Fit / order | Candidate | Bounded behavior |
+| --- | --- | --- |
+| Best first | Owner customer search and pagination | Debounced input, loading/count feedback, replace only results/pagination and cancel stale requests. Keep query limits, fixed pages, explicit Search and ordinary GET fallback. See [active search](https://htmx.org/examples/active-search/) and [request synchronization](https://htmx.org/attributes/hx-sync/). |
+| Implemented locally | Application/exception/payment filters | Swap current results and counts without replacing the page shell; preserve safe URL state, customer scope and result-return context. New filter/reference/date support is separate backend work, not something HTMX adds automatically. |
+| Manual refresh implemented; polling conditional | Customer pending-payment status | Refresh only the protected recorded-status panel. Any later polling must pause when hidden and stop at a terminal state or bounded timeout; retain manual refresh/error guidance. GET must not call the provider, verify capture, reconcile, create an order or retry a financial mutation. |
+| Useful later | Customer workspace/read-only history tabs | Lazy-load scoped applications/payments/documents and bound history pages. Ordinary URLs must render complete pages and work without JavaScript. |
+| Conditional | Plan-dependent form help and cash review preview | Use server fragments where authoritative choices or snapshot previews require a server read; keep final confirmation/rechecks and unchanged consent. Existing rate-difference JavaScript and Bootstrap disclosures already work; do not replace simple local interactions merely to use HTMX. |
+| Avoid initially | Login, Google OAuth, private verification/setup, approval, checkout, cash settlement/correction and deletion completion | Keep normal protected navigation/POST/redirect and explicit confirmations. Do not blanket-boost the site, put financial success in optimistic UI or automatically repeat a timed-out POST. |
+
+- **FW-UX-005 — Pilot HTMX as progressive enhancement:** Approved pilot and owner filter extension implemented locally with
+  customer search/pagination, application/payment/exception filters and manual status refresh, following
+  `FW-UX-004`. The reviewed HTMX asset is pinned and served locally; the read-only pilot
+  introduces no runtime service, framework migration or database change.
+  Use the same selector-backed view for full HTML and an included results fragment;
+  treat `HX-Request` only as a presentation hint, never authentication/authorization.
+  Preserve normal forms/links, escaped templates, CSRF on any later POST and owner/
+  customer scoping on every fragment request. Set appropriate `Vary: HX-Request`
+  when representations differ and prevent private response caching.
+
+  Disable HTMX history snapshots for private pages (`hx-history="false"` and a
+  reviewed cache configuration); HTTP no-store alone does not control its localStorage
+  history. Keep token-bearing routes outside the pilot and avoid capturing private
+  URLs, query contents or `HX-Current-URL` in telemetry/logs. See [history privacy](https://htmx.org/attributes/hx-history/).
+  Handle session expiry with full navigation to the existing login flow rather than
+  inserting a login page into results; review [HX-Redirect](https://htmx.org/headers/hx-redirect/)
+  and ordinary redirect semantics before implementation. Provide loading/empty/error/
+  offline states, accessible result announcements and predictable focus. Abort older
+  search responses so they cannot replace newer results. Do not fetch private HTML
+  from external origins or enable dynamic script execution unnecessarily.
+
+  Acceptance: full-page and fragment requests return the same bounded/scoped records;
+  direct unauthenticated/other-role requests fail; normal GETs still work with JS off;
+  rapid input/page changes, empty results, session expiry, network failure and Back
+  preserve correct scope and usable controls; no private snapshots enter localStorage;
+  keyboard/screen-reader feedback works at mobile/desktop sizes. Compare rendered
+  payload, request counts and observed task usability before extending to more screens.
+  A cancelled browser request is not proof that a server-side mutation was cancelled.
+  The first implementation uses manual status refresh, not polling. Lazy history
+  fragments and bounded visibility-aware polling remain conditional on measured need; retain
+  full-page fallback. Compare payload/request counts and actual usability before expanding.
 
 ## Prioritization
 
@@ -57,6 +272,45 @@ recorded limitations are not lost.
   Obtain appropriate Indian legal/accounting review before treating them as binding,
   and verify the manual payment-error refund process can meet the displayed response
   timelines.
+- **FW-PROD-008 — Migrate transactional email from Postmark to Amazon SES:** Added
+  22 October 2026 at the owner's request; planning only, not a production cutover.
+  Retain Django's standard SMTP backend, existing templates and notification services.
+  No database migration, AWS SDK or new runtime service is expected for SMTP sending.
+  Postmark remains the current provider until a separately approved switch.
+
+  - [ ] Select the AWS account/region and verify sender identities, DKIM and DMARC
+    alignment; configure custom MAIL FROM/SPF if used without disrupting existing
+    mailbox delivery or Postmark DNS. Obtain SES production access and suitable
+    sending quotas in that region before sending to unverified customer recipients.
+  - [ ] Create restricted, region-specific SES SMTP credentials and test TLS on port
+    587 from the application host; keep secrets outside the repository. Prepare the
+    environment change and credential rotation/rollback procedure (`FW-PROD-003`).
+  - [ ] Configure bounce/complaint handling, suppression, delivery/failure evidence
+    and alerts (`FW-PROD-002`). Preserve the distinction between SMTP acceptance and
+    inbox delivery; agree how owners review and recover delivery failures.
+  - [ ] Review Postmark-specific tracking/tag headers across authentication,
+    verification, application-progress, invitation, deletion, enrolment and reminder
+    messages. Explicitly disable SES open/click tracking for private-link messages;
+    verify received messages have direct, unmodified links and no tracking pixels.
+    Postmark headers are not SES tracking controls.
+  - [ ] Update provider references in owner privacy/disposition screens, runbooks and
+    applicable privacy/Data Safety records. Record SES retention/access arrangements
+    and remaining Postmark copies without rewriting historical deletion decisions or
+    delivery evidence (`FW-PRIV-001B`).
+  - [ ] Run affected email/privacy regressions and controlled recipient tests for
+    registration, progress, activation/replacement, password reset, enrolment notices,
+    reminders and deletion verification/completion. Exercise bounce/complaint handling
+    and recoverable sending failure without duplicate agreements or financial writes.
+  - [ ] Prepare a concrete cutover plan, obtain production approval, switch SMTP
+    configuration and verify delivery. Retain Postmark temporarily for controlled
+    rollback; do not automatically send each message through both providers. Retire
+    old credentials/provider access only after acceptance and review of retained data.
+
+  Setup references: [SES SMTP requirements](https://docs.aws.amazon.com/ses/latest/dg/send-email-smtp.html),
+  [production access](https://docs.aws.amazon.com/ses/latest/dg/request-production-access.html),
+  and [bounce/complaint notifications](https://docs.aws.amazon.com/ses/latest/dg/monitor-sending-activity-using-notifications.html).
+  Recheck provider requirements and pricing when implementation begins; no cost or
+  approval-time guarantee is part of this backlog entry.
 
 ## Payments, cash, and audit
 
@@ -147,16 +401,24 @@ recorded limitations are not lost.
   Structured category/field decisions, atomic minimization/completion, retryable
   notices and retained-record reviews are deployed with migration `accounts.0006`.
   The disabled rollout is accepted on release `7819fd9552825c61ebc34a7844ba346c7ad92488`;
-  deletion request intake is now enabled; end-to-end completion acceptance remains
-  open. Independent Drive/USB access and the fictional decision
-  sequence exercise passed; custody roles and the restore-isolation rule are accepted.
-  Next record actual pilot dispositions and before/after recovery evidence, approve
-  enablement and perform controlled synthetic Play-app acceptance. The separate
+  deletion request intake is enabled. Authenticated zero-history completion was
+  production-accepted on 15 September 2026: one immutable completion decision,
+  minimized profile, unusable credentials, accepted/delivered notice and clean
+  owner-confirmed integrity checks. The separate signed-out email-verification
+  journey remains unaccepted; the last recorded dependency is an independently
+  receiving owner-controlled Workspace alias. Independent Drive/USB access and the
+  fictional decision sequence exercise passed; custody roles and the restore-isolation
+  rule are accepted.
+  Next complete that separate public-path acceptance without verification bypass,
+  record provider follow-up and independent before/after recovery reconciliation,
+  and retain per-case dispositions/review dates. Enablement and the authenticated
+  completion are already done; do not repeat them as missing implementation. The separate
   `FW-PROD-007` archive implementation is not a Google Play-specific submission gate;
   applicable security obligations remain open. No automatic financial-evidence
   destruction or blanket statutory period is approved. Public Play release remains
-  blocked until the completion workflow, policy/deletion URL, synthetic rollout, and
-  production evidence are complete. Never cascade-delete `CustomUser`, `Customer`, or
+  blocked on the remaining public-path, provider and recovery evidence recorded in
+  [Mobile release readiness](MOBILE_RELEASE_READINESS.md#account-deletion-and-retention-design-gate).
+  Never cascade-delete `CustomUser`, `Customer`, or
   financial records.
   Standalone/unapproved applicant minimization and ambiguous email-matched historical
   applications need a separately reviewed disposition path; this completion service
@@ -230,15 +492,18 @@ recorded limitations are not lost.
   additively in the origin statement. Release `0c611f6` published both Play
   certificates; Google and Android verification passed and the installed app opened
   without browser chrome. Completion remains blocked on payments/recovery/role
-  evidence, financial classification review,
-  owner-approved retention procedures, an implemented
-  deletion-request workflow,
-  and a release-candidate Data Safety review. The organization D-U-N-S value remains
+  evidence, financial classification, per-category retention/provider/recovery review,
+  the separate signed-out deletion acceptance, dedicated reviewer access, reviewed
+  store assets/listing and release-candidate Data Safety review/Console submission.
+  Deletion implementation, enablement and authenticated completion are already
+  evidenced. Recheck current platform requirements at submission; the recorded API
+  floor/target is a tested baseline, not a new external-policy verification.
+  The organization D-U-N-S value remains
   intentionally outside the repository.
-- **FW-MOBILE-003 — Build the customer-only Android TWA:** Create a separately owned
-  Android repository and CI release pipeline; choose the permanent package and Play
-  signing identity; publish exact Digital Asset Links from the canonical domain; and
-  expose only the existing customer experience. Do not add a mobile API, owner tools,
+- **FW-MOBILE-003 — Finish acceptance of the customer-only Android TWA:** The Android
+  repository/CI, permanent package/signing identity, signed Internal Testing bundle
+  and exact Digital Asset Links are implemented; this is remaining acceptance work.
+  Expose only the existing customer experience. Do not add a mobile API, owner tools,
   embedded WebView OAuth, application secrets, direct database access, or on-host
   Android builds. Validate browser fallback, App Links, Google OAuth, Razorpay/UPI
   handoff and return, process death, updates, accessibility, and release signing.
@@ -277,6 +542,24 @@ recorded limitations are not lost.
 
 ## Completed item index
 
+### Implemented and verified locally; production rollout pending
+
+All four customer conversion phases are committed in `7d07cf2`. Their completed
+scope must not be mistaken for production acceptance or measured business results.
+
+| Phase | Completed scope | Acceptance evidence |
+| --- | --- | --- |
+| 1 — Offer clarity, measurement and payment correctness | Record-derived public offers and plan-first action; aggregate-only funnel report; truthful availability, abandoned and uncertain-payment states | 446 serial full-suite tests; focused follow-up and mobile/desktop inspection recorded in `STATUS.md` |
+| 2 — Owner workflow | Today, unified inbox/review/context, customer search and bounded pagination | 460 serial full-suite tests, 68 focused regressions and mobile/desktop inspection |
+| 3 — Continuous application | Durable plan/grade/preferences, protected verification/progress, renewed confirmation and transactional coordinated approval with separate records/audit | 494 serial full-suite tests, 136 focused regressions including concurrent approval, and mobile/desktop inspection |
+| 4 — Activation and continuation | Scoped activation continuation, prominent progress, record-derived payment action, expired-link owner recovery and Google eligibility copy | 514 serial full-suite tests, 130 final focused regressions and mobile/desktop inspection; Tamil protocol prepared only |
+
+These are the recorded 5 October implementation runs, not tests rerun for this
+documentation review. Release/measurement work is `FW-UX-001`; business copy and
+Tamil follow-ups are `FW-UX-002` and `FW-UX-003`.
+
+### Previously completed foundations and accepted rollouts
+
 Completed implementation and rollout details are intentionally not repeated here:
 
 - **Foundation and production:** `FW-BETA-001`, `FW-BETA-002`, `FW-BETA-003`,
@@ -291,10 +574,13 @@ Completed implementation and rollout details are intentionally not repeated here
   `FW-MEDIA-001`, `FW-CATALOG-001`, `FW-CATALOG-002`, `FW-CATALOG-003`, and
   `FW-CATALOG-004`.
 - **Mobile:** `FW-MOBILE-002`.
+- **Privacy foundation:** `FW-PRIV-001A`. Completion implementation and authenticated
+  production acceptance are also done, but the remaining `FW-PRIV-001B` evidence
+  stays in the active register above.
 
 Use [Project status](STATUS.md) for the completed capability summary, the
 [production runbook](PRODUCTION_DEPLOYMENT.md) for release evidence, and ADR-0003
-through ADR-0014 for the corresponding durable architecture decisions.
+through ADR-0015 for the corresponding durable architecture decisions.
 
 ## Historical milestone ledger
 
@@ -315,3 +601,6 @@ above.
 | Milestone 9 | Bonus lacked caps, tiers, approval, forfeiture, tax policy, and optimized aggregation. | `FW-BONUS-004`–`FW-BONUS-005`. |
 | Milestone 10 | No generic payment correction, refund/dispute reconciliation, dual approval, automated retry/alerts, or database-trigger protection existed. | `FW-AUDIT-002`–`FW-AUDIT-005`, `FW-PAY-003`, and `FW-PROD-002`. |
 | Milestone 11 | Documents were printable HTML rather than archived statutory invoices, with no PDF, signature, delivery log, tax identity, formal numbering, or date-filtered export. | `FW-DOC-004`. |
+| September deletion rollout | Completion/minimization and enablement were pending after the containment foundation. | Implemented/deployed; authenticated zero-history completion accepted 15 September. Separate public-path, provider and recovery evidence remains `FW-PRIV-001B`. |
+| September Android foundation | Signed bundle, Play certificate association and customer device acceptance were incomplete. | Signed Internal Testing and origin association accepted. Remaining release/device/pilot evidence is `FW-MOBILE-001`, `003`, `004`; native/API decision stays conditional under `005`. |
+| October conversion redesign | Public plan intent, coordinated owner review and activation/payment continuation were fragmented. | All four phases implemented and verified locally in `7d07cf2`; production/measurement, business copy and Tamil follow-ups are `FW-UX-001`–`003`. |

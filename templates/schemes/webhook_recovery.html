@@ -3,6 +3,7 @@
 {% block title %}Webhook recovery | Jai Sri Krishna Jewellery{% endblock %}
 
 {% block content %}
+{% if event.contribution %}{% include 'schemes/includes/customer_context.html' with customer=event.contribution.scheme_account.customer scheme_account=event.contribution.scheme_account %}{% endif %}
 <div class="page-header">
   <div>
     <p class="page-eyebrow">Financial exception</p>

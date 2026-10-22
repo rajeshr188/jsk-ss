@@ -1,0 +1,12 @@
+{% with current=request.resolver_match.url_name %}
+<aside class="offcanvas-lg offcanvas-start workspace-sidebar d-print-none" tabindex="-1" id="owner-navigation" aria-labelledby="owner-navigation-title">
+<div class="offcanvas-header"><h2 class="h5" id="owner-navigation-title">Owner workspace</h2><button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#owner-navigation" aria-label="Close navigation"></button></div>
+<div class="offcanvas-body"><nav aria-label="Owner workspace">
+<a class="workspace-nav-link{% if current == 'owner_today' %} active{% endif %}" href="{% url 'schemes:owner_today' %}">Today</a>
+<a class="workspace-nav-link{% if current == 'customer_list' or current == 'customer_detail' %} active{% endif %}" href="{% url 'schemes:customer_list' %}">Customers</a>
+<a class="workspace-nav-link{% if current == 'owner_applications' or current == 'customer_registration_detail' or current == 'owner_enrolment_request_detail' %} active{% endif %}" href="{% url 'schemes:owner_applications' %}">Applications</a>
+<h3 class="workspace-nav-heading">Payments</h3>
+<a class="workspace-nav-link" href="{% url 'schemes:contribution_list' %}">Contributions</a><a class="workspace-nav-link" href="{% url 'schemes:exception_queue' %}">Financial exceptions</a><a class="workspace-nav-link" href="{% url 'schemes:owner_dashboard' %}">Financial overview</a>
+<h3 class="workspace-nav-heading">Settlements</h3><a class="workspace-nav-link" href="{% url 'schemes:redemption_eligibility' %}">Redemption eligibility</a><a class="workspace-nav-link" href="{% url 'schemes:redemption_list' %}">Redemption history</a>
+<h3 class="workspace-nav-heading">Administration</h3><a class="workspace-nav-link" href="{% url 'schemes:scheme_rates' %}">Scheme rates</a><a class="workspace-nav-link" href="{% url 'schemes:plan_list' %}">Scheme plans</a><a class="workspace-nav-link" href="{% url 'schemes:payment_operations' %}">Payment operations</a><a class="workspace-nav-link" href="{% url 'schemes:reminder_delivery_log' %}">Reminder deliveries</a><a class="workspace-nav-link" href="{% url 'schemes:owner_activation_queue' %}">Login setup recovery</a>{% if customer_account_deletion_enabled %}<a class="workspace-nav-link" href="{% url 'customer_account_deletion_list' %}">Account deletion requests</a>{% endif %}<a class="workspace-nav-link" href="{% url 'schemes:audit_log' %}">Audit log</a>
+</nav></div></aside>{% endwith %}

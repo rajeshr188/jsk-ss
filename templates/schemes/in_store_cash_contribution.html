@@ -3,6 +3,7 @@
 {% block title %}Record in-store cash | Jai Sri Krishna Jewellery{% endblock %}
 
 {% block content %}
+{% include 'schemes/includes/customer_context.html' with customer=scheme_account.customer %}
 <div class="page-header">
   <div>
     <a class="small d-inline-block mb-2" href="{% url 'schemes:customer_detail' scheme_account.customer.pk %}">← Customer record</a>
@@ -18,6 +19,8 @@
 
 <div class="row g-4">
   <div class="col-12 col-lg-7">
+    {% if cash_blocker and not form.is_bound %}<div class="alert alert-warning" role="status"><h2 class="h5">Cash recording is unavailable</h2><p>{{ cash_blocker.message }}</p>{% if cash_blocker.contribution %}<a href="{% url 'schemes:owner_payment_detail' cash_blocker.contribution.pk %}">Review the pending payment</a>{% else %}<a href="{% url 'schemes:payment_operations' %}">Review payment availability</a>{% endif %}</div>{% endif %}
+    {% if not cash_blocker or form.is_bound %}
     <div class="card"><div class="card-body p-4">
       <form method="post" novalidate>
         {% csrf_token %}
@@ -73,6 +76,7 @@
         <a class="btn btn-link" href="{% url 'schemes:customer_detail' scheme_account.customer.pk %}">Cancel</a>
       </form>
     </div></div>
+    {% endif %}
   </div>
   <div class="col-12 col-lg-5">
     <div class="card stat-card h-100"><div class="card-body p-4">

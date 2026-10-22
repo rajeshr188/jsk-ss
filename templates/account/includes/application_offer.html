@@ -1,0 +1,13 @@
+{% load workspace %}
+<div class="card mb-3"><div class="card-body">
+  <h2 class="h5">Selected plan: {{ plan.name }}</h2>
+  {% if compact %}<p class="small mb-2">{% if plan.amount_rule == 'FIXED' %}₹{{ plan.fixed_contribution_amount|inr }}{% elif plan.maximum_contribution %}₹{{ plan.minimum_contribution|inr }}–₹{{ plan.maximum_contribution|inr }}{% else %}From ₹{{ plan.minimum_contribution|inr }}{% endif %} · {{ plan.get_frequency_rule_display }} · {{ plan.default_months }} months</p><details><summary class="small">Contribution and duration details</summary>{% endif %}
+  <dl class="row small mb-0">
+    <dt class="col-6">Contribution</dt><dd class="col-6">{% if plan.amount_rule == 'FIXED' %}₹{{ plan.fixed_contribution_amount|inr }}{% elif plan.maximum_contribution %}₹{{ plan.minimum_contribution|inr }}–₹{{ plan.maximum_contribution|inr }}{% else %}₹{{ plan.minimum_contribution|inr }} or more{% endif %}</dd>
+    <dt class="col-6">Timing</dt><dd class="col-6">{{ plan.get_frequency_rule_display }}</dd>
+    <dt class="col-6">Duration</dt><dd class="col-6">{{ plan.default_months }} months standard; {{ plan.minimum_months }} minimum</dd>
+    <dt class="col-6">After eligibility</dt><dd class="col-6">{% if plan.allow_contributions_after_eligibility %}Further contributions allowed under your agreement{% else %}No further contributions{% endif %}</dd>
+  </dl>
+  <p class="small text-secondary mb-0 mt-2">Gold and silver jewellery purchase savings. Metal is allocated using the Scheme Rate applicable to a confirmed payment. This application does not guarantee a return or enable payments.</p>
+  {% if compact %}</details>{% endif %}
+</div></div>

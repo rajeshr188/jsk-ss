@@ -29,15 +29,16 @@ class CustomerInvitationPasswordForm(SetPasswordForm):
 
 
 class CustomerRegistrationForm(forms.Form):
-    full_name = forms.CharField(max_length=150)
-    email = forms.EmailField(max_length=150)
+    full_name = forms.CharField(max_length=150, widget=forms.TextInput(attrs={"autocomplete": "name"}))
+    email = forms.EmailField(max_length=150, widget=forms.EmailInput(attrs={"autocomplete": "email"}))
     mobile_number = forms.CharField(
         max_length=20,
         help_text="Enter a 10-digit Indian mobile number.",
+        widget=forms.TextInput(attrs={"type": "tel", "inputmode": "tel", "autocomplete": "tel"}),
     )
     address = forms.CharField(
         max_length=1000,
-        widget=forms.Textarea(attrs={"rows": 3}),
+        widget=forms.Textarea(attrs={"rows": 3, "autocomplete": "street-address"}),
     )
     accept_policies = forms.BooleanField(
         label="I have read and agree to the Terms and Privacy Policy.",
@@ -89,6 +90,11 @@ class CustomerRegistrationRejectionForm(forms.Form):
         max_length=500,
         widget=forms.Textarea(attrs={"rows": 3}),
     )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Approval and rejection share a page, but must have distinct label targets.
+        self.auto_id = "id_registration_rejection_%s"
 
 
 class CustomerAccountDeletionPublicForm(forms.Form):

@@ -509,6 +509,7 @@ def enrolment_request_offer_is_current(enrolment_request):
             enrolment_request.default_months_snapshot == plan.default_months,
             enrolment_request.allow_post_eligibility_contributions_snapshot
             == plan.allow_contributions_after_eligibility,
+            enrolment_request.disclosure_version == settings.CUSTOMER_ENROLMENT_REQUEST_DISCLOSURE_VERSION,
         ]
     )
 
@@ -784,6 +785,8 @@ def enroll_customer_from_request(
             "The public offer changed or closed. Do not silently substitute terms; "
             "ask the customer to review the current offer and submit again."
         )
+    if agreed_months != enrolment_request.requested_months:
+        raise ValidationError("The duration differs from the customer's request. Ask the customer to withdraw and confirm a new request; do not substitute a duration.")
     account = enroll_customer(
         customer=enrolment_request.customer,
         plan=enrolment_request.plan,

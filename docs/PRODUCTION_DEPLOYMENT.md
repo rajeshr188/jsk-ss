@@ -7,6 +7,189 @@ explicit Razorpay Test/Live modes, and manually published Scheme Rate build. Dev
 
 ## Production-readiness boundary
 
+### Prepared workflow refinement release (22 October 2026)
+
+This is a local review candidate, not production authorization. No new migration, environment
+setting, feature activation or financial backfill is needed for this refinement. Earlier pending
+Phase 1/3/4 migrations remain combined release dependencies; follow their sections below.
+
+1. Review the code/static-asset diff and regression/browser evidence in STATUS.md. Build the
+   immutable application image with normal collectstatic; confirm the pinned local HTMX asset,
+   project enhancement script and styles are present. The upstream 2.0.11 license is included;
+   its official SHA-384 is checked during acquisition and included in the script tag.
+2. Rehearse both roles on restored staging with desktop/mobile and JavaScript disabled. Check
+   Today readiness, customer context/sections, search/page/review return, filtered list vs CSV,
+   receipt/statement navigation, legacy cash access and pending-payment blockers. Never make
+   a genuine financial mutation simply to test navigation. Keep existing feature switches and
+   financial safeguards unchanged.
+3. Include deploy/Caddyfile in the separately approved proxy release: it now strips query strings,
+   Referer and Hx-Current-Url from access logs, retaining existing secret-route exclusions/IP
+   masking. Validate with the actual pinned runtime before reload. The prepared configuration
+   passes local validation in the existing caddy:2-alpine image with networking disabled. Verify
+   synthetic search/return/header redaction in staging logs and the external log sink. A local
+   loopback-only responder already confirms query/header stripping; no production
+   logging configuration was changed here. Keep Gunicorn full-path access logging disabled.
+4. Verify normal GET/full-page fallback, no-store/Vary responses and expired-session full login
+   navigation for all five fragment routes (Customers, Applications, Contributions, Exceptions
+   and customer payment status). Check stage counts, category/order, exact-customer privacy
+   history/review return, six progress milestones and Test/practice print labels. Search must cancel stale results; pagination must
+   retain scope and keyboard focus. A manual status refresh only reads recorded server state;
+   it never contacts Razorpay, creates an order or retries payment. No automatic polling is enabled.
+5. After owner approval, deploy and record scoped acceptance. Roll back the application image
+   and corresponding collected assets if necessary; there is no refinement schema rollback.
+   Retain query/header redaction when rolling back UI assets. Restore a prior proxy configuration
+   only if needed to recover a failed configuration, preserving equivalent privacy controls.
+   Do not roll back historical financial/identity records. Postmark/SES and Tamil publication remain
+   separate work; neither is changed by this release.
+
+### Synthetic local workflow upgrade rehearsal (22 October 2026)
+
+The repeatable local preparation is:
+
+```powershell
+uv --cache-dir .uv-cache run --no-sync --env-file .env python -m schemes.rehearse_workflow_release --synthetic-local
+```
+
+Requires PostgreSQL clients on PATH and CREATE DATABASE permission on explicit loopback
+PostgreSQL. The module accepts only --synthetic-local: it has no existing-database or backup
+argument. It uses the local connection credentials to create two random empty databases;
+it never dumps, migrates, restores or seeds the configured application database. Non-loopback
+hosts and connection-option overrides are refused. PostgreSQL tools receive exact local
+hosts/database names; Python outbound network calls are blocked. Email stays in memory,
+provider keys are synthetic Test values, and no web server or scheduled task is started.
+Only exact names successfully created by the invocation can be cleaned up, in finally;
+the generated synthetic dump and temporary databases are removed on success or failure.
+
+The synthetic predecessor has accounts through 0006, schemes through 0020, and pages through
+0001. This is an explicit test baseline, not an inventory of the deployed production schema.
+Observed pending upgrade: accounts.0007 plan applications, accounts.0008 invitation recovery,
+and pages.0002 aggregate funnel counts. No new refinement/rehearsal migration is introduced.
+The drill checks unchanged historical rows, separate cash/gold/silver liabilities, existing
+customer/history access, owner permissions/fragments, renewed offer consent, repeat-safe
+approval, recoverable mail failure, replacement activation and plan continuation. It does not
+create a provider order or treat activation as payment. See STATUS.md for run evidence.
+
+Before external staging, confirm the hostname/access method and who owns the isolated database,
+record the exact candidate image digest and actual migration plan, and use an approved sanitized
+backup with provenance/time. Do not copy raw production PII merely to inspect UI. Disable public
+intake/outbound providers/jobs until the controlled staging workflow is ready; use separate
+secrets and the existing Test Mode acceptance procedure for any later sandbox payment.
+Rehearse the exact image/static manifest/proxy and browser flows, including JavaScript disabled,
+HTMX session/error recovery, query/token redaction at every actual log sink, operational checks
+and image rollback. Use the participant task/evidence protocol in TESTING.md. The local drill
+cannot close these external checks, provider delivery or participant acceptance.
+
+Local stakeholder acceptance is recorded: the owner tested both owner and customer roles and
+reported satisfaction on 22 October 2026. A production image and internal-only container
+restore/upgrade were verified locally; see the release candidate record below. External staging
+target, published/CI-scanned digest and approved sanitized production-backup provenance are
+not supplied for this release. Keep those checklist items open. Production deployment
+and production data changes still require separate owner approval; no remote resource is created
+by running this local drill.
+
+### Accepted UI release candidate (22 October 2026)
+
+The initial image identity below is superseded: PR #75's first security scan found fixable
+critical advisories in certifi/Pillow/PyJWT. The release branch updates only those locked
+packages to certifi 2026.10.19, Pillow 13.0.0 and PyJWT 2.15.1, with explicit minimum constraints.
+Do not promote the original b1607523 image. Replacement local tag is
+`jsk-savings:ui-release-20261022-rc-f57a8bb44665`, image ID
+`sha256:4052110e1e50d1ad674a79e027bc91d832a6da1c66095a975f50ffd39e2a743a`.
+Read [PR #75 checks](https://github.com/rajeshr188/jsk-ss/pull/75/checks) for the current-head
+CI/security conclusion before progressing. Production is unchanged. See STATUS.md for gates.
+
+The accepted code fingerprint is
+`03ece8a68849506f012217c2ccfe2a95f982b0a27d251760586966b905814c40`.
+Local build tag: `jsk-savings:ui-release-20261022-03ece8a68849`.
+Local image ID: `sha256:b160752354552a928b4d0a0e3e017a146b3807e9f624a0ebc32b0b6eb5404ddb`.
+These identify the local rehearsal only. Do not use the local image ID as a GHCR manifest digest.
+The build used unchanged Dockerfile/uv.lock, Python 3.12, production static collection and a
+curated source context excluding local secrets and unrelated notes. Evidence/manifest is in
+`.uv-cache/ui-release-20261022/`; Git retains the reviewed source and canonical runbook.
+
+The same image passed internal-network PostgreSQL 16 dump/restore, additive migration and
+legacy/new workflow checks under the runtime read-only/non-root restrictions. Actual Gunicorn
+readiness/liveness and hashed static HTTP responses passed. No ports were published and no
+provider delivery/capture, actual R2 access or live account action was attempted. Caddy validates
+locally; the existing local redaction probe does not replace checks at the actual edge/log sink.
+
+Release progression remains:
+
+1. Review the separate UI release branch and its stacked foundation dependency; leave Google
+   Play PR #74 unchanged. Run the existing CI workflow and fixable-critical vulnerability gate.
+2. Record the reviewed merged commit and CI-published GHCR manifest digest. Promote that exact
+   image through staging; do not label the local build as CI-scanned or rebuild independently
+   for production. Record the actual migration plan, backup provenance, current feature flags,
+   operational/payment availability and previous compatible image before requesting rollout.
+3. Rehearse the exact published image and prepared Caddy config on an agreed isolated staging
+   target. Check secure cookies/CSRF, normal and enhanced flows, JS-disabled browser fallback,
+   actual query/token/header redaction and external log sinks. Check providers using the existing
+   controlled Test acceptance procedure; no artificial live payment is authorized.
+4. Present that concrete digest, CI/staging evidence, migrations and rollback target to the
+   owner for separate production deployment/data-change approval. Local role satisfaction is
+   not that approval. Keep Postmark and existing switches unchanged unless separately requested.
+5. Prefer a forward fix or disabling intake for recovery. Retain application/confirmation,
+   invitation and financial evidence; never reverse the conversion migrations to roll back UI.
+   Old identity-only approval code is unsafe for linked plan-first records; suspend review if
+   forced to recover with an older application image. Do not restore an older financial database.
+
+There is no new UX refinement/rehearsal migration. Earlier conversion migrations accounts.0007,
+accounts.0008 and pages.0002 remain conditional on the actual target's migration inventory.
+The local synthetic baseline is not proof those migrations are pending on production.
+
+### Pending customer conversion Phases 1–2 release (5 October 2026)
+
+This section prepares a local change for review; it does not authorize deployment,
+production migrations, feature activation or edits to production plan records.
+
+1. Review the image/code diff and normal release gates. The only new migration is
+   `pages.0002_publicfunneldailycount`: an empty aggregate measurement table with
+   day/stage/count constraints. It performs no data migration and touches no customer
+   or financial table. Review `migrate --plan`; do not apply unrelated pending vendor
+   migrations as part of this change. After approval, the bounded migration command
+   is `python manage.py migrate pages 0002_publicfunneldailycount --noinput`.
+2. Keep `PUBLIC_FUNNEL_MEASUREMENT_ENABLED=False` through cutover. Verify home/plans,
+   selected-plan entry, disabled-feature fallbacks and existing login/request routes.
+   The revised privacy notice is dated 5 October 2026. Review it and set
+   `PUBLIC_REGISTRATION_PRIVACY_VERSION=2026-10-05` for new registration evidence
+   during the approved release; explicit environment values override the code
+   default. Do not rewrite previously accepted policy versions or change the
+   separate deletion/terms versions as part of this notice amendment.
+   When the schema and policy text are accepted, the owner may separately approve
+   `PUBLIC_FUNNEL_MEASUREMENT_ENABLED=True`. No beacon/provider configuration is needed.
+   Existing edge analytics injection/exclusion must be checked independently: tokens,
+   authentication, customer/owner and payment paths must not leak through that provider.
+3. Check mobile/desktop paused/no-rate/month-paid agreement cards, abandoned history,
+   private payment-status authorization/no-store, and test-mode uncertain callback
+   recovery. Callback/webhook verification stays enabled during initiation pauses.
+   No real payment is necessary merely to inspect the status presentation.
+4. Read aggregates with `python manage.py report_customer_funnel --start 2026-10-05
+   --end 2026-10-05` (enter on one line). Output is JSON totals only. Report dates are
+   inclusive India-local dates, at most 366 days. First-payment identity is determined
+   across full history, not just the requested period. Outstanding allocation count
+   is a current backlog snapshot. Counts are not unique visitors or a joined cohort.
+   Navigation history starts at enablement; existing source-record throughput can be
+   queried earlier. Manually account for known synthetic application identities.
+5. Rollback: disable measurement and return to the prior immutable image. Keep the
+   additive aggregate table; no customer/financial history rollback or deletion is
+   needed. Public free-text plan descriptions remain stored; this release stops
+   displaying them rather than rewriting production content. Cross-email selected
+   plan continuity and combined owner approval are Phase 3, not part of this release.
+
+Phase 2 is a code/template/static release and has no additional migration, feature
+flag or production data backfill. The Phase 1 aggregate-table migration above is
+still required if both phases ship together. After separate release approval,
+include collected static assets and smoke-test owner login to `/scheme/owner/today/`,
+Applications filters/pages, bounded customer search, historical registration/request
+links, inline agreement review and exact-payment exception recovery. Check owner-only
+permissions and customer-scoped document navigation with separate identities. No
+real agreement approval or provider/payment recovery is needed for a read-only UI
+smoke; any such production mutation needs the usual deliberate owner workflow.
+Owner sign-in now starts on Today; the previous `/scheme/owner/` financial overview
+and historical URLs remain available. Counts may include Test records and multiple
+exception records for one payment, as labelled. Rollback restores the earlier image
+and static assets; no identity, request, agreement or financial records need rewriting.
+
 Production release `315f836ac0717fbaaf2d8d90268471ac1670e5b1` runs the accepted
 Live Razorpay path, provider-backed abandoned-order lifecycle, exact-grade metal
 contracts, payment-operations circuit breaker, snapshotted Checkout expiry, and
@@ -3812,3 +3995,104 @@ not a completed control.
 - [Razorpay payment capture settings](https://razorpay.com/docs/payments/payments/capture-settings/)
 - [Razorpay payment Dashboard actions](https://razorpay.com/docs/payments/payments/dashboard/)
 - [Razorpay dispute Dashboard actions](https://razorpay.com/docs/payments/disputes/dashboard/)
+
+
+## Customer conversion Phase 3: prepared release, not production authorization
+
+Phase 3 adds `accounts.0007_planapplication_planapplicationconfirmation_and_more`.
+It creates two empty tables, protected foreign keys, one-to-one agreement/registration
+links and confirmation/preference constraints. It performs no historical registration,
+customer, request, agreement or financial backfill. The earlier Phase 1 `pages.0002`
+aggregate table remains a separate pending migration if not already deployed.
+
+Rollout dependencies and acceptance (execute on production only after owner approval):
+
+1. Review the complete pending migration plan, take the standard recoverable backup,
+   and rehearse on a restored non-production PostgreSQL database. Run Django checks,
+   migration consistency, the registration/invitation/enrolment/payment regressions
+   and the new application/concurrency tests. Confirm consent/disclosure versions match
+   the reviewed public Terms/Privacy copy; the developer's local `.env` is unchanged.
+2. Apply additive migrations before the new web code receives traffic. Deploy the
+   updated Caddy configuration before issuing progress links: `/accounts/applications/*`
+   must be omitted from access logs along with verification/invitation paths. Validate
+   Caddy configuration with the existing deployment tooling. Ensure any other edge or
+   log-export layer obeys the same exclusions. No new runtime service is required.
+3. Deploy the reviewed Django release. New plan-first intake uses the existing public
+   registration and customer enrolment-request switches together. It adds no new
+   automatic feature enablement or payment flag. Existing-customer requests and legacy
+   access-only registrations remain supported; allauth direct signup remains closed.
+4. Use synthetic applicants in the controlled acceptance environment: contact intake,
+   one-use email POST, retained plan/grade/preferences, separate private progress email,
+   session-gated address/current-offer confirmation, owner contact verification and
+   coordinated approval. Verify changed terms/policy versions/start dates require
+   customer reconfirmation; expired applications cannot be approved or have verification
+   reissued. A missed start date requires today/a future date, not silent backdating.
+5. Check distinct registration review, invitation, agreement and financial audit evidence;
+   retry approval and verify the same agreement. Simulate mail failure: approval must
+   persist and owner invitation recovery must work. Missing/failed progress delivery
+   enters owner attention; verified incomplete applicants otherwise wait for customer
+   details. Replacement progress links invalidate prior links and sessions and do not
+   extend the original application expiry. No customer payment is tested on production
+   without explicit authorization and the existing payment acceptance procedure.
+6. Run `check_public_customer_registrations` (now includes missing/mismatched coordinated
+   agreement checks) and the existing identity/enrolment integrity commands. The funnel
+   report adds aggregate plan-application submissions and distinct customer-confirmed
+   applications in the reporting period. These are subsets of registration throughput,
+   not additional unique visitors or a joined conversion cohort. Reconfirmations count
+   once per application in that period. No identity, link or reference is emitted.
+
+Recovery/rollback: prefer disabling new public intake and deploying a forward fix.
+Retain application/confirmation tables and every linked agreement, invitation and
+identity review. Do not reverse `accounts.0007` after accepting applications: that would
+remove retained evidence and relationships. Rolling back to old code can expose its
+legacy identity-only approval path for newly linked records; do not use that old owner
+approval endpoint or manual enrolment on those records. Put affected owner approval in
+maintenance until a compatible fix is deployed. Existing financial reconciliation,
+provider callbacks and historical customer access must remain available.
+
+An interrupted after-commit email callback may leave delivery unrecorded; it must not
+cause another agreement or invite on approval retry. Recover activation delivery through
+the existing owner customer invitation replacement; recover progress through its
+explicit owner replacement. No raw credential is retained for replay and no email
+worker/outbox infrastructure is introduced. Original registration/consent timestamps
+remain evidence; final policy/offer consent is retained in append-only confirmations.
+
+Phase 4 implementation/release guidance follows below. Missing approved marketing benefits/descriptions and
+showroom response-window input remain business follow-ups; no promises are added here.
+
+## Customer conversion Phase 4: prepared release, not production authorization
+
+`accounts.0008_customerinvitation_recovery_requested_at` adds one nullable timestamp
+to the existing invitation table. It performs no historical or financial data backfill.
+Review the complete pending migration plan including Phase 1/3 dependencies, back up
+and rehearse on restored staging, and apply additive migrations before serving new code.
+The developer's normal database and actual environment configuration remain unchanged.
+No new flag or runtime service is required; existing intake/Google/payment switches
+retain their independent rollout and fail-closed behavior. Do not enable Google merely
+to inspect copy: use synthetic configuration in isolated local/staging acceptance.
+
+Acceptance before approved rollout:
+
+1. Exercise linked-plan password setup and subsequent password sign-in into the exact
+   customer-owned agreement. Verify legacy setup, password reset and replaced/used
+   invitations still work. Activation must not create financial records or auto-login.
+2. Inspect customer dashboard/application stages and first-payment actions for future
+   start dates, missing rates, pauses, monthly paid, uncertain/expired checkout,
+   unallocated metal and Test versus Live records. GETs must call no payment provider.
+3. POST setup-help from an eligible expired private link, then replay it. Only one
+   timestamp is retained; no new invitation/mail/access is issued. Unknown/wrong/used/
+   superseded/inactive/erased links show the same generic outcome. Verify CSRF, no-cache,
+   strict-origin and existing token-path log exclusions at every edge/export layer.
+4. Review Today/full login recovery queue and existing owner resend. Check latest-only
+   records, 8-record preview and 25-record pages, retained recovery evidence, invitation
+   supersession and delivery failure. Activated customers use password reset instead.
+5. Review Google eligibility copy with connected/unconnected/disabled/ineligible
+   fixtures; preserve adapter checks and closed signup. Follow the prepared Tamil
+   protocol in `TESTING.md`; do not publish translations without business review.
+
+Rollback: retain the new nullable column and recovery history; prefer disabling new
+intake and a forward fix. Older compatible code may ignore recovery metadata, so owners
+must manually review outstanding setup requests until the queue is restored. Phase 3's
+warnings about old identity-only approval still apply. No agreement, registration,
+financial record or invitation evidence is deleted for rollback. Production deployment
+and production data changes require separate owner approval.

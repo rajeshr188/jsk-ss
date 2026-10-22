@@ -1,7 +1,7 @@
 {% extends '_base.html' %}
 {% load static %}
 {% block title %}Gold &amp; Silver Jewellery Savings in Vellore | Jai Sri Krishna Jewellery{% endblock title %}
-{% block meta_description %}Choose a published gold or silver jewellery savings plan, request customer access online, and begin your enrolment journey with Jai Sri Krishna Jewellery in Vellore.{% endblock %}
+{% block meta_description %}Choose a gold or silver jewellery savings plan and begin your application with Jai Sri Krishna Jewellery in Vellore.{% endblock %}
 {% block structured_data %}{% include "pages/includes/showroom_structured_data.html" %}{% endblock %}
 
 {% block content %}
@@ -10,8 +10,8 @@
     <div class="col-lg-7">
       <div class="hero-content">
         <p class="page-eyebrow">Gold and silver jewellery savings</p>
-        <h1 id="hero-title">Your jewellery goal starts with one clear plan.</h1>
-        <p class="lead">Choose a published plan, request enrolment online, and follow every verified contribution from your customer account.</p>
+        <h1 id="hero-title">Save towards jewellery you choose.</h1>
+        <p class="lead">Choose a contribution amount that suits you. Build your recorded gold or silver quantity for jewellery at our Vellore showroom.</p>
         <div class="hero-actions d-flex flex-wrap gap-2 mt-4">
           {% if user.is_authenticated and user.role == 'CUSTOMER' %}
             {% if customer_enrolment_requests_enabled %}
@@ -25,14 +25,14 @@
             <a class="btn btn-jsk btn-lg" href="{% url 'schemes:post_login' %}">Open dashboard</a>
             <a class="btn btn-outline-dark btn-lg" href="{% url 'pricing' %}">View savings plans</a>
           {% elif public_customer_registration_enabled %}
-            <a class="btn btn-jsk btn-lg" href="{% url 'customer_registration' %}">Get started</a>
-            <a class="btn btn-outline-dark btn-lg" href="#available-plans">View savings plans</a>
+            <a class="btn btn-jsk btn-lg" href="#available-plans">Choose a savings plan</a>
+            <a class="btn btn-outline-dark btn-lg" href="{% url 'contact' %}">Talk to the showroom</a>
           {% else %}
             <a class="btn btn-jsk btn-lg" href="#available-plans">View savings plans</a>
             <a class="btn btn-outline-dark btn-lg" href="{% url 'contact' %}">Contact the showroom</a>
           {% endif %}
         </div>
-        <p class="hero-boundary mb-0">Your online request starts a showroom review. It does not create a savings agreement or payment access by itself.</p>
+        <p class="hero-boundary mb-0">The showroom confirms your details and plan terms before enrolment. Payments begin after your agreement is created.</p>
         {% if not user.is_authenticated %}<p class="small mt-2 mb-0">Already approved? <a class="fw-semibold" href="{% url 'account_login' %}">Sign in to your customer account</a>.</p>{% endif %}
         <div class="trust-row" aria-label="Jewellery and account assurances">
           <span>BIS-hallmarked jewellery</span>
@@ -67,35 +67,7 @@
   <div class="row g-3 g-lg-4">
     {% for plan in featured_plans %}
     <div class="col-md-6 col-xl-4">
-      <article class="card home-plan-card h-100">
-        <div class="card-body p-4 d-flex flex-column">
-          <div class="d-flex flex-wrap gap-2 mb-3" aria-label="Available metal grades">
-            {% for offering in plan.metal_offerings.all %}{% if offering.active %}
-            <span class="badge text-bg-light border">{{ offering.metal_grade.display_name }}</span>
-            {% endif %}{% endfor %}
-          </div>
-          <h3 class="h4">{{ plan.name }}</h3>
-          <p class="home-plan-amount mb-1">
-            {% if plan.amount_rule == 'FIXED' %}
-              ₹{{ plan.fixed_contribution_amount|floatformat:0 }}
-            {% elif plan.maximum_contribution %}
-              ₹{{ plan.minimum_contribution|floatformat:0 }}–₹{{ plan.maximum_contribution|floatformat:0 }}
-            {% else %}
-              From ₹{{ plan.minimum_contribution|floatformat:0 }}
-            {% endif %}
-          </p>
-          <p class="small text-secondary mb-4">{{ plan.get_frequency_rule_display }} · {{ plan.default_months }} months</p>
-          <div class="home-plan-actions mt-auto d-grid gap-2">
-            {% if customer_enrolment_requests_enabled and user.is_authenticated and user.role == 'CUSTOMER' %}
-              <a class="btn btn-jsk" href="{% url 'schemes:scheme_enrolment_request_create' plan.pk %}">Request this plan</a>
-            {% elif not user.is_authenticated and public_customer_registration_enabled %}
-              <a class="btn btn-jsk" href="{% url 'customer_registration' %}">Get customer access</a>
-            {% else %}
-              <a class="btn btn-outline-dark" href="{% url 'pricing' %}">View plan details</a>
-            {% endif %}
-          </div>
-        </div>
-      </article>
+      {% include 'pages/includes/plan_offer.html' with heading_level='3' %}
     </div>
     {% empty %}
     <div class="col-12">
@@ -147,7 +119,7 @@
   <div>
     <p class="page-eyebrow">Want the full picture?</p>
     <h2 id="home-explainer-heading">See how your plan works before you begin.</h2>
-    <p class="mb-0 text-secondary">Learn how access approval, enrolment, contribution rate locking, metal crediting, and showroom redemption fit together.</p>
+    <p class="mb-0 text-secondary">See how contributions become recorded metal and how to use your eligible quantity at the showroom.</p>
   </div>
   <a class="btn btn-outline-dark" href="{% url 'how_it_works' %}">Read how it works</a>
 </section>
@@ -162,7 +134,7 @@
     {% if user.is_authenticated and user.role == 'CUSTOMER' and customer_enrolment_requests_enabled %}
       <a class="btn btn-jsk" href="{% url 'pricing' %}">Choose a savings plan</a>
     {% elif not user.is_authenticated and public_customer_registration_enabled %}
-      <a class="btn btn-jsk" href="{% url 'customer_registration' %}">Start my application</a>
+      <a class="btn btn-jsk" href="{% url 'pricing' %}">Choose my plan</a>
     {% else %}
       <a class="btn btn-jsk" href="{% url 'pricing' %}">View savings plans</a>
     {% endif %}

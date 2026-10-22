@@ -1,0 +1,21 @@
+{% load workspace %}
+<section id="application-workspace" tabindex="-1" hx-history="false" hx-sync="this:replace"><p class="small htmx-indicator" id="read-loading" role="status">Updating records&hellip;</p><p class="alert alert-warning enhancement-error" role="alert" data-read-error></p>
+<div class="page-header"><div><p class="page-eyebrow">Owner workspace</p><h1>Applications</h1><p class="page-subtitle">Identity and agreement reviews in one inbox. Each retains its own decision and evidence.</p></div><div class="page-actions"><a class="btn btn-outline-dark" href="{% url 'schemes:owner_today' %}">Back to Today</a></div></div>
+{% include 'schemes/includes/customer_context.html' %}
+<nav class="customer-tabs stage-tabs" aria-label="Application stage">{% for tab in stage_tabs %}<a href="{% query_link focus=tab.key %}" hx-get="{% query_link focus=tab.key %}" hx-target="#application-workspace" hx-swap="outerHTML" hx-replace-url="true" hx-indicator="#read-loading" data-page-link {% if focus == tab.key %}aria-current="page"{% endif %}>{{ tab.label }} <span class="badge text-bg-light">{{ tab.count }}</span></a>{% endfor %}</nav>
+<form method="get" data-read-filter hx-get="{{ request.path }}" hx-target="#application-workspace" hx-swap="outerHTML" hx-replace-url="true" hx-indicator="#read-loading" class="card card-body mb-4">
+  {% if customer %}<input type="hidden" name="customer" value="{{ customer.pk }}">{% endif %}
+  <div class="row g-3 align-items-end">
+    <div class="col-12"><label class="form-label" for="application-search">Applicant name, email, mobile or customer number</label><input class="form-control" id="application-search" type="search" name="q" maxlength="100" value="{{ search }}"></div>
+    <input type="hidden" name="focus" value="{{ focus }}">
+    <div class="col-sm-6 col-lg-4"><label class="form-label" for="application-kind">Review type</label><select class="form-select" id="application-kind" name="kind"><option value="all"{% if kind == 'all' %} selected{% endif %}>Identity and agreement</option><option value="registration"{% if kind == 'registration' %} selected{% endif %}>Identity</option><option value="plan"{% if kind == 'plan' %} selected{% endif %}>Agreement</option></select></div>
+    <div class="col-lg-4 d-flex flex-wrap gap-2"><button class="btn btn-jsk" type="submit">Show applications</button><a class="btn btn-outline-dark" href="{% url 'schemes:owner_applications' %}">Reset</a></div>
+  </div>
+</form>
+<p class="small text-secondary">Verified identity reviews first, then pending agreement reviews and verification recovery. Oldest first within each stage. 25 records per page.</p>
+<h2 class="visually-hidden">Application records</h2>
+{% include 'schemes/includes/pagination.html' with htmx_target='#application-workspace' htmx_indicator='#read-loading' %}
+{% include 'schemes/includes/application_items.html' %}
+{% include 'schemes/includes/pagination.html' with htmx_target='#application-workspace' htmx_indicator='#read-loading' %}
+
+</section>

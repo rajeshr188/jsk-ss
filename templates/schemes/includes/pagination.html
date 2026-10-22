@@ -1,0 +1,10 @@
+{% load workspace %}
+{% if page_obj %}
+<nav class="d-flex flex-wrap justify-content-between align-items-center gap-3 mt-4" aria-label="Results pages">
+  <p class="small text-secondary mb-0" aria-live="polite">{% if page_obj.paginator.count %}{{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ page_obj.paginator.count }}{% else %}0 results{% endif %} · Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</p>
+  <div class="d-flex gap-2">
+    {% if page_obj.has_previous %}<a class="btn btn-outline-dark" href="{% page_link page_obj.previous_page_number page_param %}"{% if htmx_target %} hx-get="{% page_link page_obj.previous_page_number page_param %}" hx-target="{{ htmx_target }}" hx-swap="outerHTML" hx-replace-url="true" hx-indicator="{{ htmx_indicator|default:'#customer-loading' }}" data-page-link{% endif %} rel="prev">Previous</a>{% endif %}
+    {% if page_obj.has_next %}<a class="btn btn-outline-dark" href="{% page_link page_obj.next_page_number page_param %}"{% if htmx_target %} hx-get="{% page_link page_obj.next_page_number page_param %}" hx-target="{{ htmx_target }}" hx-swap="outerHTML" hx-replace-url="true" hx-indicator="{{ htmx_indicator|default:'#customer-loading' }}" data-page-link{% endif %} rel="next">Next</a>{% endif %}
+  </div>
+</nav>
+{% endif %}

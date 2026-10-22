@@ -1,0 +1,8 @@
+<div class="list-group">
+{% for invitation in activations %}
+  <a class="list-group-item list-group-item-action" href="{% url 'schemes:customer_detail' invitation.user.customer_profile.pk %}">
+    <div class="d-flex flex-wrap justify-content-between gap-2"><strong>{{ invitation.user.customer_profile.full_name }}</strong><span class="badge text-bg-secondary">{{ invitation.lifecycle_status }}</span></div>
+    <div class="small">{% if invitation.recovery_requested_at %}Customer requested setup help {{ invitation.recovery_requested_at|date:'d M Y, g:i A' }}. {% endif %}Review login eligibility and resend an invitation from the customer record.</div>
+  </a>
+{% empty %}<div class="list-group-item text-secondary">No login setup issues needing attention.</div>{% endfor %}
+</div>

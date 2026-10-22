@@ -14,11 +14,14 @@ jaishrikrishnajewellery.com {
 			request>remote_ip ip_mask 24 48
 			request>client_ip ip_mask 24 48
 			request>headers>User-Agent delete
+			request>headers>Hx-Current-Url delete
+			request>headers>Referer delete
+			request>uri regexp "[?].*" "?[REDACTED]"
 			wrap json
 		}
 	}
 	log_append release {env.APP_RELEASE}
-	@sensitiveAuthPaths path /accounts/password/reset/key/* /accounts/invitations/* /accounts/registrations/verify/* /accounts/deletion/verify/* /accounts/google/login/callback/
+	@sensitiveAuthPaths path /accounts/password/reset/key/* /accounts/invitations/* /accounts/registrations/verify/* /accounts/applications/* /accounts/deletion/verify/* /accounts/google/login/callback/
 	log_skip @sensitiveAuthPaths
 	reverse_proxy web:8000
 }

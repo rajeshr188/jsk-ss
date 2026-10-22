@@ -188,6 +188,10 @@ def complete_customer_account_deletion(
         source_ip_digest="", review_reason="Identity minimized under verified account deletion.",
         delivery_error="",
     )
+    from .models import PlanApplication
+    PlanApplication.objects.filter(registration__approved_user=user).update(
+        customer_message="", progress_token_digest=None, progress_delivery_error="",
+    )
     # Explicit identity minimization, not a change to historical outcomes/times.
     Request.objects.filter(customer=customer).update(
         requested_email=tombstone_email, email_digest="", source_ip_digest="",

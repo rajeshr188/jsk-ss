@@ -1,0 +1,75 @@
+{% load workspace %}
+<section id="payment-workspace" tabindex="-1" hx-history="false" hx-sync="this:replace"><p class="small htmx-indicator" id="read-loading" role="status">Updating records&hellip;</p><p class="alert alert-warning enhancement-error" role="alert" data-read-error></p>
+{% include 'schemes/includes/customer_context.html' %}
+<div class="page-header">
+  <div><p class="page-eyebrow">Payment records</p><h1>Contributions</h1><p class="page-subtitle">{% if customer %}Payment attempts for {{ customer.full_name }}.{% else %}Customer payment attempts.{% endif %} Filters apply to these records and the export.</p></div>
+  <div class="page-actions"><a class="btn btn-outline-dark" href="{% url 'schemes:contribution_export' %}{% if export_query %}?{{ export_query }}{% endif %}">Export recorded payments (CSV)</a></div>
+</div>
+<p class="small text-secondary">The export contains only paid, allocation-pending and corrected records within this scope. Pending, failed and closed attempts are excluded.</p>
+<form method="get" data-read-filter hx-get="{{ request.path }}" hx-target="#payment-workspace" hx-swap="outerHTML" hx-replace-url="true" hx-indicator="#read-loading" class="card card-body mb-3">{% if customer %}<input type="hidden" name="customer" value="{{ customer.pk }}">{% endif %}{% if request.GET.contribution %}<input type="hidden" name="contribution" value="{{ request.GET.contribution }}">{% endif %}
+{% if filter_form.errors %}<div class="alert alert-danger" role="alert"><p>Check the selected filters.</p>{{ filter_form.non_field_errors }}{% for field in filter_form %}{% for error in field.errors %}<p class="mb-1">{{ field.label }}: {{ error }}</p>{% endfor %}{% endfor %}</div>{% endif %}
+<label class="form-label" for="{{ filter_form.q.id_for_label }}">{{ filter_form.q.label }}</label>{{ filter_form.q }}
+<details class="mt-3" {% if filter_form.errors or request.GET.status or request.GET.method or request.GET.mode or request.GET.start or request.GET.end %}open{% endif %}><summary>Status, method and date filters</summary><div class="row g-2 mt-1">{% for field in filter_form %}{% if field.name != 'q' %}<div class="col-12 col-sm-6 col-xl-3"><label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}</div>{% endif %}{% endfor %}</div></details>
+<div class="d-flex flex-wrap gap-2 mt-3"><button class="btn btn-jsk" type="submit">Filter payments</button><a class="btn btn-outline-dark" href="{% url 'schemes:contribution_list' %}{% if customer %}?customer={{ customer.pk }}{% endif %}">Clear filters</a></div></form>
+<p class="scope-summary" role="status">Selected records: {{ scope_summary.record_count }} · Received (Live/cash) ₹{{ scope_summary.received_amount|inr }} · Test/practice ₹{{ scope_summary.test_amount|inr }} (not money received) · Corrected records ₹{{ scope_summary.reversed_amount|inr }}.</p>
+{% include 'schemes/includes/pagination.html' with htmx_target='#payment-workspace' htmx_indicator='#read-loading' %}
+{% if daily_summary %}<details class="card card-body mb-3"><summary>Whole-business totals today</summary>
+<div class="row g-3 mb-4">
+  {% if in_store_cash_enabled %}
+  <div class="col-6 col-lg-4 col-xl"><div class="card stat-card h-100"><div class="card-body"><div class="stat-label">In-store cash received today</div><div class="stat-value">₹{{ daily_summary.cash.received_amount|inr }}</div><div class="stat-meta">{{ daily_summary.cash.receipts_count }} receipt{{ daily_summary.cash.receipts_count|pluralize }}</div></div></div></div>
+  <div class="col-6 col-lg-4 col-xl"><div class="card stat-card h-100"><div class="card-body"><div class="stat-label">Cash corrections today</div><div class="stat-value">₹{{ daily_summary.cash.reversed_amount|inr }}</div><div class="stat-meta">{{ daily_summary.cash.reversals_count }} reversal{{ daily_summary.cash.reversals_count|pluralize }}</div></div></div></div>
+  <div class="col-6 col-lg-4 col-xl"><div class="card stat-card h-100"><div class="card-body"><div class="stat-label">Net in-store cash today</div><div class="stat-value">₹{{ daily_summary.cash.net_amount|inr }}</div><div class="stat-meta">Cash receipts less corrections</div></div></div></div>
+  {% endif %}
+  <div class="col-6 col-lg-4 col-xl"><div class="card stat-card h-100"><div class="card-body"><div class="stat-label">Razorpay captured today</div><div class="stat-value">₹{{ daily_summary.razorpay_amount|inr }}</div><div class="stat-meta">{{ daily_summary.razorpay_count }} Live payment{{ daily_summary.razorpay_count|pluralize }}</div></div></div></div>
+  <div class="col-12 col-lg-4 col-xl"><div class="card stat-card stat-card--success h-100"><div class="card-body"><div class="stat-label">Total verified today</div><div class="stat-value">₹{{ daily_summary.verified_amount|inr }}</div><div class="stat-meta">{{ daily_summary.verified_count }} active contribution{{ daily_summary.verified_count|pluralize }} · {{ daily_summary.as_of|date:'d M Y' }}</div></div></div></div>
+</div></details>
+{% endif %}
+<div class="table-responsive">
+  <table class="table align-middle owner-records-table">
+    <thead><tr><th scope="col">Created</th><th scope="col">Customer</th><th scope="col">Scheme</th><th scope="col">Period</th><th scope="col">Amount</th><th scope="col">Provider</th><th scope="col">Entitlement</th><th scope="col">Status</th><th scope="col">Action</th></tr></thead>
+    <tbody>
+      {% for contribution in contributions %}
+      <tr>
+        <td data-label="Created">{{ contribution.created_at|date:'d M Y, g:i A' }}</td>
+        <td data-label="Customer"><a href="{% url 'schemes:customer_detail' contribution.scheme_account.customer.pk %}">{{ contribution.scheme_account.customer.full_name }}</a></td>
+        <td data-label="Scheme">{{ contribution.scheme_account.scheme_number }}</td>
+        <td data-label="Period">{{ contribution.contribution_period|date:'F Y' }}</td>
+        <td data-label="Amount"><a href="{% url 'schemes:owner_payment_detail' contribution.pk %}">₹{{ contribution.amount|inr }}<span class="visually-hidden"> · Payment {{ contribution.pk }}</span></a></td>
+        <td data-label="Provider">{{ contribution.payment_method_display }}{% if contribution.gateway_mode %} · {{ contribution.get_gateway_mode_display }}{% endif %}
+          {% if contribution.payment_gateway == 'razorpay' and contribution.checkout_expires_at %}<div class="small text-muted">Checkout expiry: {{ contribution.checkout_expires_at|date:'d M Y, g:i A' }}</div>{% endif %}
+          {% if contribution.cash_receipt.paper_receipt_number %}<div class="small text-muted">Paper receipt: {{ contribution.cash_receipt.paper_receipt_number }}</div>{% endif %}
+        </td>
+        <td data-label="Entitlement">{% if contribution.metal_allocation %}{{ contribution.metal_allocation.quantity|floatformat:3 }} g {{ contribution.metal_allocation.metal_grade.display_name }}{% else %}—{% endif %}</td>
+        <td data-label="Status">
+          {% if contribution.status == 'PAID' %}<span class="badge text-bg-success">Paid</span>
+          {% elif contribution.status == 'PAID_UNALLOCATED' %}<span class="badge text-bg-warning">Paid — allocation pending</span>
+          {% if contribution.allocation_error %}<div class="small text-danger mt-1">{{ contribution.allocation_error }}</div>{% endif %}
+          {% elif contribution.status == 'FAILED' %}<span class="badge text-bg-danger">Failed</span>
+          {% elif contribution.status == 'REVERSED' %}<span class="badge text-bg-secondary">Reversed</span><div class="small text-muted mt-1">{{ contribution.cash_reversal.get_reason_code_display }}</div>
+          {% elif contribution.status == 'ABANDONED' %}<span class="badge text-bg-secondary">Checkout closed after review</span>
+          {% else %}<span class="badge text-bg-warning">Pending</span>{% endif %}
+        </td>
+        <td data-label="Action">
+          {% if contribution.status == 'PAID' or contribution.status == 'PAID_UNALLOCATED' or contribution.status == 'REVERSED' %}
+          <a class="btn btn-sm btn-outline-dark mb-2" href="{% url 'schemes:contribution_receipt' contribution.pk %}">Receipt</a>
+          {% endif %}
+          {% if contribution.payment_gateway == 'in_store_cash' and contribution.status != 'REVERSED' %}
+          <a class="btn btn-sm btn-outline-danger mb-2" href="{% url 'schemes:in_store_cash_contribution_reverse' contribution.pk %}">Correct entry</a>
+          {% endif %}
+          {% if contribution.status == 'PAID_UNALLOCATED' %}
+          <form method="post" action="{% url 'schemes:retry_contribution_allocation' contribution.pk %}">
+            {% csrf_token %}
+            <label class="visually-hidden" for="reason-{{ contribution.pk }}">Retry reason</label>
+            <input class="form-control form-control-sm mb-2" id="reason-{{ contribution.pk }}" name="reason" placeholder="Reason for retry" required>
+            <button class="btn btn-sm btn-outline-dark" type="submit">Retry allocation</button>
+          </form>
+          {% elif contribution.status != 'PAID' %}—{% endif %}
+        </td>
+      </tr>
+      {% empty %}<tr><td colspan="9" class="text-center text-muted py-4">{% if filter_form.errors %}Correct the filters to view payment attempts.{% else %}No payment attempts match these filters.{% endif %}</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+{% include 'schemes/includes/pagination.html' with htmx_target='#payment-workspace' htmx_indicator='#read-loading' %}
+
+</section>

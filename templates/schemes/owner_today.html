@@ -1,0 +1,18 @@
+{% extends '_base.html' %}
+{% block title %}Today | Jai Sri Krishna Jewellery{% endblock %}
+{% block content %}
+<div class="page-header"><div><p class="page-eyebrow">Owner workspace</p><h1>Today</h1><p class="page-subtitle">Review applications and resolve payment issues. Includes older unresolved records.</p></div><div class="page-actions"><a class="btn btn-outline-dark" href="{% url 'schemes:customer_list' %}">Find customer</a><a class="btn btn-outline-dark" href="{% url 'schemes:owner_dashboard' %}">Financial overview</a></div></div>
+<section class="readiness-grid mb-3" aria-label="Showroom readiness">
+{% for item in readiness %}{% if not item.availability.allowed %}<div class="alert alert-warning mb-0"><strong>{{ item.grade.display_name }} payments unavailable</strong><p class="small mb-1">{{ item.availability.message }}</p><a href="{% url 'schemes:payment_operations' %}">Review availability</a> &middot; <a href="{% url 'schemes:scheme_rates' %}?grade={{ item.grade.code }}#publish-rate">Review rate</a></div>{% endif %}{% endfor %}
+{% if privacy_due_count %}<a class="alert alert-warning mb-0" href="{% url 'customer_account_deletion_list' %}">{{ privacy_due_count }} privacy reviews due</a>{% endif %}
+{% if settlement_due_count %}<a class="alert alert-info mb-0" href="{% url 'schemes:redemption_eligibility' %}">{{ settlement_due_count }} plans eligible for showroom settlement</a>{% endif %}
+</section>
+<nav class="d-flex flex-wrap gap-2 mb-4" aria-label="Today queues"><a class="btn btn-outline-dark" href="#today-financial">Financial exceptions ({{ exception_count }})</a><a class="btn btn-outline-dark" href="#today-applications">Applications ({{ application_count }})</a><a class="btn btn-outline-dark" href="#today-activation">Login setup ({{ activation_count }})</a></nav>
+<div class="section-heading" id="today-financial"><div><h2>Financial exceptions <span class="badge text-bg-warning">{{ exception_count }}</span></h2><p>Oldest detected first. Up to 8 shown; one payment may have more than one exception record.</p></div><a href="{% url 'schemes:exception_queue' %}">All financial exceptions</a></div>
+{% include 'schemes/includes/exception_items.html' %}
+<div class="section-heading mt-5" id="today-applications"><div><h2>Applications needing attention <span class="badge text-bg-secondary">{{ application_count }}</span></h2><p>Verified identity reviews first, then plan reviews and verification recovery. Oldest first in each stage; up to 8 shown.</p></div><a href="{% url 'schemes:owner_applications' %}">All applications</a></div>
+{% include 'schemes/includes/application_items.html' %}
+<div class="section-heading mt-5" id="today-activation"><div><h2>Login setup needing attention <span class="badge text-bg-secondary">{{ activation_count }}</span></h2><p>Expired, failed or pending delivery and customer recovery requests. Oldest first; up to 8 shown.</p></div><a href="{% url 'schemes:owner_activation_queue' %}">All login setup issues</a></div>
+{% include 'schemes/includes/activation_items.html' %}
+<p class="small text-secondary mt-4">Applications waiting for customer email verification remain available in the <a href="{% url 'schemes:owner_applications' %}?focus=waiting">waiting view</a>. Financial overview and operational records remain accessible from navigation.</p>
+{% endblock %}
