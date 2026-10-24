@@ -314,6 +314,27 @@ outcome by itself. Source: [official HTMX documentation](https://htmx.org/docs/)
 
 ## Payments, cash, and audit
 
+- **FW-PAY-008 ? Expired Checkout operations:** Implemented in the isolated
+  `fix/expired-checkout-operations` local candidate: shared expired-pending owner
+  queue/counts, exact-payment POST inspect/confirm with signed bounded review and
+  fresh provider verification, expiry-aware operator command, and five-minute
+  bounded inspection with combined aggregate heartbeat delivery. The timer is
+  inspection-only; owner apply still uses the existing audited financial service.
+
+  - [x] All-mode expired-attempt visibility and pagination/count parity, including
+    missing provider identity and records beyond the inspection batch.
+  - [x] Owner/CSRF/method guards, reason, owner/order/state-bound review and fresh
+    provider inspection. Uncertain, attempted and cross-mode records remain held.
+  - [x] Exact contribution selection, deadline-plus-grace default and redacted
+    monitoring failures. No automatic refunds, entitlement overrides or timer writes.
+  - [x] Hardened timer and combined financial/provider heartbeat wrapper; configured
+    external delivery is required by the shipped unit and cannot silently downgrade.
+  - [ ] Complete final local/CI/exact-image release verification and production rollout.
+  - [ ] Owner-controlled monitoring account/check, secure heartbeat configuration,
+    delivered failure notification, missed-job and recovery acceptance. Dashboard plus
+    webhook was chosen; no existing monitor was found. Healthchecks.io is recommended
+    with a five-minute period, six-minute grace and owner email notification.
+
 - **FW-PAY-003 — Complete Razorpay webhook-recovery evidence:** ADR-0006 and release
   `69eecf9` provide signed-event classification, append-only attempt evidence, and an
   owner-only provider-backed dry-run/apply workflow. The remaining work is:

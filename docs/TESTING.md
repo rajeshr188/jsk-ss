@@ -445,3 +445,12 @@ audit database. Saved screenshots include `.uv-cache/audit-customer-desktop.png`
 removed, viewport reset and temporary tab closed. No application code or production
 configuration changed; this does not replace regression tests for a future UI/HTMX
 implementation or a complete keyboard/screen-reader/accessibility acceptance run.
+
+Expired Checkout operations regressions live in `schemes.tests.test_expired_checkouts`.
+They cover shared expiry boundaries, all-mode and missing-order visibility, queue
+pagination, aggregate redaction, recent/exact/grace/age/limited provider inspection,
+provider errors, owner/CSRF/method guards, signed review binding/tampering/expiry,
+fresh changed-provider evidence, capture during inspection and unchanged balances.
+`CheckoutTimerTests` execute the wrapper with deterministic Docker/curl boundaries,
+including combined failure routing, secret-URL redaction, delivery errors and missing
+required heartbeat configuration. No real provider or monitor is contacted by tests.

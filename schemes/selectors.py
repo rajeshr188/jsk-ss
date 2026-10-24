@@ -143,6 +143,7 @@ class OwnerExceptionItem:
     detail: str
     contribution: Contribution | None = None
     webhook_event: PaymentWebhookEvent | None = None
+    queue_kind: str = "allocation"
 
     @property
     def scheme_account(self):
@@ -165,10 +166,11 @@ class FinancialExceptionCounts:
     paid_unallocated: int
     failed_webhooks: int
     mismatched_webhooks: int
+    expired_checkouts: int = 0
 
     @property
     def total(self):
-        return self.paid_unallocated + self.failed_webhooks
+        return self.paid_unallocated + self.failed_webhooks + self.expired_checkouts
 
 
 @dataclass(frozen=True)
@@ -523,6 +525,14 @@ def get_owner_application_items(keys):
     return tuple(items)
 
 
+def get_expired_pending_checkouts(*, at=None):
+    """All modes remain visible, including orders without a provider identity."""
+    return Contribution.objects.filter(
+        status=Contribution.Status.PENDING, payment_gateway="razorpay",
+        checkout_expires_at__lte=at or timezone.now(),
+    )
+
+
 def get_owner_exception_keys(*, oldest_first=False, category="all"):
     allocations = Contribution.objects.filter(status=Contribution.Status.PAID_UNALLOCATED).order_by().annotate(
         queue_kind=Value("allocation"),
@@ -531,11 +541,19 @@ def get_owner_exception_keys(*, oldest_first=False, category="all"):
     webhooks = PaymentWebhookEvent.objects.filter(status__in=["FAILED", "REVIEW_REQUIRED"]).order_by().annotate(
         queue_kind=Value("webhook"), queue_date=Coalesce("processed_at", "received_at"),
     ).values("pk", "queue_kind", "queue_date")
+    checkouts = get_expired_pending_checkouts().order_by().annotate(
+        queue_kind=Value("checkout"), queue_date=F("checkout_expires_at"),
+    ).values("pk", "queue_kind", "queue_date")
     if category == "allocation":
         webhooks = webhooks.none()
+        checkouts = checkouts.none()
     elif category == "webhook":
         allocations = allocations.none()
-    return allocations.union(webhooks, all=True).order_by(
+        checkouts = checkouts.none()
+    elif category == "checkout":
+        allocations = allocations.none()
+        webhooks = webhooks.none()
+    return allocations.union(webhooks, checkouts, all=True).order_by(
         "queue_date" if oldest_first else "-queue_date", "queue_kind", "pk"
     )
 
@@ -1017,11 +1035,22 @@ def get_owner_exception_queue(*, keys=None):
                 detected_at=event.processed_at or event.received_at,
                 detail=event.error or "Webhook processing failed.",
                 webhook_event=event,
+                queue_kind="webhook",
             )
         )
+    checkouts = get_expired_pending_checkouts().select_related("scheme_account", "scheme_account__customer")
+    if keys is not None:
+        checkouts = checkouts.filter(pk__in=[key["pk"] for key in keys if key["queue_kind"] == "checkout"])
+    for contribution in checkouts:
+        items.append(OwnerExceptionItem(
+            category="Checkout expired — provider reconciliation required",
+            detected_at=contribution.checkout_expires_at,
+            detail="The payment remains unconfirmed. Inspect the provider order and payments before closing this attempt; expiry alone does not prove non-payment.",
+            contribution=contribution, queue_kind="checkout",
+        ))
     if keys is not None:
         by_key = {
-            ("allocation", item.contribution.pk) if item.contribution else ("webhook", item.webhook_event.pk): item
+            (item.queue_kind, item.contribution.pk if item.contribution else item.webhook_event.pk): item
             for item in items
         }
         return tuple(by_key[(key["queue_kind"], key["pk"])] for key in keys if (key["queue_kind"], key["pk"]) in by_key)
@@ -1050,6 +1079,7 @@ def get_financial_exception_counts():
         ).count(),
         failed_webhooks=webhook_counts["failed"],
         mismatched_webhooks=webhook_counts["mismatched"],
+        expired_checkouts=get_expired_pending_checkouts().count(),
     )
 
 

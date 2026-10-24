@@ -2,6 +2,35 @@
 
 ## Current milestone
 
+**24 October 2026 — expired Checkout operations hotfix (local candidate).**
+Expired pending Razorpay attempts now participate in the owner Today/exception queue,
+category pagination and aggregate financial alerts across all provider modes. The
+owner can inspect an exact attempt via CSRF-protected POST, review its order and
+payments, and confirm closure using a ten-minute signed owner/payment/state-bound
+review. Apply performs a fresh provider read and uses the existing locked/audited
+service. Unexpired, changed, cross-mode, attempted or uncertain records remain held;
+expiry alone never fails a payment or creates/removes entitlement.
+
+The command defaults to the stored Checkout deadline plus five minutes of grace,
+with optional legacy hour filtering and exact contribution selection. Monitoring
+gets aggregate-only output and a failure exit for the entire unresolved expired
+backlog, including other modes, missing provider IDs and rows outside the inspection
+batch. The five-minute systemd job combines allocation/webhook and expired-checkout
+checks in one heartbeat. Its three-order provider batch fits the four-minute service
+timeout at the gateway's maximum request timeout; later rows remain visible/alerted.
+The unit requires configured external heartbeat delivery and cannot report success
+when it is absent. Neither the timer nor GET requests mutate financial records.
+
+An isolated `fix/expired-checkout-operations` checkout contains only this hotfix;
+unrelated local plan-governance and account-deletion development is excluded.
+Initial 104 affected tests passed; the broader local and isolated release suites
+are being validated, including executable alert-wrapper tests. No schema change,
+production deployment, new timer activation or external notification is claimed.
+The owner chose dashboard plus monitoring-webhook alerts. No existing webhook was
+found on the production host; Healthchecks.io with a five-minute period, six-minute
+monitoring grace and email notification is recommended. Account/check setup and a
+controlled delivered-alert/missing-heartbeat/recovery test remain release gates.
+
 **Release candidate in draft PR #75 (22 October 2026).** Draft UI PR
 [#75](https://github.com/rajeshr188/jsk-ss/pull/75) is isolated on
 agent/customer-owner-ux-release, stacked on the existing Google Play foundation (#74),

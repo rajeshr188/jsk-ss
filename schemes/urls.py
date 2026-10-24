@@ -1,10 +1,12 @@
 from django.urls import path
 
 from . import views
+from .order_reconciliation import order_reconciliation
 
 app_name = "schemes"
 
 urlpatterns = [
+    path("owner/exceptions/checkouts/<int:contribution_id>/", order_reconciliation, name="order_reconciliation"),
     path("start/", views.post_login, name="post_login"),
     path("owner/", views.owner_dashboard, name="owner_dashboard"),
     path("owner/today/", views.owner_today, name="owner_today"),

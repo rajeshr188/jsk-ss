@@ -273,6 +273,13 @@ This is the canonical source for stable business rules.
 - **PAY-028:** Daily showroom reconciliation separately reports cash received,
   corrections, and net recorded cash. Cross-record integrity must pass before and
   after deployment and during routine financial review.
+- **PAY-029:** Expired pending Razorpay attempts remain financial exceptions until
+  verified provider reconciliation or confirmed payment resolves them. Owner review
+  and aggregate monitoring share the same expiry projection across all modes. A
+  scheduled inspection may not change payment status; closing a verified untouched
+  order requires an explicit audited apply. Owner apply needs a current owner/order/
+  state-bound review and a fresh provider inspection. Expiry alone never establishes
+  failure, refunds, release of entitlement or provider cancellation.
 - **METAL-001 / FIN-002:** A metal contribution creates at most one successful allocation.
 - **METAL-002 / FIN-003:** A Scheme Rate used by an allocation is immutable.
 - **METAL-003 / FIN-004:** Historical allocated grams never change when a newer Scheme Rate is published.
