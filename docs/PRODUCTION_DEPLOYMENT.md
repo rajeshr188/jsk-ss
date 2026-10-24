@@ -704,7 +704,9 @@ for the inventory/measurement stages of `FW-PROD-007`.
    Start with 5 events in 5 minutes and tune only from measured traffic. Include the
    release, status, method, and path in the incident; do not include headers or bodies.
 5. Create a heartbeat named `JSK financial exceptions`, expected every 5 minutes
-   with a 2-minute grace period, and assign the production escalation policy. Store
+   with a 6-minute grace period for the bounded combined checkout inspection below,
+   and assign the production escalation policy (or verify email recipients when
+   the account's Free plan notifies the whole team). Store
    its secret URL separately from the application environment:
 
    ```bash
@@ -2224,6 +2226,12 @@ Configure a dedicated heartbeat with a five-minute period and six-minute monitor
 grace for this bounded inspection job. Use the existing Better Stack account and
 verify/reuse or add its `JSK financial exceptions` heartbeat, following the canonical
 Better Stack monitoring section above. No additional monitoring account is needed.
+On 24 October 2026, this heartbeat was created in the verified JSK account/team
+`t585600` as heartbeat `516408`; its saved five-minute/six-minute settings and email
+notification were read back. It remains Pending until the first real job ping.
+Its URL is configured in the root-only production file below; no URL belongs in
+release evidence, repository files or command output. No timer was enabled and no
+notification-delivery or missed-run/recovery exercise is yet claimed.
 Verify its escalation recipients and email notification. These incidents go to the
 owner/operator and concern expired provider checkouts; they are distinct from
 customer reminders about agreed unpaid contributions. Store only

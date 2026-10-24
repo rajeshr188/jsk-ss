@@ -43,6 +43,19 @@ host did not establish that external monitoring was absent. The initial recommen
 to create Healthchecks.io was mistaken and is withdrawn; no new monitoring account is
 required. Verify/reuse or add the financial-exception heartbeat in the existing Better
 Stack account and exercise delivered failure/missed-heartbeat/recovery before activation.
+On 24 October, the JSK Better Stack account (`admin@jaishrikrishnajewellery.com`,
+team `t585600`) was verified and its empty heartbeat list confirmed. Created
+`JSK financial exceptions` (heartbeat `516408`) with a five-minute period,
+six-minute grace and email notifications. The Free account reports that all team
+members receive incident notifications; no plan upgrade was made. Saved settings
+were read back. Its secret URL was transferred over SSH into
+`/opt/jsk/secrets/observability.env`, verified root-owned with mode 0600 and LF
+line endings, and the temporary local secret was removed without printing it.
+The heartbeat remains Pending, awaiting its first ping. No test alert, production
+timer activation or hotfix deployment occurred; failure delivery, missed-run and
+recovery acceptance remain pending activation of the reviewed release. Both push
+and pull-request Django/container checks also passed for documentation commit
+`c32ddc5c3ab71d2cb209969c9280c849e5bfc915` (runs 40070788281 and 40070791358).
 These alerts concern unconfirmed expired provider checkout attempts and go to the
 owner/operator. Customer emails about scheduled unpaid contributions are a separate
 reminder policy and are not implemented by this hotfix; flexible agreements must not
