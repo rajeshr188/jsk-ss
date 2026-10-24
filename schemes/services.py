@@ -1288,6 +1288,9 @@ def reconcile_abandoned_razorpay_contribution(
             "The Razorpay order is not old enough for abandonment review."
         )
 
+    if not contribution.razorpay_checkout_expired:
+        raise ValidationError("Checkout must expire before abandonment reconciliation.")
+
     inspection = gateway.inspect_order(order_id=contribution.gateway_order_id)
     expected_amount = int(contribution.amount * 100)
     untouched = (
@@ -1320,6 +1323,9 @@ def reconcile_abandoned_razorpay_contribution(
             locked.status != Contribution.Status.PENDING
             or locked.gateway_order_id != contribution.gateway_order_id
             or locked.gateway_mode != gateway.mode
+            or locked.amount != contribution.amount
+            or locked.scheme_rate_id != contribution.scheme_rate_id
+            or locked.checkout_expires_at != contribution.checkout_expires_at
         ):
             raise ValidationError(
                 "The contribution changed during reconciliation; inspect it again."

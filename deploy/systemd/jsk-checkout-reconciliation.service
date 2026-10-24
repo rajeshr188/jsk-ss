@@ -1,0 +1,22 @@
+[Unit]
+Description=Inspect expired Jai Sri Krishna Jewellery Razorpay checkouts
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=deploy
+Group=deploy
+WorkingDirectory=/opt/jsk/app
+RuntimeDirectory=jsk-checkout-reconciliation
+RuntimeDirectoryMode=0700
+Environment=DOCKER_CONFIG=/run/jsk-checkout-reconciliation
+Environment=REQUIRE_FINANCIAL_HEARTBEAT=true
+EnvironmentFile=-/opt/jsk/secrets/observability.env
+ExecStart=/usr/bin/bash /opt/jsk/app/deploy/check-expired-checkouts.sh
+TimeoutStartSec=4min
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict

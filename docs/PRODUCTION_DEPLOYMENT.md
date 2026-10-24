@@ -704,7 +704,9 @@ for the inventory/measurement stages of `FW-PROD-007`.
    Start with 5 events in 5 minutes and tune only from measured traffic. Include the
    release, status, method, and path in the incident; do not include headers or bodies.
 5. Create a heartbeat named `JSK financial exceptions`, expected every 5 minutes
-   with a 2-minute grace period, and assign the production escalation policy. Store
+   with a 6-minute grace period for the bounded combined checkout inspection below,
+   and assign the production escalation policy (or verify email recipients when
+   the account's Free plan notifies the whole team). Store
    its secret URL separately from the application environment:
 
    ```bash
@@ -2183,6 +2185,76 @@ setting the variable back to `False` and recreating `web` again.
 - After current-day Gold and Silver Scheme Rates were published and reviewed, the
   owner enabled the weekly schedule with an audit reason. Its exact closing and
   reopening boundary worked as expected; the schedule remains enabled in production.
+
+### Expired Checkout operations (FW-PAY-008 candidate)
+
+The queue and `check_financial_exceptions` now include `expired_checkouts` for all
+modes as soon as a stored deadline expires. Normal unexpired checkouts are excluded.
+The private payment detail and exception entry link to owner review. GET is read-only;
+Check provider and Apply are CSRF-protected POSTs. Apply requires the current owner's
+signed ten-minute review and explicit confirmation, re-fetches provider order and
+payments, then uses the existing audited service. Attempted, mismatched, captured,
+unknown or cross-mode results stay for investigation/verified payment recovery.
+A received payment is never inferred to have failed from its browser deadline.
+
+Operator dry-run (new default: deadline plus five minutes, not 24 hours):
+
+```bash
+docker exec jsk-savings-web-1 python manage.py reconcile_abandoned_razorpay_orders \
+  --contribution-id=REVIEWED_ID
+```
+
+Review the result before an explicitly authorized exact-ID `--apply`; the apply pass
+inspects the provider again. `--older-than-hours` is an optional additional age filter.
+`--grace-minutes=0` allows urgent inspection after expiry without weakening provider
+predicates. `--summary-only --fail-on-pending` is for monitoring, not automatic closure.
+It fails if any scoped expired backlog remains, even beyond the provider batch or
+outside the configured mode. Errors are redacted and never close a failing candidate.
+
+For activation, release the isolated application image through normal CI/image gates
+first; no migration is introduced. Install `deploy/check-expired-checkouts.sh` and
+`deploy/systemd/jsk-checkout-reconciliation.{service,timer}` from that reviewed release
+into their documented `/opt/jsk/app/deploy/` and `/etc/systemd/system/` locations.
+The service uses `/usr/bin/docker exec`, a private runtime Docker configuration and
+a maximum of three order inspections per run (six provider requests). This respects
+ProtectHome and the four-minute timeout. Both aggregate financial checks and provider
+inspection must pass before its shared heartbeat reports health. Keep any older
+financial heartbeat timer disabled when sharing this destination, so another job
+cannot mask an inspection failure.
+
+Configure a dedicated heartbeat with a five-minute period and six-minute monitoring
+grace for this bounded inspection job. Use the existing Better Stack account and
+verify/reuse or add its `JSK financial exceptions` heartbeat, following the canonical
+Better Stack monitoring section above. No additional monitoring account is needed.
+On 24 October 2026, this heartbeat was created in the verified JSK account/team
+`t585600` as heartbeat `516408`; its saved five-minute/six-minute settings and email
+notification were read back. It remains Pending until the first real job ping.
+Its URL is configured in the root-only production file below; no URL belongs in
+release evidence, repository files or command output. No timer was enabled and no
+notification-delivery or missed-run/recovery exercise is yet claimed.
+Verify its escalation recipients and email notification. These incidents go to the
+owner/operator and concern expired provider checkouts; they are distinct from
+customer reminders about agreed unpaid contributions. Store only
+`FINANCIAL_EXCEPTIONS_HEARTBEAT_URL` in
+`/opt/jsk/secrets/observability.env`, owned by root with mode 0600; systemd reads the
+file before dropping privileges. Never commit or display its secret URL. The service
+requires it by default and exits with `delivery=unconfigured` if absent. The wrapper
+sends only success/failure POSTs, with no body or customer/provider/payment fields.
+`/fail` signals either financial findings or failed provider inspection. A delivery
+failure exits 69, allowing the missing-heartbeat alarm to detect a broken channel.
+The explicit `REQUIRE_FINANCIAL_HEARTBEAT=false` override supports a deliberately
+reviewed server-only setup; it does not establish external alert delivery.
+
+After installing/configuring, run `systemd-analyze verify`, daemon-reload, one manual
+service run and enable the timer. Verify active/scheduled status, successful provider
+inspection, the monitor's received heartbeat, a controlled failure notification,
+a deliberately missed heartbeat, and recovery. Do not create a real payment solely
+for this acceptance test. Rollback disables the new timer before reverting the image;
+retain all reconciliation audits and financial records. Never restore an old database
+as an application rollback. The on-site owner still resolves held cases; this job is
+inspection and notification, not automatic refunds or entitlement overrides.
+
+Source: [Better Stack heartbeat and explicit failure monitoring](https://betterstack.com/docs/uptime/cron-and-heartbeat-monitor/).
 
 ### Abandoned Razorpay order deployment and operation (`FW-PAY-002`)
 

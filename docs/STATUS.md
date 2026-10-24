@@ -2,6 +2,65 @@
 
 ## Current milestone
 
+**24 October 2026 — expired Checkout operations hotfix (local candidate).**
+Expired pending Razorpay attempts now participate in the owner Today/exception queue,
+category pagination and aggregate financial alerts across all provider modes. The
+owner can inspect an exact attempt via CSRF-protected POST, review its order and
+payments, and confirm closure using a ten-minute signed owner/payment/state-bound
+review. Apply performs a fresh provider read and uses the existing locked/audited
+service. Unexpired, changed, cross-mode, attempted or uncertain records remain held;
+expiry alone never fails a payment or creates/removes entitlement.
+
+The command defaults to the stored Checkout deadline plus five minutes of grace,
+with optional legacy hour filtering and exact contribution selection. Monitoring
+gets aggregate-only output and a failure exit for the entire unresolved expired
+backlog, including other modes, missing provider IDs and rows outside the inspection
+batch. The five-minute systemd job combines allocation/webhook and expired-checkout
+checks in one heartbeat. Its three-order provider batch fits the four-minute service
+timeout at the gateway's maximum request timeout; later rows remain visible/alerted.
+The unit requires configured external heartbeat delivery and cannot report success
+when it is absent. Neither the timer nor GET requests mutate financial records.
+
+An isolated `fix/expired-checkout-operations` checkout contains only this hotfix;
+unrelated local plan-governance and account-deletion development is excluded.
+Initial 104 affected tests passed. Final isolated focused verification passed all
+73 expired-checkout/Razorpay tests (67.458 seconds, normal hashing), with Django
+system/migration-consistency checks clean. A 558-test initial isolated broad run
+had only the Windows curl-stub test failures; the executable boundary fixture was
+corrected and its combined routing, required configuration and delivery-error tests
+pass. The final configured-instalment/expiry run passed all 62 tests (141.495
+seconds, normal hashing). Both push and pull-request Django/container checks passed
+for implementation commit `80f43b1a90676e2746b3666ac706a31439d73cf9` in draft PR #76;
+the full hosted suite passed all 558 tests (push run 40065410966: 212.533 seconds).
+No image was published because this is not protected main. Systemd verified both units on the production OS
+using temporary files, without installation. Synthetic desktop and 390px mobile
+layout/form order were inspected with database access forbidden; no overflow was
+found and the viewport/preview were closed afterward. No schema change, production
+deployment, new timer activation or external notification is claimed.
+The owner clarified that Better Stack is already in use, as the canonical production
+runbook specifies. The missing financial-heartbeat timer/configuration on the inspected
+host did not establish that external monitoring was absent. The initial recommendation
+to create Healthchecks.io was mistaken and is withdrawn; no new monitoring account is
+required. Verify/reuse or add the financial-exception heartbeat in the existing Better
+Stack account and exercise delivered failure/missed-heartbeat/recovery before activation.
+On 24 October, the JSK Better Stack account (`admin@jaishrikrishnajewellery.com`,
+team `t585600`) was verified and its empty heartbeat list confirmed. Created
+`JSK financial exceptions` (heartbeat `516408`) with a five-minute period,
+six-minute grace and email notifications. The Free account reports that all team
+members receive incident notifications; no plan upgrade was made. Saved settings
+were read back. Its secret URL was transferred over SSH into
+`/opt/jsk/secrets/observability.env`, verified root-owned with mode 0600 and LF
+line endings, and the temporary local secret was removed without printing it.
+The heartbeat remains Pending, awaiting its first ping. No test alert, production
+timer activation or hotfix deployment occurred; failure delivery, missed-run and
+recovery acceptance remain pending activation of the reviewed release. Both push
+and pull-request Django/container checks also passed for documentation commit
+`c32ddc5c3ab71d2cb209969c9280c849e5bfc915` (runs 40070788281 and 40070791358).
+These alerts concern unconfirmed expired provider checkout attempts and go to the
+owner/operator. Customer emails about scheduled unpaid contributions are a separate
+reminder policy and are not implemented by this hotfix; flexible agreements must not
+be assigned invented overdue instalment obligations.
+
 **Release candidate in draft PR #75 (22 October 2026).** Draft UI PR
 [#75](https://github.com/rajeshr188/jsk-ss/pull/75) is isolated on
 agent/customer-owner-ux-release, stacked on the existing Google Play foundation (#74),
