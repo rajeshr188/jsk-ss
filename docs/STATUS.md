@@ -23,13 +23,30 @@ when it is absent. Neither the timer nor GET requests mutate financial records.
 
 An isolated `fix/expired-checkout-operations` checkout contains only this hotfix;
 unrelated local plan-governance and account-deletion development is excluded.
-Initial 104 affected tests passed; the broader local and isolated release suites
-are being validated, including executable alert-wrapper tests. No schema change,
-production deployment, new timer activation or external notification is claimed.
-The owner chose dashboard plus monitoring-webhook alerts. No existing webhook was
-found on the production host; Healthchecks.io with a five-minute period, six-minute
-monitoring grace and email notification is recommended. Account/check setup and a
-controlled delivered-alert/missing-heartbeat/recovery test remain release gates.
+Initial 104 affected tests passed. Final isolated focused verification passed all
+73 expired-checkout/Razorpay tests (67.458 seconds, normal hashing), with Django
+system/migration-consistency checks clean. A 558-test initial isolated broad run
+had only the Windows curl-stub test failures; the executable boundary fixture was
+corrected and its combined routing, required configuration and delivery-error tests
+pass. The final configured-instalment/expiry run passed all 62 tests (141.495
+seconds, normal hashing). Both push and pull-request Django/container checks passed
+for implementation commit `80f43b1a90676e2746b3666ac706a31439d73cf9` in draft PR #76;
+the full hosted suite passed all 558 tests (push run 40065410966: 212.533 seconds).
+No image was published because this is not protected main. Systemd verified both units on the production OS
+using temporary files, without installation. Synthetic desktop and 390px mobile
+layout/form order were inspected with database access forbidden; no overflow was
+found and the viewport/preview were closed afterward. No schema change, production
+deployment, new timer activation or external notification is claimed.
+The owner clarified that Better Stack is already in use, as the canonical production
+runbook specifies. The missing financial-heartbeat timer/configuration on the inspected
+host did not establish that external monitoring was absent. The initial recommendation
+to create Healthchecks.io was mistaken and is withdrawn; no new monitoring account is
+required. Verify/reuse or add the financial-exception heartbeat in the existing Better
+Stack account and exercise delivered failure/missed-heartbeat/recovery before activation.
+These alerts concern unconfirmed expired provider checkout attempts and go to the
+owner/operator. Customer emails about scheduled unpaid contributions are a separate
+reminder policy and are not implemented by this hotfix; flexible agreements must not
+be assigned invented overdue instalment obligations.
 
 **Release candidate in draft PR #75 (22 October 2026).** Draft UI PR
 [#75](https://github.com/rajeshr188/jsk-ss/pull/75) is isolated on

@@ -34,7 +34,7 @@ The earlier four conversion phases remain complete; this is their approved refin
 - [x] Owner exact-payment inspect/confirm with bounded signed review and fresh provider check.
 - [x] Expiry-aware command with exact selection, bounded inspection and backlog/error alerts.
 - [x] Five-minute systemd inspection and combined heartbeat wrapper, without financial writes.
-- [ ] Complete isolated release regression/CI/image verification, monitoring account setup,
+- [ ] Complete isolated release regression/CI/image verification, existing Better Stack heartbeat verification/configuration,
   delivered failure/missed-run/recovery acceptance and approved production activation.
 
 ## Remaining audit work (22 October 2026)

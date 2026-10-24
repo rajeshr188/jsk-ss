@@ -2221,9 +2221,13 @@ financial heartbeat timer disabled when sharing this destination, so another job
 cannot mask an inspection failure.
 
 Configure a dedicated heartbeat with a five-minute period and six-minute monitoring
-grace. The owner selected dashboard plus external monitoring; Healthchecks.io is the
-recommended initial service. Enable email notification and optionally recurring
-unresolved reminders. Store only `FINANCIAL_EXCEPTIONS_HEARTBEAT_URL` in
+grace for this bounded inspection job. Use the existing Better Stack account and
+verify/reuse or add its `JSK financial exceptions` heartbeat, following the canonical
+Better Stack monitoring section above. No additional monitoring account is needed.
+Verify its escalation recipients and email notification. These incidents go to the
+owner/operator and concern expired provider checkouts; they are distinct from
+customer reminders about agreed unpaid contributions. Store only
+`FINANCIAL_EXCEPTIONS_HEARTBEAT_URL` in
 `/opt/jsk/secrets/observability.env`, owned by root with mode 0600; systemd reads the
 file before dropping privileges. Never commit or display its secret URL. The service
 requires it by default and exits with `delivery=unconfigured` if absent. The wrapper
@@ -2242,8 +2246,7 @@ retain all reconciliation audits and financial records. Never restore an old dat
 as an application rollback. The on-site owner still resolves held cases; this job is
 inspection and notification, not automatic refunds or entitlement overrides.
 
-Sources: [Healthchecks failure signals](https://healthchecks.io/docs/signaling_failures/),
-[notification configuration](https://healthchecks.io/docs/configuring_notifications/).
+Source: [Better Stack heartbeat and explicit failure monitoring](https://betterstack.com/docs/uptime/cron-and-heartbeat-monitor/).
 
 ### Abandoned Razorpay order deployment and operation (`FW-PAY-002`)
 
