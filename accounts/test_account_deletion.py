@@ -101,6 +101,9 @@ class CustomerAccountDeletionTests(TestCase):
                 self.assertContains(response, "A review date is not an automatic deletion date")
                 self.assertContains(response, "Deletion does not forfeit your savings")
                 self.assertContains(response, "must not be used to reactivate a removed account")
+                self.assertContains(response, '<details class="mb-4">', html=False)
+                self.assertContains(response, '<summary class="fw-semibold">What is removed and what may remain</summary>', html=True)
+                self.assertContains(response, "Your savings and accumulated metal remain yours.")
         self.assertFalse(CustomerAccountDeletionRequest.objects.exists())
 
     def test_public_view_is_generic_for_matching_and_unknown_email(self):
@@ -466,7 +469,8 @@ class CustomerAccountDeletionTests(TestCase):
         deletion_request = self.submit().deletion_request
         self.client.force_login(self.owner)
         response = self.client.get(reverse("customer_account_deletion_detail", args=[deletion_request.pk]))
-        self.assertContains(response, "Data disposition preview")
+        self.assertContains(response, "Review before completing deletion")
+        self.assertContains(response, '<summary class="fw-semibold">Local data inventory and proposed treatment</summary>', html=True)
         self.assertContains(response, "0.010227")
         self.assertContains(response, "External checks")
         self.assertContains(response, "Financial history is preserved")

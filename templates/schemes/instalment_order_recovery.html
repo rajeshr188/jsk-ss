@@ -1,0 +1,18 @@
+{% extends '_base.html' %}
+{% block title %}Recover provider order identity | Jai Sri Krishna Jewellery{% endblock %}
+{% block content %}
+<p><a href="{% url 'schemes:instalment_review_period' claim.period_id %}">Back to period evidence</a></p>
+<h1>Recover provider order identity</h1>
+<p>{{ claim.period.scheme_account.scheme_number }} · Contribution {{ claim.contribution_id }} · ₹{{ claim.contribution.amount }} · Original checkout deadline: {{ claim.expires_at }}.</p>
+<div class="alert alert-warning" role="alert">This only links a conclusively matched provider order. It does not mark payment received, allocate metal, grant an instalment credit, release the reservation or extend checkout. Recovered orders are reconciliation-only and cannot be offered for payment again.</div>
+<p>This does not cancel the order at Razorpay or close an already-open payment window. Continue monitoring and reconciling any captured funds.</p>
+{% if intent.request_token %}
+<p>Original provider receipt reference: <code>inst_{{ intent.request_token.hex }}</code>. Find this reference in the Live merchant dashboard/support, then supply the candidate order ID below. This reference is not a login credential.</p>
+<p>No match, an empty search or a provider error leaves the original request unresolved. Do not create another order or manually clear the claim.</p>
+<form method="post" class="card p-3 mb-4">
+{% csrf_token %}{{ form.non_field_errors }}
+{% for field in form %}{% if field.is_hidden %}{{ field }}{{ field.errors }}{% else %}<div class="mb-3">{{ field.label_tag }}{{ field }}{{ field.errors }}{% if field.help_text %}<div class="form-text" id="{{ field.auto_id }}_helptext">{{ field.help_text }}</div>{% endif %}</div>{% endif %}{% endfor %}
+<button class="btn btn-primary" type="submit">Verify and record order identity</button>
+</form>
+{% else %}<p>No durable unique request identity is available. Retain this case for provider investigation; there is no automatic recovery or replacement.</p>{% endif %}
+{% endblock %}

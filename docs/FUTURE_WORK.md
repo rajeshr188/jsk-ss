@@ -30,8 +30,155 @@ implementation is absent.
 | CMS and media | Catalogue and disabled-first journal foundation accepted | Genuine approved journal content/discovery and independent media recovery (`FW-CMS-004`, `FW-MEDIA-002`) |
 
 Active entries below remain open unless explicitly marked as a completed subtask.
+The B3 local configured-settlement implementation does not complete `FW-PLAN-002`:
+failed/abandoned provider exposure disposition, Test/mock history separation, legacy
+partial-rights inventory/cutover, owner/mobile acceptance and exact-image release review
+remain pending. Do not delete history or use owner attestations to clear those holds.
 Optional business-policy and architecture work is conditional; inclusion does not
 authorize implementation, production changes, a financial transaction or a store release.
+
+## Plan builder and agreement lifecycle
+
+**24 October 2026 approved release boundary:** complete one coherent owner-builder
+v1 before production activation; do not release the current subset first. Track the
+matrix, unresolved business decisions and single completion checklist at the top of
+MVP_PLAN.md. INR purchase credit, count-only/anytime eligibility and defined benefits
+are completion targets, still subject to explicit compatible terms and the existing
+INR approval boundary. Small reviewed increments remain behind the disabled gate.
+Historical local-phase notes below do not authorise activation. FW-PLAN-008 remains
+deferred; partial redemption remains excluded.
+
+The owner subsequently approved ADR-0017's detailed matrix, INR settlement approach
+and benefit types. Typed compatibility validation and operational blockers are now
+local (`plan_policies.py`), and migration 0036 persists independent schema-2 fields
+without rewriting schema-1 evidence. Financial workflows remain open. The owner
+approved one final manually fulfilled settlement with unused-principal refund;
+no partial redemption, replacement credit or automated refund API. Usable refund
+routes, external approvals and verified fulfilment remain publication dependencies.
+The 0037 INR principal foundation is local: separate denomination and source-linked
+receipt/correction records, reconciliation reads, and pure full-settlement arithmetic.
+0038 adds the local manual proposal/fulfilment and full-closure foundation, with pending
+refund liability and original-source evidence. This does not complete the INR item:
+0039 adds contained full-return/unused-void evidence and replacement full dispositions,
+without reopening contributions or enabling partial/staged returns. Read-only schema-2
+term resolution and frozen INR snapshot checks are now shared. Migration 0040 adds
+versioned independent agreement storage, including null duration/date for count-only
+and anytime while preserving legacy terms. Payment/enrolment integration, eligibility/benefit
+variants, statements/privacy handling and acceptance remain open in MVP_PLAN.md.
+Replacement refunds exceeding a source's cumulative provider-refund capacity remain
+held: customer returns do not replenish the provider limit. A separate approved-route
+reconciliation workflow is needed for those cases; no silent cash substitution.
+Also verify refund-route availability for agreement-age, method, provider-balance and
+dispute restrictions before INR activation; a recorded amount cap is not route approval.
+
+- **FW-PLAN-001 — Govern plans and preserve agreement terms (A):** In development on
+  `agent/plan-agreement-governance`. Audited/locked owner edits, immutable revisions,
+  stable agreement identity, legacy provenance and clear calendar eligibility. Local
+  tests/migration checks passed; owner visual review, exact-image rehearsal and PR/CI
+  remain before an approved release.
+  See ADR-0017 and the A/B checklist in MVP_PLAN.md. Production remains unchanged.
+- **FW-PLAN-002 — Controlled discontinuation and unused-agreement cancellation (B):**
+  Follows the configuration/instalment/eligibility foundations below. Separate
+  request/authorization from settlement; block new payments at
+  accepted closure, resolve pending/late/unallocated funds, settle full exact-grade
+  jewellery entitlement with invoice evidence, append corrections and cancel truly
+  unused agreements without a fake redemption. Preserve history and customer login.
+  Owner confirmed **no partial redemption**, including normal/anytime settlement;
+  full settlement closes that agreement. Retire the existing smaller-amount path with
+  historical/contractual review, server-derived exact balances and race/reversal tests.
+  B1 lifecycle is implemented locally for configured agreements (0031): direct and
+  authorized owner-assisted requests, append-only reviews, pre-acceptance withdrawal/
+  rejection, acceptance payment guards, in-flight capture preservation and private UI.
+  B2 unused cancellation is implemented locally (0032): accepted configured closure,
+  strict no-attempt/no-financial-or-review-history proof, append-only CANCEL evidence,
+  terminal agreement status and explicit owner confirmation; no fake redemption.
+  B3 full exact-grade jewellery settlement and contained reversal are locally verified
+  (0033; 28 focused and 803 full-suite tests). Provider-history disposition, legacy cutover,
+  owner/mobile and release acceptance remain open. Existing legacy date-eligible
+  partial redemption is unchanged; configured publication/enrolment remains gated.
+  B4 has nine passing local HTTP/statement/late-capture/concurrency acceptance tests
+  and 201 passing affected regression tests:
+  unused cancellation and full early settlement after three of twelve instalments
+  preserve sources, login and other agreements. On 23 October 2026 the owner accepted
+  the isolated unused-cancellation, three-of-twelve early full redemption/closure and
+  correction walkthroughs. Additional viewport/keyboard/print and exception acceptance,
+  provider/legacy disposition and release evidence remain open; the parent item is
+  not complete and configured publication/enrolment is not activated by this approval.
+- **FW-PLAN-003 — Versioned configuration catalogue and customer-fixed amount:**
+  **In progress: P1a/P1b local, activation acceptance pending.** Owner creates/reuses validated
+  immutable configurations; plan publication pins a version, enrolment freezes permitted
+  customer selections and all operational terms. Reject unsupported/incompatible rule
+  combinations. A chosen monthly amount becomes enforced across payment channels, not
+  merely a preference. Preserve old agreements and current production cash restrictions.
+  P1a provides immutable typed versions, owner catalogue/new-version/reuse UI, selected
+  amount previews, audited pinned preparation plans and migration 0022; no financial
+  rights result. DB/service gates prevent configured plan activation/enrolment.
+  P1b adds migration 0023, confirmation/approval selection propagation, immutable
+  configuration/amount snapshots and shared cross-channel validation. Its tests use
+  synthetic configured agreements; real enrolment stays blocked. Full-only settlement B
+  and end-to-end activation acceptance are mandatory before marking this complete.
+  Do not migrate legacy plans/agreements into configurations automatically.
+- **FW-PLAN-004 — Scheduled instalments and missed-payment evidence:**
+  **24 October local expansion:** new calendar-month configurations alongside
+  anniversary schedules; compulsory short enrolment month, independent duration
+  floor, consistent reminders/forecasts and period-aligned outage compensation
+  (0035). Separate owner controls now expose obligation, basis, limit, eligibility
+  and consequence. Existing agreements are not converted; release/owner acceptance
+  and unsupported benefit/INR/count-only/anytime families remain separate work.
+  Scope: explicit obligations, period/due/grace/catch-up rules, count, extension bounds and payment links.
+  Handle duplicate/delayed callbacks, reversals, pauses and unallocated captures;
+  exclude Test/practice payments from real qualification. No retroactive obligations.
+  **In progress: P2a through P2b.3a and the P2b.3b outage remedy local; exception acceptance pending.** Approved anniversary schedule, zero extra
+  grace/no catch-up, three extension months, immutable period snapshots and owner
+  scenario previews are implemented behind the existing gates (migration 0024).
+  Migration 0025 adds an internal exclusive-reservation/append-only attribution ledger
+  and cash reversal evidence. P2b.2 wires both existing payment channels atomically,
+  callback/recovery awaiting-timing evidence and provider-reconciled releases with
+  non-occupying late-capture review (migration 0026). P2b.3a adds owner investigation,
+  outage holds and narrowly verified timing resolution (migration 0027). P2b.3b now
+  implements acknowledged outage amendments: three separate compensation months,
+  one per affected period, with reconciled-state hold closure (migration 0028).
+  Migration 0029 adds exact provider-backed ambiguous-order identity recovery using a
+  durable pre-request UUID, owner evidence and a reconciliation-only binding. Empty
+  lookup results and historical requests without a UUID remain unresolved, not released.
+  Late/duplicate-capture containment now blocks new online/cash initiation and owner
+  timing acceptance for unresolved Live capture events, preserving original credits
+  and in-flight confirmation. Owner review links to existing provider reconciliation.
+  No automatic refund or verified refund closure is implied; unresolved cases stay held.
+  P2b.3b still requires final owner/mobile/checkpoint/CI and release acceptance.
+  Enrolment stays disabled; payment
+  qualification does not grant eligibility or full-settlement readiness.
+- **FW-PLAN-005 — Policy-based eligibility and benefits:** Calendar/count/both policies,
+  unchanged original dates plus derived completion forecasts, separate qualification
+  and fulfilment, auditable awards/corrections. Exact numeric benefit rules remain
+  business inputs (`FW-PRICE-002`); unknown values block publication. Missed payments
+  may affect unearned benefits or completion, never erase paid entitlement.
+  Monthly read-only eligibility/forecast and customer availability are implemented
+  locally (23 October); legacy behaviour is preserved. Distinct monthly-completion
+  reminders and delivery-time revalidation are implemented locally with migration 0030;
+  forecasts do not trigger mail. Local P3 checkpoint review corrected the owner
+  date-only count, configured legacy-redemption form access and misleading extension/
+  settlement copy. B3 configured-only full settlement is now local; owner/mobile/email,
+  provider-history disposition and CI/release acceptance remain open. Configured activation is still blocked. SMTP/database
+  crash-window duplication remains a delivery limitation, not a financial credit.
+- **FW-PLAN-006 — Owner guided builder and reusable valid configurations:** Create or
+  choose approved versions, preview generated agreement and normal/missed/exit scenarios,
+  publish only combinations supported through settlement. Customer choices remain within
+  owner-authored offers. Bootstrap 5, existing Django services/selectors; no rules language.
+  P4 publication/enrolment is now implemented locally behind the default-off
+  `CONFIGURED_PLANS_ENABLED` gate with revision evidence, audited withdrawal and atomic
+  monthly schedules (0034). Remaining: complete owner/mobile/keyboard journey review,
+  exception acceptance, CI and exact-image release rehearsal. No activation is implied.
+- **FW-PLAN-007 — Flexible anytime metal family:** Builder-v1 completion target,
+  variable amounts, one fixed grade and full-only redemption/closure. No reusable wallet,
+  partial withdrawals, cash conversion or blanket removal of legacy duration rules.
+- **FW-PLAN-008 — Customer-authored configuration proposals (explicitly deferred):**
+  Future proposals through the same validated catalogue, subject to owner review and
+  customer confirmation before normal enrolment. Proposal submission creates no financial
+  records or payment access. Not included in immediate owner-builder implementation.
+
+Execution/acceptance checklist: MVP_PLAN.md; policy compatibility, legacy handling and
+scope: ADR-0017. These approved design items are not implemented by migration 0021.
 
 ## Customer conversion release and validation
 
@@ -292,21 +439,35 @@ outcome by itself. Source: [official HTMX documentation](https://htmx.org/docs/)
   and verify the manual payment-error refund process can meet the displayed response
   timelines.
 - **FW-PROD-008 — Migrate transactional email from Postmark to Amazon SES:** Added
-  22 October 2026 at the owner's request; planning only, not a production cutover.
+  22 October 2026 at the owner's request. Setup/migration authorised 24 October;
+  the owner accepts a brief interruption for the final web-container replacement.
+  Execution is in progress; Postmark still serves production. Follow the staged
+  sequence in [Production deployment](PRODUCTION_DEPLOYMENT.md#amazon-ses-migration-fw-prod-008-in-progress-24-october-2026).
   Retain Django's standard SMTP backend, existing templates and notification services.
   No database migration, AWS SDK or new runtime service is expected for SMTP sending.
-  Postmark remains the current provider until a separately approved switch.
+  Keep Postmark current until SES verification, production access, operations and
+  controlled delivery gates pass; retain it for rollback after the authorised switch.
 
   - [ ] Select the AWS account/region and verify sender identities, DKIM and DMARC
     alignment; configure custom MAIL FROM/SPF if used without disrupting existing
     mailbox delivery or Postmark DNS. Obtain SES production access and suitable
     sending quotas in that region before sending to unverified customer recipients.
-  - [ ] Create restricted, region-specific SES SMTP credentials and test TLS on port
+  - [x] Create restricted, region-specific SES SMTP credentials and test TLS on port
     587 from the application host; keep secrets outside the repository. Prepare the
     environment change and credential rotation/rollback procedure (`FW-PROD-003`).
-  - [ ] Configure bounce/complaint handling, suppression, delivery/failure evidence
+    Completed 24 October: console-disabled SMTP user, exact Mumbai identity plus
+    configuration-set resources and admin FromAddress restriction; TLS 1.3/auth 235,
+    controlled authenticated inbox delivery, and alternate-sender rejection verified.
+    Candidate credentials are protected outside the server application repository;
+    production still uses Postmark. Production-access review remains pending.
+  - [x] Configure bounce/complaint handling, suppression, delivery/failure evidence
     and alerts (`FW-PROD-002`). Preserve the distinction between SMTP acceptance and
     inbox delivery; agree how owners review and recover delivery failures.
+    Completed 24 October: account bounce/complaint suppression and feedback forwarding;
+    exact-set/account-scoped SNS failure topic and confirmed admin email subscription.
+    Both simulator event types reached the Inbox through SNS. Direct feedback's bounce
+    went to Spam, retained as a secondary route without a spam-bypass rule. Controlled
+    real-inbox transport evidence and manual owner recovery are in the runbook.
   - [ ] Review Postmark-specific tracking/tag headers across authentication,
     verification, application-progress, invitation, deletion, enrolment and reminder
     messages. Explicitly disable SES open/click tracking for private-link messages;
@@ -320,8 +481,8 @@ outcome by itself. Source: [official HTMX documentation](https://htmx.org/docs/)
     registration, progress, activation/replacement, password reset, enrolment notices,
     reminders and deletion verification/completion. Exercise bounce/complaint handling
     and recoverable sending failure without duplicate agreements or financial writes.
-  - [ ] Prepare a concrete cutover plan, obtain production approval, switch SMTP
-    configuration and verify delivery. Retain Postmark temporarily for controlled
+  - [ ] Finish the reviewed cutover gates, execute the owner-authorised SMTP
+    configuration switch and verify delivery. Retain Postmark temporarily for controlled
     rollback; do not automatically send each message through both providers. Retire
     old credentials/provider access only after acceptance and review of retained data.
 
@@ -332,6 +493,27 @@ outcome by itself. Source: [official HTMX documentation](https://htmx.org/docs/)
   approval-time guarantee is part of this backlog entry.
 
 ## Payments, cash, and audit
+
+- **FW-PAY-008 — Expired Checkout operations:** Implemented in the isolated
+  `fix/expired-checkout-operations` local candidate: shared expired-pending owner
+  queue/counts, exact-payment POST inspect/confirm with signed bounded review and
+  fresh provider verification, expiry-aware operator command, and five-minute
+  bounded inspection with combined aggregate heartbeat delivery. The timer is
+  inspection-only; owner apply still uses the existing audited financial service.
+
+  - [x] All-mode expired-attempt visibility and pagination/count parity, including
+    missing provider identity and records beyond the inspection batch.
+  - [x] Owner/CSRF/method guards, reason, owner/order/state-bound review and fresh
+    provider inspection. Uncertain, attempted and cross-mode records remain held.
+  - [x] Exact contribution selection, deadline-plus-grace default and redacted
+    monitoring failures. No automatic refunds, entitlement overrides or timer writes.
+  - [x] Hardened timer and combined financial/provider heartbeat wrapper; configured
+    external delivery is required by the shipped unit and cannot silently downgrade.
+  - [ ] Complete final local/CI/exact-image release verification and production rollout.
+  - [ ] Owner-controlled monitoring account/check, secure heartbeat configuration,
+    delivered failure notification, missed-job and recovery acceptance. Dashboard plus
+    webhook was chosen; no existing monitor was found. Healthchecks.io is recommended
+    with a five-minute period, six-minute grace and owner email notification.
 
 - **FW-PAY-003 — Complete Razorpay webhook-recovery evidence:** ADR-0006 and release
   `69eecf9` provide signed-event classification, append-only attempt evidence, and an
@@ -358,6 +540,10 @@ outcome by itself. Source: [official HTMX documentation](https://htmx.org/docs/)
   covers paid-unallocated allocations and failed/mismatched webhooks. Add resolution
   workflows for delayed or provider-only payments, late captures, Razorpay refunds
   and disputes, chargebacks, and other provider/local differences.
+  Monthly-plan P2b.3b now contains these capture exceptions without extra credit, but
+  does not certify refund completion or clear their holds. Define provider-verified
+  disposition/closure evidence here alongside FW-AUDIT-005; never clear an event by
+  editing its status or treating an investigation note as a completed refund.
 - **FW-AUDIT-004 — Automate safe allocation recovery:** Add bounded retries and
   external alerts for `PAID_UNALLOCATED` metal contributions while preserving
   idempotency and owner visibility.
@@ -399,8 +585,11 @@ outcome by itself. Source: [official HTMX documentation](https://htmx.org/docs/)
 - **FW-SETTLE-002 — Define metal-to-cash conversion:** Approve authoritative rate
   timing, spread or fee, taxes, rounding, authorization, and customer disclosure
   before implementation.
-- **FW-SETTLE-003 — Define partial-redemption policy:** Decide minimum amounts,
-  maximum counts, reservations, expiry, and approval requirements.
+- **FW-SETTLE-003 — Partial-redemption decision superseded by full-only settlement:**
+  Owner explicitly rejected partial redemption on 22 October 2026. Do not implement
+  partial minimums/counts or expose a partial option in the builder. Enforcement and
+  legacy-contract/history review are tracked under `FW-PLAN-002`; the current partial
+  service path still exists until that implementation is reviewed and deployed.
 - **FW-SETTLE-004 — Keep inventory and invoicing separate:** If introduced, validate
   jewellery invoice value, taxes, making charges, returns, and stock movement in a
   dedicated bounded workflow. Current redemption stores only external references and

@@ -8,7 +8,7 @@
   <div class="card auth-card">
     <p class="page-eyebrow">Customer invitation</p>
     <h1>Set up your login</h1>
-    {% if approved_application %}<div class="alert alert-info"><strong>Your plan is approved.</strong> {{ approved_application.scheme_account.plan.name }} · {{ approved_application.scheme_account.metal_grade.display_name }}. Set your password, then sign in to see your agreement and the next payment action.</div>{% endif %}
+    {% if approved_application %}<div class="alert alert-info"><strong>Your plan is approved.</strong> {{ approved_application.scheme_account.display_plan_name }} · {{ approved_application.scheme_account.metal_grade.display_name }}. Set your password, then sign in to see your agreement and the next payment action.</div>{% endif %}
     <p class="text-secondary mb-4">Choose a strong password for {{ invitation.email }}. This invitation can be used only once.</p>
     <form method="post" novalidate>
       {% csrf_token %}

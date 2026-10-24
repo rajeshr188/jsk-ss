@@ -1,6 +1,7 @@
 import hashlib
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date
+from itertools import chain
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
@@ -22,6 +23,8 @@ from .selectors import (
     get_completed_redemptions_for_date,
     get_scheme_reminder_owner_emails,
     get_upcoming_eligibility_accounts,
+    get_upcoming_monthly_completion_accounts,
+    eligibility_reminder_terms,
 )
 
 
@@ -63,7 +66,7 @@ class SchemeReminderPlan:
 
 @dataclass(frozen=True)
 class SchemeReminderDeliveryResult:
-    reminder: SchemeReminder
+    reminder: SchemeReminder | None
     outcome: str
 
 
@@ -109,22 +112,28 @@ def build_scheme_reminder_plan(*, as_of):
         settings.SCHEME_REMINDER_CUSTOMER_ELIGIBILITY
         or settings.SCHEME_REMINDER_OWNER_ELIGIBILITY
     ):
-        accounts = get_upcoming_eligibility_accounts(
-            as_of=as_of,
-            lead_days=settings.SCHEME_REMINDER_ELIGIBILITY_DAYS,
+        accounts = chain(
+            get_upcoming_eligibility_accounts(as_of=as_of, lead_days=settings.SCHEME_REMINDER_ELIGIBILITY_DAYS),
+            get_upcoming_monthly_completion_accounts(as_of=as_of, lead_days=settings.SCHEME_REMINDER_ELIGIBILITY_DAYS),
         )
         for account in accounts:
-            lead_days = (account.eligible_from - as_of).days
+            terms = eligibility_reminder_terms(account, as_of=as_of)
+            if terms is None:
+                continue
+            kind, event_date = terms
+            lead_days = (event_date - as_of).days
+            if lead_days not in settings.SCHEME_REMINDER_ELIGIBILITY_DAYS:
+                continue
             if settings.SCHEME_REMINDER_CUSTOMER_ELIGIBILITY:
                 recipient = _customer_recipient(account)
                 if recipient:
                     candidates.append(
                         _candidate(
-                            kind=SchemeReminder.Kind.UPCOMING_ELIGIBILITY,
+                            kind=kind,
                             audience=SchemeReminder.Audience.CUSTOMER,
                             recipient_email=recipient,
                             scheme_account=account,
-                            event_date=account.eligible_from,
+                            event_date=event_date,
                             eligibility_lead_days=lead_days,
                         )
                     )
@@ -134,11 +143,11 @@ def build_scheme_reminder_plan(*, as_of):
                 for recipient in owner_emails:
                     candidates.append(
                         _candidate(
-                            kind=SchemeReminder.Kind.UPCOMING_ELIGIBILITY,
+                            kind=kind,
                             audience=SchemeReminder.Audience.OWNER,
                             recipient_email=recipient,
                             scheme_account=account,
-                            event_date=account.eligible_from,
+                            event_date=event_date,
                             eligibility_lead_days=lead_days,
                         )
                     )
@@ -210,7 +219,7 @@ def _action_url(candidate):
             "schemes:my_scheme_detail",
             args=[candidate.scheme_account.scheme_number],
         )
-    elif candidate.kind == SchemeReminder.Kind.UPCOMING_ELIGIBILITY:
+    elif candidate.kind in (SchemeReminder.Kind.UPCOMING_ELIGIBILITY, SchemeReminder.Kind.UPCOMING_MONTHLY_COMPLETION):
         path = reverse("schemes:redemption_eligibility")
     elif candidate.kind == SchemeReminder.Kind.ALLOCATION_EXCEPTION:
         path = reverse("schemes:exception_queue")
@@ -226,6 +235,8 @@ def _build_message(candidate):
         "customer_name": candidate.scheme_account.customer.full_name,
         "scheme_number": candidate.scheme_account.scheme_number,
         "eligible_from": candidate.scheme_account.eligible_from,
+        "completion_date": candidate.event_date,
+        "required_payments": candidate.scheme_account.agreed_months,
         "eligibility_lead_days": candidate.eligibility_lead_days,
         "contribution_id": candidate.contribution.pk if candidate.contribution else None,
         "redemption_number": (
@@ -284,7 +295,39 @@ def reminder_candidate_state(candidate):
 
 
 @transaction.atomic
-def deliver_scheme_reminder(candidate):
+def deliver_scheme_reminder(candidate, *, as_of=None):
+    """Account-first locking serializes qualification changes with dispatch.
+
+    Re-evaluate before any email/attempt is created. SMTP acceptance cannot be
+    atomically committed with PostgreSQL: this does not promise exactly-once mail.
+    """
+    from .instalments import AGREEMENT_TIMEZONE
+
+    account = SchemeAccount.objects.select_for_update().get(pk=candidate.scheme_account.pk)
+    candidate = replace(candidate, scheme_account=account)
+    eligibility_kinds = (SchemeReminder.Kind.UPCOMING_ELIGIBILITY, SchemeReminder.Kind.UPCOMING_MONTHLY_COMPLETION)
+    allowed = settings.SCHEME_REMINDERS_ENABLED
+    if candidate.audience == SchemeReminder.Audience.CUSTOMER:
+        allowed = allowed and _customer_recipient(account) == candidate.recipient_email
+    elif candidate.audience == SchemeReminder.Audience.OWNER:
+        allowed = allowed and candidate.recipient_email in get_scheme_reminder_owner_emails()
+    else:
+        allowed = False
+    if candidate.kind in eligibility_kinds:
+        today = timezone.localdate(timezone=AGREEMENT_TIMEZONE)
+        # Explicit legacy date replay remains available. Monthly evidence is a
+        # current projection, so even a confirmed CLI override cannot replay it.
+        processing_date = today if candidate.kind == SchemeReminder.Kind.UPCOMING_MONTHLY_COMPLETION else (as_of or today)
+        allowed = allowed and (
+            settings.SCHEME_REMINDER_CUSTOMER_ELIGIBILITY if candidate.audience == SchemeReminder.Audience.CUSTOMER
+            else settings.SCHEME_REMINDER_OWNER_ELIGIBILITY)
+        allowed = allowed and (
+            candidate.eligibility_lead_days in settings.SCHEME_REMINDER_ELIGIBILITY_DAYS
+            and (candidate.event_date - processing_date).days == candidate.eligibility_lead_days
+            and eligibility_reminder_terms(account, as_of=processing_date) == (candidate.kind, candidate.event_date)
+            and candidate.contribution is None and candidate.redemption is None)
+    if not allowed:
+        return SchemeReminderDeliveryResult(reminder=None, outcome="SKIPPED")
     reminder, created = SchemeReminder.objects.get_or_create(
         idempotency_key=candidate.idempotency_key,
         defaults={

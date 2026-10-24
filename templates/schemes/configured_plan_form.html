@@ -1,0 +1,4 @@
+{% extends '_base.html' %}
+{% load crispy_forms_tags %}
+{% block title %}Prepare plan | Jai Sri Krishna Jewellery{% endblock %}
+{% block content %}<div class="row justify-content-center"><div class="col-lg-8"><h1>Prepare a plan</h1><p>Reuse {{ configuration }}. Amount policy: {{ configuration.get_amount_policy_display }}.</p><div class="alert alert-warning">The new plan will be inactive, unlisted and blocked from enrolment. It pins this version; later configuration versions will not change it. This does not replace any existing plan or agreement.</div><form method="post" class="card p-3" novalidate>{% csrf_token %}{{ form|crispy }}<div class="d-flex flex-wrap gap-2"><button type="submit" class="btn btn-jsk">Create preparation-only plan</button><a class="btn btn-outline-dark" href="{% url 'schemes:plan_configuration_detail' configuration.pk %}">Cancel</a></div></form></div></div>{% endblock %}

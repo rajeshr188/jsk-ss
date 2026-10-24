@@ -4,9 +4,9 @@
 {% block content %}
 <div class="row justify-content-center"><div class="col-lg-8"><div class="card shadow-sm"><div class="card-body p-4 p-lg-5">
   <h1 class="h2">Delete my customer account</h1>
-  <p>This request disables your login immediately. We target completion of removable-data work within {{ completion_target_days }} days, subject to existing entitlements, captured payments, disputes, and approved accounting or legal retention.</p>
-  <div class="alert alert-warning" role="note">Deleting access does not cancel or forfeit accumulated metal. Contact the showroom to receive statements or complete an eligible showroom redemption.</div>
+  <p>Submitting this request signs you out and disables your login immediately. The showroom will review it and aim to remove unnecessary account details within {{ completion_target_days }} days.</p>
+  <div class="alert alert-warning" role="note">Your savings and accumulated metal remain yours. Contact the showroom for statements or settlement. Records needed for open payments, settlement, disputes or other documented obligations may remain longer; we will explain what we keep and the next review date.</div>
   {% include "account/_deletion_retention_explanation.html" %}
-  <form method="post" novalidate>{% csrf_token %}{{ form|crispy }}<button class="btn btn-danger" type="submit">Submit deletion request</button></form>
+  <form method="post" novalidate>{% csrf_token %}{{ form|crispy }}<button class="btn btn-danger" type="submit">Request deletion and sign out</button></form>
 </div></div></div></div>
 {% endblock %}

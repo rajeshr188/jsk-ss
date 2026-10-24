@@ -5,22 +5,24 @@
 {% block content %}
 <div class="page-header">
   <div><p class="page-eyebrow">Scheme configuration</p><h1>Scheme plans</h1><p class="page-subtitle">Reusable terms for new customer agreements.</p></div>
-  <div class="page-actions"><a class="btn btn-jsk" href="{% url 'schemes:plan_add' %}">Add plan</a></div>
+  <div class="page-actions"><a class="btn btn-outline-dark" href="{% url 'schemes:plan_manual' %}">Plan reference manual</a><a class="btn btn-outline-dark" href="{% url 'schemes:plan_configuration_list' %}">Configuration catalogue</a><a class="btn btn-jsk" href="{% url 'schemes:plan_add' %}">Add existing-style plan</a></div>
 </div>
 <div class="table-responsive">
   <table class="table align-middle">
-    <thead><tr><th scope="col">Plan</th><th scope="col">Amount</th><th scope="col">Frequency</th><th scope="col">Duration</th><th scope="col">Cash bonus</th><th scope="col">Status</th><th scope="col">Public page</th><th scope="col">Action</th></tr></thead>
+    <thead><tr><th scope="col">Plan</th><th scope="col">Amount</th><th scope="col">Frequency</th><th scope="col">Duration</th><th scope="col">Offered grades</th><th scope="col">Status</th><th scope="col">Public page</th><th scope="col">Action</th></tr></thead>
     <tbody>
       {% for plan in plans %}
       <tr>
-        <td><strong>{{ plan.name }}</strong><br><small class="text-muted">{{ plan.code }}</small></td>
-        <td>{{ plan.get_amount_rule_display }}{% if plan.fixed_contribution_amount %} · ₹{{ plan.fixed_contribution_amount }}{% endif %}</td>
-        <td>{{ plan.get_frequency_rule_display }}</td>
-        <td>{{ plan.default_months }} months</td>
-        <td>{% if plan.cash_bonus_percentage %}{{ plan.cash_bonus_percentage|floatformat:2 }}% · minimum {{ plan.cash_bonus_minimum_months }} months{% else %}None{% endif %}</td>
+        {% if plan.configuration_id %}<td colspan="8"><strong>{{ plan.name }} ({{ plan.code }})</strong> — {{ plan.configuration }} · {{ plan.configuration.get_amount_policy_display }} · {% if plan.active %}{% if configured_plans_enabled %}<span class="badge text-bg-success">Published offer</span>{% else %}<span class="badge text-bg-warning">Published; new intake disabled</span>{% endif %}{% else %}<span class="badge text-bg-warning">Preparation only / withdrawn</span>{% endif %} <a href="{% url 'schemes:plan_configuration_detail' plan.configuration_id %}">Review configuration</a> · <a href="{% url 'schemes:configured_plan_publication' plan.pk %}">Publication review</a>{% if not plan.active %} · <a href="{% url 'schemes:plan_edit' plan.pk %}">Edit identity and grades</a>{% endif %}</td>{% else %}
+        <td><strong>{{ plan.name }}</strong><br><small class="text-muted">{{ plan.code }}</small>{% if cash_scheme_activity_enabled and plan.cash_bonus_percentage %}<div class="small">Legacy cash bonus: {{ plan.cash_bonus_percentage|floatformat:2 }}% · minimum {{ plan.cash_bonus_minimum_months }} months (development only)</div>{% endif %}</td>
+        <td>{{ plan.get_amount_rule_display }}{% if plan.fixed_contribution_amount %} · ₹{{ plan.fixed_contribution_amount }}{% else %} · ₹{{ plan.minimum_contribution }}{% if plan.maximum_contribution %}–₹{{ plan.maximum_contribution }}{% else %} or more{% endif %}{% endif %}</td>
+        <td>{% if plan.configuration.instalment_policy == 'MONTHLY_COMPLETION' %}{{ plan.configuration.get_period_basis_display }} — one qualifying payment{% else %}{{ plan.get_frequency_rule_display }}{% endif %}</td>
+        <td>{{ plan.default_months }} months suggested<br><small>Minimum {{ plan.minimum_months }} months; {% if plan.configuration.instalment_policy == 'MONTHLY_COMPLETION' %}calendar AND qualifying instalments (draft only){% else %}calendar-based eligibility{% endif %}</small></td>
+        <td>{% for offering in plan.metal_offerings.all %}{% if offering.active %}<div>{{ offering.metal_grade.display_name }}</div>{% endif %}{% endfor %}<small>{{ plan.agreement_count }} existing agreement{{ plan.agreement_count|pluralize }}</small></td>
         <td>{% if plan.active %}<span class="badge text-bg-success">Active</span>{% else %}<span class="badge text-bg-secondary">Inactive</span>{% endif %}</td>
-        <td>{% if plan.active and plan.publicly_listed %}<span class="badge text-bg-success">Published</span>{% elif plan.publicly_listed %}<span class="badge text-bg-warning">Hidden while inactive</span>{% else %}<span class="badge text-bg-secondary">Not listed</span>{% endif %}</td>
+        <td>{% if plan.active and plan.publicly_listed and plan.offered_grade_count %}<span class="badge text-bg-success">Published</span>{% elif plan.publicly_listed %}<span class="badge text-bg-warning">Hidden: inactive or no offered grades</span>{% else %}<span class="badge text-bg-secondary">Not listed</span>{% endif %}</td>
         <td><a class="btn btn-sm btn-outline-dark" href="{% url 'schemes:plan_edit' plan.pk %}">Edit</a></td>
+        {% endif %}
       </tr>
       {% empty %}<tr><td colspan="8" class="text-muted text-center py-4">No plans yet.</td></tr>{% endfor %}
     </tbody>

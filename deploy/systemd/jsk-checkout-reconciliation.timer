@@ -1,0 +1,12 @@
+[Unit]
+Description=Inspect expired Razorpay checkouts every five minutes
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+RandomizedDelaySec=15s
+Persistent=true
+Unit=jsk-checkout-reconciliation.service
+
+[Install]
+WantedBy=timers.target

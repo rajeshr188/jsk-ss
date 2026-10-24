@@ -1,10 +1,15 @@
 from django.urls import path
 
-from . import views
+from . import views, instalment_views, closure_views, settlement_views, manual_views
+from .order_reconciliation import order_reconciliation
 
 app_name = "schemes"
 
 urlpatterns = [
+    path("owner/exceptions/checkouts/<int:contribution_id>/", order_reconciliation, name="order_reconciliation"),
+    path("owner/closures/<uuid:request_id>/settlement/", settlement_views.settlement_workspace, name="configured_settlement"),
+    path("owner/closures/", closure_views.closure_queue, name="closure_queue"),
+    path("agreements/<str:scheme_number>/closure/", closure_views.closure_workspace, name="closure_workspace"),
     path("start/", views.post_login, name="post_login"),
     path("owner/", views.owner_dashboard, name="owner_dashboard"),
     path("owner/today/", views.owner_today, name="owner_today"),
@@ -29,6 +34,10 @@ urlpatterns = [
         name="reminder_delivery_log",
     ),
     path("owner/exceptions/", views.exception_queue, name="exception_queue"),
+    path("owner/instalment-reviews/", instalment_views.review_queue, name="instalment_review_queue"),
+    path("owner/instalment-reviews/<int:period_id>/", instalment_views.review_period, name="instalment_review_period"),
+    path("owner/instalment-outages/<int:hold_id>/resolve/", instalment_views.resolve_outage, name="instalment_outage_resolution"),
+    path("owner/instalment-orders/<int:reservation_id>/recover/", instalment_views.recover_order, name="instalment_order_recovery"),
     path(
         "owner/exceptions/webhooks/<int:event_id>/recovery/",
         views.webhook_recovery,
@@ -97,8 +106,16 @@ urlpatterns = [
         name="customer_invitation_resend",
     ),
     path("owner/plans/", views.plan_list, name="plan_list"),
+    path("owner/plan-manual/", manual_views.plan_manual, name="plan_manual"),
+    path("owner/plan-manual/assets/<str:filename>", manual_views.plan_manual_asset, name="plan_manual_asset"),
+    path("owner/plan-configurations/", views.plan_configuration_list, name="plan_configuration_list"),
+    path("owner/plan-configurations/add/", views.plan_configuration_create, name="plan_configuration_create"),
+    path("owner/plan-configurations/<int:configuration_id>/", views.plan_configuration_detail, name="plan_configuration_detail"),
+    path("owner/plan-configurations/<int:previous_id>/new-version/", views.plan_configuration_create, name="plan_configuration_new_version"),
+    path("owner/plan-configurations/<int:configuration_id>/plan/", views.configured_plan_create, name="configured_plan_create"),
     path("owner/plans/add/", views.plan_add, name="plan_add"),
     path("owner/plans/<int:plan_id>/edit/", views.plan_edit, name="plan_edit"),
+    path("owner/plans/<int:plan_id>/publication/", views.configured_plan_publication, name="configured_plan_publication"),
     path("owner/contributions/", views.contribution_list, name="contribution_list"),
     path("owner/contributions/<int:contribution_id>/", views.owner_payment_detail, name="owner_payment_detail"),
     path(

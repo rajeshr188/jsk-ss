@@ -1,0 +1,27 @@
+{% extends '_base.html' %}
+{% block title %}Resolve outage hold | Jai Sri Krishna Jewellery{% endblock %}
+{% block content %}
+<p><a href="{% url 'schemes:instalment_review_period' hold.period_id %}">Back to period evidence</a></p>
+<h1>Resolve outage hold</h1>
+<p>{{ account.scheme_number }} · Period {{ hold.period.number }} · {{ hold.period.starts_on }} to before {{ hold.period.ends_before }} (India time).</p>
+<div class="alert alert-warning" role="alert">This is an acknowledged agreement amendment, not payment verification or eligibility. Pending or uncertain orders, timing reviews, unallocated payments and unresolved webhooks must be reconciled first. Do not use this workflow to clear them.</div>
+<section class="card mb-4"><div class="card-body">
+  <h2 class="h4">Proposal to explain to the customer</h2>
+  <p>The original {{ account.agreed_months }} required payments, ₹{{ account.fixed_amount_snapshot }} per payment, {{ account.entitlement_name }}, original dates and three ordinary extension months remain unchanged. No payment is waived, no bonus is granted and no historical rate can be chosen.</p>
+  <p>Separate outage compensation used: {{ used }} of 3 months. At most one additional month using the agreed period basis per proven outage-caused missed period.</p>
+  {% if proposed %}<p>If compensation is approved: add period {{ proposed.number }}, {{ proposed.starts_on }} to before {{ proposed.ends_before }} (India time), at the same agreed amount. This is an outer payment window, not a guaranteed eligibility date. It must still be wholly in the future when approved.</p>
+  {% else %}<p>No further compensating month is available. Keep the hold for separate agreement/discontinuation review; this does not forfeit paid entitlement.</p>{% endif %}
+  <p>Without compensation, closure is limited to restoration while the original unpaid window is still open, or an already-qualified payment for that period. Routine published closing hours are not exceptional outages.</p>
+</div></section>
+{% if hold.outage_resolution %}
+<p>This hold already has a recorded resolution. It cannot be edited or deleted.</p>
+{% else %}
+<form method="post" class="card p-3 mb-4">
+  {% csrf_token %}{{ form.non_field_errors }}
+  {% for field in form %}{% if field.is_hidden %}{{ field }}{{ field.errors }}{% else %}
+  <div class="mb-3">{{ field.label_tag }}{{ field }}{{ field.errors }}{% if field.help_text %}<div class="form-text" id="{{ field.auto_id }}_helptext">{{ field.help_text }}</div>{% endif %}</div>
+  {% endif %}{% endfor %}
+  <button type="submit" class="btn btn-primary">Record acknowledged resolution</button>
+</form>
+{% endif %}
+{% endblock %}

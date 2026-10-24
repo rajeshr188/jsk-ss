@@ -3,6 +3,8 @@ from decimal import Decimal
 
 from django import forms
 from django.contrib.auth import get_user_model
+from django.core import signing
+from django.core.exceptions import ValidationError
 from django.utils import timezone
 
 from .models import (
@@ -14,6 +16,7 @@ from .models import (
     Redemption,
     SchemeAccount,
     SchemePlan,
+    SchemePlanConfiguration,
     SchemePlanOffering,
     SchemeRate,
 )
@@ -53,6 +56,10 @@ class CustomerCreateForm(forms.Form):
         return email
 
 class SchemePlanForm(forms.ModelForm):
+    audit_reason = forms.CharField(
+        label="Reason for change", widget=forms.Textarea(attrs={"rows": 2}),
+        help_text="Recorded with your identity in the plan revision and audit log.",
+    )
     metal_grades = forms.ModelMultipleChoiceField(
         queryset=MetalGrade.objects.none(),
         label="Metal grades offered for new enrolment",
@@ -83,6 +90,9 @@ class SchemePlanForm(forms.ModelForm):
         ]
 
         help_texts = {
+            "description": "Internal plan notes; this text is not published on the public plans page.",
+            "active": "Allow new enrolments. Disabling this does not close existing agreements or stop their contributions.",
+            "frequency_rule": "A frequency limit, not an instalment-completion or benefit-qualification rule.",
             "cash_bonus_percentage": (
                 "Applies only to cash schemes. Use 0 to disable cash bonus."
             ),
@@ -106,34 +116,28 @@ class SchemePlanForm(forms.ModelForm):
         if not cash_scheme_activity_is_enabled():
             self.fields.pop("cash_bonus_percentage", None)
             self.fields.pop("cash_bonus_minimum_months", None)
-
-    def save_offerings(self):
-        selected_ids = set(self.cleaned_data["metal_grades"].values_list("pk", flat=True))
-        existing = {
-            offering.metal_grade_id: offering
-            for offering in self.instance.metal_offerings.all()
-        }
-        for grade in MetalGrade.objects.all():
-            active = grade.pk in selected_ids
-            offering = existing.get(grade.pk)
-            if offering is None:
-                SchemePlanOffering.objects.create(
-                    plan=self.instance,
-                    metal_grade=grade,
-                    active=active,
-                )
-            elif offering.active != active:
-                offering.active = active
-                offering.save(update_fields=["active", "updated_at"])
+        if self.instance.configuration_id:
+            from .plan_configuration import configuration_plan_values
+            for name in (*configuration_plan_values(self.instance.configuration), "active", "publicly_listed"):
+                if name in self.fields:
+                    self.fields[name].disabled = True
 
 
 class SchemePlanChangeForm(SchemePlanForm):
+    expected_digest = forms.CharField(widget=forms.HiddenInput)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not self.is_bound:
+            from .plan_governance import plan_edit_digest
+            self.fields["expected_digest"].initial = plan_edit_digest(self.instance)
+
     class Meta(SchemePlanForm.Meta):
         fields = [*SchemePlanForm.Meta.fields, "publicly_listed"]
         help_texts = {
             **SchemePlanForm.Meta.help_texts,
             "publicly_listed": (
-                "Publishes this savings plan's name, description, contribution amounts, "
+                "Publishes this savings plan's name, contribution amounts, "
                 "frequency, and duration when the plan is active."
             ),
         }
@@ -145,7 +149,122 @@ class SchemePlanChangeForm(SchemePlanForm):
     )
 
 
+class PlanConfigurationForm(forms.ModelForm):
+    minimum_months = forms.IntegerField(min_value=12, max_value=32767, initial=12)
+    default_months = forms.IntegerField(min_value=12, max_value=32767, initial=12)
+    field_order = ["name", "amount_policy", "minimum_amount", "maximum_amount", "fixed_amount",
+        "amount_step", "schedule_family", "schedule_period", "frequency_rule", "minimum_months",
+        "default_months", "completion_rule", "missed_outcome", "allow_contributions_after_eligibility", "reason"]
+    reason = forms.CharField(label="Reason for this version", widget=forms.Textarea(attrs={"rows": 2}))
+    schedule_family = forms.ChoiceField(required=False, label="Contribution obligation", choices=[
+        ("CALENDAR", "Optional contributions"),
+        ("MONTHLY_COMPLETION", "Required monthly instalments"),
+    ], initial="CALENDAR", help_text="An obligation is different from a payment limit. Required instalments currently use a customer-selected fixed amount; no advance or bulk catch-up.")
+    schedule_period = forms.ChoiceField(required=False, label="Instalment period basis", choices=[
+        ("", "Not applicable — optional contributions"),
+        ("ANNIVERSARY", "Agreement-anniversary month (India time)"),
+        ("CALENDAR_MONTH", "Calendar month, including enrolment month (India time)"),
+    ], help_text="Calendar month: joining on 30 January requires January's instalment before 1 February. Enrolment-day payment counts. No extra grace.")
+    completion_rule = forms.ChoiceField(required=False, label="Normal redemption eligibility", choices=[
+        ("CALENDAR", "Agreed duration — optional contributions"),
+        ("CALENDAR_AND_COUNT", "Agreed duration AND qualifying instalment count"),
+    ], initial="CALENDAR", help_text="Both means the later of the minimum-duration date and final qualifying period end. Count-only and anytime plans are not yet supported.")
+    missed_outcome = forms.ChoiceField(required=False, label="Missed-payment outcome", choices=[
+        ("NONE", "No required instalment — no missed-payment consequence"),
+        ("EXTEND_THEN_REVIEW", "Up to three extension periods, then discontinuation review"),
+    ], initial="NONE", help_text="Paid entitlement is never forfeited. Benefit-loss rules are unavailable because this release offers no bonus or discount. Outage compensation is separately reviewed.")
+
+    class Meta:
+        model = SchemePlanConfiguration
+        fields = [
+            "name", "amount_policy", "minimum_amount", "maximum_amount", "fixed_amount",
+            "amount_step", "frequency_rule", "minimum_months", "default_months",
+            "allow_contributions_after_eligibility",
+        ]
+        help_texts = {
+            "fixed_amount": "For a showroom-fixed amount, also set both minimum and maximum to exactly this amount. Leave the increment empty.",
+            "frequency_rule": "Required instalments use one qualifying contribution per selected period. For optional contributions, a calendar-month limit is only a ceiling, not an obligation.",
+        }
+        labels = {"frequency_rule": "Payment limit"}
+
+    def clean(self):
+        values = super().clean()
+        # Do not silently accept forged future policy fields that this editor cannot support.
+        from .plan_configuration import CONFIGURATION_FIELDS, EDITABLE_CONFIGURATION_FIELDS, INDEPENDENT_CONFIGURATION_FIELDS
+        if any(name in self.data for name in set(CONFIGURATION_FIELDS + INDEPENDENT_CONFIGURATION_FIELDS) - set(EDITABLE_CONFIGURATION_FIELDS)):
+            raise forms.ValidationError("Advanced policy dimensions are not available in this release.")
+        if values.get("schedule_family") == "MONTHLY_COMPLETION":
+            from .plan_configuration import MONTHLY_COMPLETION_POLICY
+            if values.get("amount_policy") != "CUSTOMER_FIXED":
+                self.add_error("amount_policy", "Monthly completion requires a customer-selected fixed amount.")
+            if values.get("frequency_rule") != "ONCE_PER_PERIOD":
+                self.add_error("frequency_rule", "Choose one qualifying contribution per selected monthly period.")
+            if not values.get("schedule_period"):
+                self.add_error("schedule_period", "Choose calendar month or agreement-anniversary month.")
+            if values.get("completion_rule") != "CALENDAR_AND_COUNT":
+                self.add_error("completion_rule", "Required instalments currently require both duration and qualifying count.")
+            if values.get("missed_outcome") != "EXTEND_THEN_REVIEW":
+                self.add_error("missed_outcome", "Required instalments currently use bounded extension followed by review.")
+            if values.get("allow_contributions_after_eligibility"):
+                self.add_error("allow_contributions_after_eligibility", "Extension payments are separate from payments after completed eligibility. Leave this off.")
+            for field, value in MONTHLY_COMPLETION_POLICY.items():
+                setattr(self.instance, field, value)
+            self.instance.period_basis = values.get("schedule_period") or "ANNIVERSARY"
+        else:
+            if values.get("schedule_period"):
+                self.add_error("schedule_period", "Optional contributions have no instalment periods; their payment limit is selected separately.")
+            if values.get("completion_rule") not in (None, "", "CALENDAR"):
+                self.add_error("completion_rule", "Optional contributions use duration eligibility, not a compulsory count.")
+            if values.get("missed_outcome") not in (None, "", "NONE"):
+                self.add_error("missed_outcome", "Optional contributions cannot have a missed-instalment consequence.")
+        return values
+
+    def configuration_values(self):
+        from .plan_configuration import EDITABLE_CONFIGURATION_FIELDS, MONTHLY_COMPLETION_POLICY
+        values = {field: self.cleaned_data[field] for field in EDITABLE_CONFIGURATION_FIELDS}
+        if self.cleaned_data.get("schedule_family") == "MONTHLY_COMPLETION":
+            values.update(MONTHLY_COMPLETION_POLICY)
+            values["period_basis"] = self.cleaned_data["schedule_period"]
+        return values
+
+
+class ConfigurationPreviewForm(forms.Form):
+    amount = forms.DecimalField(max_digits=14, decimal_places=2, min_value=Decimal("0.01"))
+    months = forms.IntegerField(min_value=12, max_value=32767)
+    metal_grade = forms.ModelChoiceField(queryset=MetalGrade.objects.all())
+    start_date = forms.DateField(required=False, widget=forms.DateInput(attrs={"type": "date"}), help_text="Monthly scenario start date; defaults to today. No agreement is created.")
+    missed_periods = forms.CharField(required=False, max_length=200, help_text="Scenario only: comma-separated missed period numbers, for example 2,5. Leave empty for all payments on time.")
+
+    def clean_missed_periods(self):
+        raw = self.cleaned_data.get("missed_periods", "").strip()
+        if not raw:
+            return ()
+        try:
+            numbers = tuple(int(part.strip()) for part in raw.split(","))
+        except ValueError:
+            raise forms.ValidationError("Use comma-separated whole period numbers.") from None
+        if len(numbers) != len(set(numbers)) or any(number < 1 for number in numbers):
+            raise forms.ValidationError("Use positive, distinct period numbers.")
+        return numbers
+
+
+class ConfiguredPlanDraftForm(forms.Form):
+    name = forms.CharField(max_length=120)
+    code = forms.CharField(max_length=30)
+    metal_grades = forms.ModelMultipleChoiceField(queryset=MetalGrade.objects.all(), widget=forms.CheckboxSelectMultiple)
+    reason = forms.CharField(widget=forms.Textarea(attrs={"rows": 2}))
+
+
+class ConfiguredPlanPublicationForm(forms.Form):
+    expected_digest = forms.CharField(widget=forms.HiddenInput)
+    confirmed = forms.BooleanField(label="I reviewed this offer and the effect on new applications; existing agreements are unchanged.")
+    reason = forms.CharField(max_length=1000, widget=forms.Textarea(attrs={"rows": 3}))
+
+
 class EnrolmentForm(forms.Form):
+    selected_contribution_amount = forms.DecimalField(required=False, max_digits=14, decimal_places=2, min_value=Decimal("0.01"), label="Customer's agreed contribution amount")
+    selected_amount_confirmed = forms.BooleanField(required=False, label="I reviewed the configuration and individual amount with the customer.")
+    configuration_token = forms.CharField(required=False, widget=forms.HiddenInput)
     plan = forms.ModelChoiceField(queryset=SchemePlan.objects.none())
     metal_grade = forms.ModelChoiceField(
         queryset=MetalGrade.objects.none(),
@@ -154,14 +273,14 @@ class EnrolmentForm(forms.Form):
     start_date = forms.DateField(
         widget=forms.DateInput(attrs={"type": "date"}),
         help_text=(
-            "Eligibility is calculated from this date using exact calendar months."
+            "Calendar dates and any required instalment windows are anchored to this date."
         ),
     )
     agreed_months = forms.IntegerField(
         min_value=12,
         help_text=(
-            "Weekends, public holidays, showroom hours, and payment pauses do not "
-            "shift the eligibility date."
+            "Calendar plans use the agreed duration. Monthly-completion plans also require "
+            "qualifying instalments; missed periods can extend completion."
         ),
     )
     audit_reason = forms.CharField(
@@ -172,17 +291,44 @@ class EnrolmentForm(forms.Form):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["plan"].queryset = SchemePlan.objects.filter(active=True)
+        from .selectors import get_enrollable_scheme_plans
+        self.fields["plan"].queryset = get_enrollable_scheme_plans()
         self.fields["metal_grade"].queryset = MetalGrade.objects.filter(
             plan_offerings__active=True,
-            plan_offerings__plan__active=True,
+            plan_offerings__plan__in=self.fields["plan"].queryset,
         ).distinct()
+        configured = self.fields["plan"].queryset.filter(configuration__isnull=False)
+        if not configured.exists():
+            for name in ("selected_contribution_amount", "selected_amount_confirmed", "configuration_token"):
+                self.fields.pop(name)
+        elif not self.is_bound:
+            from .plan_governance import plan_edit_digest
+            self.fields["configuration_token"].initial = signing.dumps(
+                {str(plan.pk): plan_edit_digest(plan) for plan in configured}, salt="owner-enrolment-configuration",
+            )
 
     def clean(self):
         cleaned = super().clean()
         plan = cleaned.get("plan")
         metal_grade = cleaned.get("metal_grade")
         agreed_months = cleaned.get("agreed_months")
+        if plan and plan.configuration_id:
+            from .plan_governance import plan_edit_digest
+            try:
+                offers = signing.loads(cleaned.get("configuration_token", ""), salt="owner-enrolment-configuration", max_age=7200)
+                if offers.get(str(plan.pk)) != plan_edit_digest(plan):
+                    raise signing.BadSignature
+                cleaned["expected_configuration_id"] = plan.configuration_id
+                cleaned["expected_plan_digest"] = offers[str(plan.pk)]
+            except signing.BadSignature:
+                self.add_error(None, "The displayed configuration changed or expired. Reload and review it again.")
+            if not cleaned.get("selected_amount_confirmed"):
+                self.add_error(None, "Confirm the individual amount with the customer.")
+            from .plan_configuration import agreement_snapshot_values
+            try:
+                agreement_snapshot_values(plan=plan, selected_amount=cleaned.get("selected_contribution_amount"))
+            except ValidationError as error:
+                self.add_error(None, error)
         if plan and metal_grade and not SchemePlanOffering.objects.filter(
             plan=plan,
             metal_grade=metal_grade,
@@ -260,6 +406,13 @@ class SchemeEnrolmentRequestForm(forms.Form):
                     f"Choose ₹{plan.minimum_contribution:.2f}–"
                     f"₹{plan.maximum_contribution:.2f}."
                 )
+        if plan.configuration_id:
+            configuration = plan.configuration
+            if configuration.amount_policy == "CUSTOMER_FIXED":
+                self.fields["requested_contribution_amount"].label = "Your fixed contribution amount"
+                self.fields["requested_contribution_amount"].help_text += " Choose once: this amount becomes fixed on your agreement after confirmation and approval."
+            if configuration.amount_step:
+                self.fields["requested_contribution_amount"].help_text += f" Use increments of ₹{configuration.amount_step:.2f} from the minimum."
 
     def clean(self):
         cleaned = super().clean()
@@ -273,6 +426,12 @@ class SchemeEnrolmentRequestForm(forms.Form):
         ).exists():
             self.add_error("metal_grade", "This grade is no longer offered.")
         if amount is not None:
+            if self.plan.configuration_id:
+                from .plan_configuration import validate_configuration_amount
+                try:
+                    validate_configuration_amount(self.plan.configuration, amount)
+                except ValidationError as error:
+                    self.add_error("requested_contribution_amount", error)
             if self.plan.amount_rule == SchemePlan.AmountRule.FIXED:
                 if amount != self.plan.fixed_contribution_amount:
                     self.add_error(
@@ -329,6 +488,10 @@ class EnrolmentRequestConversionForm(EnrolmentForm):
         self.fields["plan"].disabled = True
         self.fields["metal_grade"].disabled = True
         self.fields["agreed_months"].disabled = True
+        if enrolment_request.configuration_snapshot_id and "selected_contribution_amount" in self.fields:
+            self.fields["selected_contribution_amount"].initial = enrolment_request.requested_contribution_amount
+            self.fields["selected_contribution_amount"].disabled = True
+            self.fields["selected_contribution_amount"].help_text = "Uses the customer's requested amount. Changing it requires a fresh confirmed request."
         self.fields["agreed_months"].help_text = "Uses the customer's confirmed duration. A different duration requires a new customer request."
         self.fields["audit_reason"].label = "Confirmation and enrolment reason"
         self.fields["audit_reason"].help_text = (
@@ -356,6 +519,8 @@ class ContributionForm(forms.Form):
             boundary = f"Minimum ₹{scheme_account.minimum_amount_snapshot}"
             if maximum is not None:
                 boundary += f"; maximum ₹{maximum}"
+            if scheme_account.contribution_step_snapshot:
+                boundary += f"; increments of ₹{scheme_account.contribution_step_snapshot} from the minimum"
             self.fields["amount"].help_text = boundary
 
     def clean_amount(self):

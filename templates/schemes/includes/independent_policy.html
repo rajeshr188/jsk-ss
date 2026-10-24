@@ -1,0 +1,22 @@
+<section aria-labelledby="independent-policy-title">
+  <h2 id="independent-policy-title" class="h4">Independent policy terms (schema 2)</h2>
+  <p class="alert alert-info">Preparation record only. Publication, enrolment, financial previews and payments are unavailable until the complete workflows are implemented and accepted.</p>
+  <dl>
+    <dt>Contribution amount</dt><dd>{{ configuration.get_amount_policy_display }}; minimum INR {{ configuration.minimum_amount }}{% if configuration.maximum_amount %}, maximum INR {{ configuration.maximum_amount }}{% endif %}{% if configuration.fixed_amount %}; fixed INR {{ configuration.fixed_amount }}{% endif %}{% if configuration.amount_step %}; increment INR {{ configuration.amount_step }}{% endif %}.</dd>
+    <dt>Accumulation</dt><dd>{{ configuration.get_accumulation_display }}</dd>
+    <dt>Obligation</dt><dd>{{ configuration.get_instalment_policy_display }}</dd>
+    <dt>Payment limit</dt><dd>{{ configuration.get_frequency_rule_display }}</dd>
+    <dt>Period basis</dt><dd>{{ configuration.get_period_basis_display|default:'Not applicable' }}</dd>
+    <dt>Normal eligibility</dt><dd>{{ configuration.get_eligibility_policy_display }}</dd>
+    <dt>Duration</dt><dd>{% if configuration.duration_months %}{{ configuration.duration_months }} months{% else %}No duration condition{% endif %}</dd>
+    <dt>Required qualifying instalments</dt><dd>{{ configuration.required_count|default:'None' }}</dd>
+    <dt>Contributions after eligibility</dt><dd>{{ configuration.allow_contributions_after_eligibility|yesno:'Permitted until full closure,Not permitted' }}</dd>
+    <dt>Grace and catch-up</dt><dd>{{ configuration.grace_days }} extra days; {{ configuration.get_catch_up_policy_display }}.</dd>
+    <dt>Missed-payment consequence</dt><dd>{{ configuration.get_missed_payment_policy_display }}{% if configuration.max_extension_months %}; {{ configuration.max_extension_months }} ordinary replacement periods{% endif %}. Paid principal is not forfeited.</dd>
+    <dt>Benefit</dt><dd>{{ configuration.get_benefit_policy_display }}{% if configuration.benefit_percentage %}; {{ configuration.benefit_percentage }}%, capped at INR {{ configuration.benefit_cap_inr }}{% endif %}</dd>
+    <dt>Benefit qualification</dt><dd>{{ configuration.get_benefit_qualification_display }}</dd>
+    <dt>Benefit after missed payments</dt><dd>{{ configuration.get_benefit_on_miss_display }}</dd>
+    {% if configuration.eligible_charge_definition %}<dt>Eligible charges</dt><dd>{{ configuration.eligible_charge_definition }}</dd>{% endif %}
+    <dt>Settlement</dt><dd>One final full settlement; no partial redemption or replacement vouchers. INR principal may be applied to jewellery and/or refunded through an approved route. The showroom records fulfilment evidence; outstanding amounts prevent final closure. Metal-to-cash conversion is not authorised.</dd>
+  </dl>
+</section>

@@ -1,0 +1,9 @@
+{% extends '_base.html' %}
+{% load crispy_forms_tags %}
+{% block title %}Configuration version | Jai Sri Krishna Jewellery{% endblock %}
+{% block content %}
+<div class="row justify-content-center"><div class="col-lg-8"><h1>{% if previous %}New version of {{ previous.name }}{% else %}Create configuration{% endif %}</h1>
+<div class="alert alert-warning">Preparation only, not a customer offer. Choose obligation, period basis, payment limit, eligibility and missed-payment outcome separately. Only compatible, implemented combinations can be saved. All currently accumulate one exact metal grade, have no benefits, and require full-only jewellery settlement and closure. INR purchase-credit, count-only, anytime and benefit-bearing plans remain unavailable. Saving a draft does not enable enrolment or payment.</div>
+{% if previous %}<p>This appends to version {{ previous.version }}. Earlier versions, plans and agreements will not change.</p>{% endif %}
+<form method="post" class="card p-3" novalidate>{% csrf_token %}{{ form|crispy }}<div class="d-flex flex-wrap gap-2"><button type="submit" class="btn btn-jsk">Save immutable version</button><a class="btn btn-outline-dark" href="{% url 'schemes:plan_configuration_list' %}">Cancel</a></div></form></div></div>
+{% endblock %}

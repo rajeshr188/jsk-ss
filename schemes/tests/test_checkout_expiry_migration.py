@@ -55,13 +55,13 @@ class CheckoutExpiryMigrationTests(TransactionTestCase):
             minimum_contribution=Decimal("100.00"),
             maximum_contribution=Decimal("100000.00"),
         )
-        grade = MetalGrade.objects.create(
+        # A preceding historical migration may already have seeded this grade.
+        grade, _ = MetalGrade.objects.get_or_create(
             code="GOLD_22K_916",
-            metal="GOLD",
-            display_name="22K Gold",
-            fineness=Decimal("0.916000"),
-            display_order=10,
+            defaults={"metal": "GOLD", "display_name": "22K Gold",
+                      "fineness": Decimal("0.916000"), "display_order": 10},
         )
+        self.assertEqual((grade.metal, grade.fineness), ("GOLD", Decimal("0.916000")))
         account = SchemeAccount.objects.create(
             scheme_number="JSK-EXPIRY-MIG",
             customer=customer,

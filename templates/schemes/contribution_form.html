@@ -6,7 +6,7 @@
 {% block content %}
 <div class="row justify-content-center"><div class="col-lg-6">
   <a class="small d-inline-block mb-2" href="{% url 'schemes:my_scheme_detail' scheme_account.scheme_number %}">← Back to scheme</a>
-  <div class="page-header"><div><p class="page-eyebrow">Secure contribution</p><h1>Scheme contribution</h1><p class="page-subtitle">{{ scheme_account.scheme_number }} · {{ scheme_account.plan.name }}</p></div></div>
+  <div class="page-header"><div><p class="page-eyebrow">Secure contribution</p><h1>Scheme contribution</h1><p class="page-subtitle">{{ scheme_account.scheme_number }} · {{ scheme_account.display_plan_name }}</p></div></div>
   {% if cash_activity_unavailable %}
   <div class="alert alert-danger" role="alert">
     This legacy cash scheme is retained for historical reference. New cash contributions are unavailable. Contact the showroom if you need assistance.

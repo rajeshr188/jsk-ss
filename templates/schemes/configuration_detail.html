@@ -1,0 +1,80 @@
+{% extends '_base.html' %}
+{% load crispy_forms_tags %}
+{% block title %}{{ configuration.name }} | Jai Sri Krishna Jewellery{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><h1>{{ configuration.name }} · v{{ configuration.version }}</h1><p class="small">Family {{ configuration.family_id }}</p></div>
+  <div class="page-actions">
+    <a class="btn btn-outline-dark" href="{% url 'schemes:plan_manual' %}">Plan reference manual</a>
+    <a class="btn btn-outline-dark" href="{% url 'schemes:plan_configuration_list' %}">Catalogue</a>
+    {% if configuration.policy_schema_version == 1 %}
+    <a class="btn btn-outline-dark" href="{% url 'schemes:plan_configuration_new_version' configuration.pk %}">Create next version</a>
+    <a class="btn btn-jsk" href="{% url 'schemes:configured_plan_create' configuration.pk %}">Use in a draft plan</a>
+    {% endif %}
+  </div>
+</div>
+<div class="alert alert-warning">Not publishable from this preview. A configuration is not a public offer and cannot create an agreement or permit a payment. {% if configuration.policy_schema_version == 1 %}Prepare a plan, review its publication and obtain release approval.{% else %}This policy schema is not yet supported by plan or agreement creation.{% endif %} The configured-plan release gate defaults to disabled.</div>
+{% if configuration.policy_schema_version == 2 %}
+{% include 'schemes/includes/independent_policy.html' %}
+{% else %}
+<div class="row g-3">
+  <section class="col-lg-6">
+    <h2 class="h4">Recorded policy</h2>
+    <dl>
+      <dt>Amount</dt><dd>{{ configuration.get_amount_policy_display }}: ₹{{ configuration.minimum_amount }}{% if configuration.maximum_amount %}–₹{{ configuration.maximum_amount }}{% else %} or more{% endif %}{% if configuration.amount_step %}; increments of ₹{{ configuration.amount_step }} from the minimum{% endif %}</dd>
+      <dt>Accumulation</dt><dd>One exact metal grade, selected from the plan's offered grades at enrolment. Not INR purchase credit.</dd>
+      {% if configuration.instalment_policy == 'MONTHLY_COMPLETION' %}
+      <dt>Obligation and payment limit</dt><dd>Required qualifying payments equal agreed months; at most one qualifies per selected monthly period.</dd>
+      <dt>Period basis</dt><dd>{{ configuration.get_period_basis_display }}. {% if configuration.period_basis == 'CALENDAR_MONTH' %}The first period starts on enrolment day and ends before the first of the next month, even if only one or two days remain. An enrolment-day payment counts. Later periods are whole calendar months.{% else %}Each period starts on its original enrolment-day anniversary and ends before the next anniversary, with month-end clamping.{% endif %}</dd>
+      <dt>Eligibility</dt><dd>The later of the agreed minimum-duration date and the final qualifying period end, after all required payments qualify. Minimum {{ configuration.minimum_months }} months; suggested {{ configuration.default_months }} months. Twelve payments made early cannot shorten a twelve-month agreement.</dd>
+      <dt>Missed payments</dt><dd>No extra grace, advance instalments or bulk catch-up. Up to {{ configuration.max_extension_months }} extension months, then discontinuation review. Paid entitlement is not forfeited. Provider/showroom outage exceptions require explicit review, not automatic penalties.</dd>
+      <dt>Exceptional outage amendments</dt><dd>Separate from ordinary extensions: at most three additional months using the same period basis, one per proven outage-caused unpaid period. Each requires incident evidence, reconciliation and customer acknowledgement of the exact amendment. This is not automatic time, free credit or an eligibility guarantee; the illustration below excludes amendments.</dd>
+      <dt>After completion</dt><dd>No further instalments once completion requirements are met. Extension payments before completion are distinct from payments after eligibility.</dd>
+      {% else %}
+      <dt>Schedule</dt><dd>{{ configuration.get_frequency_rule_display }}. No mandatory instalments.</dd>
+      <dt>Eligibility</dt><dd>Agreed calendar duration; minimum {{ configuration.minimum_months }} months, suggested {{ configuration.default_months }} months. Not a paid-instalment count.</dd>
+      <dt>After eligibility</dt><dd>Further contributions: {{ configuration.allow_contributions_after_eligibility|yesno:'allowed,not allowed' }}.</dd>
+      <dt>Missed payments</dt><dd>No mandatory-payment penalty.</dd>
+      {% endif %}
+      <dt>Benefits</dt><dd>No bonus or discount.</dd>
+      <dt>Settlement</dt><dd>Full entitlement, jewellery fulfilment and agreement closure. No partial redemption. Early discontinuation requires customer authorization and settlement of actual paid entitlement; unresolved payment evidence remains held. Genuinely unused agreements can be cancelled without redemption.</dd>
+      <dt>Evidence</dt><dd>{{ configuration.actor_label }} · {{ configuration.created_at|date:'d M Y H:i' }}<br>{{ configuration.reason }}</dd>
+    </dl>
+  </section>
+  <section class="col-lg-6">
+    <h2 class="h4">Read-only agreement preview</h2>
+    <p>Select example terms. No customer data, rates, payments, allocations or agreement records are written. A draft plan will separately restrict offered grades.</p>
+    <form method="post" class="card p-3" novalidate>{% csrf_token %}{{ form|crispy }}<button class="btn btn-outline-dark" type="submit">Preview selected terms</button></form>
+    {% if preview %}
+    <div class="card p-3 mt-3" role="status">
+      <h3 class="h5">Proposed individual terms</h3>
+      <p>{{ preview.metal_grade }} · {{ preview.agreed_months }} calendar months.</p>
+      {% if preview.fixed_amount_snapshot %}
+      <p>Each contribution would be fixed at ₹{{ preview.fixed_amount_snapshot }} for this agreement. It is not merely a preferred amount.</p>
+      {% else %}
+      <p>Contributions would remain variable from ₹{{ preview.minimum_amount_snapshot }}{% if preview.maximum_amount_snapshot %} to ₹{{ preview.maximum_amount_snapshot }}{% endif %}{% if preview.amount_step %}, in increments of ₹{{ preview.amount_step }} from the minimum{% endif %}.</p>
+      {% endif %}
+      {% if preview.schedule %}
+      <h3 class="h5">Illustrative monthly scenario</h3>
+      <p>Required payments: {{ preview.schedule.required_payments }}. Original calendar date: {{ preview.schedule.original_date|date:'d M Y' }}.</p>
+      {% if preview.schedule.projected_completion %}
+      <p>Assuming the shown payments occur, projected completion: {{ preview.schedule.projected_completion|date:'d M Y' }}.</p>
+      {% else %}
+      <p>Insufficient qualifying payments within the extension limit. Discontinuation review after {{ preview.schedule.review_after|date:'d M Y' }}; paid entitlement remains protected.</p>
+      {% endif %}
+      <div class="table-responsive" tabindex="0" role="region" aria-label="Monthly schedule scenario">
+        <table class="table table-sm">
+          <caption>Illustration only, not payment history or an eligibility decision. Dates are in India time.</caption>
+          <thead><tr><th scope="col">Period</th><th scope="col">From (inclusive)</th><th scope="col">Until (exclusive)</th><th scope="col">Scenario</th></tr></thead>
+          <tbody>{% for row in preview.schedule.rows %}<tr><th scope="row">{{ row.window.number }}{% if row.window.extension %} (extension){% endif %}</th><td>{{ row.window.starts_on|date:'d M Y' }}</td><td>{{ row.window.ends_before|date:'d M Y' }}</td><td>{{ row.outcome }}</td></tr>{% endfor %}</tbody>
+        </table>
+      </div>
+      {% if preview.schedule.omitted_rows %}<p>{{ preview.schedule.omitted_rows }} additional periods omitted from this display; the forecast includes the whole schedule.</p>{% endif %}
+      {% endif %}
+      <p class="mb-0">Preview only; no agreement or customer acceptance has been recorded.</p>
+    </div>
+    {% endif %}
+  </section>
+</div>
+{% endif %}
+{% endblock %}

@@ -7,6 +7,375 @@ explicit Razorpay Test/Live modes, and manually published Scheme Rate build. Dev
 
 ## Production-readiness boundary
 
+### Independent agreement storage (0040; not activated)
+
+`schemes.0040_independent_agreement_storage` preserves legacy accounts as storage
+version 1 and adds explicit eligibility/count snapshots for future version-2 agreements.
+Only version 2 can have a short duration or null duration/date for count-only/anytime.
+No new agreement, instalment, balance, benefit or customer consent is generated.
+Before eventual exact-image rehearsal, verify that no accounts already point at a
+policy-schema-2 configuration: the forward preflight refuses such unversioned records
+rather than converting their frozen terms implicitly. Review any such records explicitly;
+do not bypass the preflight or relabel them with SQL to make migration succeed.
+
+Reverse migration refuses when any version-2 agreement exists, even unused. Older
+application code assumes non-null calendar dates and cannot interpret these contracts;
+use compatible forward recovery once they exist. Retain all prior INR-history guards.
+Keep configured-plan activation disabled. This is local storage preparation, not a
+production deployment instruction; the normal local/production databases were not migrated.
+
+### INR correction foundation (0039; not activated)
+
+`schemes.0039_inr_settlement_corrections` retains resolution/physical-return records
+and a linear replacement-proposal chain. Existing proposals become unretired roots;
+no balances are rewritten and no provider action runs. This is a local internal
+foundation, not permission to enable INR enrolment or deploy the accumulated work.
+Rehearse the full pending chain and run `check_inr_principal` and
+`check_scheme_closures` against the exact eventual image. Source/history drift fails
+closed. All-retired histories awaiting replacement remain contained liabilities.
+
+The reverse guard refuses to remove any correction, return or replacement evidence.
+Old code assumes one proposal and ignores restored liability: do not roll application
+code back over retained correction history. Use compatible forward recovery, preserving
+all records. No ordinary local or production migration ran during implementation.
+
+### INR manual settlement foundation (0038; not activated)
+
+`schemes.0038_inr_manual_settlement` adds immutable full-disposition proposals,
+manual jewellery/refund fulfilments and completion links. It changes no old balances
+and performs no provider operations. Rehearse the entire pending migration chain in
+the eventual exact-image release; no ordinary local/production migration ran here.
+Keep configured-plan activation disabled. `check_inr_principal` now reports settlement
+errors, remaining principal and pending refund amounts; an error means totals need
+review, not permission to erase or rewrite evidence. `status=ok` is not activation.
+
+Reverse migration refuses to drop any proposal/fulfilment/completion history. Older
+code that ignores fulfilment debits is not a safe rollback after such records exist;
+retain schema and history and use compatible forward recovery. The 0039 correction
+foundation builds on this migration; runtime enrolment/payment and owner/customer
+interfaces remain release gates.
+
+### INR principal foundation (0037; not activated)
+
+`schemes.0037_inr_principal_foundation` adds principal receipt/correction tables and
+the distinct future `INR_CREDIT` account denomination. It backfills no balances,
+relabels no old accounts, and does not activate payment, enrolment or settlement.
+Keep the configured-plan release gate disabled. Include the complete pending chain
+through 0037 in eventual exact-image migration rehearsal, not just the newest file.
+After migration, `python manage.py check_inr_principal` is a read-only ledger-evidence
+check; `workflow=not_activated` is intentional and `status=ok` is not release readiness.
+No ordinary local/production migration ran during this implementation step.
+
+If any INR contracts/receipts/corrections exist, 0037 reverse migration refuses to
+drop them. Old code cannot safely interpret the denomination. Preserve the schema,
+source records and liabilities and use a compatible forward fix; never delete evidence
+or relabel INR credit as legacy CASH to force a rollback. No production activation is
+approved by these local tests or by an owner recording a synthetic test fixture.
+
+### Independent policy persistence (0036; local only)
+
+`schemes.0036_independent_policy_fields` follows 0035. Existing configurations retain
+policy schema 1, old values and serialized evidence. New schema-2 records have separate
+duration/count/benefit terms and are preparation-only; no offers, payments, agreements
+or entitlements are created by this migration. Keep `CONFIGURED_PLANS_ENABLED=False`.
+Include 0036 in the eventual exact-image restored-database rehearsal and run
+`python manage.py check_plan_configurations` after the schema is present.
+No ordinary local or production migration was run for this implementation step.
+
+Once schema-2 records exist, reverse migration deliberately refuses to remove their
+contract evidence. Old code also cannot safely interpret those records. Preserve the
+schema and use a compatible forward fix; do not delete contracts to force rollback.
+This is not deployment approval or activation of INR, benefits or new eligibility.
+
+### P4 controlled configured offers — local integration, gate remains off
+
+Calendar extension `schemes.0035_calendar_month_instalments` now follows 0034 in
+the local candidate. It expands the supported new configuration basis without
+backfilling or reinterpreting any existing configuration, agreement or period.
+Include 0035 in exact-image migration rehearsal and verify the short-first-month
+disclosure, India-midnight attribution, minimum-duration floor, completion reminders
+and full settlement. `CONFIGURED_PLANS_ENABLED` remains disabled until approved.
+After creating any calendar-month configuration, do not reverse 0035 or roll back
+to code that only validates anniversary configurations. Use a compatible forward
+fix or a separately approved, data-aware recovery procedure; never relabel existing
+calendar agreements to force an old image to accept them.
+
+Migration `schemes.0034_configured_plan_publication` adds a nullable protected
+publication revision and replaces the preparation-only constraint with a requirement
+for publication evidence. No offers activate and no existing agreements or financial
+records are converted. Keep `CONFIGURED_PLANS_ENABLED=False` during disabled-first
+rehearsal and until explicit release approval; neither `.env` nor production was
+enabled as part of this implementation.
+
+Before any approved release, rehearse the entire 0021–0035 chain with the exact image
+on a disposable restored database; review financial/grade/provider/closure baselines
+and `python manage.py check_plan_configurations`. Do not build on the serving host.
+Complete owner/mobile/keyboard offer-to-closure review and outstanding B4 exception
+acceptance. Use only exact-grade, no-benefit calendar or approved monthly-completion
+offers. An operator enabling the gate does not itself publish a draft: an owner must
+review and publish through **Scheme plans → Publication review**, with a reason.
+
+Disabling the gate hides configured offers and blocks new publication/intake/enrolment.
+Withdrawal remains possible. This is NOT a financial kill switch: existing agreements
+retain payment, instalment and full-closure rights. Use payment operations controls
+for a payment pause. Withdraw before editing a published offer; policy changes need a
+new configuration/draft. Never rewrite existing accepted terms or invent customer consent.
+After any configured enrolment, do not reverse 0034 or downgrade to code that rejects
+or ignores these contracts. Preserve schema/evidence and use a compatible recovery image.
+
+### B3 full settlement — local implementation, not activation approval
+
+Migration `schemes.0033_configured_full_settlement` creates immutable typed settlement/
+correction proof and extends closure/status constraints, without backfill or financial
+rewrites. Rehearse 0021–0033 against a disposable restored database and the exact approved
+image before a future authorized release. Run `check_scheme_closures`, financial,
+exact-grade, configuration, instalment and existing provider integrity checks.
+
+Configured publication/enrolment remains blocked. Verify owner/customer/statement UI,
+full six-decimal fulfilment, stale/duplicate submissions and reversal containment.
+Failed/abandoned/Test/mock histories and unresolved payment/outage evidence are not
+settleable in this version; don't delete records or change statuses to bypass holds.
+Legacy partial-settlement rights require an inventory and separate cutover decision.
+
+Once configured SETTLE/REVERSE evidence exists, don't downgrade to code that ignores it,
+reverse 0033, delete evidence or restore an older database to undo a settlement. Preserve
+schema and sources; pause new initiation and use a reviewed compatible recovery image.
+A business reversal is the explicit audited workflow, not an infrastructure rollback.
+After settlement, keep running both closure and financial/provider checks: a later
+unexpected provider capture may require investigation even when remaining metal is zero.
+Do not suppress the event, reopen contributions or mutate the completed invoice to
+make a check green. Use the retained exception and separately authorized disposition.
+
+### B2 unused cancellation — local, configured-only preparation
+
+Migration `schemes.0032_unused_agreement_cancellation` extends closure action/status
+constraints and adds configured-only agreement cancellation. No backfill or automatic
+cancellation; no financial rows are changed. Rehearse the full 0021–0032 chain with the
+exact approved image against a disposable restored database before any authorized
+release. Run `check_scheme_closures` plus financial, configuration and instalment checks.
+Configured publication/enrolment remains blocked; B3 is local-only as described above.
+
+Once CANCEL evidence exists, older application code may misclassify cancelled agreements
+as active. Do not roll back to such code or reverse 0032 with cancellation records present.
+Preserve the schema, events and status, pause initiation/reminders and use a reviewed
+compatible recovery image. Never delete cancellation evidence or restore an old database
+to undo a closure. Owner/mobile acceptance and the B3/B4 release review remain outstanding.
+
+### B1 closure lifecycle — local, configured-only preparation
+
+Migration `schemes.0031_scheme_closure_lifecycle` creates empty request/event tables
+and constraints. No backfill, legacy conversion or financial changes. It does not
+implement unused cancellation or full settlement. Do not activate configured plans
+or deploy this accumulated branch merely because migration generation/tests succeed.
+Rehearse the complete 0021–0031 chain with the exact approved image against a disposable
+restored database before a later authorized release; use `check_scheme_closures`
+alongside existing financial/instalment checks. Zero integrity errors do not establish
+resolved provider exposure or permission to cancel an agreement.
+
+Once accepted requests exist, do not roll back to code that ignores closure payment
+guards: that could reopen payment collection. Pause initiation and reminder dispatch
+before any incompatible rollback and retain the schema/evidence. Never delete requests,
+events or restore an old database to undo acceptance. Existing captures and allocation
+recovery must remain operational. No new environment bypass is supplied.
+
+### P3 monthly completion reminders — local, gated preparation
+
+Migration `schemes.0030_monthly_completion_reminders` extends existing reminder
+kind/shape constraints and choices. It performs no financial or message-data backfill.
+Do not deploy it independently of the accepted P3/configured-plan release boundary.
+Configured publication/enrolment and full-only settlement remain disabled.
+
+For a future approved rollout, rehearse 0021–0030 against the exact candidate image
+and a disposable restored database, including preservation of legacy reminders and
+attempts. Pause reminder dispatch while versions/schema are mixed; then preview
+`send_scheme_reminders` without `--apply`, check candidate kinds/dates/recipients, and
+use a controlled approved recipient before resuming the timer. Do not create real
+payments or synthetic obligations merely to manufacture notification evidence.
+The command now reports `skipped`: state/date/recipient/switch changes can make a
+planned candidate unsafe before delivery. Skips create no SMTP attempt; existing
+failed or accepted attempt evidence is retained. Monthly notices are count-complete
+progress notices, not forecasts, eligibility grants or settlement instructions.
+They reuse configured lead days and have no automatic missed-day catch-up. A
+confirmed historical `--as-of` override still cannot replay monthly qualification.
+
+Retain 0030 and its historical monthly reminder rows on rollback; do not reverse
+the constraint migration once such rows exist or delete them to fit an older schema.
+Keep dispatch paused when reverting to code that does not understand the new kind.
+Account locking prevents concurrent financial mutations during dispatch, but SMTP
+acceptance cannot commit atomically with PostgreSQL. Investigate crash-window mail
+duplicates rather than claiming exactly-once delivery. No deployment was performed
+for this local preparation step.
+Dispatch holds only one agreement per email, not the whole batch. It can briefly
+delay a concurrent payment on that agreement; retain the bounded `EMAIL_TIMEOUT`
+(default 10 seconds) and inspect SMTP failures before increasing it.
+
+### Capture containment P2b.3b — local acceptance preparation only
+
+No additional migration beyond 0029. Unresolved Live captured events for configured
+monthly agreements now block new online/cash initiation and owner timing acceptance;
+confirmation of independently verified in-flight funds continues. A second payment
+for an already-paid order retains the original credit and records DUPLICATE_CAPTURE_REVIEW.
+Owner instalment pages link retained exceptions to existing provider reconciliation.
+
+`check_instalment_payments` now reports `unresolved_capture_events`. Check it separately
+from `integrity_errors`: structurally valid evidence can still require financial
+disposition. Neither investigation notes nor a manually reported refund clear this
+hold. Do not edit event status to bypass it. Automated refunds/verified refund closure
+are not delivered by this step; keep unresolved cases in the established manual
+provider process. See ADR-0017's disposition matrix. Configured publication/enrolment
+stays blocked. Owner/mobile, CI and exact-image acceptance remain outstanding; this
+section is not permission to deploy, migrate an ordinary DB or create real test funds.
+
+### Lost-order identity recovery P2b.3b — partial, preparation only
+
+Migration `schemes.0029_instalment_order_recovery` adds a nullable unique request UUID
+to payment decisions and an empty immutable identity-recovery table. It does not
+backfill old requests or change historical orders, money, rates, deadlines or agreements.
+New configured monthly requests carry their durable UUID in the provider receipt/notes.
+The private owner instalment workspace links ORDERING cases to exact-order recovery.
+Use only a candidate ID obtained from the correct Live merchant investigation; the
+server verifies it independently. Missing/mismatched evidence remains held.
+
+Recovered checkout is never resumed. Reconcile captured funds separately; an existing
+unknown-order webhook in review requires explicit payment recovery before original
+signed timing can qualify it. For expired untouched orders, use existing provider-backed
+abandonment, not a database edit or replacement retry. `check_instalment_payments`
+reports `recovered_orders` and `uncorrelated_order_requests`; neither a successful binding
+nor zero integrity errors completes the exception/eligibility/settlement gates.
+No normal local/production migration, activation or deployment is authorized here.
+
+### Bounded outage amendments P2b.3b — partial, preparation only
+
+Migration `schemes.0028_instalment_outage_resolutions` adds an empty immutable
+resolution/amendment table, with no existing agreement, schedule, configuration hash
+or financial backfill. The owner review workspace links each open hold to an
+acknowledged resolution form. Maximum three extra anniversary months per agreement,
+separate from ordinary extensions; original terms are retained. Customer acceptance
+must be genuinely obtained and retained outside this form; do not manufacture test
+consent or production agreements. No uncertain provider order can be released here.
+
+After the schema exists, `check_instalment_schedules` validates base plus acknowledged
+windows; `check_instalment_payments` reports open held accounts, resolutions and
+compensation months. Zero errors do not grant eligibility or close unresolved holds.
+Configured publication/enrolment remains blocked. External disposition/closure, final
+exception acceptance, P3 and full-only settlement remain open. Local test success does
+not authorize normal local/production migration, deployment or activation.
+
+### Owner instalment review P2b.3a — preparation only
+
+Migration `schemes.0027_instalment_owner_reviews` adds an empty append-only owner-review
+table and payment-decision source link, without historical attribution. The owner
+workspace is `/scheme/owner/instalment-reviews/`; it should have no monthly periods
+until an independently approved configured-enrolment release. Do not create production
+test agreements to populate it. `check_instalment_payments` additionally reports owner
+reviews and outage-held accounts. A zero-integrity-error result does not clear a hold.
+No arbitrary hold removal, timing override or uncertain-order release is provided.
+P2b.3b owner/CI/release acceptance, P3 and full settlement remain open; capture
+containment is not a verified refund-closure workflow.
+Normal DB migration, production deployment, owner visual acceptance, CI and exact-image
+PostgreSQL 18.6 rehearsal are not authorized by local test success.
+
+### Monthly payment-service integration P2b.2 — not an activation release
+
+Migration `schemes.0026_instalment_payment_integration` extends qualification lifecycle
+constraints with awaiting timing, provider-reconciled release, and non-occupying late
+capture review; decisions retain the reconciliation audit FK. Existing legacy payment
+rows and agreements are not reinterpreted. Run `check_instalment_payments` only after
+the schema exists. Current P4 diagnostics report `integration=gated_services` and
+`configured_intake_enabled=true|false` from the release flag, replacing the P2-era
+hard-coded `activation=disabled`. The closure check uses the same intake flag; it
+does not describe whether existing agreements may accept payments or settle.
+Configured enrolment/publication remains blocked. Do not manufacture production
+agreements or use internal calls as an activation bypass. P2b.3 exception resolution,
+P3 eligibility and B full settlement remain unfinished. Migration rehearsal, exact-image
+PG18.6 and separately approved rollout are still required; this is not deployment approval.
+
+### Instalment payment ledger P2b.1 — internal foundation only
+
+Migration `schemes.0025_instalment_payment_ledger` adds empty reservation/decision
+tables and constraints. It has no financial or qualification backfill. P2b.1 was an
+internal foundation; P2b.2 service integration is described above. Publication and
+enrolment gates remain closed. Do not invoke internal services on production to bypass them.
+`check_instalment_payments` is read-only and explicitly reports activation disabled.
+Before activation, both reservation and decision counts should remain zero. A successful
+check is not rollout acceptance. Exact-image/PG18.6 rehearsal and separately approved
+deployment remain necessary; no ordinary local or production migration is authorized here.
+
+### Monthly schedule foundation P2a — preparation only
+
+Migration `schemes.0024_monthly_completion_schedule` adds nullable policy fields and
+an empty period snapshot table; it does not create obligations for existing agreements.
+Approved monthly-completion definitions stay inactive/unlisted and cannot enrol or
+initiate payments. No bypass flag exists. `check_instalment_schedules` is read-only;
+before activation there should be zero monthly agreements/periods in production.
+Do not call internal preparation services to manufacture production agreements.
+Complete P2b attribution/reservations/exceptions, P3 eligibility and B settlement before
+activating the family. An original calendar `paid_at` value is not capture-time evidence.
+Migration/schema rehearsal, exact-image PostgreSQL validation and rollout approval
+remain required; this development entry does not authorize deployment or DB rollback.
+
+### Configured agreement integration P1b — activation remains blocked
+
+Migration `schemes.0023_configured_agreement_terms` adds nullable agreement/request
+configuration references and an optional agreement contribution increment. It has no
+data backfill: preserve every legacy amount, date, grade, status and financial row.
+The database gate on configured plan visibility/activity remains and the enrolment
+service still rejects configured plans. Do not remove that constraint, forge agreements
+via SQL or patch settings to test with customers. Full-only settlement is not released.
+
+For any separately approved release, run `check_plan_agreements` and
+`check_plan_configurations`; the latter must still report zero configured agreements.
+Preserve schema and evidence on rollback. Synthetic contract tests are not proof of an
+enabled customer journey; exact-image rehearsal, visual review and later full-lifecycle
+acceptance remain required. No migration/deployment is authorized by this runbook update.
+
+### Configuration preparation P1a — not activation authorization
+
+`schemes.0022_plan_configuration_foundation` follows 0021. It adds immutable typed
+configuration versions and an optional pinned configuration on plans; it does not
+backfill configurations onto existing plans or mutate agreements/payments. New pinned
+plans are inactive/unlisted by database constraint and rejected by enrolment services.
+There is no environment flag to unlock them. P1a alone supports amount previews;
+P1b adds gated agreement integration above. Full-only settlement is still separate work.
+
+After a separately approved release/migration, run `check_plan_configurations` and
+`check_plan_agreements` alongside normal integrity checks. Require zero activated
+configured plans and zero configured agreements. Inspect **Scheme plans → Configuration
+catalogue** as owner; customers must not access it. Do not remove the database gate or
+enable drafts via SQL. Preserve configuration/revision evidence; rollback to code that
+does not understand these drafts is not an activation path. No production rollout or
+normal local-database migration was performed during this implementation slice.
+
+### Plan governance A — prepared change, not deployment authorization
+
+The subsequently approved owner plan builder/full-only settlement design in ADR-0017
+is **not implemented by this release**. Do not advertise instalment-completion plans,
+automatic benefits or anytime/full-only processing merely after applying 0021. Those
+families need their own implementation, migration review, historical-contract checks,
+integrity/acceptance tests and explicit activation. Customer-authored configurations
+remain out of immediate scope. Current code still permits date-eligible partial settlement.
+
+`schemes.0021_plan_agreement_governance` adds revision/identity metadata. Its data
+migration freezes each legacy agreement's currently observed plan name/code and leaves
+its revision null; it must not change economic snapshots, eligibility, grades or any
+financial ledger record. Review the migration on a local synthetic PostgreSQL upgrade
+before CI/image publication. Capture legacy agreement fields before/after and retain
+the exact old image/configuration and a verified current managed-database recovery point.
+
+For an approved future rollout, temporarily restrict owner plan edits and new enrolment
+mutations while migrating and switching web code, so old workers cannot insert an
+agreement without identity metadata. Preserve payment/webhook handling. Never build
+on the 1 GB serving host. Check `check_plan_agreements`, health and existing financial,
+grade, authentication and application checks after rollout. New enrolments should have
+identity/revision evidence; legacy records should remain explicitly legacy. No feature
+flag changes or early-discontinuation activation are part of A.
+
+Review the updated Terms/Cancellation copy and advance the applicable terms/consent
+version for future confirmations before enabling new applications; retain historical
+consent records. No privacy-policy change is implied. Rollback must not reverse the
+schema or discard new revisions; old code could create unsnapshotted agreements, so
+keep enrolment/plan mutations restricted until a compatible recovery image is ready.
+
 ### Approved simpler rollout — 22 October 2026
 
 The owner approved deploying release `4d92b57588d0714eb2e9b48661df1878824953d0`
@@ -1970,6 +2339,91 @@ test and compare post-release liabilities and exception counts with the baseline
 accounting for legitimate activity. Observe through the stabilization window before
 closing the release record.
 
+### Amazon SES migration (`FW-PROD-008`; in progress 24 October 2026)
+
+The owner authorised SES setup and migration and accepted a brief interruption for
+the final single-container replacement. Use the existing host; no second stack,
+database migration or unrelated local application release belongs in this change.
+Postmark continues serving customers until the gates below pass.
+
+Read-only production inventory confirmed release
+`4d92b57588d0714eb2e9b48661df1878824953d0`, a healthy web container, standard Django
+SMTP, `smtp.postmarkapp.com:587`, STARTTLS, a ten-second timeout and sender/server
+address `admin@jaishrikrishnajewellery.com`. Cloudflare is authoritative DNS; root MX
+is `smtp.google.com`, root SPF authorises Google, and DMARC is `p=reject` with relaxed
+alignment. Preserve these and existing Postmark DKIM/`pm-bounces` records.
+
+1. Prepare SES in Mumbai (`ap-south-1`) alongside Postmark. Create the domain identity
+   with Easy DKIM RSA 2048 and enabled signatures. Publish its three CNAMEs as DNS
+   only. Use the previously unused `ses-bounce.jaishrikrishnajewellery.com` for custom
+   MAIL FROM: MX priority 10 to `feedback-smtp.ap-south-1.amazonses.com`, plus TXT
+   `v=spf1 include:amazonses.com ~all`. These are additions, not root MX/SPF changes.
+   Wait for identity/DKIM/custom MAIL FROM verification and SES production access.
+2. Confirm the selected pricing mode before metered use; new SES regions may default
+   to Essentials. Do not enable paid upgrades, dedicated IPs, archiving or additional
+   deliverability products implicitly. Configure a default transactional configuration
+   set with delivery/failure evidence, monitored bounce/complaint notifications,
+   suppression handling and explicit disabling of open/click tracking, including
+   applicable VDM settings. Existing `X-PM-*` headers do not configure SES tracking.
+   Review/import applicable Postmark suppressions and define owner failure recovery.
+   `jsk-failure-alerts` now publishes hard bounces, complaints, delivery delays,
+   rejects and rendering failures to Standard SNS topic `jsk-ses-failures`. Its
+   confirmed email endpoint is the business admin mailbox; the publish policy permits
+   only the exact SES configuration set and source account. Bounce and complaint
+   simulator events reached the Inbox (marker `f113e40c4751`). Direct feedback
+   forwarding remains enabled as a second route; its simulator bounce landed in Spam,
+   so include Spam in manual mailbox review rather than weakening spam protection.
+   Review SNS event metadata and notification mailbox copies in the provider retention
+   inventory; no message archive was enabled. Keep opens and clicks unselected.
+   For failures, correlate the SES message ID and recipient privately with application
+   evidence. Keep hard-bounce/complaint recipients suppressed and use a verified
+   showroom/contact route for recovery. Correct addresses through existing owner
+   workflows before a bounded resend; a delay or ambiguous acceptance is not permission
+   to send a duplicate. Notification duplicates do not justify transactional resends.
+3. Create restricted regional SMTP credentials, keeping secrets outside the repository
+   and chat. Permit `ses:SendRawEmail` only for the verified identity ARN and the
+   exact `jsk-transactional` configuration-set ARN in Mumbai, with `ses:FromAddress`
+   restricted to `admin@jaishrikrishnajewellery.com`. The configuration-set resource
+   is required even when assigned by default; identity-only permission was rejected.
+   Keep console login disabled for this SMTP user. Production-container connectivity to
+   `email-smtp.ap-south-1.amazonaws.com:587` was verified with certificate-validated
+   STARTTLS/TLS 1.3, without authentication or sending. Authentication and actual
+   message acceptance/delivery tests remain separate gates. Authentication (235) and
+   controlled admin-inbox delivery have now passed, including SPF/DKIM/DMARC and direct
+   links/no tracking image. Keep production SMTP unchanged until all other gates pass.
+   The deploy user's protected candidate is `~/.config/jsk/ses-smtp-ap-south-1.env`;
+   the SMTP-only Postmark snapshot is
+   `~/.config/jsk/postmark-smtp-rollback-20261024.json` (both mode 0600). Revalidate
+   current live settings before using that dated snapshot; do not restore it wholesale
+   over the production environment or expose either file in a log/Compose dump.
+4. Review current-provider privacy/disposition wording and retained Postmark copies.
+   Run affected regressions and controlled recipient tests for all email workflows.
+   Inspect received DKIM/SPF/DMARC results and direct private links/no tracking pixels;
+   exercise simulator bounce/complaint and recovery paths. SMTP acceptance is not
+   inbox delivery. Do not generate customer messages or financial mutations merely
+   to test transport. Use an isolated reviewed release if code changes are needed;
+   never deploy the accumulated unrelated worktree.
+5. Before cutover, record the exact live image/release, health and financial-exception
+   baseline, timer/cron inventory and current SMTP settings. Make a protected rollback
+   copy of the server configuration and retain working Postmark credentials. Hold
+   scheduled email dispatch and let in-flight sends finish; do not pause payment
+   processing or provider reconciliation as an email-migration shortcut.
+6. Edit only reviewed SMTP values in the protected environment (and any separately
+   reviewed email-only release identity). Keep the sender unchanged. Validate Compose
+   without printing secrets; run Django deployment checks. Recreate only `web` with
+   `up -d --force-recreate --no-deps web`. A plain `restart` does not reload environment
+   values. Keep Caddy running and verify public/readiness routes, TLS, sessions,
+   existing payment/webhook paths and controlled SES delivery before resuming dispatch.
+   Do not run `migrate` for an SMTP-only switch or replace the environment from an example.
+7. If checks fail, restore only the saved SMTP values (and compatible email-only image
+   if changed), recreate `web`, then verify Postmark recovery. Review ambiguous sends
+   before retrying: do not automatically dual-send or claim exactly-once delivery.
+   Observe real delivery/failure evidence through an agreed acceptance period before
+   retiring Postmark credentials, DNS or retained data. No database restore is involved.
+
+Remaining gates and execution evidence are tracked in FUTURE_WORK.md and STATUS.md.
+No production SMTP switch is implied by DNS setup or a successful TLS handshake.
+
 ### 7. Propagate configuration-only changes
 
 Validate configuration changes through the same review and change-window controls.
@@ -2225,6 +2679,67 @@ setting the variable back to `False` and recreating `web` again.
   owner enabled the weekly schedule with an audit reason. Its exact closing and
   reopening boundary worked as expected; the schedule remains enabled in production.
 
+### Expired Checkout operations (FW-PAY-008 candidate)
+
+The queue and `check_financial_exceptions` now include `expired_checkouts` for all
+modes as soon as a stored deadline expires. Normal unexpired checkouts are excluded.
+The private payment detail and exception entry link to owner review. GET is read-only;
+Check provider and Apply are CSRF-protected POSTs. Apply requires the current owner's
+signed ten-minute review and explicit confirmation, re-fetches provider order and
+payments, then uses the existing audited service. Attempted, mismatched, captured,
+unknown or cross-mode results stay for investigation/verified payment recovery.
+A received payment is never inferred to have failed from its browser deadline.
+
+Operator dry-run (new default: deadline plus five minutes, not 24 hours):
+
+```bash
+docker exec jsk-savings-web-1 python manage.py reconcile_abandoned_razorpay_orders \
+  --contribution-id=REVIEWED_ID
+```
+
+Review the result before an explicitly authorized exact-ID `--apply`; the apply pass
+inspects the provider again. `--older-than-hours` is an optional additional age filter.
+`--grace-minutes=0` allows urgent inspection after expiry without weakening provider
+predicates. `--summary-only --fail-on-pending` is for monitoring, not automatic closure.
+It fails if any scoped expired backlog remains, even beyond the provider batch or
+outside the configured mode. Errors are redacted and never close a failing candidate.
+
+For activation, release the isolated application image through normal CI/image gates
+first; no migration is introduced. Install `deploy/check-expired-checkouts.sh` and
+`deploy/systemd/jsk-checkout-reconciliation.{service,timer}` from that reviewed release
+into their documented `/opt/jsk/app/deploy/` and `/etc/systemd/system/` locations.
+The service uses `/usr/bin/docker exec`, a private runtime Docker configuration and
+a maximum of three order inspections per run (six provider requests). This respects
+ProtectHome and the four-minute timeout. Both aggregate financial checks and provider
+inspection must pass before its shared heartbeat reports health. Keep any older
+financial heartbeat timer disabled when sharing this destination, so another job
+cannot mask an inspection failure.
+
+Configure a dedicated heartbeat with a five-minute period and six-minute monitoring
+grace. The owner selected dashboard plus external monitoring; Healthchecks.io is the
+recommended initial service. Enable email notification and optionally recurring
+unresolved reminders. Store only `FINANCIAL_EXCEPTIONS_HEARTBEAT_URL` in
+`/opt/jsk/secrets/observability.env`, owned by root with mode 0600; systemd reads the
+file before dropping privileges. Never commit or display its secret URL. The service
+requires it by default and exits with `delivery=unconfigured` if absent. The wrapper
+sends only success/failure POSTs, with no body or customer/provider/payment fields.
+`/fail` signals either financial findings or failed provider inspection. A delivery
+failure exits 69, allowing the missing-heartbeat alarm to detect a broken channel.
+The explicit `REQUIRE_FINANCIAL_HEARTBEAT=false` override supports a deliberately
+reviewed server-only setup; it does not establish external alert delivery.
+
+After installing/configuring, run `systemd-analyze verify`, daemon-reload, one manual
+service run and enable the timer. Verify active/scheduled status, successful provider
+inspection, the monitor's received heartbeat, a controlled failure notification,
+a deliberately missed heartbeat, and recovery. Do not create a real payment solely
+for this acceptance test. Rollback disables the new timer before reverting the image;
+retain all reconciliation audits and financial records. Never restore an old database
+as an application rollback. The on-site owner still resolves held cases; this job is
+inspection and notification, not automatic refunds or entitlement overrides.
+
+Sources: [Healthchecks failure signals](https://healthchecks.io/docs/signaling_failures/),
+[notification configuration](https://healthchecks.io/docs/configuring_notifications/).
+
 ### Abandoned Razorpay order deployment and operation (`FW-PAY-002`)
 
 The release introduces `schemes.0012_abandoned_razorpay_orders`. Its approved plan
@@ -2274,6 +2789,37 @@ Suspend the affected checkout, reconcile the order/payment/amount and any replac
 contribution, and follow the approved no-entitlement payment-error refund procedure.
 Never delete the old contribution, provider order, reconciliation audit event, or
 failed webhook.
+
+#### Expired pending Checkout incidents
+
+Expiry is a local deadline, not a provider payment result. An expired pending
+attempt suppresses the customer's primary payment action even on a flexible plan
+with a later successful payment; any pending Razorpay order also blocks showroom
+cash recording. The existing financial-exception queue/check does not include these
+attempts, so an `ok` result alone does not rule out this customer-access incident.
+Inspect pending exposure with `check_payment_operations` and the exact owner's
+payment record; independently review the provider order and its payments.
+
+The reconciliation command's default age is **24 hours from creation**, not the
+Checkout deadline. For an urgent younger incident, select an explicit reviewed age
+and target the exact contribution through
+`reconcile_abandoned_razorpay_contribution(contribution_id=..., cutoff=..., apply=False)`
+in the running image's Django shell. Verify customer/agreement, Live/Test mode, amount,
+order ID and expired deadline before the dry-run. The existing CLI has no exact-ID
+filter; do not use its bulk `--apply` merely to unblock one customer.
+Only after an `ELIGIBLE_FOR_ABANDONMENT` dry-run, use the same exact ID and reviewed
+cutoff with `apply=True` and a specific owner-authorized reason. The service re-reads
+the provider, locks the agreement/contribution, preserves the locked rate and writes
+the audit event. Any changed/uncertain provider result must remain for investigation.
+
+Afterward, verify the audit ID, restored customer action and cash blocker, unchanged
+successful payments and exact-grade entitlement, remaining pending exposure and
+financial checks. Never create a real payment to test the restored button. The
+24 October 2026 incident used this workflow for contribution 20, recorded audit 104,
+preserved paid contribution 21 and 0.037169 g 22K entitlement, and left zero pending
+Razorpay contributions. A read-only customer-view render verified the pay link.
+`FW-PAY-008` tracks the missing owner recovery UI, overdue-attempt visibility and
+bounded inspection/alert job; none is installed or enabled by this runbook update.
 
 #### Completed production rollout evidence — 2026-08-31
 

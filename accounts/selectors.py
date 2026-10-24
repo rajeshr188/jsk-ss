@@ -79,6 +79,9 @@ def customer_account_deletion_disposition(deletion_request):
     customer = deletion_request.customer
     user = customer.user
     accounts = customer.scheme_accounts.select_related("metal_grade")
+    if accounts.filter(savings_mode="INR_CREDIT").exists():
+        from django.core.exceptions import ValidationError
+        raise ValidationError("INR purchase-credit deletion disposition is not integrated; preserve the contract and principal evidence.")
     contributions = Contribution.objects.filter(scheme_account__customer=customer)
     enrolments = customer.enrolment_requests.all()
     balances = []

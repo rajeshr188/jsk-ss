@@ -1,0 +1,11 @@
+{% extends '_base.html' %}
+{% block title %}Agreement closure reviews{% endblock %}
+{% block content %}
+<h1>Agreement closure reviews</h1>
+<p>Configured agreements only. Acceptance blocks new payments; it does not cancel an agreement or settle its entitlement.</p>
+{% for item in page_obj %}
+<article class="card p-3 mb-3"><h2 class="h5"><a href="{% url 'schemes:closure_workspace' item.scheme_account.scheme_number %}">{{ item.scheme_account.scheme_number }}</a></h2><p>{{ item.scheme_account.customer.full_name }} · {{ item.get_status_display }}</p><p>Requested {{ item.requested_at|date:'d M Y, H:i' }}</p></article>
+{% empty %}<p>No open closure requests.</p>{% endfor %}
+{% if page_obj.has_previous %}<a href="?page={{ page_obj.previous_page_number }}">Previous page</a>{% endif %}
+{% if page_obj.has_next %}<a href="?page={{ page_obj.next_page_number }}">Next page</a>{% endif %}
+{% endblock %}

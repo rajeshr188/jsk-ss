@@ -2,7 +2,12 @@
 <html lang="en">
 <body>
   <p>{% if audience == 'CUSTOMER' %}Hello {{ customer_name }},{% else %}Hello,{% endif %}</p>
-  {% if kind == 'UPCOMING_ELIGIBILITY' %}
+  {% if kind == 'UPCOMING_MONTHLY_COMPLETION' %}
+    <p>Scheme <strong>{{ scheme_number }}</strong> for {{ customer_name }} currently has all <strong>{{ required_payments }}</strong> required qualifying payments recorded. Its normal completion date, after both duration and qualifying-period requirements, is <strong>{{ completion_date|date:"d M Y" }}</strong> (India time), in {{ eligibility_lead_days }} day{{ eligibility_lead_days|pluralize }}.</p>
+    <p>Original calendar date: {{ eligible_from|date:"d M Y" }}.</p>
+    <p>This is a payment-and-date progress notice, not redemption approval, an automatic account closure, or a bonus/discount award. A subsequent correction or review can change completion.</p>
+    <p>Full jewellery settlement requires showroom review and customer confirmation. Check the current agreement status or contact the showroom before arranging fulfilment.</p>
+  {% elif kind == 'UPCOMING_ELIGIBILITY' %}
     {% if audience == 'CUSTOMER' %}
       <p>Your savings scheme <strong>{{ scheme_number }}</strong> becomes eligible for redemption on <strong>{{ eligible_from|date:"d M Y" }}</strong>.</p>
       <p>Reaching this date does not automatically close or redeem your scheme. Please visit our Vellore showroom when you are ready to select jewellery.</p>

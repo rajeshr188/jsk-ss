@@ -92,6 +92,13 @@
       </div>
     </div>
   </div>
+  {% if liabilities.inr_purchase_principal %}
+  <div class="col-12 col-lg-4"><div class="card stat-card h-100"><div class="card-body">
+    <div class="stat-label">INR purchase-credit principal</div>
+    <div class="stat-value">INR {{ liabilities.inr_purchase_principal|floatformat:2 }}</div>
+    <p class="small mb-0">Separate from legacy cash bonuses and metal. Settlement integration is not activated.</p>
+  </div></div></div>
+  {% endif %}
   {% for liability in liabilities.metal_grades %}
   <div class="col-12 col-lg-4">
     <div class="card stat-card {% if liability.metal_grade.metal == 'GOLD' %}stat-card--gold{% else %}stat-card--silver{% endif %} h-100">

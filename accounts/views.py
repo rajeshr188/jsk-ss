@@ -18,6 +18,7 @@ from django.views.decorators.http import require_POST, require_GET, require_http
 from .forms import (
     CustomerDeletionCompletionForm,
     CustomerDeletionRetentionFormSet,
+    CustomerDeletionSharedRetentionForm,
     CustomerAccountDeletionAuthenticatedForm,
     CustomerAccountDeletionHoldForm,
     CustomerAccountDeletionPublicForm,
@@ -661,14 +662,19 @@ def customer_account_deletion_complete(request, request_id, review=False):
     if not review and deletion_request.status == deletion_request.Status.COMPLETED_WITH_RETENTION:
         return redirect("customer_account_deletion_detail", request_id=request_id)
     form = CustomerDeletionCompletionForm(request.POST if request.method == "POST" else None)
+    shared_form = CustomerDeletionSharedRetentionForm(
+        request.POST if request.method == "POST" else None, prefix="shared",
+    )
+    shared_valid = shared_form.is_valid() if request.method == "POST" else False
     formset = CustomerDeletionRetentionFormSet(
         request.POST if request.method == "POST" else None,
         initial=[{"category": key} for key, label in RETENTION_CATEGORIES],
         prefix="retention",
+        form_kwargs={"shared_retention": shared_form.cleaned_data if request.method == "POST" else {}},
     )
     if request.method == "POST":
         valid_form, valid_rows = form.is_valid(), formset.is_valid()
-        if valid_form and valid_rows:
+        if valid_form and valid_rows and shared_valid:
             rows = [{**row, "review_on": row["review_on"].isoformat()} for row in formset.cleaned_data]
             try:
                 service = review_customer_account_retention if review else complete_customer_account_deletion
@@ -692,7 +698,8 @@ def customer_account_deletion_complete(request, request_id, review=False):
     return render(request, "account/customer_deletion_complete.html", {
         "deletion_request": deletion_request,
         "disposition": customer_account_deletion_disposition(deletion_request),
-        "completion_form": form, "retention_forms": formset, "is_review": review,
+        "completion_form": form, "retention_forms": formset, "shared_retention_form": shared_form,
+        "is_review": review,
     }, status=400 if request.method == "POST" else 200)
 
 

@@ -266,6 +266,111 @@ class DeletionCompletionTests(CompletionFixtures, TestCase):
             review_customer_account_retention(**self.completion_args(request, ("email",)))
         call_command("check_customer_account_deletions", stdout=StringIO())
 
+    def shared_form_data(self, request, retained=()):
+        args = self.completion_args(request, retained)
+        first = args["retention_plan"][0]
+        data = {
+            "reason": args["reason"], "external_review": args["external_review"],
+            "confirmation": str(request.pk), "reviewed": "on",
+            "retain_profile_fields": list(retained),
+            "retention-TOTAL_FORMS": "7", "retention-INITIAL_FORMS": "7",
+            "retention-MIN_NUM_FORMS": "7", "retention-MAX_NUM_FORMS": "7",
+            **{f"shared-{key}": first[key] for key in ("period_start", "period_or_condition", "review_on")},
+        }
+        for index, row in enumerate(args["retention_plan"]):
+            data.update({f"retention-{index}-{key}": row[key] for key in ("treatment", "purpose", "fields")})
+        self.client.force_login(self.owner)
+        self.client.post(reverse("account_reauthenticate"), {"password": "strong-owner-password"})
+        return data
+
+    def test_shared_terms_save_complete_category_decisions_and_allow_exceptions(self):
+        request = self.contain()
+        data = self.shared_form_data(request)
+        exception = (timezone.localdate() + timedelta(days=10)).isoformat()
+        data.update({
+            "retention-3-period_start": "Synthetic provider review date",
+            "retention-3-period_or_condition": "Synthetic provider follow-up before release",
+            "retention-3-review_on": exception,
+        })
+        url = reverse("customer_account_deletion_complete", args=[request.pk])
+        page = self.client.get(url)
+        self.assertContains(page, "Shared retention terms")
+        self.assertContains(page, 'name="shared-review_on"', count=1)
+        self.assertEqual(self.client.post(url, data).status_code, 302)
+        decision = Decision.objects.get(request=request)
+        rows = decision.disposition["retention_plan"]
+        self.assertEqual(len(rows), 7)
+        for index, row in enumerate(rows):
+            self.assertEqual(row["category"], RETENTION_CATEGORIES[index][0])
+            if index != 3:
+                for key in ("period_start", "period_or_condition", "review_on"):
+                    self.assertEqual(row[key], data[f"shared-{key}"])
+        self.assertEqual(rows[3]["period_start"], data["retention-3-period_start"])
+        self.assertEqual(rows[3]["period_or_condition"], data["retention-3-period_or_condition"])
+        self.assertEqual(rows[3]["review_on"], exception)
+        self.assertEqual(timezone.localdate(decision.review_due_at).isoformat(), exception)
+        self.assertIn(data["retention-3-period_or_condition"], mail.outbox[0].body)
+        self.assertEqual(self.client.post(url, data).status_code, 302)
+        self.assertEqual(len(mail.outbox), 1)
+
+    def test_missing_invalid_or_expired_shared_terms_do_not_remove_data(self):
+        request = self.contain()
+        data = self.shared_form_data(request)
+        url = reverse("customer_account_deletion_complete", args=[request.pk])
+        for changes in (
+            {"shared-review_on": ""},
+            {"shared-review_on": "invalid", "retention-0-review_on": data["shared-review_on"]},
+            {"shared-review_on": timezone.localdate().isoformat()},
+            {"shared-review_on": (timezone.localdate() + timedelta(days=366)).isoformat()},
+            {"shared-period_start": ""}, {"shared-period_or_condition": ""},
+            {"retention-0-purpose": ""}, {"retention-0-fields": ""},
+            {"retention-TOTAL_FORMS": "6"}, {"reviewed": ""}, {"confirmation": "wrong"},
+        ):
+            with self.subTest(changes=changes):
+                response = self.client.post(url, {**data, **changes})
+                self.assertEqual(response.status_code, 400)
+                self.assertFalse(Decision.objects.exists())
+                self.assertFalse(Notice.objects.exists())
+                self.user.refresh_from_db()
+                self.assertIsNone(self.user.privacy_erased_at)
+                self.assertEqual(self.user.email, "customer@example.com")
+
+    def test_shared_terms_preserve_entitlements_and_review_cannot_restore_fields(self):
+        self.preview_account()
+        before = list(Contribution.objects.values())
+        allocations = list(MetalAllocation.objects.values())
+        request = self.contain()
+        data = self.shared_form_data(request)
+        url = reverse("customer_account_deletion_complete", args=[request.pk])
+        self.assertEqual(self.client.post(url, data).status_code, 400)
+        self.assertFalse(Decision.objects.exists())
+        data = self.shared_form_data(request, ("full_name", "email"))
+        self.assertEqual(self.client.post(url, data).status_code, 302)
+        self.assertEqual(list(Contribution.objects.values()), before)
+        self.assertEqual(list(MetalAllocation.objects.values()), allocations)
+        review_url = reverse("customer_account_deletion_review_retention", args=[request.pk])
+        self.assertEqual(self.client.post(review_url, {**data, "retain_profile_fields": []}).status_code, 400)
+        self.assertEqual(self.client.post(review_url, {**data, "retain_profile_fields": ["full_name", "email", "address"]}).status_code, 400)
+        self.assertEqual(Decision.objects.count(), 1)
+
+    def test_retention_review_accepts_shared_terms_and_removes_eligible_contact(self):
+        request = self.contain()
+        complete_customer_account_deletion(**self.completion_args(request, ("full_name", "email")))
+        data = self.shared_form_data(request)
+        data["shared-period_or_condition"] = "Synthetic profile purpose ended; review remaining evidence."
+        url = reverse("customer_account_deletion_review_retention", args=[request.pk])
+        self.assertEqual(self.client.post(url, data).status_code, 302)
+        review = Decision.objects.get(request=request, outcome="RETENTION_REVIEW")
+        self.assertEqual(len(review.disposition["retention_plan"]), 7)
+        self.assertTrue(all(
+            row["period_or_condition"] == data["shared-period_or_condition"]
+            for row in review.disposition["retention_plan"]
+        ))
+        self.customer.refresh_from_db()
+        self.assertTrue(self.customer.email.endswith("@deleted.invalid"))
+        self.assertEqual(self.customer.full_name, "Removed customer")
+        self.assertTrue(review.notice.accepted_at)
+
     def test_retention_review_cannot_strip_contact_for_open_entitlement(self):
         self.preview_account()
         request = self.contain()

@@ -22,10 +22,11 @@
     <p class="text-muted mb-0">Customer savings scheme statement</p>
   </div>
   {% if statement.includes_practice_activity %}<div class="alert alert-warning">Contains Test/practice records. They do not represent Live money collected. Check the payment labels below.</div>{% endif %}
+  {% include 'schemes/includes/agreement_basis.html' with scheme_account=statement.scheme_account %}
   <dl class="row">
     <dt class="col-sm-3">Customer</dt><dd class="col-sm-9">{{ statement.scheme_account.customer.full_name }} ({{ statement.scheme_account.customer.customer_number }})</dd>
     <dt class="col-sm-3">Scheme</dt><dd class="col-sm-9">{{ statement.scheme_account.scheme_number }} · {{ statement.scheme_account.entitlement_name }}</dd>
-    <dt class="col-sm-3">Agreement</dt><dd class="col-sm-9">{{ statement.scheme_account.start_date|date:'d M Y' }} · {{ statement.scheme_account.agreed_months }} months · eligible {{ statement.scheme_account.eligible_from|date:'d M Y' }}</dd>
+    <dt class="col-sm-3">Agreement</dt><dd class="col-sm-9">{{ statement.scheme_account.start_date|date:'d M Y' }} · {{ statement.scheme_account.agreed_months }} months · {% if statement.scheme_account.configuration_snapshot.instalment_policy == 'MONTHLY_COMPLETION' %}original calendar date (payment count also required){% else %}eligible{% endif %} {{ statement.scheme_account.eligible_from|date:'d M Y' }}</dd>
     <dt class="col-sm-3">Generated</dt><dd class="col-sm-9">{{ statement.generated_at|date:'d M Y, g:i A' }}</dd>
   </dl>
 
@@ -41,7 +42,7 @@
       {% for entry in statement.entries %}
       <tr>
         <td>{{ entry.occurred_at|date:'d M Y, g:i A' }}</td>
-        <td>{{ entry.description }}</td>
+        <td>{{ entry.description }}{% if entry.settlement_basis %}<span class="small d-block">Full settlement · {{ entry.settlement_basis }}</span>{% endif %}{% if entry.invoice_reference %}<span class="small d-block">Invoice: {{ entry.invoice_reference }}</span>{% endif %}</td>
         <td>{{ entry.reference|default:'—' }}{% if entry.contribution_id %}<span class="d-print-none"><br><a href="{% url 'schemes:contribution_receipt' entry.contribution_id %}">Receipt</a></span>{% endif %}</td>
         <td>{% if entry.amount_inr is not None %}₹{{ entry.amount_inr|inr }}{% else %}—{% endif %}</td>
         <td>{% if entry.scheme_rate is not None %}₹{{ entry.scheme_rate|inr:4 }}/g{% else %}—{% endif %}</td>

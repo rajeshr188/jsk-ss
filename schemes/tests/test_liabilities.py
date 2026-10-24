@@ -43,7 +43,8 @@ def make_liability_accounts():
             **enrolment_grade_kwargs(plan, mode),
             start_date=date(2026, 1, 1),
         )
-        for mode in SchemeAccount.SavingsMode.values
+        # The not-yet-activated INR credit family has separate synthetic ledger tests.
+        for mode in (SchemeAccount.SavingsMode.CASH, SchemeAccount.SavingsMode.GOLD, SchemeAccount.SavingsMode.SILVER)
     }
     return customer, accounts
 

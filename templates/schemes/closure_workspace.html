@@ -1,0 +1,24 @@
+{% extends '_base.html' %}
+{% load crispy_forms_tags %}
+{% block title %}Closure review · {{ scheme_account.scheme_number }}{% endblock %}
+{% block content %}
+<h1>Agreement closure review</h1>
+<p>{{ scheme_account.scheme_number }} · {{ scheme_account.entitlement_name }}</p>
+<div class="alert alert-info">A closure request is not jewellery delivery, a refund or completed closure. Paid entitlement, payment history, your login and other agreements are retained. The owner can separately cancel a genuinely unused agreement or record a full exact-grade jewellery settlement after accepted closure, resolved payment evidence and customer confirmation.</div>
+{% if scheme_account.status == 'CANCELLED' %}<div class="alert alert-success" role="status">This unused agreement has been cancelled. No money or metal was redeemed. It cannot accept further contributions; your login and other agreements are unchanged.</div>{% endif %}
+<p>While a request awaits review, the existing contribution rules remain. Once the owner accepts closure, new payments and checkout resumption stop. An already-open provider payment may still complete and must be reconciled. Only pending requests may be withdrawn or rejected; acceptance cannot silently reopen payments.</p>
+{% if integrity_error %}<div class="alert alert-danger" role="alert">Closure history needs investigation. Do not bypass the review or edit retained evidence.</div>{% endif %}
+{% if target %}<h2 class="h5">{{ target.get_status_display }}</h2>{% endif %}
+{% if owner_view %}
+<h2 class="h5">Current payment investigation</h2>
+<p>These counts are not settlement approval. Zero current balance or zero pending payments does not prove an agreement was unused. Expired or abandoned provider orders can still capture.</p>
+<dl>{% for label, count in payment_review.items %}<dt>{{ label }}</dt><dd>{{ count }}</dd>{% endfor %}</dl>
+<a href="{% url 'schemes:exception_queue' %}">Open financial exceptions</a> · <a href="{% url 'schemes:closure_queue' %}">All closure reviews</a>
+{% endif %}
+{% if can_submit %}<form method="post" class="card p-3 my-3">{% csrf_token %}{{ form|crispy }}<button type="submit" class="btn btn-primary">{% if target %}Record decision{% else %}Request closure review{% endif %}</button></form>{% endif %}
+{% if can_cancel %}<section class="card p-3 my-3"><h2 class="h5">Cancel a genuinely unused agreement</h2><p>Any contribution attempt, even failed, abandoned, test or reversed, prevents this operation. Instalment investigations also need separate review. Empty scheduled periods are allowed. Nothing is deleted and no redemption is created.</p><form method="post">{% csrf_token %}<input type="hidden" name="operation" value="cancel_unused">{{ cancel_form|crispy }}<button type="submit" class="btn btn-outline-danger">Cancel unused agreement</button></form></section>{% endif %}
+<h2 class="h5 mt-4">Retained request history</h2>
+{% for item in history %}<section class="card p-3 mb-3"><h3 class="h6">{{ item.get_status_display }} · {{ item.requested_at|date:'d M Y, H:i' }}</h3><p>{{ item.get_source_display }}: {{ item.reason }}</p>
+{% if owner_view and item.status == 'ACCEPTED' or owner_view and item.status == 'SETTLED' %}<p><a href="{% url 'schemes:configured_settlement' item.pk %}">Full settlement / correction workspace</a></p>{% endif %}
+<ol>{% for event in item.events.all %}<li>{{ event.get_action_display }} — {{ event.created_at|date:'d M Y, H:i' }}<p>{{ event.reason }}</p>{% if event.action == 'SETTLE' %}<p>Full quantity: {{ event.settlement.redemption.entitlement_amount|floatformat:6 }} {{ event.settlement.redemption.entitlement_unit }}. Invoice: {{ event.settlement.redemption.external_reference }}.</p>{% endif %}{% if owner_view %}<p>{{ event.actor_label }}{% if event.authorization_reference %} · Authorization reference: {{ event.authorization_reference }}{% endif %}</p>{% endif %}</li>{% endfor %}</ol></section>{% empty %}<p>No closure request recorded.</p>{% endfor %}
+{% endblock %}

@@ -80,20 +80,22 @@ class Command(BaseCommand):
             if state == "PENDING":
                 pending.append(candidate)
 
-        sent = failed = exhausted = 0
+        sent = failed = exhausted = skipped = 0
         if apply and settings.SCHEME_REMINDERS_ENABLED:
             if owner_audiences_enabled and plan.owner_recipient_count == 0:
                 raise CommandError(
                     "Owner reminders are enabled but no active owner email recipient exists."
                 )
             for candidate in pending[:limit]:
-                result = deliver_scheme_reminder(candidate)
+                result = deliver_scheme_reminder(candidate, as_of=as_of)
                 if result.outcome == "SENT":
                     sent += 1
                 elif result.outcome == "FAILED":
                     failed += 1
                 elif result.outcome == "RETRY_EXHAUSTED":
                     exhausted += 1
+                elif result.outcome == "SKIPPED":
+                    skipped += 1
         elif apply:
             self.stdout.write(
                 "scheme_reminders status=disabled; no email was sent"
@@ -115,6 +117,7 @@ class Command(BaseCommand):
                     f"retry_exhausted={states['RETRY_EXHAUSTED'] + exhausted}",
                     f"sent={sent}",
                     f"failed={failed}",
+                    f"skipped={skipped}",
                     f"owner_recipients={plan.owner_recipient_count}",
                     f"invalid_customer_recipients={plan.invalid_customer_recipient_count}",
                     f"truncated={max(0, len(pending) - limit) if apply else 0}",

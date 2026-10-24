@@ -7,11 +7,14 @@
 <div class="row justify-content-center"><div class="col-lg-8">
   <div class="page-header"><div><p class="page-eyebrow">Scheme configuration</p><h1>{% if plan %}Edit scheme plan{% else %}Add scheme plan{% endif %}</h1><p class="page-subtitle">For fixed plans, set minimum contribution equal to the fixed amount. Existing enrolments retain their snapshots when this plan changes. {% if plan %}Review all customer-facing fields before selecting publicly listed.{% else %}New plans start off the public page; review and edit the saved plan to publish it.{% endif %}</p></div></div>
   <form method="post" class="card form-card" novalidate>
+    {% if plan.configuration_id %}<div class="alert alert-warning">Preparation-only plan editing is separate from <a href="{% url 'schemes:configured_plan_publication' plan.pk %}">publication review</a>. This plan pins {{ plan.configuration }}; economic values are locked. Withdraw a published offer before editing. Create a new configuration version and a separate draft to change policy. The amount policy is {{ plan.configuration.get_amount_policy_display }}; the legacy fields below are only a compatibility projection.</div>{% endif %}
     {% csrf_token %}
+    {{ form.expected_digest }}
+    {% if form.expected_digest.errors %}<div class="alert alert-danger">The edit version is missing. Reload this page before saving.</div>{% endif %}
     {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
     <fieldset class="form-section">
       <legend>Plan identity</legend>
-      <p class="form-section-description">Customer-facing name, reference code, and description.</p>
+      <p class="form-section-description">Customer-facing name and reference code; description is an internal note.</p>
       {{ form.name|as_crispy_field }}
       {{ form.code|as_crispy_field }}
       {{ form.description|as_crispy_field }}
@@ -27,6 +30,7 @@
     </fieldset>
     <fieldset class="form-section">
       <legend>Duration and eligibility</legend>
+      {% if plan.configuration.instalment_policy == 'MONTHLY_COMPLETION' %}<p>Normal eligibility requires the agreed duration AND qualifying instalment count, and cannot precede the final qualifying period end. Period basis: {{ plan.configuration.get_period_basis_display }}. The pinned configuration controls these rules; the compatibility fields below do not replace it.</p>{% else %}<p>Eligibility is the start date plus the agreed calendar months. It does not require twelve successful instalments. A monthly frequency limit is not a benefit-qualification rule.</p>{% endif %}
       {{ form.minimum_months|as_crispy_field }}
       {{ form.default_months|as_crispy_field }}
       {{ form.allow_contributions_after_eligibility|as_crispy_field }}
@@ -47,4 +51,13 @@
     <div class="form-actions d-flex flex-wrap gap-2"><button class="btn btn-jsk" type="submit">{% if plan %}Save audited change{% else %}Create plan{% endif %}</button><a class="btn btn-outline-dark" href="{% url 'schemes:plan_list' %}">Cancel</a></div>
   </form>
 </div></div>
+{% if plan %}
+<section class="card p-3 mt-3" aria-labelledby="edit-impact">
+  <h2 id="edit-impact" class="h5">What this edit affects</h2>
+  <p>{{ impact.agreements }} existing agreement{{ impact.agreements|pluralize }} retain their recorded terms, identity, grade and eligibility date. Changing availability does not stop existing contributions; use payment operations controls for that.</p>
+  <p>Changes update the offer for future enrolments. Pending applications with changed terms require the customer's current-offer confirmation before approval. Unlisting hides the public offer; deactivating also prevents new owner enrolments.</p>
+  <h3 class="h6">Recent recorded revisions</h3>
+  <ul>{% for revision in impact.recent_revisions %}<li>Revision {{ revision.number }} · {{ revision.recorded_at|date:"d M Y H:i" }} · {{ revision.actor_label }} — {{ revision.reason }}</li>{% empty %}<li>Legacy plan: no recorded revision yet. The first audited edit preserves its currently observed terms, not reconstructed historical consent.</li>{% endfor %}</ul>
+</section>
+{% endif %}
 {% endblock %}

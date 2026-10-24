@@ -1,5 +1,6 @@
 from decimal import Decimal
 from io import StringIO
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
@@ -8,7 +9,8 @@ from django.core.exceptions import ValidationError
 from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.db import OperationalError
-from django.test import TestCase, override_settings
+from django.test import SimpleTestCase, TestCase, override_settings
+from django.template.loader import render_to_string
 from django.urls import reverse
 from wagtail.models import (
     Collection,
@@ -36,6 +38,20 @@ from pages.permissions import (
 )
 from schemes.models import Customer, MetalGrade, SchemePlan, SchemePlanOffering
 from schemes.tests.grade_helpers import metal_grade_for
+
+
+class AccountMenuPresentationTests(SimpleTestCase):
+    def test_account_toggle_uses_solid_bootstrap_button_in_each_header(self):
+        for owner, customer in ((True, False), (False, True), (False, False)):
+            with self.subTest(owner=owner, customer=customer):
+                user = SimpleNamespace(email="review@example.invalid", is_authenticated=True,
+                    is_superuser=False, is_staff=False, role="OWNER" if owner else "CUSTOMER")
+                html = render_to_string("_base.html", {"user": user,
+                    "workspace_owner": owner, "workspace_customer": customer})
+                self.assertRegex(html, r'<button class="btn btn-light dropdown-toggle" type="button" '
+                    r'data-bs-toggle="dropdown"\s+aria-expanded="false">\s*Account\s*</button>')
+                self.assertIn("Change password", html)
+                self.assertIn("Sign out", html)
 
 
 @override_settings(

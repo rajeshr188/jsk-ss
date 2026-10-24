@@ -19,7 +19,8 @@
         <td>{{ redemption.scheme_account.scheme_number }}</td>
         <td>{{ redemption.get_settlement_type_display }}</td>
         <td>
-          {% if redemption.cash_amount is not None %}₹{{ redemption.cash_amount|floatformat:2 }}<br><small class="text-muted">Principal ₹{{ redemption.cash_principal_amount|floatformat:2 }} · Bonus ₹{{ redemption.cash_bonus_amount|floatformat:2 }}</small>
+          {% if redemption.configured_settlement %}{{ redemption.entitlement_amount|floatformat:6 }} g {{ redemption.metal_grade.display_name }}<br><small>Full exact-grade settlement</small>
+          {% elif redemption.cash_amount is not None %}₹{{ redemption.cash_amount|floatformat:2 }}<br><small class="text-muted">Principal ₹{{ redemption.cash_principal_amount|floatformat:2 }} · Bonus ₹{{ redemption.cash_bonus_amount|floatformat:2 }}</small>
           {% elif redemption.gold_quantity is not None %}{{ redemption.gold_quantity|floatformat:3 }} g {{ redemption.metal_grade.display_name }}
           {% else %}{{ redemption.silver_quantity|floatformat:3 }} g {{ redemption.metal_grade.display_name }}{% endif %}
         </td>
@@ -32,7 +33,7 @@
           <div class="small text-muted mt-1">{{ redemption.reversal.reversal_number }} by {{ redemption.reversal.processed_by.email }}<br>{{ redemption.reversal.reason }}</div>
           {% else %}
           <span class="badge text-bg-success">Completed</span>
-          <a class="btn btn-sm btn-outline-danger d-block mt-2" href="{% url 'schemes:redemption_reverse' redemption.redemption_number %}">Reverse</a>
+          {% if redemption.configured_settlement %}<a class="btn btn-sm btn-outline-danger d-block mt-2" href="{% url 'schemes:configured_settlement' redemption.configured_settlement.closure_id %}">Review full-settlement correction</a>{% else %}<a class="btn btn-sm btn-outline-danger d-block mt-2" href="{% url 'schemes:redemption_reverse' redemption.redemption_number %}">Reverse</a>{% endif %}
           {% endif %}
         </td>
       </tr>

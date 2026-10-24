@@ -1,5 +1,889 @@
 # Testing
 
+## Independent agreement storage (0040, 24 October 2026)
+
+`schemes.tests.test_independent_agreement_storage` exercises synthetic persisted
+contracts for both denominations: duration, count-only, both, anytime and required
+schedule solely for a defined benefit. Verify independent duration/count, no fabricated
+date, short duration, calendar/anniversary ceilings, pinned-policy drift detection,
+immutability and SQL shape constraints. Legacy rows must retain all values through
+migration roundtrip and reject short/null durations and new frequency semantics.
+Forward migration refuses unversioned schema-2 rows; rollback refuses even an unused
+independent agreement or a forged legacy storage tag on a schema-2 policy.
+Explicitly test that payment availability, model writes, old monthly evaluation and
+schedule construction stay blocked for v2, even with the release flag enabled.
+
+Existing INR migration tests now assert the earlier 0040 chain refusal and also invoke
+the original 0037/0038/0039 preservation guards directly, retaining their coverage.
+An older empty-settlement/correction roundtrip over a version-2 agreement is no longer
+permitted; tests assert preserved evidence and refusal instead. Run the INR suites,
+schema-1 configured agreements, monthly eligibility/reminders, calendar/anniversary
+schedules, liability and policy-persistence regression suites together. Use unique
+disposable local PostgreSQL only; synthetic account insertion is not a runtime bypass.
+
+Verification: the combined 179-test run finished in 794.761s with 178 passing and one
+error in the existing monthly-reminder migration test: it queried the runtime account
+model while the database was at 0029. That test now uses historical migration-state
+models on both sides of 0030. A focused rerun of that test plus all seven independent
+storage tests passed (8 tests, 58.183s). The broad run had already loaded the old test;
+the full combined suite was not rerun after the test-only correction. Earlier runs
+also exposed a missing seeded MetalGrade after TransactionTestCase flush; the synthetic
+fixture now creates its own exact grade. No production constraint was relaxed.
+Django checks, migration consistency and whitespace checks passed. These overlapping
+runs used unique disposable localhost databases, which were destroyed afterwards;
+they are not a claim of full builder acceptance or clean normal CI.
+
+## Independent agreement-term integration (24 October 2026)
+
+`schemes.tests.test_independent_agreement_terms` covers read-only resolution across
+metal/INR, fixed/customer-fixed/variable amounts and flexible/calendar/anniversary
+limits. Duration and count remain independent; count-only/anytime have no fabricated
+duration floor. Cover month-end clamping, date overflow, invalid amounts/grades,
+immutable resolved terms, no implicit benefits, unchanged records and release gates.
+Frozen account checks cover current-plan/new-version independence, cached-object and
+persisted evidence drift, amount/frequency/date mismatches, atomic rejection before
+principal recording, and matching read-only diagnostics. Synthetic INR fixtures now
+include the exact pinned maximum amount, not an incomplete snapshot. They remain
+disposable-test fixtures, not a runtime enrolment bypass.
+
+Run alongside `test_inr_principal`, `test_inr_settlements`, `test_inr_corrections`,
+`test_configured_agreements` and `test_independent_policy_fields`. All use unique
+disposable localhost PostgreSQL databases with normal hashing/logging. This does
+not replace the remaining full builder acceptance matrix or production rehearsal.
+
+Verification: all 105 tests across those six modules passed in 274.002s after fixing
+the new plan-fixed fixture's min/max/fixed shape. The initial run's six failing
+subcases were fixture errors; no database constraint was relaxed. Django checks,
+migration consistency and scoped whitespace checks passed. Databases were destroyed.
+
+## Controlled INR disposition corrections (24 October 2026)
+
+`schemes.tests.test_inr_corrections` covers unfulfilled voids, pending and completed
+full-return resolutions, exact restoration of principal, no top-up credit, mixed
+cash/live source retention, repeated full replacement, fresh authorization/previews,
+atomic rollback, duplicate/concurrent requests, owner permissions, timestamp/IST
+normalization, immutable history, projection/source tampering, SQL finite-value and
+single-current/root constraints, migration roundtrip and reversal-history refusal.
+Also verify that restored principal does not reset the original provider refund cap.
+All fixtures are synthetic future contracts in disposable localhost PostgreSQL; no
+normal enrolment bypass, real refund or production mutation. Partial/staged returns
+are deliberately rejected. A fresh corrected invoice/transaction reference is needed
+for replacement; old fulfilments/completions remain historical evidence.
+
+Verification: 174 cross-workflow tests passed in 587.309s, including timestamp,
+atomicity, repeated-return, closure, liability, policy and privacy completion cases.
+After the final provider-cap safeguard, 46 focused correction/settlement tests passed
+in 166.628s; an additional cumulative-cap/exact-boundary test passed in 11.957s.
+Earlier 19-case (91.935s) and 43-case (142.631s) runs also passed. These suites overlap;
+do not sum them as distinct tests. All used normal hashing/logging and destroyed their
+unique disposable databases. Django checks, migration consistency and scoped whitespace
+checks passed. Normal CI and full builder release acceptance remain open.
+
+## Manual INR final-disposition foundation (24 October 2026)
+
+`schemes.tests.test_inr_settlements` uses synthetic future contracts/accepted closures
+in disposable localhost PostgreSQL, never a runtime enrolment bypass or real provider
+payment. Cover invoice below/equal/above principal, all-refund closure, source-specific
+cash/live refunds, pending liability after either leg, external top-ups, full completion,
+unchanged contribution/metal/legacy-redemption records, signed-preview staleness/expiry,
+owner/customer boundaries, evidence reuse, duplicate/concurrent requests, finite Decimal
+SQL constraints, late/source-drift holds and migration-history preservation. Runtime
+schema-2 creation remains gated. The 135-case broader regression passed in 563.311s;
+the final 48-case settlement/contribution/cash run passed in 121.892s. These overlapping
+suites used normal hashing/logging and unique disposable PostgreSQL databases,
+destroyed afterwards. Django checks, migration consistency and scoped whitespace
+checks passed. Normal CI and complete release acceptance remain open; see STATUS.md
+for the initial fixture corrections and the exact implementation boundary.
+
+## INR principal foundation (24 October 2026)
+
+`schemes.tests.test_inr_principal` tests real-source-only receipts, source/contract
+matching, immutable amounts, replay/conflict handling, reloaded owner permissions,
+source drift and missing credits, separate liabilities, append-only full cash-entry
+corrections, SQL constraints (including NaN), concurrent receipts/corrections, ordinary
+workflow refusal even with the release flag enabled, no false settlement on late funds,
+full principal invoice/refund/top-up arithmetic, and preservation/reversal guards.
+The initial 19-case run passed in 34.124s. The broader 145-case regression passed in
+492.196s; 65 Razorpay/policy tests passed in 80.086s; the final 41-case principal and
+deletion-completion run passed in 78.744s. These suites overlap and are not a full-CI
+run. They used disposable localhost PostgreSQL databases with normal logging/hashing,
+destroyed afterwards. Django checks and migration consistency passed; ordinary
+local/production data was not used or migrated by these tests.
+
+Tests explicitly bulk-create synthetic future contracts in a disposable localhost
+PostgreSQL database: the normal agreement service/model save intentionally cannot
+enrol schema-2 contracts yet. Sources are synthetic retained payment evidence, not real
+provider charges/refunds. Test fixture creation is not a runtime bypass or deployment
+instruction. Source-correction fixtures likewise simulate completed upstream evidence;
+the new service records it but does not perform or verify a physical refund.
+Regression must cover existing contributions, cash receipts, instalment capture,
+liability reporting, configured settlements/closure and the older migration chain.
+
+## Independent policy persistence (24 October 2026)
+
+`schemes.tests.test_independent_policy_fields` covers schema-2 family round trips,
+independent duration/count, Decimal benefit parameters, owner-only preparation,
+append-only versioning/no schema downgrade, invalid/null/NaN SQL bypasses, legacy
+form required fields/forged dimensions, correct read-only owner presentation and
+runtime refusal even with the release flag on. Migration tests verify exact preservation
+of schema-1 rows/evidence and refusal to reverse 0036 with schema-2 contracts present.
+Configuration creation produces no plan, agreement, contribution or allocation.
+Run alongside configuration/publication/agreement/settlement/calendar/eligibility/
+schedule/manual regressions on disposable localhost PostgreSQL, preserving normal
+logging and hashing. No ordinary database migration or production write is required.
+
+Evidence: 159 cases across eleven affected modules ran in 486.383s; 158 passed and
+one historical migration fixture errored because it used the current serializer on
+a pre-0036 model lacking `policy_schema_version`. The fixture now uses a frozen 0023
+calendar-evidence serializer while historical, and compares the current serializer
+after upgrading to the latest schema. The final 24-case rerun (independent fields,
+typed policies and the corrected migration chain) passed in 38.291s, also covering
+the final read-only template. Both temporary databases were destroyed. Django checks,
+migration consistency and scoped whitespace passed. This is affected regression and
+corrected-test evidence, not a clean full-suite/CI run or production acceptance.
+
+## Builder-v1 typed compatibility foundation (24 October 2026)
+
+`schemes.tests.test_plan_policies` validates the approved optional/required, amount,
+denomination, calendar/anniversary, duration/count/both/anytime combinations; named
+benefit parameters and strict Decimal inputs; rejected contradictory policies; immutable
+objects; unchanged historical evidence; and operational blockers with the release flag
+both on and off. The 11 tests use SimpleTestCase: no database or financial mutations.
+Manual refund fulfilment and external INR approval remain publication blockers after
+the remainder-policy decision. Design-valid policies
+are not a claim of implemented financial workflows or legal/provider approval.
+
+Regression must include configuration creation/reuse, configured agreements, calendar
+instalments, publication/enrolment, configured settlement, monthly eligibility and
+instalment schedules on disposable localhost PostgreSQL. Do not migrate the ordinary
+database or enable future families for a validation-only change. This step adds no
+database migration and does not change immutable serialized revision evidence.
+
+Evidence: the combined eight-module affected run passed **136 tests in 362.111s**,
+using normal logging/hashing configuration and a uniquely named disposable localhost
+PostgreSQL database, destroyed after the run. An initial test-runner setup overwrote
+Django's TEST defaults and failed on missing MIRROR before creating a database;
+preserving those defaults and changing only NAME corrected the runner. Django system
+checks, makemigrations --check --dry-run and scoped whitespace checks passed. No new
+migration, ordinary database changes or production activation; full CI remains required.
+
+## Calendar-month compulsory instalments (24 October 2026)
+
+`schemes.tests.test_calendar_instalments` covers the short enrolment month, Jan 30/31,
+leap-day/year-end boundaries, enrolment-day cash qualification, cross-channel timing,
+late-delivered versus month-crossing provider evidence, minimum-duration forecasts,
+completion reminders, normal versus early full settlement, calendar-aligned outage
+compensation, explicit owner controls, publication/enrolment and immutable 0035 upgrade.
+All provider activity is synthetic; no production funds, SMTP or ordinary database
+migrations are involved. Existing anniversary regression remains required.
+
+Evidence: 844 of 845 broad schemes/accounts/pages cases passed (657.641 seconds,
+process-only MD5 hasher). The only failure was the funnel warning-log assertion,
+caused by globally disabling logging in that test invocation, not an application
+change. Final calendar/funnel/manual/accessibility verification passed all 35 tests
+in 32.026 seconds with normal logging and password hashing. System, migration-
+consistency and whitespace checks passed. Run normal CI before release; do not
+record the earlier broad invocation as an entirely green run.
+
+Owner acceptance must review a 30 January / twelve-month calendar configuration:
+first window ends before 1 February, twelve original payments finish by December,
+but normal completion waits until 30 January next year. One missed original month
+replaced in January moves normal completion to 1 February. Inspect the separate
+controls and the short-month disclosure on mobile and customer offers before release.
+
+## Illustrated owner learning guide
+
+[Plan configuration — illustrated owner guide](guides/plan-configuration/index.html)
+is the browser-readable, print-styled handbook for the current local P4 builder.
+It covers the actual field labels, supported recipes, read-only previews, publication,
+individual enrolment, monthly timing, versioning and unused/funded full closure.
+Its four screenshots use the isolated synthetic review, not production customer data.
+Keep its adjacent `assets` folder when copying it. This is training documentation,
+not owner acceptance or permission to enable `CONFIGURED_PLANS_ENABLED` in production.
+The executable review protocol and evidence remain below.
+
+The same source is also served at `/scheme/owner/plan-manual/`, reachable through
+**Plan reference manual** on the owner Scheme plans/catalogue/detail screens.
+Only active owners/superusers can read its HTML or allowlisted JPEG illustrations.
+Reading is available with `CONFIGURED_PLANS_ENABLED=False` and does not activate intake.
+The endpoint is GET/HEAD-only, private/no-store and noindex; it does not expose arbitrary
+repository documents or public static copies. The image build includes only the manual
+and four explicitly allowlisted illustrations from `docs/`.
+
+`schemes.tests.test_plan_manual` runs without database access and covers role boundaries,
+anonymous redirects, inactive users, safe methods, all asset signatures/headers,
+traversal/unknown-file rejection, intact anchors/authenticated links and both gate states.
+Together with existing owner-form accessibility tests, 15 tests passed in 0.339 seconds;
+Django checks passed. On the next planned review-server restart/release rehearsal,
+verify the navigation, authenticated image loading, mobile/print layout and anonymous/
+customer rejection in the browser/exact image. Do not restart a user's unfinished
+synthetic journey merely to load this documentation route.
+
+## P4 controlled publication and enrolment (23 October 2026)
+
+`schemes.tests.test_plan_publication` exercises owner-only, CSRF-protected audited
+publication/withdrawal, the default-off release gate, stale offer forms and confirmations,
+immutable revision provenance, confirmed individual amounts, atomic monthly schedules,
+customer registration/application approval, existing-customer request conversion,
+publication/withdrawal races and cash/simulated-live-provider full-settlement journeys.
+The journey fixture replaces synthetic account insertion with the actual publication
+and enrolment services. Provider calls remain fake; no real payment/email is sent.
+The migration rehearsal verifies 0034 leaves legacy terms, accounts and contributions
+unchanged. The integrity command rejects agreements referencing unpublished draft terms.
+
+Evidence: initial 14 focused tests passed (22.912 seconds). After correcting the
+draft-agreement diagnostic, a 797-test schemes/accounts/pages run had four migration-
+fixture errors, not application assertion failures. Current-model factory setup now
+precedes historical-schema downgrade, and checkout-expiry fixtures reuse the seeded
+grade with denomination/fineness assertions. All 20 P4 tests plus those four fixtures,
+the configuration/publication upgrade and draft-agreement diagnostic passed together:
+26 tests, 183.184 seconds. The broad run used a process-only fast hasher; the final run
+used normal defaults apart from existing application-fixture overrides. Full clean CI
+remains required; do not describe the 797-test run as passed.
+
+Subsequent clean checkpoint: the complete Django discovery run passed **839 tests in
+725.719 seconds** on a new disposable localhost PostgreSQL database, with a process-only
+fast password hasher. This includes the corrected migration fixtures and new walkthrough
+tests. It does not establish hosted CI/container/production acceptance. A later
+reporting-only change replaces hard-coded activation-disabled labels in the closure
+and instalment checks with the actual `configured_intake_enabled` flag; targeted
+on/off reporting and walkthrough tests verified that correction separately: eight
+tests passed with normal hashing in 13.779 seconds. No financial logic changed after
+the 839-test run. Django system, migration-consistency and whitespace checks passed.
+
+Owner acceptance still required: review a calendar and a monthly offer on mobile and
+keyboard; publish in an isolated test environment; submit/confirm/approve a customer
+application; verify the exact fixed amount and schedule; withdraw/edit/republish and
+verify old agreements unchanged; complete unused cancellation and funded full closure.
+Disabling the release gate must hide new offers without disabling existing payments or
+settlement. This is not permission to enable the ordinary local or production environment.
+
+### Isolated P4 publication-to-closure walkthrough
+
+Use the existing review helper's separate P4 mode:
+
+```powershell
+uv --cache-dir .uv-cache run --no-sync --env-file .env python -m schemes.review_closure_locally --synthetic-local --publication-journey
+```
+
+This creates a fresh random `jsk_p4_review_*` localhost database and enables configured
+offers/enrolment requests **only in that review process**. It does not edit `.env`,
+migrate the ordinary database, publish production offers or enable online payments.
+It starts on `http://127.0.0.1:8767/accounts/login/`, separate from B4's port/cookies.
+The printed owner/customer credentials are temporary synthetic identities. Both start
+with working passwords; public identity verification/email delivery is not simulated
+in this browser review (its service regression coverage is described above).
+
+Seeded state: one calendar-only and one monthly-completion draft, GOLD_22K_916,
+customer-fixed amount bounded INR 500–10,000 in steps of INR 100, and a clearly
+synthetic INR 10,000/g rate for today. No agreement, enrolment request, contribution,
+allocation or redemption is seeded. Both configurations have no benefits and full-only
+settlement. Browser/static/CDN access and server isolation/cleanup follow the B4 rules
+below; emails stay in process memory and no external SMTP or payment API is available.
+
+Review in this order, using separate browser profiles/private windows for the two roles:
+
+1. **Owner:** open the printed monthly publication link. Review its policy and publish
+   with confirmation/reason. Also review the calendar draft; its eligibility must be
+   date-based, not dependent on twelve paid instalments.
+2. **Customer:** open Savings Plans, choose the published monthly offer, select INR
+   1,000 and 12 months, confirm its disclosures and submit. Submission must create
+   only a request, with no agreement or payment yet.
+3. **Owner:** open the printed request queue and approve/enrol with today's start date,
+   the customer's confirmed amount/duration and an audit reason. Inspect the accepted
+   agreement: fixed INR 1,000, GOLD_22K_916, twelve required anniversary instalments
+   and at most three ordinary extension periods. No money or metal is created yet.
+4. **Owner:** record one **synthetic** showroom-cash contribution of INR 1,000 using
+   the seeded current-day rate. Expect 0.100000 g internally (0.100 g customer display).
+   Do not use real money or customer information. If reviewing on a later date,
+   restart this disposable review or explicitly publish a new synthetic current-day rate.
+5. **Customer:** request closure. **Owner:** accept, inspect the EARLY/full quantity
+   preview and simulate fulfilment with `DEMO-P4-INVOICE` / `DEMO-P4-FULFILMENT`.
+   Expect the entire 0.100000 g settled, agreement REDEEMED, zero remaining entitlement,
+   no maturity benefit, and the customer login intact. These consent/fulfilment
+   confirmations may be simulated only in this disposable review.
+6. Review withdrawal/edit/republish: old agreement snapshots and settlement evidence
+   must remain unchanged; new customer submissions must see the new offer revision.
+   Use a second enrolled-but-never-funded agreement for unused cancellation if desired.
+
+Inspect desktop and 390px responsive layout, Tab/focus/form errors and statement print
+preview. Record results rather than inferring viewport/accessibility acceptance from
+automated tests. An actual browser close/reopen, stale form or rejected owner action
+must not create duplicate records. Provider exceptions, production activation and
+exact-image CI/release acceptance remain separate gates.
+
+Append `--check-only` to migrate, seed, check role boundaries/integrity and clean up
+without serving. That check deliberately leaves offers unpublished; automated helper
+tests separately exercise both seeded offers through actual publication, request,
+enrolment, cash contribution and full settlement. Ctrl+C/four-hour timeout drops only
+this run's exact generated database; the same abrupt-termination caution as B4 applies.
+
+Local smoke evidence (23 October 2026): six helper tests passed with normal hashing
+(13.108 seconds); standalone check-only seed/role/integrity checks and exact-database
+cleanup passed. Chrome owner login and the unpublished monthly offer rendered. At the
+390px viewport override, document client/scroll widths both measured 375px (scrollbar
+excluded), with no horizontal overflow. Tab moves from confirmation to reason to
+publication button. The viewport was reset and the draft left unpublished for the owner.
+This is a limited rendering/keyboard smoke check, not full customer journey, focus-style,
+screen-reader, print, exception or user-acceptance evidence.
+
+## B4 closure acceptance checkpoint (23 October 2026)
+
+`schemes.tests.test_closure_acceptance` exercises customer request and owner acceptance,
+unused cancellation, early full settlement after three of twelve actual instalments,
+invoice/basis/exact quantity on the customer statement, reversal/restoration and old
+submission replay through CSRF-protected Django forms. It also checks cross-customer
+isolation, form IDs/labels, escaped references, same-payment webhook redelivery,
+unexpected second capture after settlement and duplicate settlement/reversal races.
+Fake providers and synthetic configured contracts only; activation is not bypassed.
+The nine focused tests passed with normal password hashing in 30.945 seconds on a
+disposable local PostgreSQL test database. All 201 affected regression tests passed in
+225.996 seconds with a test-process-only fast password hasher. This is not a new
+full-suite run; the earlier 803-test full regression belongs to the B3 checkpoint.
+Django check, migration consistency and whitespace checks passed.
+
+Owner acceptance recorded on 23 October 2026: the user reviewed the three supplied
+local cases (unused cancellation, three-of-twelve early full settlement/closure,
+and settlement correction) and confirmed they are acceptable. This is user-reported
+scenario acceptance. No specific mobile viewport, keyboard, print, exception-case
+or production coverage was confirmed. Remaining release checks stay open.
+
+Manual B4 acceptance matrix (the three cases above accepted; remaining coverage open):
+
+| Scenario | Expected owner/customer result |
+| --- | --- |
+| Never-used agreement | Request → accept → separately confirm cancellation; CANCELLED, no fabricated financial event, login and other agreements unchanged |
+| Three paid instalments of twelve | Request → accept → resolve exposure → confirm full exact quantity/invoice/customer fulfilment; EARLY settlement, zero remaining entitlement, REDEEMED |
+| Failed/abandoned or unresolved attempt | Held for disposition; neither “unused” nor silently settleable, no delete/status-edit workaround |
+| Settlement correction | Original retained, exact entitlement restored, closure remains accepted and payments blocked; new settlement needs fresh preview/confirmation |
+| Duplicate/stale submission | No duplicate liability mutation; changed evidence requires reload and confirmation |
+| Late unexpected capture | Retained provider exception and investigation, no duplicate allocation or silent financial rewrite |
+
+Use 390px and desktop layouts, keyboard-only focus and print view on isolated synthetic
+data. Check invoice and six-decimal quantities, long references, readable labels/errors,
+absence of horizontal page overflow, and no customer access to owner-only evidence.
+HTML response tests are not a real viewport or screen-reader acceptance claim. Exact
+image/migration rehearsal and production rollout require separate approval and evidence.
+
+### Run the isolated owner walkthrough
+
+Helper validation: 15 closure/helper/isolation tests passed with normal password
+hashing in 29.140 seconds. Check-only migration/seed/private-page/integrity/cleanup
+passed, and Chrome owner login plus the unused-agreement screen were verified on
+the threaded review server. The owner subsequently accepted the three scenarios above;
+this does not establish complete mobile/accessibility or release acceptance.
+
+From the repository in a local terminal:
+
+```powershell
+uv --cache-dir .uv-cache run --no-sync --env-file .env python -m schemes.review_closure_locally --synthetic-local
+```
+
+This is a standalone opt-in review helper, not a production management command. It
+requires explicit loopback PostgreSQL with no connection-option overrides and database
+creation permission. It creates/migrates only a fresh random `jsk_b4_review_*` database;
+it does not migrate or seed the database named in `.env`. Do not enable configured
+plans in your ordinary database to perform this review. Existing activation guards
+remain unchanged; the helper creates explicitly synthetic agreement fixtures.
+
+Open the printed `http://127.0.0.1:8766/accounts/login/` URL. Use
+`owner@example.invalid` or `customer@example.invalid` with the temporary password
+printed for this run (do not reuse a real password or save it in the browser). Every
+HTML page has a synthetic-review banner. The server binds to loopback only, uses
+separate session/CSRF cookies, memory-only email, disabled online checkout/Google
+login/PWA/reminders and local temporary media. Outbound Python socket connections
+other than local PostgreSQL are rejected. Browser static assets can still use the
+application's existing public CDNs. No real money, jewellery delivery or email occurs.
+
+The three printed agreement links belong to one synthetic customer:
+
+| Link label | Starting state | Owner walkthrough |
+| --- | --- | --- |
+| `unused` | Active, no payment or financial history | Create an owner-assisted closure request with `DEMO-CONSENT-001`, accept it, then separately confirm unused cancellation. Expect CANCELLED, no redemption and customer login unchanged. |
+| `three-paid` | Three payments of INR 1,000 out of twelve; 0.300000 g GOLD_22K_916 at a **synthetic** INR 10,000/g rate | Request/accept closure, follow the full-settlement link, review EARLY and the whole quantity, use `DEMO-INVOICE-002` / `DEMO-FULFILMENT-002`, and confirm the simulated fulfilment. Expect REDEEMED, zero remaining metal, no unpaid-instalment credit or benefit. |
+| `correction` | Already settled for 0.300000 g with DEMO-INVOICE-001 | Open the printed settlement URL, record `DEMO-CORRECTION-001` and confirm reversal. Expect the original retained, 0.300000 g restored, CLOSURE_PENDING and payments still blocked. A new full settlement needs a fresh preview and confirmation. |
+
+Only in this disposable demonstration may you simulate the consent/delivery checks.
+In production those checkboxes require actual retained evidence. To review the direct
+customer journey instead, sign in as the sample customer first and submit the closure
+request, then switch to the owner to accept it. Use a separate private browser window
+for the customer, or explicitly log out between roles. Inspect statements and verify
+that closing one agreement leaves the other agreements and login intact.
+
+Check desktop and 390px browser responsive mode (a physical phone cannot reach the
+PC's loopback address; do not expose this server on the LAN). Tab through forms and
+errors, inspect print preview and long invoice references. Report each scenario as
+pass/fail with the screen and wording that needs correction. This review cannot prove
+publication/enrolment activation, real-provider disposition, legacy cutover or release
+readiness.
+
+The server automatically stops after four hours; Ctrl+C in the launching terminal
+normally stops it earlier and removes its synthetic database/temp media. Each run is
+fresh and has new links/password. Abrupt process termination may leave its random
+database behind: use the exact printed name and a separate read-only target check
+before approved cleanup, never a wildcard or the ordinary application database.
+`--synthetic-local --check-only` seeds, runs integrity/private-page checks and cleans
+up immediately without starting a server. The helper does not reset an existing run.
+
+## B3 configured full settlement (23 October 2026)
+
+`schemes.tests.test_configured_settlements` uses synthetic gated contracts and actual
+financial services with local fake provider events. It covers full gold/silver precision,
+calendar/monthly normal versus early eligibility, customer/owner/CSRF boundaries,
+required invoice/confirmation, stale/expired/altered signed previews, duplicate requests,
+pending/abandoned/Test-mode/timing/outage holds, correction and re-settlement without
+reopening, source immutability/integrity and a PostgreSQL concurrent-settlement race.
+A disposable-database 0032–0033 rehearsal preserves existing financial sources.
+No ordinary/production migration, real payment or email is part of these tests.
+**28 focused tests passed with normal password hashing in 109.561 seconds.** The final
+**803-test full regression passed in 644.246 seconds**, using a test-process-only fast
+password hasher. Initial fixture errors were corrected without relaxing settlement
+rules. Django check, migration consistency and whitespace checks passed. Owner/mobile,
+legacy-cutover and exact-image acceptance remain open; configured activation stays blocked.
+
+## B2 unused-agreement cancellation (23 October 2026)
+
+`schemes.tests.test_unused_agreement_cancellation` adds 15 synthetic configured-agreement
+tests. Coverage includes monthly/calendar cancellation, retained terms/periods/login,
+no fabricated financial rows, role/ownership/active-user checks, accepted-only/stale and
+idempotent decisions, required owner confirmation and CSRF, zero-balance reversed and
+failed/abandoned histories, instalment investigations, direct-model/legacy database
+guards, terminal integrity checks and exclusion from active/payment/eligibility displays.
+PostgreSQL races cover duplicate cancellation and cancellation competing with cash after
+acceptance. A real disposable-database 0031-to-0032 migration preserves legacy records
+without creating cancellation evidence. No ordinary or production database is migrated.
+
+The 42 combined B1/B2 tests passed with normal password hashing in **133.518 seconds**.
+The first run's sole error was a duplicated customer email in the legacy-guard fixture;
+reuse of the fixture customer corrected it. The owner workspace now uses distinct HTML
+field IDs for review and cancellation forms; a regression assertion covers that detail.
+The final **775-test full regression passed in 624.048 seconds**, using only a
+test-process fast password hasher (no production hashing/configuration change).
+It includes the final form-ID, terminal next-action and review-queue presentation
+updates. Django check, migration consistency and whitespace checks passed.
+These automated checks do not replace owner/mobile review, legacy cutover or release
+acceptance. All providers are fake and no real email is sent. Full-only settlement and
+configured-plan activation are deliberately not enabled.
+
+## B1 configured-agreement closure lifecycle (23 October 2026)
+
+`schemes.tests.test_scheme_closures` uses synthetic configured monthly/calendar
+agreements and local fake providers. Coverage: direct/owner-assisted authorization,
+active customer/owner scoping, request/decision idempotency and stale sequences,
+one-open-request and action-shape constraints, append-only history, pending-only
+withdrawal/rejection, accepted payment/resumption guards, unaffected other agreements,
+cash retry/correction, in-flight capture/allocation recovery, integrity reporting,
+CSRF/private UI, legacy exclusion and no automatic unused cancellation.
+
+PostgreSQL races cover duplicate creation, accept versus withdraw, acceptance winning
+the account lock before cash, and concurrent accepted closure/captured payment. A
+0030-to-0031 rehearsal preserves existing agreement/contribution values and creates
+no closure requests/events. All schema work is in disposable local test databases.
+**26 tests passed with normal hashing** in 73.388 seconds. Initial fast checks exposed
+a duplicated fixture plan code and a test expecting the closure error while an older
+pending-order guard fired first; fixture reuse and the explicit post-idempotency cash
+closure guard resolved these. The final normal run was green. An additional test
+uses a genuinely count-complete reminder candidate, then accepts closure and verifies
+selection/locked-delivery suppression with no SMTP attempt. The final **760-test full
+regression passed** in 630.569 seconds with a test-process-only fast password hasher,
+including this additional test and all existing migration/financial/race coverage.
+Django checks, migration consistency and whitespace checks passed. This is not
+production, owner/mobile or release acceptance.
+
+## P3 local checkpoint corrections (23 October 2026)
+
+**79 focused tests passed** in 172.663 seconds across `test_monthly_eligibility`,
+`test_configured_agreements`, `test_owner_workspace`, `test_redemptions` and
+`test_eligibility`, against disposable local PostgreSQL. No new password-hasher
+override was added (existing per-class test settings remain). New coverage checks
+that monthly original dates and completed configured contracts never enter the
+legacy Today settlement count, and that configured calendar/monthly GET and POST
+requests cannot open the partial-redemption form. Legacy date boundaries remain,
+with wording that requests eligibility review rather than promising settlement.
+Extension copy and configured-calendar payment/status messages are asserted too.
+
+The initial run's two failures were expired test sessions after a year-forward clock
+jump, corrected by logging in inside the simulated date. The complete focused rerun
+includes the final calendar status/action changes. Django checks, migration consistency
+and whitespace checks pass; no new migration or ordinary database changes. The previous
+729-test full regression below predates these checkpoint corrections. This is not
+owner/mobile/email approval, CI evidence or permission to activate configured plans.
+
+## P3 monthly completion reminders (23 October 2026, local and gated)
+
+`schemes.tests.test_monthly_reminders` covers count-complete versus forecast-only
+selection, extensions/original-date distinction, text/HTML and tracking headers,
+no financial changes, reversal/outage/allocation suppression, refreshed recipients
+and switches, date rollover, no monthly historical replay, forged candidates,
+retry revalidation, changed completion identities, immutable previous evidence,
+database/model shape checks and dry-run/apply idempotency. PostgreSQL concurrency
+tests prove one accepted attempt for two dispatchers and suppression when a committed
+cash reversal wins the account lock. A 0029-to-0030 rehearsal preserves legacy
+reminders, attempts and agreements. Legacy reminder tests also cover closure and
+recipient changes after planning. Mail uses the in-memory backend, never Postmark.
+The final focused suite also treats a deliberately corrupted PAID row with no metal
+allocation as unresolved, preserving its qualification count but suppressing mail.
+
+**27 focused reminder tests passed with normal hashing** (138.207 seconds), using
+disposable local PostgreSQL test databases. An initial full run found an isolation
+error: an earlier migration rehearsal left the accounts schema historical. The new
+0030 preservation test now restores all migration leaves before downgrading only
+the schemes app to 0029, and restores leaves again on exit. No application workaround
+or ordinary database migration was needed. Django checks, migration consistency and
+whitespace checks passed.
+The final complete rerun passed **729 tests** in 544.258 seconds with a process-only
+fast password hasher, including the corrected migration setup and final corruption
+case. The earlier 728-test run had one test-isolation error; it is superseded by this
+green rerun. No production database, Postmark or real payment provider was contacted.
+
+These tests do not prove exactly-once SMTP delivery across a crash, owner approval,
+mobile/email-client visual acceptance, or production deployment readiness.
+
+## P3 monthly eligibility projection (23 October 2026, local and gated)
+
+`schemes.tests.test_monthly_eligibility` uses synthetic configured agreements and
+the existing cash/provider-fixture services, never a real provider. Coverage includes
+12 qualifying payments plus the final India-time period boundary, missed-period
+extension payment/forecast, count completion blocking further initiation, exhaustion
+without forfeiture, acknowledged compensation, cash reversal, resumable/expired
+checkout, ambiguous creation, duplicate capture, missing timing, allocation failure,
+corrupt/partial schedules, Test Mode rejection, read-only evaluation, template wording
+and suppression of misleading original-date reminders. Legacy eligibility tests
+remain separate. The shared projection is current evidence, not historical replay.
+
+Full regression: **708 tests passed** with a process-only fast password hasher on
+disposable local PostgreSQL test databases. A subsequent focused run passed all
+**18 monthly-eligibility tests with normal password hashing** (60.283 seconds),
+including the two ambiguous-order/duplicate-capture cases added after full-suite
+discovery; the 708-test count does not include those two additions. Django checks, migration consistency
+and whitespace checks passed. No ordinary/production database migrations were run.
+
+No configured publication/enrolment or settlement gate is removed. At this earlier
+checkpoint reminder integration remained pending; see the subsequent checkpoint above.
+
+## Owner exception-form accessibility correction (23 October 2026)
+
+`schemes.tests.test_instalment_form_accessibility`: five database-free tests first
+failed against the missing help IDs and passed after the three template corrections.
+Coverage includes unbound/invalid forms, default and period/claim-specific IDs,
+multiple forms on one page, help/error target existence, unique IDs, label targets,
+checkbox labeling, non-field errors and escaping. No service or policy change.
+
+Combined regression: **53 tests passed with normal password hashing** across the
+new rendering tests and existing owner-review, outage and order-recovery suites.
+Database-backed cases used disposable local PostgreSQL test databases. Django checks,
+migration consistency and whitespace checks passed; no full-suite rerun in this step.
+
+A transient read-only localhost preview rendered synthetic objects with database
+execution explicitly prohibited and no POST action available. Chrome inspection
+at 390x844 and 1440x1000 covered period review, recovery and outage forms, invalid
+input/help presentation and keyboard field traversal. Mobile document width was
+375 CSS pixels within the 390-pixel viewport (scrollbar accounted for); help/error
+references resolved. The server/tab were closed and viewport reset afterwards.
+This limited form-rendering smoke did not exercise a real customer, a provider,
+the complete owner queue/decision journey, or a screen reader. Those acceptance
+items remain pending; do not describe the entire P2 owner workflow as approved.
+
+## Accumulated P2 checkpoint review (23 October 2026)
+
+Code review covered configured activation gates, migrations 0021–0029, account-locked
+payment attribution/recovery, outage evidence and owner exception rendering. This
+does not replace CI, exact-image rehearsal or owner/mobile acceptance.
+
+Checkpoint rerun: **149 tests passed** across plan governance/configuration (including
+migration tests), configured agreements, schedules, payment ledger/integration,
+owner reviews, outage amendments, order recovery and capture containment. This used
+a test-process-only fast password hasher and disposable local PostgreSQL test
+databases. Django checks and `makemigrations --check --dry-run` passed. The previous
+687-test full regression and 26-test normal-hashing run were not rerun in this review.
+
+Historical finding, subsequently fixed by the correction above: render the three owner
+forms with synthetic objects and parse each widget's `aria-describedby` ID references
+against the rendered IDs. Period review is missing `period_reason_helptext`;
+order recovery is missing `id_order_id_helptext`; outage resolution is missing
+`id_reason_helptext`, `id_incident_started_at_helptext`,
+`id_service_restored_at_helptext`, `id_customer_acknowledged_at_helptext` and
+`id_acknowledgement_reference_helptext`. The custom help-text wrappers need matching
+IDs. Add regression coverage for unbound and invalid forms, unique IDs when multiple
+claim forms appear, and links to actual help/error elements. These HTML-only probes
+made no database writes or provider requests; they are not a visual browser test.
+
+The next owner rehearsal must use an isolated synthetic database, not enable drafts
+or manufacture duplicate payments in production. Check desktop/narrow mobile widths,
+keyboard focus, labels/help/errors, long provider/evidence references, empty and
+review states, stale submissions and unchanged financial evidence. Owner acceptance
+is still pending. P3 must separately reconcile customer payment prompts and reminders
+with monthly ledger/hold/count/extension state before configured activation.
+
+## Late/duplicate-capture containment (P2b.3b, gated)
+
+`schemes.tests.test_instalment_capture_boundaries` tests same-payment redelivery versus
+different-payment capture, retained original credit/rate/allocation, account-scoped
+online/cash/timing guards, delayed on-time delivery, expired timing review, late capture
+after cash replacement, confirmation of an in-flight replacement during review/pause,
+transient-event retry, mode/order isolation, owner queue/provider links and customer
+availability. A two-capture race must yield one credit and one retained provider review.
+The order-recovery suite also checks the hold/owner queue for captures that arrived
+before their order identity was linked. These use synthetic gated agreements and no
+provider network. Schema remains at 0029; no historical backfill or real refund.
+
+See STATUS.md for final validation evidence. Tests establish local containment, not
+owner/mobile approval, verified refund completion, configured activation, CI or release
+acceptance. Unresolved captures and structural integrity are separate checks.
+
+Owner acceptance, using synthetic fixtures in an isolated rehearsal database only:
+
+- Confirm the period queue/detail shows retained additional-payment identity and the
+  existing provider-reconciliation link on desktop and narrow mobile widths.
+- Confirm original receipt/rate/allocation is unchanged; the customer sees a review
+  hold, not a new payment prompt or a second instalment credit.
+- Confirm an investigation note cannot clear a capture exception or assert a refund;
+  late abandoned-order evidence remains separate from any legitimate replacement.
+- Confirm ordinary same-payment redelivery is not displayed as an additional debit.
+
+Do not create duplicate real payments, edit event status or enable configured plans
+in production to rehearse these scenarios. CI and exact-image PostgreSQL 18.6
+rehearsal still follow the accumulated checkpoint review.
+
+23 October 2026: **687 full serial regression tests passed** using a test-process-only
+fast password hasher; **26 focused capture/recovery tests passed with normal hashing**.
+Django checks, migration consistency and whitespace checks passed. No new migration
+was generated; existing migrations were exercised only in disposable local PostgreSQL
+test databases. No normal local/production migration, environment edit, commit, push
+or deployment was performed.
+
+## Exact ambiguous-order identity recovery (P2b.3b partial, gated)
+
+`schemes.tests.test_instalment_order_recovery` covers durable provider receipt/UUID
+correlation, authenticated fixed-endpoint reads, mismatched/absent/provider-error
+evidence, historical uncorrelated requests, response/write failures, stale evidence,
+idempotent and concurrent binding, immutable/database guards and integrity checks.
+Owner-only CSRF-protected UI does not expose a resumable customer checkout. Tests
+distinguish identity binding from verified capture/qualification, including a capture
+received before binding, explicit payment reconciliation, signed timing redelivery,
+expired untouched-order abandonment and late-capture review. No provider network or
+real funds are used. Forward migration preservation now extends through 0029 without
+financial backfill; configured publication/enrolment remains blocked.
+
+See STATUS.md for current validation results. Owner/mobile review, CI, exact-image
+PostgreSQL 18.6 rehearsal and remaining exception acceptance are still required.
+
+23 October 2026: **677 full serial regression tests passed** with a test-process-only
+fast password hasher. **27 final focused tests passed with normal hashing** across
+order recovery, payment presentation and customer contribution views, including final
+desktop/mobile history link suppression and malformed provider-status handling.
+Django checks, migration consistency and whitespace checks passed. Migration 0029
+was exercised only on disposable local PostgreSQL test databases; no ordinary local
+or production database, environment, commit, push or deployment changed.
+
+## Bounded outage amendments (P2b.3b partial, gated)
+
+`schemes.tests.test_instalment_outages` covers separate three-month compensation caps,
+one grant per affected period, original-anchor month-end dates, preservation of original
+agreements/periods/finances, current-rate payment in an appended window, strict evidence/
+acknowledgement timestamps, stale submissions, idempotency, immutable/database guards,
+restored/qualified-only closure and rejection of uncertain orders, missing timing,
+unresolved webhooks or allocation failure. Private owner UI retains CSRF protection.
+Race tests cover same-submission replay, competing proposals requiring refreshed
+acknowledgement, and capture versus compensation without invented payment credit.
+Actual forward-migration preservation extends through 0028, with no legacy amendment
+or configuration-evidence hash change. Configured enrolment/publication remains blocked.
+See STATUS.md for final run results; owner mobile/visual review and exact-image
+PostgreSQL 18.6 acceptance remain pending.
+
+23 October 2026: **661 full serial tests passed** with a test-process-only fast
+password hasher; **49 final focused tests passed with normal hashing**, including the
+latest selector/UI edits, outage/review/integration races and actual forward migration
+through 0028. Django checks, migration consistency and whitespace checks passed.
+Only disposable local PostgreSQL test databases were migrated; no ordinary local or
+production database, environment, commit or push changed.
+
+## Owner instalment investigation (P2b.3a, gated)
+
+`schemes.tests.test_instalment_reviews` covers owner-only review, required references,
+append-only/stale/idempotent evidence, stored signed timing acceptance, rejection of
+conflicting/expired/missing or cross-account evidence, no financial mutation, outage
+initiation holds with continued in-flight capture handling, uncertain-order notes
+without release, database constraints, integrity corruption detection, private/CSRF
+UI routes, duplicate owner races and outage-versus-cash serialization. Configuration
+migration preservation now rehearses through 0029 without historical qualification.
+No provider network or production mutation is used. Owner mobile/visual acceptance
+and final exception acceptance remain pending; bounded outage remedies and exact
+ambiguous-order identity recovery are now covered by the sections above.
+
+23 October 2026: 643 full serial regression tests passed with a test-process-only fast
+password hasher. The final 32-test review/integration/migration run passed with normal
+hashing, including the added India-time boundary and malformed reservation-input
+checks. Django checks, migration consistency and diff checks passed. Migrations ran
+only on disposable local PostgreSQL databases, not the ordinary local or production DB.
+
+## Monthly payment-service integration (P2b.2, gated)
+
+`schemes.tests.test_instalment_payment_integration` exercises the existing service
+entry points with synthetic agreements and a fake provider: reserve-before-order,
+same-order resume, expired claims, callback awaiting timing, delayed webhook during
+pause, duplicates, missing timing review, paid-unallocated, cash idempotency/correction/
+replacement and rollback, provider-backed abandonment and late-capture review, ambiguous
+order errors, interruption after a provider response, Test/mock/backdate rejection, extension-period payment and owner API
+recovery followed by signed-payload replay. Separate-connection tests cover simultaneous
+online requests and online-versus-showroom-cash creation. No provider network requests
+or production mutations are used. An HTTP test verifies a signed captured webhook and
+rejects an invalid signature without creating an event. The migration rehearsal also covers 0025-to-0026
+without assigning new historical payment qualification.
+
+Configured enrolment/publication gates remain. Outage/review-resolution UI and final
+exception acceptance belong to P2b.3; policy eligibility and full settlement are not
+claimed by these payment-service tests.
+
+23 October 2026 validation: all 629 serial regression tests passed with a
+test-process-only fast password hasher. A final 18-test run with normal hashing
+passed the integration/race module, historical configuration migration rehearsal
+through 0026 and the legacy signed-webhook transient-failure retry test. Django
+system checks, migration consistency and whitespace checks passed. Only disposable
+local PostgreSQL test databases were migrated; exact-image PostgreSQL 18.6 release
+acceptance and production rollout remain pending.
+
+## Instalment payment ledger foundation (P2b.1, gated)
+
+`schemes.tests.test_instalment_payments` tests current-period reservation exclusivity
+across online/cash, separate-connection races, idempotence, India-boundary deadline
+capping, delayed captured-event evidence, malformed/unverified payload rejection,
+missing/contradictory timing review, Test/mock exclusion, cash reversal/replacement,
+database constraints, immutable model writes and projection-corruption detection.
+Synthetic agreements/payments exercise internal primitives only. No real payment or
+enabled configured enrolment is used. Qualification neither allocates metal nor grants
+eligibility; paid-unallocated is reported separately. The configuration migration
+rehearsal now also applies 0024 to 0025, preserving old agreements/contributions and
+proving empty new tables. The read-only check is `check_instalment_payments`.
+
+At the P2b.1 checkpoint, payment-path integration and exception acceptance remained
+open. P2b.2 service coverage is now recorded above; P2b.3 outage/review resolution
+remains open. These are separate from internal-ledger acceptance.
+
+23 October 2026 validation: 611 full serial regression tests passed with a test-process-only
+fast password hasher; 13 final focused tests passed with normal hashing, including two
+additional timestamp/backfill tests and the actual schema preservation rehearsal.
+The initial combined ledger/schedule run passed 24 tests. Django checks, migration-drift
+and diff checks passed. All migration execution was on disposable local PostgreSQL
+test databases; no ordinary local/production migration or exact-image PG18.6 acceptance.
+
+## Monthly schedule foundation (P2a, gated)
+
+`schemes.tests.test_instalment_schedules` covers approved policy compatibility and DB
+NULL guards, anniversary/month-end/leap-day boundaries, fixed India-time half-open
+windows, no-miss/two-miss/extension-limit scenarios, read-only owner previews, frozen
+periods, idempotent concurrent preparation, corruption detection and preserved gates.
+Fixtures create synthetic agreements directly; no real enrolment gate is patched and
+no payment is sent. `check_instalment_schedules` is read-only and checks definitions
+against snapshots, not payment compliance. The configuration migration test rehearses
+0023→0024 preserving all old fields and calendar-configuration evidence, with no
+period backfill. Monetary/metal ledgers remain unchanged by previews/preparation.
+
+P2b.1 internal-ledger coverage is recorded above; payment integration and outage tests
+remain pending. Never treat successful schedule tests as a released monthly-payment
+journey or full-settlement acceptance. Browser/mobile visual acceptance is separate.
+
+23 October 2026 evidence: 601 full serial tests passed with a test-process-only fast
+password hasher; 15 final focused schedule/migration tests passed with normal hashing.
+Django system, migration-drift and diff checks passed. No ordinary local or production
+database migration was run. Exact-image PostgreSQL 18.6 and CI acceptance remain open.
+
+## Configured individual terms (P1b, gated)
+
+Run `schemes.tests.test_configured_agreements`, the configuration/governance migration
+tests, `accounts.test_plan_applications` and `schemes.tests.test_enrolment_requests`,
+then the full serial suite. Tests create synthetic configured accounts directly on the
+disposable test database without patching publication/enrolment gates. This is not an
+enabled end-to-end offer/approval test. Cover different customer-selected amounts under
+one version, exact fixed/variable/step validation, every payment channel, locked reloads,
+no provider order on invalid input, snapshot immutability, corrupted-term checks,
+legacy-preference preservation and configured redemption refusal. Approval tests assert
+the reviewed selection is passed onward without altering legacy variable agreements.
+The configuration migration test also runs 0022→0023 and compares all old agreement/
+plan fields, with null new references/steps. Existing financial rows are not rewritten.
+
+P4 now adds actual publication/confirmation/enrolment/settlement service tests and
+migration 0034 replaces the unconditional preparation constraint with publication proof.
+Normal production/local databases and external gateways are not used by these tests.
+
+## Preparation-only configuration foundation (P1a)
+
+Run `schemes.tests.test_plan_configuration` and
+`schemes.tests.test_plan_configuration_migration` alongside the governance tests, then
+the full serial suite. Coverage includes owner/CSRF boundaries, immutable version reuse,
+two-connection successor races, unknown/incompatible policies, Decimal bounds/steps,
+fixed-versus-variable previews, no financial writes from previews, transactional draft
+audit failure, server and database activation blocks and legacy enrolment preservation.
+The actual 0021-to-0022 upgrade test compares all existing plan and agreement fields,
+leaves the plan unconfigured and creates no configuration versions automatically.
+`check_plan_configurations` is read-only and fails on invalid definitions, projection or
+revision-evidence drift. P4 permits valid publication and agreements while still rejecting
+configured agreements linked to unpublished draft terms.
+
+These P1 tests are **not** tests of a live customer-fixed plan. Subsequent B/P4 tests
+cover full-only settlement and controlled enrolment, with fake external providers.
+The default-off release gate never substitutes for owner publication evidence. Before release, visually
+review catalogue/create/version/preview/reuse and pinned-plan edit screens on mobile,
+desktop and keyboard, and rehearse the exact image on production's PostgreSQL major.
+
+## Owner plan builder / full-only settlement acceptance (planned)
+
+The approved ADR-0017 policy catalogue is not implemented by current Phase A tests.
+Each slice in MVP_PLAN.md must add relevant service, database, permission, template
+and migration coverage before publication; these are acceptance requirements, not
+claims of existing passing tests:
+
+- Validate each permitted configuration and reject incompatible combinations in the
+  service, not just the owner UI. Unknown enums/unsupported policies, incomplete numeric
+  rules, cross-grade/cash conversion and a forged partial option fail closed.
+- Owner-created/reused versions are immutable; no-op edits, concurrent edits, changed
+  pending offers and historical snapshots remain correct. A customer cannot create or
+  publish a configuration by direct POST. Deferred proposal features are absent.
+- Two customers can select different bounded monthly amounts under one customer-fixed
+  plan; enforce each frozen selection for Razorpay and cash. Plan-fixed and variable
+  behaviour remain distinct. Test out-of-range/step/precision values and attempted edits.
+- Scheduled periods cover month ends/leap years, agreed timezone, exact due/grace
+  boundaries, missed periods, catch-up and extension limits. Include fully on-time,
+  skipped middle month, fewer payments than required, retries, duplicate webhooks,
+  late captures, reversals, paid-unallocated recovery and Test/Live separation.
+- Calendar/count/both results match across selectors, payment permission, reminders,
+  statements and settlement; original dates never shift silently. Required extension
+  payments remain possible after the original calendar date. No accidental twelve-
+  payments-in-one-week completion. Showroom pauses/outages follow approved exception rules.
+- Benefits without an approved policy remain unavailable. Test qualification separately
+  from redemption, caps/exclusions/rounding, projection versus earned/fulfilled amounts,
+  duplicate fulfilment, reversals and missed-payment loss of an unearned benefit. No
+  invented gold grams, cash refund or principal forfeiture.
+- Reject every smaller/larger settlement request server-side. Full six-decimal gram
+  entitlement settles despite three-decimal presentation; no residual dust. Lock and
+  revalidate previews; test concurrent cash entry, provider capture, duplicate settlement
+  and late payment after apparent abandonment. A full settlement closes only its agreement.
+- Full-only cutover preserves prior partial-redemption records and remaining liabilities;
+  contractual conflicts are identified, not silently amended. Unused cancellation is
+  not a zero-quantity redemption; a zero balance after financial activity is not unused.
+- Exact-image migration/rollback rehearsal and separate owner release approval remain
+  necessary. Current local test totals must not be reused as acceptance for these rules.
+
+## Plan governance and agreement provenance (A)
+
+Run `schemes.tests.test_plan_governance` and
+`schemes.tests.test_plan_governance_migration`, then the complete serial suite.
+The migration test actually moves a disposable PostgreSQL test database from schemes
+0020 to 0021 and compares every pre-existing agreement field, including deliberately
+different historic/offer amounts; only observed display identity is added and no
+accepted revision is invented. A separate-connection test serializes enrolment with
+an audited edit. Verify stale-form rejection, creation audit, immutable snapshots,
+admin restrictions, atomic audit failure, no-op edits, legacy labels and exact decimal
+normalization. `check_plan_agreements` is a read-only rollout integrity check.
+
+Before release, visually inspect owner plan list/add/edit and customer agreement,
+statement and approved-application screens on desktop/mobile. Confirm current-offer
+changes cannot rewrite old agreement names or amounts, and legacy identity is not
+presented as original customer consent. Rehearse the exact CI image on the production
+PostgreSQL major version; local PostgreSQL 16.1 tests are not that image rehearsal.
+Early discontinuation/unused cancellation (B) still require separate implementation
+and their own race, authorization, settlement and correction acceptance.
+
 ## Release rehearsal and stakeholder task protocol (22 October 2026)
 
 Run the opt-in synthetic local drill described in PRODUCTION_DEPLOYMENT.md:
@@ -8,8 +892,12 @@ Run the opt-in synthetic local drill described in PRODUCTION_DEPLOYMENT.md:
 uv --cache-dir .uv-cache run --no-sync --env-file .env python -m schemes.rehearse_workflow_release --synthetic-local
 ```
 
-The drill creates a pre-conversion synthetic baseline at accounts.0006 / schemes.0020 /
-pages.0001, dumps it, restores a fresh database and applies the current pending migrations.
+The drill creates a pre-conversion synthetic baseline at accounts.0006 / the current
+schemes leaf / pages.0001, dumps it, restores a fresh database and applies the current
+pending accounts/pages migrations. The accepted 22 October release used schemes.0020;
+with configured-agreement code the seed uses schemes.0023. This older conversion drill is
+not evidence of a schemes.0020-to-0021 upgrade; use the governance migration test and
+an exact-image upgrade rehearsal for that change.
 It compares every legacy identity/registration/enrolment and financial row before/after the
 upgrade, checks INR/gold/silver separately, reads restored owner/customer/history pages and
 four owner fragments, and verifies permissions/no financial writes on reads. It then exercises
@@ -445,3 +1333,12 @@ audit database. Saved screenshots include `.uv-cache/audit-customer-desktop.png`
 removed, viewport reset and temporary tab closed. No application code or production
 configuration changed; this does not replace regression tests for a future UI/HTMX
 implementation or a complete keyboard/screen-reader/accessibility acceptance run.
+
+Expired Checkout operations regressions live in `schemes.tests.test_expired_checkouts`.
+They cover shared expiry boundaries, all-mode and missing-order visibility, queue
+pagination, aggregate redaction, recent/exact/grace/age/limited provider inspection,
+provider errors, owner/CSRF/method guards, signed review binding/tampering/expiry,
+fresh changed-provider evidence, capture during inspection and unchanged balances.
+`CheckoutTimerTests` execute the wrapper with deterministic Docker/curl boundaries,
+including combined failure routing, secret-URL redaction, delivery errors and missing
+required heartbeat configuration. No real provider or monitor is contacted by tests.

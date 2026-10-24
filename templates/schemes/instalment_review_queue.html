@@ -1,0 +1,23 @@
+{% extends '_base.html' %}
+{% block title %}Instalment reviews | Jai Sri Krishna Jewellery{% endblock %}
+{% block content %}
+<h1>Instalment reviews</h1>
+<p>Preparation-stage monthly agreements only. Existing agreements gain no new instalment obligations.</p>
+<p><a href="{% url 'schemes:exception_queue' %}">Back to financial exceptions</a></p>
+<div class="list-group">
+{% for period in page_obj %}
+  <a class="list-group-item list-group-item-action" href="{% url 'schemes:instalment_review_period' period.pk %}">
+    {{ period.scheme_account.scheme_number }} — {{ period.scheme_account.customer.full_name }}<br>
+    Period {{ period.number }}: {{ period.starts_on }} to before {{ period.ends_before }} · ₹{{ period.amount }}
+    {% if period.has_payment_review %}<br>Payment investigation required{% endif %}
+    {% if period.has_capture_review %}<br>Captured-payment exception — reconcile before further payments{% endif %}
+    {% if period.outage_held %}<br>Outage hold recorded{% endif %}
+  </a>
+{% empty %}<p>No monthly agreement periods have been prepared. Configured enrolment remains disabled.</p>{% endfor %}
+</div>
+<nav class="mt-3" aria-label="Instalment review pages">
+  {% if page_obj.has_previous %}<a href="?page={{ page_obj.previous_page_number }}">Previous</a>{% endif %}
+  <span>Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+  {% if page_obj.has_next %}<a href="?page={{ page_obj.next_page_number }}">Next</a>{% endif %}
+</nav>
+{% endblock %}

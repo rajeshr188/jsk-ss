@@ -105,6 +105,7 @@ from .selectors import (
     get_pending_payment_exposure,
     get_owner_redemptions,
     get_owner_scheme_reminders,
+    get_owner_settlement_review_count,
     get_pending_enrolment_request_count,
     get_redemption_eligibility_summary,
     get_redemption_history,
@@ -128,7 +129,6 @@ from .services import (
     process_mock_contribution,
     publish_scheme_rate,
     record_in_store_cash_contribution,
-    record_scheme_plan_change,
     submit_scheme_enrolment_request,
     reverse_redemption,
     reverse_in_store_cash_contribution,
@@ -213,7 +213,7 @@ def owner_today(request):
         "activation_count": activations.count(), "activations": activations[:8],
         "readiness": get_owner_readiness(),
         "privacy_due_count": customer_account_deletion_queue().filter(owner_review_due_at__lte=timezone.now()).count() if settings.CUSTOMER_ACCOUNT_DELETION_ENABLED else 0,
-        "settlement_due_count": SchemeAccount.objects.filter(status="ACTIVE", eligible_from__lte=timezone.localdate()).count(),
+        "settlement_due_count": get_owner_settlement_review_count(),
     })
 
 
@@ -450,7 +450,7 @@ def reminder_delivery_log(request):
 @require_GET
 def exception_queue(request):
     category = request.GET.get("category", "all")
-    if category not in {"all", "allocation", "webhook"}:
+    if category not in {"all", "allocation", "webhook", "checkout"}:
         category = "all"
     oldest = request.GET.get("order") == "oldest"
     page = Paginator(get_owner_exception_keys(category=category, oldest_first=oldest), 25).get_page(request.GET.get("page"))
@@ -717,6 +717,10 @@ def redemption_create(request, scheme_number):
         SchemeAccount.objects.select_related("customer", "plan"),
         scheme_number=scheme_number,
     )
+    # Do not present the legacy partial-redemption form for a configured contract.
+    # Its independent service-level full-only settlement gate remains authoritative.
+    if account.configuration_snapshot_id:
+        raise Http404
     outstanding = get_outstanding_entitlement(account)
     cash_bonus = (
         get_cash_bonus_summary(account)
@@ -782,6 +786,9 @@ def redemption_reverse(request, redemption_number):
         redemption_number=redemption_number,
         reversal__isnull=True,
     )
+    if redemption.scheme_account.configuration_snapshot_id:
+        settlement = get_object_or_404(redemption.scheme_account.closure_requests.filter(settlements__redemption=redemption))
+        return redirect("schemes:configured_settlement", request_id=settlement.pk)
     form = RedemptionReversalForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
         try:
@@ -943,6 +950,10 @@ def customer_enroll(request, customer_id):
                 metal_grade=form.cleaned_data["metal_grade"],
                 start_date=form.cleaned_data["start_date"],
                 agreed_months=form.cleaned_data["agreed_months"],
+                selected_contribution_amount=form.cleaned_data.get("selected_contribution_amount"),
+                selected_amount_confirmed=form.cleaned_data.get("selected_amount_confirmed", False),
+                expected_configuration_id=form.cleaned_data.get("expected_configuration_id"),
+                expected_plan_digest=form.cleaned_data.get("expected_plan_digest"),
                 performed_by=request.user,
                 reason=form.cleaned_data["audit_reason"],
             )
@@ -984,8 +995,9 @@ def scheme_enrolment_request_create(request, plan_id):
     if not settings.CUSTOMER_ENROLMENT_REQUESTS_ENABLED:
         raise Http404
     customer = _customer_for_request_user(request.user)
+    from .selectors import get_public_scheme_plans
     plan = get_object_or_404(
-        SchemePlan.objects.prefetch_related("metal_offerings__metal_grade"),
+        get_public_scheme_plans(),
         pk=plan_id,
         active=True,
         publicly_listed=True,
@@ -1252,60 +1264,168 @@ def owner_enrolment_request_enroll(request, request_id):
 
 
 @owner_required
+def plan_configuration_list(request):
+    from .selectors import get_plan_configurations
+    page = Paginator(get_plan_configurations(), 20).get_page(request.GET.get("page"))
+    return render(request, "schemes/configuration_list.html", {"page": page})
+
+
+@owner_required
+def plan_configuration_create(request, previous_id=None):
+    from .forms import PlanConfigurationForm
+    from .models import SchemePlanConfiguration
+    from .plan_configuration import EDITABLE_CONFIGURATION_FIELDS, create_configuration_version
+
+    previous = get_object_or_404(SchemePlanConfiguration, pk=previous_id) if previous_id else None
+    if previous and previous.policy_schema_version == 2:
+        messages.warning(request, "Independent-policy versions are preparation-only; the legacy editor cannot change them.")
+        return redirect("schemes:plan_configuration_detail", configuration_id=previous.pk)
+    initial = {field: getattr(previous, field) for field in EDITABLE_CONFIGURATION_FIELDS} if previous else None
+    if previous:
+        initial["schedule_family"] = "MONTHLY_COMPLETION" if previous.instalment_policy == "MONTHLY_COMPLETION" else "CALENDAR"
+        initial["schedule_period"] = previous.period_basis or ""
+        initial["completion_rule"] = previous.eligibility_policy
+        initial["missed_outcome"] = previous.missed_payment_policy
+    form = PlanConfigurationForm(request.POST or None, initial=initial)
+    if request.method == "POST" and form.is_valid():
+        try:
+            configuration = create_configuration_version(
+                values=form.configuration_values(),
+                actor=request.user, reason=form.cleaned_data["reason"], previous_id=previous_id,
+            )
+        except ValidationError as error:
+            _add_service_errors(form, error)
+        else:
+            messages.success(request, "Configuration version recorded. It is not a published offer.")
+            return redirect("schemes:plan_configuration_detail", configuration_id=configuration.pk)
+    return render(request, "schemes/configuration_form.html", {"form": form, "previous": previous})
+
+
+@owner_required
+def plan_configuration_detail(request, configuration_id):
+    from .forms import ConfigurationPreviewForm
+    from .models import SchemePlanConfiguration
+    from .plan_configuration import preview_configuration_agreement
+
+    configuration = get_object_or_404(SchemePlanConfiguration, pk=configuration_id)
+    if configuration.policy_schema_version == 2:
+        return render(request, "schemes/configuration_detail.html", {"configuration": configuration})
+    form = ConfigurationPreviewForm(request.POST or None, initial={
+        "amount": configuration.fixed_amount or configuration.minimum_amount,
+        "months": configuration.default_months,
+    })
+    preview = None
+    if request.method == "POST" and form.is_valid():
+        try:
+            preview = preview_configuration_agreement(configuration=configuration, **form.cleaned_data)
+        except ValidationError as error:
+            _add_service_errors(form, error)
+    return render(request, "schemes/configuration_detail.html", {
+        "configuration": configuration, "form": form, "preview": preview,
+    })
+
+
+@owner_required
+def configured_plan_create(request, configuration_id):
+    from .forms import ConfiguredPlanDraftForm
+    from .models import SchemePlanConfiguration
+    from .plan_configuration import create_configured_plan_draft
+
+    configuration = get_object_or_404(SchemePlanConfiguration, pk=configuration_id)
+    if configuration.policy_schema_version == 2:
+        messages.warning(request, "Independent-policy configurations cannot create offers until their financial workflows are complete.")
+        return redirect("schemes:plan_configuration_detail", configuration_id=configuration.pk)
+    form = ConfiguredPlanDraftForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        try:
+            create_configured_plan_draft(configuration_id=configuration.pk, actor=request.user, **form.cleaned_data)
+        except ValidationError as error:
+            _add_service_errors(form, error)
+        else:
+            messages.success(request, "Preparation-only plan created and audited. Publication review and the configured-plan release gate are required before enrolment.")
+            return redirect("schemes:plan_list")
+    return render(request, "schemes/configured_plan_form.html", {"form": form, "configuration": configuration})
+
+
+@owner_required
+def configured_plan_publication(request, plan_id):
+    from .forms import ConfiguredPlanPublicationForm
+    from .plan_governance import plan_edit_digest
+    from .plan_publication import set_configured_plan_publication
+
+    plan = get_object_or_404(SchemePlan.objects.select_related("configuration", "publication_revision"),
+                             pk=plan_id, configuration__isnull=False)
+    publish = not (plan.active or plan.publicly_listed)
+    form = ConfiguredPlanPublicationForm(request.POST or None, initial={"expected_digest": plan_edit_digest(plan)})
+    if request.method == "POST" and form.is_valid():
+        try:
+            set_configured_plan_publication(plan_id=plan.pk, publish=publish, actor=request.user,
+                **form.cleaned_data)
+        except ValidationError as error:
+            _add_service_errors(form, error)
+        else:
+            messages.success(request, "Offer published for new applications." if publish else
+                             "Offer withdrawn. Existing agreements and their rights are unchanged.")
+            return redirect("schemes:plan_list")
+    return render(request, "schemes/plan_publication.html", {"plan": plan, "form": form,
+        "publish": publish, "release_enabled": settings.CONFIGURED_PLANS_ENABLED})
+
+
+@owner_required
 def plan_list(request):
-    return render(request, "schemes/plan_list.html", {"plans": SchemePlan.objects.all()})
+    from .selectors import get_owner_plan_configuration
+    return render(request, "schemes/plan_list.html", {
+        "plans": get_owner_plan_configuration(),
+        "configured_plans_enabled": settings.CONFIGURED_PLANS_ENABLED,
+        "cash_scheme_activity_enabled": cash_scheme_activity_is_enabled(),
+    })
 
 
 @owner_required
 def plan_add(request):
+    from .plan_governance import save_scheme_plan
     form = SchemePlanForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
-        with transaction.atomic():
-            plan = form.save()
-            form.save_offerings()
-        messages.success(request, f"Plan {plan.name} created.")
-        return redirect("schemes:plan_list")
+        try:
+            plan, _ = save_scheme_plan(
+                values={field: form.cleaned_data[field] for field in form.Meta.fields if field in form.cleaned_data},
+                metal_grades=form.cleaned_data["metal_grades"], actor=request.user,
+                reason=form.cleaned_data["audit_reason"],
+            )
+        except ValidationError as error:
+            _add_service_errors(form, error)
+        else:
+            messages.success(request, f"Plan {plan.name} created and audited; not publicly listed.")
+            return redirect("schemes:plan_list")
     return render(request, "schemes/plan_form.html", {"form": form})
 
 
 @owner_required
 def plan_edit(request, plan_id):
+    from .plan_governance import save_scheme_plan
+    from .selectors import get_plan_edit_impact
     plan = get_object_or_404(SchemePlan, pk=plan_id)
     form = SchemePlanChangeForm(request.POST or None, instance=plan)
     if request.method == "POST" and form.is_valid():
-        tracked_fields = SchemePlanChangeForm.Meta.fields
-        stored_plan = SchemePlan.objects.get(pk=plan.pk)
-        before = {field: getattr(stored_plan, field) for field in tracked_fields}
-        before["metal_grades"] = tuple(
-            stored_plan.metal_offerings.filter(active=True)
-            .order_by("metal_grade__code")
-            .values_list("metal_grade__code", flat=True)
-        )
-        with transaction.atomic():
-            plan = form.save()
-            form.save_offerings()
-            event = record_scheme_plan_change(
-                plan=plan,
-                actor=request.user,
+        try:
+            plan, changed = save_scheme_plan(
+                plan_id=plan.pk, expected_digest=form.cleaned_data["expected_digest"],
+                values={field: form.cleaned_data[field] for field in form.Meta.fields if field in form.cleaned_data},
+                metal_grades=form.cleaned_data["metal_grades"], actor=request.user,
                 reason=form.cleaned_data["audit_reason"],
-                before=before,
-                after_overrides={
-                    "metal_grades": tuple(
-                        plan.metal_offerings.filter(active=True)
-                        .order_by("metal_grade__code")
-                        .values_list("metal_grade__code", flat=True)
-                    )
-                },
             )
-        if event is None:
-            messages.info(request, "No plan values changed.")
+        except ValidationError as error:
+            _add_service_errors(form, error)
         else:
-            messages.success(request, f"Plan {plan.name} updated and audited.")
-        return redirect("schemes:plan_list")
+            if changed:
+                messages.success(request, f"Plan {plan.name} updated and audited.")
+            else:
+                messages.info(request, "No plan values changed.")
+            return redirect("schemes:plan_list")
     return render(
         request,
         "schemes/plan_form.html",
-        {"form": form, "plan": plan},
+        {"form": form, "plan": plan, "impact": get_plan_edit_impact(plan)},
     )
 
 
@@ -1559,6 +1679,10 @@ def razorpay_checkout(request, contribution_id):
     )
     if not contribution.gateway_order_id:
         raise Http404
+    from .closure_selectors import accepted_closure
+    if accepted_closure(contribution.scheme_account):
+        messages.warning(request, "Closure has been accepted. Checkout cannot resume; contact the showroom to reconcile any existing payment.")
+        return redirect("schemes:my_scheme_detail", scheme_number=contribution.scheme_account.scheme_number)
     if contribution.gateway_mode != gateway.mode:
         messages.warning(
             request,
@@ -1600,6 +1724,14 @@ def razorpay_checkout(request, contribution_id):
             "schemes:my_scheme_detail",
             scheme_number=contribution.scheme_account.scheme_number,
         )
+    from .instalments import has_monthly_instalments
+    from .instalment_selectors import current_instalment_period
+    if has_monthly_instalments(contribution.scheme_account):
+        try:
+            current_instalment_period(contribution.scheme_account, exclude_contribution_id=contribution.pk)
+        except ValidationError:
+            messages.warning(request, "This monthly payment requires showroom reconciliation and cannot be resumed.")
+            return redirect("schemes:my_scheme_detail", scheme_number=contribution.scheme_account.scheme_number)
     availability = get_payment_availability(
         metal_grade=contribution.scheme_account.metal_grade
     )

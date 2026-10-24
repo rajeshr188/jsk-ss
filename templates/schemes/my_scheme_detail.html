@@ -7,7 +7,7 @@
 <div class="page-header">
   <div>
     <a class="small d-inline-block mb-2" href="{% url 'schemes:customer_plans' %}">← All plans</a>
-    <p class="page-eyebrow">{{ scheme_account.plan.name }}</p>
+    <p class="page-eyebrow">{{ scheme_account.display_plan_name }}</p>
     <h1>{{ scheme_account.entitlement_name }}</h1>
     <div class="page-subtitle">{{ scheme_account.scheme_number }}</div>
     <span class="badge text-bg-secondary mt-2">{{ scheme_account.effective_status_label }}</span>
@@ -18,8 +18,15 @@
 </div>
 
 {% include 'schemes/includes/plan_next_action.html' %}
+{% include 'schemes/includes/agreement_basis.html' %}
 
-{% if scheme_account.effective_status == 'REDEMPTION_ELIGIBLE' %}
+{% if scheme_account.status == 'CANCELLED' %}
+<div class="alert alert-secondary" role="status">This unused agreement has been cancelled without a redemption or refund. Your login and other agreements are unchanged.</div>
+{% elif scheme_account.status == 'REDEEMED' %}
+<div class="alert alert-secondary" role="status">This agreement has been redeemed. Its statement and settlement history remain available; your login and other agreements are unchanged.</div>
+{% elif scheme_account.configuration_snapshot_id %}
+<div class="alert alert-secondary" role="status">Configured agreements require full jewellery settlement with showroom review and customer confirmation. Your recorded entitlement is retained until settlement; no partial redemption is available.</div>
+{% elif scheme_account.effective_status == 'REDEMPTION_ELIGIBLE' %}
 <div class="alert alert-success" role="alert">
   This scheme became eligible for redemption on {{ scheme_account.eligible_from|date:'d M Y' }}.
   It remains open until the store completes a redemption. Visit during showroom opening hours to arrange fulfilment.
@@ -93,7 +100,9 @@
           <br><a href="{% url 'schemes:payment_status' contribution.pk %}">Check recorded payment status</a>
           {% endif %}
           {% if contribution.status == 'PENDING' and contribution.payment_gateway == 'razorpay' and contribution.gateway_order_id and contribution.gateway_mode == razorpay_mode %}
-          {% if contribution.razorpay_checkout_expired %}
+          {% if contribution.order_identity_recovered %}
+          <br><span class="small text-muted">Payment under reconciliation — do not pay again for this attempt</span>
+          {% elif contribution.razorpay_checkout_expired %}
           <br><span class="small text-muted">Checkout expired — awaiting provider reconciliation</span>
           {% else %}
           {% if contribution.scheme_account.savings_mode != 'CASH' or cash_scheme_activity_enabled %}{% if not payment_availability or payment_availability.allowed %}
@@ -136,7 +145,9 @@
     <a class="btn btn-sm btn-outline-dark" href="{% url 'schemes:payment_status' contribution.pk %}">Check recorded payment status</a>
     {% endif %}
     {% if contribution.status == 'PENDING' and contribution.payment_gateway == 'razorpay' and contribution.gateway_order_id and contribution.gateway_mode == razorpay_mode %}
-    {% if contribution.razorpay_checkout_expired %}
+    {% if contribution.order_identity_recovered %}
+    <p class="small text-muted mb-0">Payment under reconciliation — do not pay again for this attempt</p>
+    {% elif contribution.razorpay_checkout_expired %}
     <p class="small text-muted mb-0">Checkout expired — awaiting provider reconciliation</p>
     {% else %}
     {% if contribution.scheme_account.savings_mode != 'CASH' or cash_scheme_activity_enabled %}{% if not payment_availability or payment_availability.allowed %}

@@ -1,0 +1,20 @@
+{% extends '_base.html' %}
+{% block title %}Plan configurations | Jai Sri Krishna Jewellery{% endblock %}
+{% block content %}
+<div class="page-header"><div><p class="page-eyebrow">Plan builder foundation</p><h1>Configuration catalogue</h1></div><div class="page-actions"><a class="btn btn-jsk" href="{% url 'schemes:plan_configuration_create' %}">Create configuration</a><a class="btn btn-outline-dark" href="{% url 'schemes:plan_list' %}">Plans</a></div></div>
+<div class="alert alert-warning">Preparation only. A configuration is not a public offer. Use a version in a draft plan, then complete publication review after the configured-plan release gate is approved. Existing plans and agreements are unchanged.</div>
+<p>Create an owner-defined configuration or reuse an existing version in a draft plan. Saving a new version never updates an earlier version or the plans using it.</p>
+<p><a href="{% url 'schemes:plan_manual' %}">Plan reference manual — illustrated creation, enrolment and closure guide</a></p>
+<div class="row g-3">
+  {% for configuration in page %}
+  <div class="col-md-6"><section class="card p-3 h-100">
+    <h2 class="h5"><a href="{% url 'schemes:plan_configuration_detail' configuration.pk %}">{{ configuration.name }} · v{{ configuration.version }}</a></h2>
+    <p>{{ configuration.get_amount_policy_display }}<br>₹{{ configuration.minimum_amount }}{% if configuration.maximum_amount %}–₹{{ configuration.maximum_amount }}{% else %} or more{% endif %}<br>{{ configuration.get_frequency_rule_display }}
+    {% if configuration.policy_schema_version == 2 %}<br>Independent policy — preparation only. {{ configuration.get_accumulation_display }}; {{ configuration.get_eligibility_policy_display }}.
+    {% else %} · minimum {{ configuration.minimum_months }} months{% endif %}</p>
+    <p class="small mb-0">{{ configuration.plan_count }} draft plan{{ configuration.plan_count|pluralize }} · recorded {{ configuration.created_at|date:'d M Y H:i' }}</p>
+  </section></div>
+  {% empty %}<p>No configuration versions yet.</p>{% endfor %}
+</div>
+<nav class="mt-3" aria-label="Configuration pages">{% if page.has_previous %}<a href="?page={{ page.previous_page_number }}">Previous</a>{% endif %} <span>Page {{ page.number }} of {{ page.paginator.num_pages }}</span> {% if page.has_next %}<a href="?page={{ page.next_page_number }}">Next</a>{% endif %}</nav>
+{% endblock %}

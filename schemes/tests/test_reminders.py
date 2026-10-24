@@ -21,7 +21,7 @@ from schemes.models import (
     SchemeReminder,
     SchemeReminderDeliveryAttempt,
 )
-from schemes.reminders import build_scheme_reminder_plan
+from schemes.reminders import build_scheme_reminder_plan, deliver_scheme_reminder
 from schemes.services import create_customer, enroll_customer
 from schemes.tests.grade_helpers import enrolment_grade_kwargs
 
@@ -290,6 +290,23 @@ class SchemeReminderTests(TestCase):
                     stdout=io.StringIO(),
                 )
         self.assertEqual(SchemeReminder.objects.count(), 0)
+        self.assertEqual(len(mail.outbox), 0)
+
+    def test_legacy_eligibility_rechecks_account_closure_before_delivery(self):
+        candidate = next(c for c in build_scheme_reminder_plan(as_of=self.as_of).candidates
+                         if c.audience == "CUSTOMER")
+        SchemeAccount.objects.filter(pk=self.account.pk).update(status="REDEEMED")
+        self.assertEqual(deliver_scheme_reminder(candidate, as_of=self.as_of).outcome, "SKIPPED")
+        self.assertEqual(len(mail.outbox), 0)
+        self.assertFalse(SchemeReminder.objects.exists())
+
+    def test_legacy_eligibility_rechecks_recipient_before_delivery(self):
+        candidate = next(c for c in build_scheme_reminder_plan(as_of=self.as_of).candidates
+                         if c.audience == "CUSTOMER")
+        user = self.customer.user
+        user.is_active = False
+        user.save(update_fields=["is_active"])
+        self.assertEqual(deliver_scheme_reminder(candidate, as_of=self.as_of).outcome, "SKIPPED")
         self.assertEqual(len(mail.outbox), 0)
 
     def test_reminder_and_attempt_are_immutable(self):

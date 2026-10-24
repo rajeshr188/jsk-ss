@@ -1,21 +1,46 @@
 {% extends "_base.html" %}
 {% load crispy_forms_tags %}
-{% block title %}Approve account disposition | Jai Sri Krishna Jewellery{% endblock %}
+{% block title %}Complete account deletion | Jai Sri Krishna Jewellery{% endblock %}
 {% block content %}
 <a href="{% url 'customer_account_deletion_detail' deletion_request.pk %}">Back to disposition preview</a>
-<h1 class="h2 mt-3">{% if is_review %}Review retained records{% else %}Approve account disposition{% endif %}</h1>
+<h1 class="h2 mt-3">{% if is_review %}Review retained records{% else %}Complete account deletion{% endif %}</h1>
 {% if is_review %}<p>Only previously retained profile fields may remain selected. Unchecked fields will be removed if obligations allow it. Financial history cannot be destroyed here. A review notice is queued only if a contact email was still retained.</p>{% endif %}
 <p>Request: <strong>{{ deletion_request.pk }}</strong> · {{ deletion_request.customer.customer_number }}</p>
 <div class="alert alert-warning">This removes login credentials and unneeded identity fields irreversibly. Financial records and justified retained fields remain. It is not a financial refund, settlement, or deletion of provider/backups. No legal retention period is pre-approved by this form.</div>
 <ul>{% for flag in disposition.review_flags %}<li>{{ flag }}</li>{% endfor %}</ul>
 <form method="post" novalidate>
   {% csrf_token %}
-  {{ completion_form|crispy }}
-  <h2 class="h4 mt-4">Category-specific retention decisions</h2>
-  <p>Write plain-language explanations suitable for the customer notice. Review dates trigger owner review, not automatic destruction. Explain “not applicable” rather than leaving fields blank.</p>
+  {{ completion_form.non_field_errors }}
+  {{ completion_form.reason|as_crispy_field }}
+  {{ completion_form.external_review|as_crispy_field }}
+  {{ completion_form.retain_profile_fields|as_crispy_field }}
+  <h2 class="h4 mt-4">Shared retention terms</h2>
+  <p>Enter the start, duration or release condition, and next review date once. These terms apply to all seven categories below. Use a category exception when different terms are needed.</p>
+  {{ shared_retention_form|crispy }}
+  <h2 class="h4 mt-4">What needs to remain</h2>
+  <p>For each category, state why and which records are needed. Explain “not applicable” for categories with no records to retain. These explanations appear in the customer notice.</p>
   {{ retention_forms.management_form }}
   {{ retention_forms.non_form_errors }}
-  {% for form in retention_forms %}<fieldset class="card p-3 mb-3"><legend class="h5">Category {{ forloop.counter }}</legend>{{ form|crispy }}</fieldset>{% endfor %}
-  <button class="btn btn-danger" type="submit">Remove eligible account data and queue outcome notice</button>
+  {% for form in retention_forms %}
+  <fieldset class="card p-3 mb-3">
+    <legend class="h5">{{ form.category_label }}</legend>
+    {{ form.non_field_errors }}
+    {{ form.category.as_hidden }}
+    {{ form.treatment|as_crispy_field }}
+    {{ form.purpose|as_crispy_field }}
+    {{ form.fields|as_crispy_field }}
+    <details{% if form.period_start.errors or form.period_or_condition.errors or form.review_on.errors or form.period_start.value or form.period_or_condition.value or form.review_on.value %} open{% endif %}>
+      <summary>Different retention terms for this category</summary>
+      <div class="mt-3">
+        {{ form.period_start|as_crispy_field }}
+        {{ form.period_or_condition|as_crispy_field }}
+        {{ form.review_on|as_crispy_field }}
+      </div>
+    </details>
+  </fieldset>
+  {% endfor %}
+  {{ completion_form.confirmation|as_crispy_field }}
+  {{ completion_form.reviewed|as_crispy_field }}
+  <button class="btn btn-danger" type="submit">{% if is_review %}Save retention review{% else %}Complete deletion and send notice{% endif %}</button>
 </form>
 {% endblock %}

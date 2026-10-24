@@ -28,7 +28,7 @@ def application_enabled():
 
 def offer_snapshot(plan, grade):
     """Money is serialized as decimal strings, never JSON floats."""
-    return {
+    offer = {
         "plan_id": plan.pk, "name": plan.name, "code": plan.code,
         "amount_rule": plan.amount_rule, "frequency_rule": plan.frequency_rule,
         "fixed_amount": format(plan.fixed_contribution_amount, ".2f") if plan.fixed_contribution_amount is not None else None,
@@ -42,6 +42,11 @@ def offer_snapshot(plan, grade):
         "terms_version": settings.PUBLIC_REGISTRATION_TERMS_VERSION,
         "privacy_version": settings.PUBLIC_REGISTRATION_PRIVACY_VERSION,
     }
+    if plan.configuration_id:
+        from schemes.plan_configuration import configuration_evidence
+        offer["configuration"] = configuration_evidence(plan.configuration)
+        offer["publication_revision_id"] = plan.publication_revision_id
+    return offer
 
 
 def offer_form_digest(plan):
@@ -54,6 +59,8 @@ def offer_form_digest(plan):
 
 def _locked_offer(plan_id, grade_id):
     plan = SchemePlan.objects.select_for_update().get(pk=plan_id)
+    from schemes.plan_publication import require_configured_offer
+    require_configured_offer(plan)
     plan.full_clean()
     grade = MetalGrade.objects.get(pk=grade_id)
     offering = SchemePlanOffering.objects.select_for_update().filter(
@@ -272,9 +279,14 @@ def approve_plan_application(*, registration_id, actor, mobile_verified, terms_r
     customer, invitation, raw_token = _approve_registration_identity(
         application=registration, reviewed_by=actor, reason=reason,
     )
+    from schemes.plan_governance import plan_edit_digest
     account = enroll_customer(
         customer=customer, plan=plan, metal_grade=grade, start_date=application.start_date,
         agreed_months=application.requested_months, performed_by=actor, reason=reason,
+        selected_contribution_amount=application.requested_amount,
+        selected_amount_confirmed=terms_reviewed,
+        expected_configuration_id=application.confirmations.order_by("-sequence").first().offer.get("configuration", {}).get("id"),
+        expected_plan_digest=plan_edit_digest(plan),
     )
     application.scheme_account = account
     application.save(update_fields=["scheme_account"])

@@ -4,7 +4,9 @@
     <p class="home-plan-amount mb-1">
       {% if plan.amount_rule == 'FIXED' %}₹{{ plan.fixed_contribution_amount|floatformat:2 }}{% else %}From ₹{{ plan.minimum_contribution|floatformat:2 }}{% endif %}
     </p>
-    <p class="small fw-semibold mb-2">{% if plan.frequency_rule == 'ONCE_PER_MONTH' %}Once per calendar month{% else %}Flexible contribution timing{% endif %} · {{ plan.default_months }} months</p>
+    {% if plan.configuration.amount_policy == 'CUSTOMER_FIXED' %}<p class="small">Choose your contribution amount once at enrolment. After confirmation, every contribution uses that fixed amount.</p>{% endif %}
+    {% if plan.configuration.amount_step %}<p class="small">Choose increments of ₹{{ plan.configuration.amount_step|floatformat:2 }} from the minimum.</p>{% endif %}
+    <p class="small fw-semibold mb-2">{% if plan.configuration.instalment_policy == 'MONTHLY_COMPLETION' %}{{ plan.configuration.get_period_basis_display }} — one qualifying payment{% elif plan.frequency_rule == 'ONCE_PER_MONTH' %}Once per calendar month{% else %}Flexible contribution timing{% endif %} · {{ plan.default_months }} months</p>
     <div class="d-flex flex-wrap gap-2 mb-3" aria-label="Available metal grades">
       {% for offering in plan.metal_offerings.all %}{% if offering.active %}<span class="badge text-bg-light border">{{ offering.metal_grade.display_name }}</span>{% endif %}{% endfor %}
     </div>
@@ -22,6 +24,7 @@
         <dt class="col-6">Minimum duration</dt><dd class="col-6">{{ plan.minimum_months }} months</dd>
         <dt class="col-6">After eligibility</dt><dd class="col-6">{% if plan.allow_contributions_after_eligibility %}Further contributions allowed under your agreement{% else %}No further contributions{% endif %}</dd>
       </dl>
+      {% include 'schemes/includes/configured_offer_rules.html' %}
     </details>
   </div>
 </article>

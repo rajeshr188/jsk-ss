@@ -10,16 +10,19 @@
   {% if form.fields.plan.queryset.exists %}
   <form method="post" class="card form-card" novalidate>
     {% csrf_token %}
+    {% if form.configuration_token %}{{ form.configuration_token }}{% endif %}
     {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
     <fieldset class="form-section">
       <legend>Scheme terms</legend>
       <p class="form-section-description">Select the plan and exact metal grade. The grade becomes a permanent part of this agreement.</p>
       {{ form.plan|as_crispy_field }}
       {{ form.metal_grade|as_crispy_field }}
+      {% if form.selected_contribution_amount %}{{ form.selected_contribution_amount|as_crispy_field }}{{ form.selected_amount_confirmed|as_crispy_field }}{% endif %}
     </fieldset>
     <fieldset class="form-section">
       <legend>Agreement schedule and record</legend>
-      <p class="form-section-description">The contractual eligibility date uses exact calendar months from the start date. A weekend, public holiday, showroom closure, or payment pause does not shift it.</p>
+      <p class="form-section-description">Calendar plans use exact calendar months. Monthly-completion plans also require qualifying instalments and can extend after missed periods; outages need separate evidenced review.</p>
+      <p>Confirm the selected plan's eligibility, full-settlement rules, duration and contribution amount with the customer. Later plan edits do not change this agreement.</p>
       {{ form.start_date|as_crispy_field }}
       {{ form.agreed_months|as_crispy_field }}
       {{ form.audit_reason|as_crispy_field }}
