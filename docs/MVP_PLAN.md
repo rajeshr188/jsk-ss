@@ -31,7 +31,7 @@ Use the existing FW-PLAN items; do not create further numbered micro-milestones.
 - [x] Owner approved the detailed matrix/timing, INR settlement approach and benefit types in ADR-0017, including one manual final settlement with unused-principal refund, no partial redemption and no replacement credit. External publication approvals and usable refund-route evidence remain required.
 - [x] Implement typed compatibility validation and fail-closed operational support checks without altering existing persisted configuration evidence. This is the contract foundation, not new financial-workflow completion.
 - [x] Persist independent duration/count/benefit fields under policy schema 2 (0036), preserving schema-1 evidence, append-only version semantics and preparation-only runtime gates. Legacy editor stays schema 1; schema-2 inspection is read-only. Verification is recorded in STATUS.md/TESTING.md.
-- [ ] Review/checkpoint accumulated local work before widening financial implementation; preserve unrelated changes and existing agreement history.
+- [x] Scope-review/checkpoint accumulated local work before widening financial implementation (`84115be`, 24 October). Separate dropdown styling and nested worktrees remain outside the checkpoint. This is a local WIP checkpoint, not exhaustive code review, clean CI or release acceptance.
 - [ ] Implement separate INR entitlement/full-settlement primitives under the approved manual-fulfilment contract, without enabling public INR offers prematurely.
   - Local principal foundation (0037): distinct `INR_CREDIT` denomination, immutable source-linked receipts, full evidenced cash-entry corrections, separate principal reads and fail-closed diagnostics. Pure invoice/refund/top-up arithmetic is covered; it does not fulfil or close anything.
   - Local manual disposition foundation (0038): one immutable full-principal proposal, source-specific manual refund legs, jewellery handover/top-up evidence, remaining liability and completion-linked closure. Supports optional/calendar/no-benefit synthetic INR contracts only; actual fulfilment is owner-attested evidence, not an API-verified refund. No public workflow is enabled.
@@ -73,8 +73,9 @@ Replacement full dispositions retain their retired predecessors and require fres
 Read-only independent contract resolution and stronger INR snapshot validation are now
 shared. Versioned account storage now supports independent duration/count and no-duration
 agreements (0040); structural validation still neither grants eligibility nor enables
-account creation. Complete gated schema-2 enrolment/payment integration
-and review/checkpoint accumulated work, then follow the eligibility/benefit checklist.
+account creation. The accumulated foundation is checkpointed at `84115be`. Rerun the
+combined regression suite after the historical-model test correction, then complete
+gated schema-2 enrolment/payment integration and follow the eligibility/benefit checklist.
 Required regression examples: January 30 short month; final qualifying payment before
 period end (count-only versus both); missed payment with retained versus lost unearned
 benefit; optional monthly ceiling without any debt; invoice below/equal/above full INR

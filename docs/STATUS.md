@@ -2,7 +2,9 @@
 
 ## Current milestone
 
-**24 October 2026 - accumulated builder checkpoint preparation.**
+**24 October 2026 - accumulated builder checkpoint created locally.**
+Commit `84115be` on `agent/plan-agreement-governance` records the accumulated work
+through 0040. No push, PR, normal database migration or deployment was performed.
 Reviewed the worktree scope through migration 0040 before further financial changes.
 The checkpoint is work-in-progress, not activation or production acceptance. Preserve
 the separate account-dropdown styling edits and nested `.worktrees/` outside it;
@@ -12,6 +14,9 @@ excluded. Existing verification remains as recorded below: the final historical-
 test fix passed its focused rerun, not a fresh full-suite run. Normal CI, complete
 builder acceptance and deployment rehearsal remain outstanding. Do not widen enrolment
 or payment support merely to make checkpointed configurations operational.
+Next: rerun the combined regression suite from this checkpoint after its historical-
+model test correction, then implement gated schema-2 enrolment/payment integration.
+This scope review/checkpoint is not an exhaustive financial-code or release audit.
 
 **24 October 2026 - independent agreement storage implemented locally (0040).**
 Added agreement storage version, eligibility-policy snapshot and required-count snapshot.
