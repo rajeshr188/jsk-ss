@@ -1555,7 +1555,7 @@ class Contribution(models.Model):
         help_text="First calendar day of the contribution month."
     )
     frequency_rule_snapshot = models.CharField(
-        max_length=20, choices=SchemePlan.FrequencyRule.choices
+        max_length=20, choices=[*SchemePlan.FrequencyRule.choices, ("ONCE_PER_PERIOD", "Once per agreed period")]
     )
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
     payment_gateway = models.CharField(max_length=30)
@@ -1749,7 +1749,7 @@ class InrPrincipalReceipt(models.Model):
     verified_at = models.DateTimeField()
     cash_receipt = models.OneToOneField("InStoreCashReceipt", null=True, blank=True, on_delete=models.PROTECT)
     webhook_event = models.OneToOneField("PaymentWebhookEvent", null=True, blank=True, on_delete=models.PROTECT)
-    recorded_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    recorded_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT)
     actor_label = models.CharField(max_length=254)
     reason = models.TextField()
     idempotency_key = models.UUIDField(unique=True)
@@ -1761,6 +1761,9 @@ class InrPrincipalReceipt(models.Model):
             models.CheckConstraint(condition=(models.Q(cash_receipt__isnull=False, webhook_event__isnull=True)
                 | models.Q(cash_receipt__isnull=True, webhook_event__isnull=False)), name="inr_principal_one_source"),
             models.CheckConstraint(condition=~models.Q(source_reference="") & ~models.Q(actor_label="") & ~models.Q(reason=""), name="inr_principal_evidence_required"),
+            models.CheckConstraint(condition=(models.Q(recorded_by__isnull=False)
+                | models.Q(cash_receipt__isnull=True, webhook_event__isnull=False,
+                           actor_label="system:razorpay-capture")), name="inr_principal_actor_shape"),
         ]
 
     def clean(self):

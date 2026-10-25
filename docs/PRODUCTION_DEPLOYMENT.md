@@ -7,6 +7,29 @@ explicit Razorpay Test/Live modes, and manually published Scheme Rate build. Dev
 
 ## Production-readiness boundary
 
+### Independent contribution frequency (0042; not activated)
+
+`schemes.0042_contribution_independent_frequency` adds the `ONCE_PER_PERIOD` model
+choice for future independent contribution records. The accounting month remains a
+calendar key; required reservations/optional cash receipt windows enforce the agreed
+basis. No existing row, balance, period or legacy uniqueness constraint is rewritten.
+Keep configured-plan readiness gates closed. Actual INR cash and required-monthly
+online service tests are not optional-online/callback/recovery or full builder acceptance.
+Rehearse the accumulated migration chain only as part of a separately approved release;
+do not downgrade application code over independent agreements/receipts.
+
+### INR verified-source system provenance (0041; not activated)
+
+`schemes.0041_inr_system_receipts` makes only the INR principal receipt's human actor
+nullable and restricts this shape to a captured-webhook source labelled
+`system:razorpay-capture`. Existing owner receipts are unchanged. It does not enable
+INR collection or configured plans; retain `CONFIGURED_PLANS_ENABLED=False` during
+builder development. Rehearse on a disposable database and inspect `migrate --plan`
+before any separately approved release. Reversal is refused while system receipts
+exist: preserve financial history and use compatible forward recovery, never assign
+a fictional human actor to make a downgrade succeed. The verified-source hooks do not
+complete callback/API recovery, collection, eligibility or final builder acceptance.
+
 ### Independent agreement storage (0040; not activated)
 
 `schemes.0040_independent_agreement_storage` preserves legacy accounts as storage

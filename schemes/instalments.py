@@ -1,7 +1,7 @@
 """Approved monthly schedule foundation. No payment or eligibility mutation.
 
-Periods are denomination-independent; only the currently supported metal policy can
-create them. Payment attribution and outage mutations use explicit separate services.
+Periods are denomination-independent. Structural schedule/attribution support does
+not activate schema-2 enrolment or payments. Outage mutations use separate services.
 Do not treat paid_at (local confirmation time) as proof of provider capture time.
 """
 from dataclasses import dataclass
@@ -116,12 +116,21 @@ def expected_account_windows(account):
     validate_agreement_configuration(account)
     if not account.configuration_snapshot_id:
         raise ValidationError("Existing agreements must not acquire new instalment obligations.")
+    if account.agreement_schema_version == 2:
+        from .agreement_contracts import resolve_independent_agreement_schedule
+        if not has_monthly_instalments(account):
+            raise ValidationError("Optional payment ceilings must not create required instalment periods.")
+        return resolve_independent_agreement_schedule(
+            configuration_id=account.configuration_snapshot_id, start_date=account.start_date,
+            selected_amount=account.fixed_amount_snapshot, metal_grade_id=account.metal_grade_id).windows
     return build_instalment_windows(configuration=account.configuration_snapshot,
         start_date=account.start_date, agreed_months=account.agreed_months, amount=account.fixed_amount_snapshot)
 
 
 def compensation_window(account, number):
     """V1 amendment allowance: three months, SEPARATE from ordinary extensions."""
+    if account.agreement_schema_version == 2:
+        raise ValidationError("Independent agreement outage compensation is not yet integrated.")
     base = expected_account_windows(account)
     if type(number) is not int or not 1 <= number <= 3:
         raise ValidationError("An agreement permits at most three outage-compensation months.")
@@ -138,6 +147,10 @@ def compensation_window(account, number):
 def effective_account_windows(account):
     """Original schedule plus individually acknowledged, append-only amendments."""
     base = expected_account_windows(account)
+    if account.agreement_schema_version == 2:
+        if account.outage_resolutions.exists():
+            raise ValidationError("Independent agreement outage resolutions require review.")
+        return base
     amendments = list(account.outage_resolutions.filter(outcome="COMPENSATE").select_related(
         "hold", "period", "compensation_period").order_by("compensation_number"))
     for number, amendment in enumerate(amendments, 1):
@@ -145,6 +158,15 @@ def effective_account_windows(account):
             raise ValidationError("Outage compensation sequence requires review.")
         amendment.full_clean()
     return base + tuple(compensation_window(account, amendment.compensation_number) for amendment in amendments)
+
+
+def required_instalment_count(account):
+    """Read the validated frozen count, never infer schema-2 count from duration."""
+    from .plan_configuration import validate_agreement_configuration
+    validate_agreement_configuration(account)
+    if not has_monthly_instalments(account):
+        raise ValidationError("This agreement has no required instalment count.")
+    return account.required_count_snapshot if account.agreement_schema_version == 2 else account.agreed_months
 
 
 def validate_real_instalment_channel(contribution):
@@ -179,7 +201,11 @@ def prepare_instalment_periods(*, account_id, actor, reason):
         ):
             raise ValidationError("The recorded schedule requires review; no periods were changed.")
         return existing
-    # Validated complete snapshot; bulk insertion is atomic and bounded by contract duration.
+    if account.agreement_schema_version == 2 and (
+        account.status != "ACTIVE" or account.contributions.exists()
+    ):
+        raise ValidationError("Record the independent schedule at enrolment, before any contributions; no backfill is allowed.")
+    # Validated complete snapshot; insertion is atomic and bounded by the frozen policy.
     return SchemeInstalmentPeriod.objects.bulk_create([
         SchemeInstalmentPeriod(scheme_account=account, number=window.number,
             starts_on=window.starts_on, ends_before=window.ends_before, amount=window.amount,

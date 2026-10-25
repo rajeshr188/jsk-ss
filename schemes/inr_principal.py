@@ -1,10 +1,12 @@
 """Source-linked INR principal bookkeeping, not payment verification or a refund API.
 
-Not wired into public workflows until schema-2 enrolment/payment/settlement is complete.
+Verified-source hooks exist; collection/activation stays gated until the complete
+schema-2 payment, eligibility and settlement workflows are accepted.
 Every mutation locks the agreement before its source, matching the payment lock order.
 """
 from dataclasses import dataclass
 from decimal import Decimal
+import uuid
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
@@ -12,20 +14,38 @@ from django.db import transaction
 from .closures import _actor, _key, _matching, _text
 from .inr_selectors import validate_inr_contract, validate_principal_receipt, validate_principal_correction
 from .models import (Contribution, InrPrincipalReceipt, InrPrincipalCorrection,
-                     InStoreCashContributionReversal, SchemeAccount)
+                     InStoreCashContributionReversal, InStoreCashReceipt, PaymentWebhookEvent, SchemeAccount)
 
 
-def _locked_source(contribution_id, actor):
+def _source(contribution_id):
     account_id = Contribution.objects.values_list("scheme_account_id", flat=True).get(pk=contribution_id)
     account = SchemeAccount.objects.select_for_update().get(pk=account_id)
-    actor, owner = _actor(actor, account)
-    if not owner:
-        raise ValidationError("Only an active owner may record INR principal evidence.")
     validate_inr_contract(account)
     source = Contribution.objects.select_for_update().get(pk=contribution_id)
     if source.scheme_account_id != account.pk:
         raise ValidationError("The source agreement changed; inspect it again.")
+    return account, source
+
+
+def _locked_source(contribution_id, actor):
+    account, source = _source(contribution_id)
+    actor, owner = _actor(actor, account)
+    if not owner:
+        raise ValidationError("Only an active owner may record INR principal evidence.")
     return account, source, actor
+
+
+def _require_new_principal(account, source):
+    if source.status != "PAID":
+        raise ValidationError("Record principal only after verified payment, not pending or reversed payment.")
+    if account.inr_settlements.exists():
+        raise ValidationError("Late funds after an agreed disposition require separate reconciliation; retain their source evidence.")
+    if account.status not in ("ACTIVE", "REDEMPTION_ELIGIBLE", "CLOSURE_PENDING"):
+        raise ValidationError("Late funds on a closed agreement require explicit settlement review.")
+
+
+def _source_key(kind, pk):
+    return uuid.uuid5(uuid.NAMESPACE_URL, f"jsk:inr:{kind}:{pk}")
 
 
 @transaction.atomic
@@ -45,15 +65,75 @@ def record_inr_principal(*, contribution_id, actor, reason, idempotency_key,
         return existing
     if InrPrincipalReceipt.objects.filter(contribution=source).exists():
         raise ValidationError("This contribution already has principal evidence; use its original submission identifier.")
-    if source.status != "PAID":
-        raise ValidationError("Record principal only after verified payment, not pending or reversed payment.")
-    if account.inr_settlements.exists():
-        raise ValidationError("Late funds after an agreed disposition require separate reconciliation; retain their source evidence.")
-    if account.status not in ("ACTIVE", "REDEMPTION_ELIGIBLE", "CLOSURE_PENDING"):
-        raise ValidationError("Late funds on a closed agreement require explicit settlement review.")
+    _require_new_principal(account, source)
     receipt = InrPrincipalReceipt(**facts, actor_label=_actor_label(actor), idempotency_key=key)
     receipt.save()
     return receipt
+
+
+@transaction.atomic
+def record_captured_inr_principal(*, event_id, body):
+    """Internal post-verification consumer; never authenticate or collect funds here."""
+    from .payment_evidence import validated_capture_payload
+    from .instalments import has_monthly_instalments
+    from .instalment_payments import attribute_razorpay_instalment
+    target = PaymentWebhookEvent.objects.get(pk=event_id)
+    if target.contribution_id is None:
+        raise ValidationError("A captured contribution is required.")
+    account, source = _source(target.contribution_id)
+    event = PaymentWebhookEvent.objects.select_for_update().get(pk=event_id)
+    validated_capture_payload(event=event, contribution=source, body=body)
+    receipt = InrPrincipalReceipt.objects.filter(contribution=source).first()
+    if receipt:
+        # A duplicate event can add timing evidence, never another principal credit.
+        validate_principal_receipt(receipt)
+    else:
+        _require_new_principal(account, source)
+        receipt = InrPrincipalReceipt.objects.create(scheme_account=account,
+            configuration_id=account.configuration_snapshot_id, contribution=source,
+            amount=source.amount, source_reference=source.gateway_reference,
+            verified_at=source.paid_at, webhook_event=event, recorded_by=None,
+            actor_label="system:razorpay-capture", reason="Verified live captured-payment principal.",
+            idempotency_key=_source_key("principal", source.pk))
+    if has_monthly_instalments(account):
+        attribute_razorpay_instalment(event_id=event.pk, body=body)
+    return receipt
+
+
+@transaction.atomic
+def record_cash_inr_principal(*, cash_receipt_id):
+    """Link an actual owner receipt and its schedule evidence in one transaction."""
+    from .instalments import has_monthly_instalments
+    from .instalment_payments import attribute_cash_instalment
+    cash = InStoreCashReceipt.objects.get(pk=cash_receipt_id)
+    account, source = _source(cash.contribution_id)
+    receipt = InrPrincipalReceipt.objects.filter(contribution=source).first()
+    if receipt:
+        validate_principal_receipt(receipt)
+        if receipt.cash_receipt_id != cash.pk:
+            raise ValidationError("The original principal source must be retained.")
+    else:
+        receipt = record_inr_principal(contribution_id=source.pk, actor=cash.received_by,
+            reason="Verified showroom cash principal.", idempotency_key=_source_key("principal", source.pk),
+            cash_receipt_id=cash.pk)
+    if has_monthly_instalments(account):
+        attribute_cash_instalment(contribution_id=source.pk)
+    return receipt
+
+
+@transaction.atomic
+def record_cash_inr_correction(*, cash_reversal_id, actor):
+    """Mirror a completed full cash-entry correction, never a refund instruction."""
+    from .instalments import has_monthly_instalments
+    from .instalment_payments import reverse_cash_instalment
+    reversal = InStoreCashContributionReversal.objects.get(pk=cash_reversal_id)
+    account, source, actor = _locked_source(reversal.contribution_id, actor)
+    receipt = InrPrincipalReceipt.objects.get(contribution=source)
+    correction = record_inr_cash_correction(receipt_id=receipt.pk, cash_reversal_id=reversal.pk,
+        actor=actor, reason=reversal.reason, idempotency_key=_source_key("cash-correction", reversal.pk))
+    if has_monthly_instalments(account):
+        reverse_cash_instalment(contribution_id=source.pk)
+    return correction
 
 
 @transaction.atomic

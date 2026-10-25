@@ -20,6 +20,10 @@ def validate_principal_receipt(receipt):
     account = receipt.scheme_account
     contribution = receipt.contribution
     validate_inr_contract(account)
+    if receipt.recorded_by_id is None and (
+        receipt.actor_label != "system:razorpay-capture" or receipt.cash_receipt_id or not receipt.webhook_event_id
+    ):
+        raise ValidationError("System principal must retain its captured-webhook source and actor label.")
     if (receipt.configuration_id != account.configuration_snapshot_id
             or contribution.scheme_account_id != account.pk
             or receipt.amount != contribution.amount

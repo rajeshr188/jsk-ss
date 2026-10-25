@@ -37,7 +37,12 @@ Use the existing FW-PLAN items; do not create further numbered micro-milestones.
   - Local manual disposition foundation (0038): one immutable full-principal proposal, source-specific manual refund legs, jewellery handover/top-up evidence, remaining liability and completion-linked closure. Supports optional/calendar/no-benefit synthetic INR contracts only; actual fulfilment is owner-attested evidence, not an API-verified refund. No public workflow is enabled.
   - Local correction foundation (0039): void an entirely unfulfilled proposal, or record all fulfilled portions returned in full atomically. Retain original proposals/fulfilments/completions; restore only principal, keep the agreement contained and require fresh customer authorization/signed preview for a replacement full disposition. Partial/staged returns are not enabled. Verification is tracked in STATUS.md/TESTING.md.
   - Schema-2 contract integration: read-only resolution retains independent duration/count, amount choices, exact metal or INR denomination and benefit terms. Migration 0040 adds versioned account storage with explicit eligibility/count snapshots, nullable duration/date for count-only/anytime, and database shape constraints. Frozen-contract diagnostics use the pinned revision, not the current offer. Legacy rows keep their old dates/minimum duration and receive no invented count. This is not enrolment/payment activation; schedule, eligibility and benefit execution remain unfinished.
-  - Still required: complete schema-2 agreement snapshots/enrolment, payment and receipt integration, count/anytime/benefit settlement integration, statements/privacy-disposition integration, owner/customer presentation and acceptance. No owner-facing INR offer is enabled by these foundations.
+  - Independent schedule prerequisite: read-only construction uses required count, not duration, for original periods; preserves calendar/anniversary anchors; adds only approved ordinary replacements; and creates no obligations for optional ceilings. Benefit-only schedules do not extend principal maturity.
+  - Internal schema-2 schedule/attribution integration (25 October): complete periods can be persisted atomically/idempotently before any contribution. Verified receipt/capture attribution uses the frozen required count independently of duration, with existing timing, review and correction evidence. This is tested on synthetic contracts, not accepted-enrolment or payment-entry activation. Owner investigation/outage amendment services explicitly remain closed for schema 2 until integrated; eligibility and benefit execution remain pending.
+  - Gated owner-enrolment orchestration (25 October): the existing enrolment service now resolves schema-2 denomination and frozen independent terms from the locked offer, retains its publication revision, and commits account/schedule/audit together. Duration overrides are refused; count-only/anytime retain null maturity. Tests simulate only operational readiness to exercise the future path; real readiness/publication/model gates still reject schema 2. This is not public request/form/email integration or activation.
+  - Verified-source INR integration (0041, 25 October): atomic captured-event principal/instalment hooks with constrained system provenance, owner cash-receipt hooks and full source-correction integration. Duplicate captures cannot create duplicate principal; timing review never discards verified funds. Collection and new-payment eligibility remain gated; callback-only principal and INR API recovery are not enabled.
+  - Gated independent payment entry (0042, 25 October): server-date/amount/count/duration checks, optional calendar/anniversary cash ceilings, rate-free INR global payment controls, atomic actual cash receipt/principal/audit and required-monthly online creation/resumption. The contribution frequency retains ONCE_PER_PERIOD rather than pretending it is a calendar month. Existing metal flows remain separate. Optional online creation is explicitly blocked pending durable order-intent/recovery support; callback/API recovery remains pending. This is not collection activation or full policy-family acceptance.
+  - Still required: optional online durable creation/recovery, callback/API-recovery reconciliation, collection/benefit-schedule acceptance, enrolment request/form/email integration, count/anytime/benefit settlement integration, statements/privacy-disposition integration, owner/customer presentation and acceptance. No owner-facing INR offer is enabled by these foundations.
 - [ ] Implement count-only and anytime eligibility and the agreed additional amount/schedule combinations, including consistent UI, reminders and full closure.
 - [ ] Implement only defined benefit policies, including qualification, actual fulfilment and append-only corrections/reversal.
 - [ ] Complete verified provider-history disposition needed for closure; ambiguous payments must not be cleared by an owner checkbox.
@@ -62,10 +67,10 @@ customer-fixed amounts and duration AND count. `build_instalment_windows` still 
 Changing a form choice alone is therefore insufficient.
 
 Typed compatibility checks and backward-compatible schema-2 persistence now exist.
-The 0037 principal foundation now records only verified real-source receipts and
-evidenced full cash-entry corrections. It is not wired into payment flows; synthetic
-future contracts exercise the services in disposable tests while actual enrolment
-remains blocked. The 0038 manual proposal/fulfilment foundation now retains pending
+The 0037 principal foundation records only verified real-source receipts and
+evidenced full cash-entry corrections. The 0041 integration adds atomic captured-event
+and cash/correction hooks; synthetic future contracts exercise these paths in disposable
+tests while actual collection and enrolment remain blocked. The 0038 manual proposal/fulfilment foundation retains pending
 refund liability until recorded evidence permits one full closure, without vouchers
 or automated provider refunds. The 0039 correction foundation now distinguishes an
 unfulfilled void from evidenced full physical return; neither reopens contributions.
@@ -73,9 +78,17 @@ Replacement full dispositions retain their retired predecessors and require fres
 Read-only independent contract resolution and stronger INR snapshot validation are now
 shared. Versioned account storage now supports independent duration/count and no-duration
 agreements (0040); structural validation still neither grants eligibility nor enables
-account creation. The accumulated foundation is checkpointed at `84115be`. Rerun the
-combined regression suite after the historical-model test correction, then complete
+account creation. The accumulated foundation is checkpointed at `84115be`; its combined
+179-test regression rerun passed after the historical-model test correction. Complete
 gated schema-2 enrolment/payment integration and follow the eligibility/benefit checklist.
+Inspection identified legacy count-from-duration schedule construction as an enrolment
+prerequisite. Schema-2 schedule construction, atomic persistence and internal payment
+attribution now exist independently. Gated owner-enrolment orchestration uses those
+terms/periods atomically. Verified-source INR receipt integration now exists, and new-payment
+validation, actual cash entry and required-monthly online creation are integrated behind
+readiness gates. Optional online durable order creation/recovery, callback/API-recovery
+reconciliation and public request/presentation integration remain pending, without
+opening publication or removing readiness gates.
 Required regression examples: January 30 short month; final qualifying payment before
 period end (count-only versus both); missed payment with retained versus lost unearned
 benefit; optional monthly ceiling without any debt; invoice below/equal/above full INR

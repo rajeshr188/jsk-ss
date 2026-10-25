@@ -52,6 +52,8 @@ def record_instalment_review(*, period_id, actor, action, reason, evidence_refer
         raise ValidationError("A valid review submission identifier is required.") from None
     period = SchemeInstalmentPeriod.objects.get(pk=period_id)
     account = SchemeAccount.objects.select_for_update().get(pk=period.scheme_account_id)
+    if account.agreement_schema_version == 2:
+        raise ValidationError("Independent agreement owner review is not yet integrated.")
     if account.status == "CANCELLED":
         raise ValidationError("A cancelled unused agreement cannot acquire new instalment reviews.")
     validated_instalment_periods(account)

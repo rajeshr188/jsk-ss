@@ -1,5 +1,119 @@
 # Testing
 
+## Independent payment admission/entry (0042, 25 October 2026)
+
+`test_independent_payment_entry` exercises actual cash preview/record/correction and
+required-monthly online creation/resumption/capture on synthetic accepted contracts.
+Only runtime readiness is simulated; normal paths must reject schema 2 with either
+release-flag value. Cover both denominations, exact units, amount/step bounds, frozen
+snapshot drift, no backdating, duration/count separation, optional short-calendar and
+original-anniversary boundaries, explicit anytime continued payments, server receipt
+time versus insertion time, principal failure rollback, duplicate submissions and
+concurrent optional ceiling enforcement. INR must respect global/kill/schedule controls
+without needing a metal rate. Mock/Test sources and optional independent online
+creation remain rejected. Run existing payment operations, contribution, instalment,
+INR source integration, cash and Razorpay regressions. Focused runs exposed a stale
+related-object assertion and an invalid February fixture date; both were corrected.
+All 249 combined entry/principal/settlement/correction/instalment/Razorpay/cash/
+operations/contribution/storage tests passed (553.975s). The additional missing
+principal/allocation admission test passed separately (1 test, 2.254s), covering
+all 19 new entry tests across these runs. Django checks, migration consistency and
+whitespace checks passed. Disposable localhost PostgreSQL only; no normal database
+migration, CI claim or release activation. Optional online and callback/API-recovery
+acceptance remain explicitly outstanding.
+
+## INR verified-source integration (0041, 25 October 2026)
+
+`test_inr_payment_integration` covers processed Live source-to-principal integration,
+optional/required schedules, truthful system provenance, same/different-event retries,
+concurrent consumers, body/amount/mode mismatch rejection, late timing with retained
+principal, and atomic rollback of confirmation/credit/qualification. Cash tests cover
+owner receipt linkage, full source-correction service integration and rollback of
+source/instalment reversal if the principal correction fails. Database constraints
+reject unattributed cash and wrong system labels. Empty 0041 reversal/reapply works;
+retained system principal refuses reversal before schema changes. Test-only clocks
+must include bound model defaults, not only timezone.now calls. Runtime collection
+gates remain closed and INR API recovery explicitly requires review.
+
+Verification: after correcting the focused fixture clock mismatch, the initial
+68-test regression passed (146.676s). A fresh combined run passed all 200 tests
+(368.179s), including the 12 integration tests, principal, settlement/correction,
+independent ledger, legacy instalment, order recovery, Razorpay and in-store cash
+modules. Suites overlap; disposable localhost PostgreSQL databases were destroyed.
+Django checks, migration consistency and whitespace checks passed. No normal local
+or production migration was performed; this is not normal CI or activation acceptance.
+
+## Gated independent owner enrolment (25 October 2026)
+
+`test_independent_enrolment` exercises the existing owner service with synthetic
+published offers and test-only simulation of the two operational-readiness lookups.
+Do not patch model save/validation, publication evidence, release gate, transaction,
+snapshot or audit services in successful-path tests. Separately verify unpatched
+runtime rejects every new denomination with either release-flag value. The matrix
+covers exact metal/INR, calendar/anniversary, count-only and independent count/duration,
+optional anytime, fixed benefit-only schedule without extension, null maturity,
+variable preference, and no principal/allocation/payment created by enrolment.
+Assert current digest/configuration/boolean consent, owner authority, exact duration,
+denomination, pinned publication revision, and rollback of account plus periods on
+schedule/audit failure. Existing legacy/configured/publication/governance and customer
+enrolment-request regressions must remain green. No production gate is patched.
+
+Verification: after correcting the synthetic publication fixture to respect the
+active-offer/revision database constraint, all ten focused tests passed (5.403s).
+All 98 combined independent enrolment, configured agreements, publication, governance,
+enrolment requests, independent storage and ledger tests then passed (132.966s).
+These suites overlap; disposable localhost PostgreSQL databases were destroyed.
+Django checks, migration consistency and whitespace checks passed; no new migration
+is needed. This is not public schema-2 form/request/email
+or payment-flow acceptance, and is not normal CI or permission to activate.
+
+## Independent schedule persistence and attribution (25 October 2026)
+
+`test_independent_instalment_ledger` uses synthetic version-2 accounts and upstream
+source records only in disposable local PostgreSQL. Check metal/INR and both period
+bases, count separate from duration, exact idempotent schedule reads, concurrent
+initial preparation, atomic insertion rollback, pinned-revision independence, owner
+permissions, no optional obligations/backfill/non-active initial preparation, and
+refusal of corrupted schedules. Verify source-bound cash and processed-live-capture
+attribution, delayed receipt versus original evidenced payment time, deadline review,
+duplicate delivery, body-integrity refusal, Test exclusion, full cash correction and
+replacement count capacity. Attribution must not create principal/allocations or
+change agreement status. Normal payment/model gates remain closed with either flag
+value. All owner-review actions and outage-resolution outcomes refuse schema 2 without
+adding decisions or periods; those services require separate integration.
+
+Run alongside independent schedule/storage/terms, existing payment/integration,
+calendar/anniversary schedule, owner-review and outage suites. The initial 85-test
+run passed 84 with one invalid February-date test fixture. After correction and the
+additional owner-review/outage guard test, all 86 schedule/storage/terms/payment
+regressions passed in 192.320s. The separate 42-test ledger/review/outage suite passed
+in 116.031s. These suites overlap; do not add them as distinct tests. Both unique
+disposable localhost PostgreSQL databases were destroyed. Django checks, migration
+consistency and whitespace checks passed. No new
+migration is needed. This is not full normal CI or owner-builder activation acceptance.
+
+## Independent schedule construction (24 October 2026)
+
+`test_independent_agreement_schedules` covers the metal/INR, plan-fixed/customer-fixed,
+calendar/anniversary and count/both matrix using ten required periods independently
+of an eighteen-month duration. Assert exactly three ordinary replacements, no
+replacements for duration-only benefit schedules, and no obligations for optional
+ceilings. Check the short first calendar month, India-midnight half-open boundaries,
+leap-year original-anchor clamping, finite fixed amounts, invalid dates/overflow and
+the required-count bound plus its three replacements (32770 total periods fit the
+existing PositiveInteger period-number field). The resolver is read-only and its result is
+immutable; account/period/payment/principal/allocation/audit records remain unchanged.
+Existing runtime gates reject schema 2 with either release-flag value. The shared
+timestamp mapping does not itself verify a provider timestamp or qualify an instalment.
+
+Verification: all 17 schedule/contract tests passed in 7.442s on a unique disposable
+localhost PostgreSQL database, subsequently destroyed. Separate combined checkpoint
+regression passed all 179 tests in 708.807s, including the corrected historical reminder
+migration test; its disposable database was destroyed. The suites overlap, so do not
+add their counts as unique tests. Django checks, migration consistency and whitespace
+checks passed. No normal database migration or real
+payment occurred; this is not full builder or normal CI acceptance.
+
 ## Independent agreement storage (0040, 24 October 2026)
 
 `schemes.tests.test_independent_agreement_storage` exercises synthetic persisted
@@ -10,8 +124,9 @@ immutability and SQL shape constraints. Legacy rows must retain all values throu
 migration roundtrip and reject short/null durations and new frequency semantics.
 Forward migration refuses unversioned schema-2 rows; rollback refuses even an unused
 independent agreement or a forged legacy storage tag on a schema-2 policy.
-Explicitly test that payment availability, model writes, old monthly evaluation and
-schedule construction stay blocked for v2, even with the release flag enabled.
+Explicitly test that payment availability, model writes and old monthly evaluation
+stay blocked for v2, even with the release flag enabled. As of 25 October, expected
+required schedules can be read; optional ceilings still refuse required-period construction.
 
 Existing INR migration tests now assert the earlier 0040 chain refusal and also invoke
 the original 0037/0038/0039 preservation guards directly, retaining their coverage.

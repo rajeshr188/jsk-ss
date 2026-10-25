@@ -33,6 +33,8 @@ def resolve_instalment_outage(*, hold_id, actor, outcome, reason, evidence_refer
         raise ValidationError("A valid resolution submission identifier is required.") from None
     hold = InstalmentReview.objects.select_related("period").get(pk=hold_id)
     account = SchemeAccount.objects.select_for_update().get(pk=hold.period.scheme_account_id)
+    if account.agreement_schema_version == 2:
+        raise ValidationError("Independent agreement outage resolution is not yet integrated.")
     if account.status == "CANCELLED":
         raise ValidationError("A cancelled unused agreement cannot receive outage amendments.")
     facts = dict(hold_id=hold.pk, scheme_account_id=account.pk, period_id=hold.period_id,

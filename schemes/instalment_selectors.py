@@ -166,6 +166,9 @@ def validated_instalment_periods(account):
 
 def current_instalment_period(account, *, exclude_contribution_id=None):
     """New-payment guard; caller holds the agreement lock when mutating."""
+    from .plan_policies import require_current_payment_workflow
+    require_current_payment_workflow(account)
+    from .instalments import required_instalment_count
     from .closure_selectors import require_no_accepted_closure
     require_no_accepted_closure(account)
     require_no_outage_hold(account)
@@ -176,7 +179,7 @@ def current_instalment_period(account, *, exclude_contribution_id=None):
     if account.status != "ACTIVE" or period is None:
         raise ValidationError("No current payable monthly period exists for this active agreement.")
     claims = InstalmentReservation.objects.filter(period__scheme_account=account)
-    if claims.filter(state="QUALIFIED").count() >= account.agreed_months:
+    if claims.filter(state="QUALIFIED").count() >= required_instalment_count(account):
         raise ValidationError("The required instalment count is already complete.")
     if exclude_contribution_id is not None:
         claims = claims.exclude(contribution_id=exclude_contribution_id)

@@ -63,7 +63,17 @@ refund liability and original-source evidence. This does not complete the INR it
 without reopening contributions or enabling partial/staged returns. Read-only schema-2
 term resolution and frozen INR snapshot checks are now shared. Migration 0040 adds
 versioned independent agreement storage, including null duration/date for count-only
-and anytime while preserving legacy terms. Payment/enrolment integration, eligibility/benefit
+and anytime while preserving legacy terms. Independent read-only schedule construction
+now separates original required count from duration and ordinary replacements; optional
+ceilings create no obligations. Internal persisted schedules and verified-payment
+attribution now support independent required counts under synthetic-contract tests;
+this does not activate enrolment/payment entry or owner review/outage amendments.
+Gated owner-enrolment orchestration now freezes the accepted independent revision
+and account/schedule/audit atomically, with runtime readiness still closed.
+Verified-capture and cash/correction principal hooks now exist (0041 system provenance),
+and gated independent admission/actual cash/required-monthly online entry now exists
+(0042 frequency choice). Optional online durable order/recovery, callback/API recovery,
+collection and benefit-schedule acceptance, request/form/email integration, eligibility/benefit
 variants, statements/privacy handling and acceptance remain open in MVP_PLAN.md.
 Replacement refunds exceeding a source's cumulative provider-refund capacity remain
 held: customer returns do not replenish the provider limit. A separate approved-route

@@ -6,7 +6,6 @@ Provider order intent uses a separate durable boundary before network I/O.
 All writers serialize on the agreement before contribution/reservation locks.
 """
 import hashlib
-import json
 import uuid
 from datetime import datetime, time, timedelta, timezone as datetime_timezone
 
@@ -14,7 +13,7 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 
-from .instalments import AGREEMENT_TIMEZONE, validate_real_instalment_channel, window_for_instant
+from .instalments import AGREEMENT_TIMEZONE, required_instalment_count, validate_real_instalment_channel, window_for_instant
 from .instalment_selectors import validated_instalment_periods, require_no_outage_hold, require_no_capture_exception
 from .models import (
     AuditEvent, Contribution, InStoreCashContributionReversal, InStoreCashReceipt,
@@ -55,9 +54,13 @@ def reserve_instalment(*, contribution_id):
     existing = InstalmentReservation.objects.filter(contribution=contribution).first()
     if existing:
         last = existing.decisions.order_by("-sequence").first()
-        if last is None or last.state != existing.state:
+        if (last is None or last.state != existing.state
+                or existing.period_id not in {period.pk for period in periods}
+                or existing.period.amount != contribution.amount):
             raise ValidationError('The existing reservation needs integrity review.')
         return existing
+    from .closure_selectors import require_no_accepted_closure
+    require_no_accepted_closure(account)
     require_no_outage_hold(account)
     require_no_capture_exception(account)
     if contribution.payment_gateway == 'razorpay' and (
@@ -76,7 +79,7 @@ def reserve_instalment(*, contribution_id):
     claims = InstalmentReservation.objects.filter(period__scheme_account=account)
     if claims.filter(state__in=["RESERVED", "ORDERING", "AWAITING", "REVIEW", "RELEASED_REVIEW"]).exists():
         raise ValidationError('Resolve the existing reservation or timing review before another payment.')
-    if claims.filter(state="QUALIFIED").count() >= account.agreed_months:
+    if claims.filter(state="QUALIFIED").count() >= required_instalment_count(account):
         raise ValidationError('The required payment count is already complete.')
     if claims.filter(period=period).exclude(state__in=["REVERSED", "RELEASED"]).exists():
         raise ValidationError("This monthly period already has a payment claim.")
@@ -171,21 +174,8 @@ def attribute_razorpay_instalment(*, event_id, body):
     contribution, reservation = _evidence_target(event.contribution_id)
     if contribution.payment_channel != "RAZORPAY" or contribution.status not in ("PAID", "PAID_UNALLOCATED"):
         raise ValidationError('The payment must already be independently verified.')
-    try:
-        payload = json.loads(body)
-        payment = payload['payload']['payment']["entity"]
-        valid = (payload["event"] == 'payment.captured'
-            and isinstance(payment["id"], str) and bool(payment["id"])
-            and isinstance(payment["order_id"], str) and bool(payment["order_id"])
-            and payment["id"] == contribution.gateway_reference == event.gateway_reference
-            and payment["order_id"] == contribution.gateway_order_id == event.gateway_order_id
-            and payment['status'] == 'captured' and payment['captured'] is True
-            and payment["currency"] == "INR" and type(payment['amount']) is int
-            and payment['amount'] == contribution.amount * 100)
-    except (KeyError, TypeError, ValueError):
-        valid = False
-    if not valid:
-        raise ValidationError('Capture payload and verified contribution do not match.')
+    from .payment_evidence import validated_capture_payload
+    payload, payment = validated_capture_payload(event=event, contribution=contribution, body=body)
     existing = reservation.decisions.filter(webhook_event=event).first()
     if existing:
         return existing

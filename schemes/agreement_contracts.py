@@ -2,7 +2,7 @@
 
 The pinned configuration supplies independent policy dimensions. Customer choices
 resolve only the exact denomination and amount; they cannot rewrite that policy.
-No account, payment, rate lock, schedule or benefit is created here.
+No account, payment, rate lock, persisted schedule or benefit is created here.
 """
 from dataclasses import dataclass
 from datetime import date
@@ -124,3 +124,47 @@ def validate_independent_account_terms(account):
             or (terms.metal_grade_code is not None and terms.metal_grade_code not in grades)):
         raise ValidationError("The recorded revision and accumulation denomination must agree.")
     return terms
+
+
+@dataclass(frozen=True, kw_only=True)
+class IndependentAgreementSchedule:
+    """Prospective obligations, not persisted periods or payment qualifications."""
+    terms: IndependentAgreementTerms
+    windows: tuple
+
+
+def resolve_independent_agreement_schedule(*, configuration_id, start_date,
+                                           selected_amount=None, metal_grade_id=None):
+    """Prepare schema-2 enrolment's schedule without granting runtime permission.
+
+    Required count, not duration, determines the original monthly windows. Ordinary
+    replacement windows exist only for EXTEND_THEN_REVIEW. Outage compensation needs
+    separate acknowledged evidence and is never pre-created here. Optional payment
+    ceilings are not obligations and therefore produce no required windows.
+
+    A window end is not an eligibility date: COUNT qualification needs verified
+    payment evidence, while DURATION_AND_COUNT also needs its duration/period rules.
+    This function creates no account, period, payment, benefit or financial record.
+    """
+    from .instalments import InstalmentWindow, period_boundary
+
+    terms = resolve_independent_agreement_terms(configuration_id=configuration_id,
+        start_date=start_date, selected_amount=selected_amount, metal_grade_id=metal_grade_id)
+    policy = terms.policy
+    if policy.obligation == "OPTIONAL":
+        return IndependentAgreementSchedule(terms=terms, windows=())
+    required_count = policy.required_count
+    replacements = policy.extension_periods if policy.missed_outcome == "EXTEND_THEN_REVIEW" else 0
+    total = required_count + replacements
+    # The policy bounds required count at 32767; period.number is PositiveInteger,
+    # so its separate ordinary replacement periods fit without truncating the count.
+    try:
+        period_boundary(policy, terms.start_date, total)
+        windows = tuple(InstalmentWindow(number=index + 1,
+            starts_on=period_boundary(policy, terms.start_date, index),
+            ends_before=period_boundary(policy, terms.start_date, index + 1),
+            amount=terms.fixed_amount, extension=index >= required_count)
+            for index in range(total))
+    except (ValueError, OverflowError):
+        raise ValidationError("The proposed schedule exceeds supported calendar dates.") from None
+    return IndependentAgreementSchedule(terms=terms, windows=windows)

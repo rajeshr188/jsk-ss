@@ -33,6 +33,9 @@ def plan_terms(plan):
     if plan.configuration_id:
         from .plan_configuration import configuration_evidence
         terms["configuration"] = configuration_evidence(plan.configuration)
+        if plan.configuration.policy_schema_version == 2:
+            from .plan_policies import policy_from_configuration
+            terms["eligibility_basis"] = policy_from_configuration(plan.configuration).eligibility
     return terms
 
 

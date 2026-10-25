@@ -76,12 +76,16 @@ class IndependentAgreementStorageTests(TestCase):
                     with override_settings(CONFIGURED_PLANS_ENABLED=True):
                         for action in (account.full_clean, account.save,
                                        lambda: require_current_payment_workflow(account),
-                                       lambda: expected_account_windows(account),
                                        lambda: get_monthly_eligibility(account),
                                        lambda: account.effective_status):
                             with self.assertRaises(ValidationError):
                                 action()
                         self.assertFalse(get_customer_payment_availability(account).allowed)
+                    if account.required_count_snapshot:
+                        self.assertGreaterEqual(len(expected_account_windows(account)), account.required_count_snapshot)
+                    else:
+                        with self.assertRaises(ValidationError):
+                            expected_account_windows(account)
         output = StringIO()
         call_command("check_plan_agreements", stdout=output)
         self.assertIn("revision_term_mismatches=0", output.getvalue())
@@ -135,6 +139,8 @@ class IndependentAgreementMigrationTests(TransactionTestCase):
         self.assertEqual(SchemeAccount.objects.values().get(pk=account.pk), before)
 
     def test_reverse_refuses_to_discard_even_unused_independent_agreement(self):
+        leaves = MigrationExecutor(connection).loader.graph.leaf_nodes()
+        self.addCleanup(lambda: MigrationExecutor(connection).migrate(leaves))
         account = stored_future(make_owner(), make_customer(), required_values())
         with self.assertRaisesMessage(RuntimeError, "Cannot reverse 0040"):
             MigrationExecutor(connection).migrate([("schemes", "0039_inr_settlement_corrections")])

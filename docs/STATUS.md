@@ -2,6 +2,144 @@
 
 ## Current milestone
 
+**26 October 2026 - scoped local financial checkpoint before optional order recovery.**
+Reviewed the accumulated schema-2 schedule/enrolment, verified-source principal and
+payment-entry changes through 0042, including their fail-closed boundaries and prior
+test evidence. Checkpoint includes the associated tests and canonical documentation;
+the separate dropdown UI edits and nested worktrees are excluded. Whitespace checks
+passed. This is a local development checkpoint, not exhaustive independent review,
+normal CI, production acceptance or activation. Continue optional online durable
+order creation/recovery next; callback/API principal reconciliation follows.
+
+**25 October 2026 - independent payment admission and cash entry integrated locally (0042).**
+Schema-2 new-payment selectors validate the pinned contract, server date, independent
+count/duration, fixed/bounded amounts and optional calendar/anniversary ceilings.
+Cash ceilings use the server receipt instant, not insertion time; optional ceilings
+create no obligations. Closed/contained agreements and unreconciled principal/capture
+evidence are blocked. INR now observes kill switch, global pause and business hours
+without requiring a metal grade/rate; metal-specific pauses remain metal-specific.
+Actual cash services support principal-only receipt/credit/audit transactions, retain
+full-entry correction semantics, and preserve existing exact-grade allocation behavior.
+Required-monthly online creation uses existing durable order intent/resumption and
+verified-capture integration. Migration 0042 adds the independent contribution-frequency
+choice without rewriting rows or changing legacy monthly constraints.
+
+Runtime/publication gates remain closed with either release-flag value. Optional
+schema-2 online order creation is explicitly blocked until equivalent durable
+lost-response recovery exists. Callback/API-recovery principal evidence, eligibility,
+benefit workflows and complete matrix acceptance are still pending. Tests simulate
+only readiness on synthetic contracts; no production bypass is added. Focused runs
+exposed two fixture issues (a stale related object and a nonexistent February date),
+corrected without weakening financial rules. All 249 combined payment-entry, principal,
+settlement/correction, instalment, Razorpay, cash, operations, contribution and storage
+tests passed (553.975s); the additional missing-principal/allocation entry-guard test
+passed separately (1 test, 2.254s). Django checks, migration consistency and whitespace
+checks passed. Tests used disposable localhost PostgreSQL databases. Full normal CI
+and production acceptance remain outstanding. No normal database migration,
+environment edit, commit, push or deployment. Next: optional online durable order
+creation/recovery, then callback/API-recovery principal evidence and collection acceptance.
+
+**25 October 2026 - verified-source INR principal integration implemented locally (0041).**
+Captured-webhook processing now has an atomic INR source-confirmation/event/principal/
+monthly-attribution branch. Exact processed Live payload identity, hash, INR amount
+and capture state are rechecked using shared evidence validation. Duplicate/concurrent
+consumers retain one receipt. Principal and instalment timing remain separate: a late
+capture retains principal while timing is REVIEW. Cash source hooks record owner-linked
+principal and full corrections; correction failure rolls back the source reversal too.
+Migration 0041 permits a null human actor only for an explicitly labelled captured-
+webhook receipt, with a database shape constraint and reversal refusal once such
+receipts exist. No fabricated owner/service user or automated refund is introduced.
+
+Collection remains closed: the existing INR readiness and cash-entry restrictions
+are unchanged. Generic callback success alone creates no principal. INR API recovery
+is explicitly manual-review-only until its principal evidence is integrated. These
+hooks are tested with synthetic contracts/sources and test-only readiness simulation,
+not production acceptance. Initial focused run exposed a reversed-at test default
+using the real clock against a frozen test clock; corrected the fixture, not the rule.
+Verification: the initial 68-test regression passed (146.676s), followed by a fresh
+200-test combined principal, settlement/correction, instalment, Razorpay/recovery and
+cash regression (368.179s), including all 12 new integration tests. Suites overlap;
+disposable localhost PostgreSQL databases were destroyed. Django checks, migration
+consistency and whitespace checks passed. No normal database migration, deployment,
+environment changes, commit or push. Next: complete new-payment validation/creation,
+callback/API-recovery reconciliation and collection acceptance; then eligibility,
+benefits and the complete builder acceptance matrix.
+
+**25 October 2026 - gated independent owner-enrolment orchestration implemented locally.**
+The existing owner enrolment service now handles the independent contract behind its
+unchanged readiness/publication/model gates. It reloads and locks the offer, resolves
+exact metal versus INR purchase credit, requires current revision/configuration and
+explicit customer-term confirmation, rejects duration overrides, and persists account,
+required schedule and audit in one transaction. Count-only/anytime retain null duration
+and date; variable preferences remain variable. The audit retains the independent
+count/eligibility basis. New schema-2 revision evidence no longer labels count/anytime
+as calendar eligibility; schema-1 evidence and legacy enrolment behavior are preserved.
+
+This is service orchestration, not activation: schema-2 actual enrolment is still
+rejected with either release-flag value. Tests simulate only readiness to exercise
+the future path while leaving publication, consent, models, constraints and writes
+real. Initial tests exposed a synthetic-offer fixture that set active before its
+required publication revision; fixed the fixture to set both together. All ten focused
+tests passed (5.403s), followed by all 98 combined enrolment/publication/governance,
+request, independent storage and ledger tests (132.966s). The suites overlap. Unique
+disposable localhost PostgreSQL databases were destroyed. Django checks, migration
+consistency and whitespace checks passed; full normal CI remains outstanding.
+No migration, normal database/environment edit, commit, push or
+deployment. Source-payment/INR receipt integration comes next; public request/forms,
+emails, independent eligibility, benefits and full-closure acceptance remain open.
+
+**25 October 2026 - independent schedule persistence/attribution integrated locally.**
+Schema-2 required schedules now reuse the account-locked, atomic, idempotent period
+service. The full frozen snapshot is validated; optional ceilings create no debt,
+partial/corrupt schedules are never repaired, and initial persistence refuses any
+existing contribution or non-active account. Required count, not duration, limits
+internal reservation capacity for both exact-metal and INR contracts. Existing
+cash/capture evidence, conservative timing, duplicate handling and append-only cash
+correction semantics are retained. Attribution does not create principal/metal,
+grant eligibility, award benefits or change agreement status.
+
+Shared readers do not open unsupported workflows: schema-2 normal/model enrolment,
+payment entry, monthly eligibility, owner investigation and outage resolution remain
+explicitly closed. Synthetic account/source fixtures exercise the internal boundary
+only. Accepted-enrolment orchestration, real source-payment/INR receipt integration,
+independent eligibility, benefits and full-closure acceptance remain unfinished.
+The single coherent builder release contract is unchanged.
+
+Verification: after correcting one invalid February-date test fixture and adding
+explicit owner-review/outage refusal coverage, all 86 schedule/storage/terms/payment
+regression tests passed (192.320s). The separate 42-test ledger/review/outage run also
+passed (116.031s). Suites overlap; these are not 128 distinct tests or full normal CI.
+Both disposable localhost PostgreSQL databases were destroyed. Django checks,
+migration consistency and whitespace checks passed. No new migration, ordinary local
+or production database changes, environment edits, commit, push or deployment.
+Next: complete accepted-enrolment and source-payment integration without opening the
+release gate, then independent eligibility/benefit/closure acceptance.
+
+**24 October 2026 - independent schedule construction prepared locally.**
+Inspection of the next enrolment/payment boundary found that the schema-1 schedule
+builder still derives original period count from duration. Added a separate read-only
+schema-2 schedule resolver using the shared frozen-term resolver: required count
+determines original periods; duration remains a separate floor. Both metal and INR,
+plan-fixed/customer-fixed amounts and calendar/anniversary periods are covered.
+Count-completion policies add only the three agreed ordinary replacement periods;
+benefit-only duration schedules add none. Optional ceilings create no required periods.
+India-local half-open attribution reuses the existing timestamp helper. No schedule
+end is asserted to be eligibility, and no outage compensation or benefit is invented.
+Calendar overflow fails before schedule creation. The 25 October follow-up corrects
+the earlier period-number assumption: the field is PositiveInteger, so 32767 required
+periods plus three replacements fit without imposing a false small-integer limit.
+
+The 17 focused schedule/contract tests passed in 7.442s on disposable local PostgreSQL.
+The checkpoint's combined regression rerun passed all 179 tests in 708.807s, including
+the corrected historical reminder migration test. Django checks, migration consistency
+and whitespace checks passed; disposable databases were destroyed. These suites overlap
+and are not full normal CI or builder acceptance. This is an
+enrolment prerequisite, not completed enrolment/payment integration: no account/period
+rows are written and schema-2 publication/model/payment gates remain closed. No new
+migration, environment change, commit, push or deployment. Next: integrate independent
+schedule persistence and payment attribution atomically with accepted enrolment; retain
+the single builder activation boundary until eligibility/benefit/closure acceptance.
+
 **24 October 2026 - accumulated builder checkpoint created locally.**
 Commit `84115be` on `agent/plan-agreement-governance` records the accumulated work
 through 0040. No push, PR, normal database migration or deployment was performed.

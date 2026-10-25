@@ -616,6 +616,17 @@ preferences do not become fixed, and no old agreement receives a configuration i
   A full erroneous cash-entry correction needs its matching completed source reversal;
   it is not a refund. Neither source status changes nor unresolved source drift silently
   erase the retained principal/correction history. Reconcile discrepancies explicitly.
+  Verified-capture integration records principal and instalment evidence in the source
+  transaction. A principal receipt may use system:razorpay-capture with no human actor
+  only for a captured-webhook source; cash and manual recording retain a human actor.
+  Recheck the original processed Live body hash, payment/order IDs, exact INR amount
+  and captured state. This consumer does not authenticate signatures; authenticated
+  webhook processing remains upstream. A new event for the same payment adds no second
+  principal receipt. Late/missing timing may require instalment review without losing
+  verified principal. Full cash-entry correction atomically retains source reversal,
+  principal correction and instalment reversal. Callback-only confirmation is not
+  sufficient principal evidence. INR API-recovery stays manual-review-only until its
+  source integration is complete. Normal collection/readiness gates remain closed.
   One immutable INR disposition assigns all recorded principal to an evidenced invoice
   and/or original-source refund legs. Invoice application consumes earliest verified
   uncorrected receipts first (verification time, then receipt ID); remaining amounts
@@ -678,6 +689,23 @@ preferences do not become fixed, and no old agreement receives a configuration i
   ONCE_PER_PERIOD records the independent policy ceiling; it is never silently stored
   as FLEXIBLE. Model/service activation guards stay closed until integrated workflows
   exist. Migration does not infer consent or convert pre-existing schema-2 agreements.
+  Prospective schema-2 required windows use required_count, never duration_months.
+  Calendar windows start on enrolment day then month boundaries; anniversary windows
+  always clamp from the original start anchor. Ordinary replacement windows apply
+  only to EXTEND_THEN_REVIEW. Benefit-only duration schedules have no replacements;
+  optional monthly ceilings have no required windows. Constructing these windows is
+  not persisted obligation, verified attribution, eligibility or benefit qualification.
+  Outage compensation remains separate acknowledged evidence, never automatic padding.
+  Internal schema-2 schedule persistence validates the entire frozen contract, locks
+  the account, inserts all periods atomically and returns an exact existing schedule
+  unchanged. It refuses optional obligations, partial/corrupt repairs and first-time
+  creation after any contribution or on a non-active account. Reservation capacity
+  uses the frozen required count, not duration. Receipt/capture attribution retains
+  source, timing, idempotency and reversal evidence; it creates neither INR principal
+  nor metal allocation and does not grant redemption or benefit qualification.
+  Public/model enrolment, payment entry, owner instalment review and outage resolution
+  remain blocked for schema 2 pending their explicit integration. Tests use synthetic
+  stored contracts; they are not permission to bypass model/service activation guards.
   The 0037 INR principal services are internal foundations, not activated payment or
   settlement workflows. Existing contribution confirmation, redemption and closure
   entry points reject the future denomination; no legacy cash workflow is reused.
@@ -688,6 +716,30 @@ preferences do not become fixed, and no old agreement receives a configuration i
   New configured enrolment requires current offer confirmation and freezes that revision;
   monthly instalment periods are created in the same transaction. No contribution,
   rate lock, allocation or eligibility credit is created by publication/enrolment.
+  Schema-2 owner-enrolment orchestration uses the locked offer's exact published
+  revision and typed configuration, not the legacy plan duration/frequency columns.
+  INR purchase credit rejects a metal grade or legacy CASH denomination. Required
+  count and duration remain distinct; an explicit duration must match the policy,
+  and count-only/anytime have no invented date. Owner authority, exact current offer
+  digest/configuration and explicit boolean confirmation remain required. Account,
+  full required schedule and enrolment audit commit or roll back together. This
+  internal integration does not remove operational publication/model gates; future
+  request/form/email and payment integrations still require their own acceptance.
+  Schema-2 new-payment admission uses the frozen independent contract and server time,
+  never a caller-selected historical month. Accounting month is not an anniversary
+  window. Required counts remain independent of duration; optional ceilings create no
+  obligations. Cash uses its server receipt instant within half-open India-local
+  calendar/original-anniversary windows. Active payment claims and uncorrected paid
+  sources consume the ceiling; a full evidenced correction retains history and frees
+  only that payment opportunity. Cash mutations serialize on the agreement.
+  INR payment initiation respects the environment kill switch, global pause and
+  business-hour schedule without requiring a metal rate or obeying a gold-only pause.
+  Actual INR cash source, receipt, principal, schedule evidence and audit commit
+  atomically; no grams or legacy cash bonus are created. Required-monthly online
+  initiation retains durable order intent and cannot blindly retry a lost response.
+  Optional independent online initiation remains blocked until equivalent recovery
+  exists. All these paths still require operational readiness; no activation follows
+  from service integration or the ONCE_PER_PERIOD contribution field choice.
 
 P4 supersedes the earlier unconditional preparation-only gate with the above default-off
 controlled gate. Earlier B/P checkpoints describe their implementation boundaries, not

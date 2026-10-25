@@ -99,8 +99,8 @@ class InStoreCashContributionPreview:
     scheme_account: SchemeAccount
     amount: Decimal
     contribution_period: date
-    scheme_rate: SchemeRate
-    quantity: Decimal
+    scheme_rate: SchemeRate | None
+    quantity: Decimal | None
 
 
 @dataclass(frozen=True)
@@ -159,13 +159,14 @@ def record_audit_event(*, action, reason, actor=None, **targets):
     return event
 
 
-def ensure_payment_initiation_allowed(*, metal_grade, at=None, lock=False):
-    if metal_grade is None:
+def ensure_payment_initiation_allowed(*, metal_grade, at=None, lock=False, savings_mode=None):
+    if metal_grade is None and savings_mode != SchemeAccount.SavingsMode.INR_CREDIT:
         return
     availability = get_payment_availability(
         metal_grade=metal_grade,
         at=at,
         lock=lock,
+        savings_mode=savings_mode,
     )
     if not availability.allowed:
         raise ValidationError(availability.message)
@@ -372,9 +373,21 @@ def enroll_customer(
     customer = Customer.objects.select_for_update().get(pk=customer.pk)
     if get_user_model().objects.filter(pk=customer.user_id, privacy_erased_at__isnull=False).exists():
         raise ValidationError("A removed customer login cannot receive new enrolments.")
+    # Resolve denomination from the locked offer, not caller-cached configuration.
+    from .models import SchemePlan
+    from .plan_governance import ensure_plan_revision
+
+    plan = SchemePlan.objects.select_for_update().get(pk=plan.pk)
+    independent = bool(plan.configuration_id and plan.configuration.policy_schema_version == 2)
+    inr_credit = independent and plan.configuration.accumulation == "INR_PURCHASE_CREDIT"
+    if inr_credit:
+        if metal_grade is not None or savings_mode not in (None, SchemeAccount.SavingsMode.INR_CREDIT):
+            raise ValidationError("INR purchase credit cannot carry a metal grade or another denomination.")
+        savings_mode = SchemeAccount.SavingsMode.INR_CREDIT
     if metal_grade is not None:
+        metal_grade = MetalGrade.objects.get(pk=metal_grade.pk)
         savings_mode = metal_grade.metal
-    elif savings_mode != SchemeAccount.SavingsMode.CASH:
+    elif savings_mode != SchemeAccount.SavingsMode.CASH and not inr_credit:
         raise ValidationError(
             {"metal_grade": "Select the exact metal grade for this enrolment."}
         )
@@ -384,17 +397,17 @@ def enroll_customer(
     ):
         raise ValidationError({"savings_mode": CASH_SCHEME_ACTIVITY_UNAVAILABLE})
     # Serialize enrolment with audited offer edits; never use a stale caller instance.
-    from .models import SchemePlan
-    from .plan_governance import ensure_plan_revision
-
-    plan = SchemePlan.objects.select_for_update().get(pk=plan.pk)
     if plan.configuration_id:
         from .plan_publication import require_configured_offer
         from .plan_governance import plan_edit_digest
         require_configured_offer(plan)
         if expected_plan_digest != plan_edit_digest(plan):
             raise ValidationError('The configured offer changed; review it with the customer again.')
-    plan.full_clean()
+    if not independent:
+        plan.full_clean()
+    # Independent policy is authoritative: the legacy plan duration/frequency
+    # columns cannot represent COUNT/ANYTIME. require_configured_offer above still
+    # checks publication, exact revision evidence and operational readiness.
     if not plan.active:
         raise ValidationError({"plan": "Only active plans can accept new enrolments."})
     if metal_grade is not None and not SchemePlanOffering.objects.filter(
@@ -406,22 +419,34 @@ def enroll_customer(
             {"metal_grade": "This metal grade is not offered by the selected plan."}
         )
     start_date = start_date or timezone.localdate()
-    agreed_months = agreed_months or plan.default_months
-    if agreed_months < plan.minimum_months:
-        raise ValidationError(
-            {"agreed_months": "Agreed duration cannot be below the plan minimum."}
-        )
-
     from .plan_configuration import agreement_snapshot_values
     if plan.configuration_id:
         _validate_owner(performed_by)
-        if expected_configuration_id != plan.configuration_id or not selected_amount_confirmed:
+        if expected_configuration_id != plan.configuration_id or selected_amount_confirmed is not True:
             raise ValidationError({"plan": 'Confirm the current configuration and individual amount with the customer.'})
-    snapshots = agreement_snapshot_values(plan=plan, selected_amount=selected_contribution_amount)
-    revision = ensure_plan_revision(
-        plan=plan, actor=performed_by,
-        reason='Current offer recorded at enrolment; individual agreement terms are snapshotted separately.',
-    )
+    if independent:
+        from .agreement_contracts import resolve_independent_agreement_terms
+        terms = resolve_independent_agreement_terms(configuration_id=plan.configuration_id,
+            start_date=start_date, selected_amount=selected_contribution_amount,
+            metal_grade_id=metal_grade.pk if metal_grade else None)
+        if agreed_months is not None and (type(agreed_months) is not int or agreed_months != terms.policy.duration_months):
+            raise ValidationError("The selected duration must match the accepted independent policy; count is not duration.")
+        snapshots = terms.account_snapshots()
+        revision = plan.publication_revision
+    else:
+        agreed_months = agreed_months or plan.default_months
+        if agreed_months < plan.minimum_months:
+            raise ValidationError(
+                {"agreed_months": "Agreed duration cannot be below the plan minimum."}
+            )
+        snapshots = agreement_snapshot_values(plan=plan, selected_amount=selected_contribution_amount)
+        snapshots.update(start_date=start_date, agreed_months=agreed_months,
+            eligible_from=calculate_eligibility_date(start_date=start_date, agreed_months=agreed_months),
+            savings_mode=savings_mode, metal_grade_id=metal_grade.pk if metal_grade else None)
+        revision = ensure_plan_revision(
+            plan=plan, actor=performed_by,
+            reason='Current offer recorded at enrolment; individual agreement terms are snapshotted separately.',
+        )
     account = SchemeAccount(
         scheme_number=_reference("JSK", SchemeAccount, "scheme_number"),
         customer=customer,
@@ -429,14 +454,6 @@ def enroll_customer(
         plan_name_snapshot=plan.name,
         plan_code_snapshot=plan.code,
         plan_revision=revision,
-        start_date=start_date,
-        agreed_months=agreed_months,
-        eligible_from=calculate_eligibility_date(
-            start_date=start_date,
-            agreed_months=agreed_months,
-        ),
-        savings_mode=savings_mode,
-        metal_grade=metal_grade,
         **snapshots,
         cash_bonus_policy_version_snapshot=CASH_BONUS_POLICY_VERSION,
     )
@@ -460,7 +477,10 @@ def enroll_customer(
             "savings_mode": account.savings_mode,
             "metal_grade": account.metal_grade.code if account.metal_grade_id else None,
             "agreed_months": account.agreed_months,
-            "eligible_from": account.eligible_from.isoformat(),
+            "eligible_from": account.eligible_from.isoformat() if account.eligible_from else None,
+            **({"agreement_schema_version": account.agreement_schema_version,
+                "eligibility_policy": account.eligibility_policy_snapshot,
+                "required_count": account.required_count_snapshot} if independent else {}),
         },
     )
     return account
@@ -944,6 +964,7 @@ def validate_contribution_allowed(
     *,
     contribution_period=None,
     exclude_contribution_id=None,
+    _server_instant=None,
 ):
     from .plan_policies import require_current_payment_workflow
     require_current_payment_workflow(scheme_account)
@@ -959,6 +980,12 @@ def validate_contribution_allowed(
         and not cash_scheme_activity_is_enabled()
     ):
         raise ValidationError(CASH_SCHEME_ACTIVITY_UNAVAILABLE)
+    if scheme_account.agreement_schema_version == 2:
+        from .independent_payment_selectors import validate_independent_payment_window
+        period = validate_independent_payment_window(scheme_account,
+            contribution_date=contribution_date, contribution_period=contribution_period,
+            exclude_contribution_id=exclude_contribution_id, at=_server_instant)
+        return validate_contribution_amount(scheme_account, amount), period
     if monthly:
         today = timezone.now().astimezone(AGREEMENT_TIMEZONE).date()
         if contribution_date is not None and contribution_date != today:
@@ -1036,9 +1063,15 @@ def initiate_contribution(
     contribution_date=None,
 ):
     locked_account = SchemeAccount.objects.select_for_update().get(pk=scheme_account.pk)
+    if locked_account.agreement_schema_version == 2:
+        if payment_gateway != "razorpay" or gateway_mode != GatewayMode.LIVE:
+            raise ValidationError("Independent online contributions require live Razorpay.")
+        if not has_monthly_instalments(locked_account):
+            raise ValidationError("Optional independent online order recovery is not integrated yet.")
     ensure_payment_initiation_allowed(
         metal_grade=locked_account.metal_grade,
         lock=True,
+        savings_mode=locked_account.savings_mode,
     )
     normalized_amount, period = validate_contribution_allowed(
         locked_account, amount, contribution_date
@@ -1076,15 +1109,19 @@ def initiate_contribution(
 def preview_in_store_cash_contribution(*, scheme_account, amount):
     if not in_store_cash_contributions_are_enabled():
         raise ValidationError("In-store cash contribution recording is disabled.")
+    scheme_account = SchemeAccount.objects.get(pk=scheme_account.pk)
     if scheme_account.savings_mode not in {
         SchemeAccount.SavingsMode.GOLD,
         SchemeAccount.SavingsMode.SILVER,
+        SchemeAccount.SavingsMode.INR_CREDIT,
     }:
         raise ValidationError(
             "In-store cash can be recorded only against a gold or silver scheme."
         )
-    ensure_payment_initiation_allowed(metal_grade=scheme_account.metal_grade)
+    ensure_payment_initiation_allowed(metal_grade=scheme_account.metal_grade, savings_mode=scheme_account.savings_mode)
     normalized_amount, period = validate_contribution_allowed(scheme_account, amount)
+    if scheme_account.savings_mode == SchemeAccount.SavingsMode.INR_CREDIT:
+        return InStoreCashContributionPreview(scheme_account, normalized_amount, period, None, None)
     scheme_rate = get_current_scheme_rate(scheme_account.metal_grade)
     if scheme_rate is None:
         raise ValidationError(
@@ -1162,12 +1199,14 @@ def record_in_store_cash_contribution(
         if account.savings_mode not in {
             SchemeAccount.SavingsMode.GOLD,
             SchemeAccount.SavingsMode.SILVER,
+            SchemeAccount.SavingsMode.INR_CREDIT,
         }:
             raise ValidationError(
                 "In-store cash can be recorded only against a gold or silver scheme."
             )
-        MetalGrade.objects.select_for_update().get(pk=account.metal_grade_id)
-        ensure_payment_initiation_allowed(metal_grade=account.metal_grade, lock=True)
+        if account.metal_grade_id:
+            MetalGrade.objects.select_for_update().get(pk=account.metal_grade_id)
+        ensure_payment_initiation_allowed(metal_grade=account.metal_grade, lock=True, savings_mode=account.savings_mode)
         if Contribution.objects.filter(
             scheme_account=account,
             status=Contribution.Status.PENDING,
@@ -1177,9 +1216,10 @@ def record_in_store_cash_contribution(
                 "This scheme has a pending Razorpay order. Reconcile or complete it "
                 "before recording in-store cash."
             )
-        normalized_amount, period = validate_contribution_allowed(account, amount)
         now = timezone.now()
-        scheme_rate = (
+        normalized_amount, period = validate_contribution_allowed(account, amount, _server_instant=now)
+        inr_credit = account.savings_mode == SchemeAccount.SavingsMode.INR_CREDIT
+        scheme_rate = None if inr_credit else (
             SchemeRate.objects.select_for_update()
             .filter(
                 metal_grade=account.metal_grade,
@@ -1188,9 +1228,9 @@ def record_in_store_cash_contribution(
             .order_by("-effective_from", "-published_at", "-pk")
             .first()
         )
-        if scheme_rate is None:
+        if not inr_credit and scheme_rate is None:
             raise ValidationError("The current Scheme Rate has not been published.")
-        if scheme_rate.pk != expected_scheme_rate_id:
+        if (scheme_rate.pk if scheme_rate else None) != expected_scheme_rate_id:
             raise ValidationError(
                 "The Scheme Rate changed after preview. Review the updated rate "
                 "before confirming cash receipt."
@@ -1206,12 +1246,12 @@ def record_in_store_cash_contribution(
             amount=normalized_amount,
             contribution_period=period,
             frequency_rule_snapshot=account.frequency_rule_snapshot,
-            status=Contribution.Status.PAID_UNALLOCATED,
+            status=Contribution.Status.PAID if inr_credit else Contribution.Status.PAID_UNALLOCATED,
             payment_gateway="in_store_cash",
             payment_channel=PaymentChannel.IN_STORE_CASH,
             gateway_reference=receipt_reference,
             scheme_rate=scheme_rate,
-            rate_locked_at=now,
+            rate_locked_at=None if inr_credit else now,
             paid_at=now,
         )
         contribution.full_clean()
@@ -1231,6 +1271,9 @@ def record_in_store_cash_contribution(
         if has_monthly_instalments(account):
             reserve_instalment(contribution_id=contribution.pk)
             attribute_cash_instalment(contribution_id=contribution.pk)
+        if account.savings_mode == SchemeAccount.SavingsMode.INR_CREDIT:
+            from .inr_principal import record_cash_inr_principal
+            record_cash_inr_principal(cash_receipt_id=receipt.pk)
         record_audit_event(
             action=AuditEvent.Action.IN_STORE_CASH_RECEIPT,
             actor=received_by,
@@ -1242,8 +1285,8 @@ def record_in_store_cash_contribution(
                 "receipt_reference": receipt_reference,
                 "paper_receipt_number": paper_receipt_number,
                 "amount_inr": str(normalized_amount),
-                "metal_grade": account.metal_grade.code,
-                "rate_per_gram": str(scheme_rate.rate_per_gram),
+                "metal_grade": account.metal_grade.code if account.metal_grade_id else None,
+                "rate_per_gram": str(scheme_rate.rate_per_gram) if scheme_rate else None,
             },
         )
 
@@ -1591,6 +1634,12 @@ def retry_metal_allocation(*, contribution, performed_by=None, reason=""):
 def _apply_contribution_entitlement(contribution):
     from .plan_policies import require_current_payment_workflow
     require_current_payment_workflow(contribution.scheme_account)
+    if (contribution.scheme_account.savings_mode == SchemeAccount.SavingsMode.INR_CREDIT
+        and contribution.payment_channel == PaymentChannel.IN_STORE_CASH):
+        from .inr_principal import record_cash_inr_principal
+        receipt = InStoreCashReceipt.objects.get(contribution=contribution)
+        record_cash_inr_principal(cash_receipt_id=receipt.pk)
+        return contribution
     if contribution.scheme_account.savings_mode in {
         SchemeAccount.SavingsMode.GOLD,
         SchemeAccount.SavingsMode.SILVER,
@@ -1621,7 +1670,7 @@ def initiate_razorpay_contribution(
             raise ValidationError('Monthly real instalments require the live payment mode.')
         with transaction.atomic():
             account = SchemeAccount.objects.select_for_update().get(pk=scheme_account.pk)
-            ensure_payment_initiation_allowed(metal_grade=account.metal_grade, lock=True)
+            ensure_payment_initiation_allowed(metal_grade=account.metal_grade, lock=True, savings_mode=account.savings_mode)
             contribution = resumable_instalment_contribution(account)
             normalized_amount, _ = validate_contribution_allowed(account, amount, contribution_date,
                 exclude_contribution_id=contribution.pk if contribution else None)
@@ -1687,8 +1736,12 @@ def initiate_razorpay_contribution(
 
 def _create_razorpay_order(*, contribution, gateway):
     from .closure_selectors import require_no_accepted_closure
+    from .plan_policies import require_current_payment_workflow
+    require_current_payment_workflow(contribution.scheme_account)
     order_error = None
     monthly = has_monthly_instalments(contribution.scheme_account)
+    if contribution.scheme_account.agreement_schema_version == 2 and not monthly:
+        raise ValidationError("Optional independent online order recovery is not integrated yet.")
     order_started = begin_instalment_order_request(contribution_id=contribution.pk) if monthly else False
     with transaction.atomic():
         SchemeAccount.objects.select_for_update().get(pk=contribution.scheme_account_id)
@@ -1698,6 +1751,7 @@ def _create_razorpay_order(*, contribution, gateway):
             .get(pk=contribution.pk)
         )
         require_no_accepted_closure(contribution.scheme_account)
+        require_current_payment_workflow(contribution.scheme_account)
         if monthly:
             if order_started:
                 current_instalment_period(contribution.scheme_account, exclude_contribution_id=contribution.pk)
@@ -1712,6 +1766,7 @@ def _create_razorpay_order(*, contribution, gateway):
         ensure_payment_initiation_allowed(
             metal_grade=contribution.scheme_account.metal_grade,
             lock=True,
+            savings_mode=contribution.scheme_account.savings_mode,
         )
         if not contribution.scheme_rate_id:
             _lock_current_scheme_rate(contribution)
@@ -1859,10 +1914,11 @@ def _extract_webhook_payment(payload):
 
 def _complete_captured_webhook(*, contribution, event, payment_id, body):
     monthly = has_monthly_instalments(contribution.scheme_account)
+    inr_credit = contribution.scheme_account.savings_mode == SchemeAccount.SavingsMode.INR_CREDIT
     # Preserve legacy confirmation/retry transaction boundaries. Monthly funds and
     # qualification evidence must commit together under the agreement lock.
-    with transaction.atomic() if monthly else nullcontext():
-        if monthly:
+    with transaction.atomic() if monthly or inr_credit else nullcontext():
+        if monthly or inr_credit:
             SchemeAccount.objects.select_for_update().get(pk=contribution.scheme_account_id)
         contribution = confirm_contribution(contribution_id=contribution.pk,
             payment_gateway='razorpay', gateway_reference=payment_id, verified=True)
@@ -1874,7 +1930,10 @@ def _complete_captured_webhook(*, contribution, event, payment_id, body):
             event.error = ""
             event.processed_at = timezone.now()
             event.save(update_fields=["status", 'contribution', 'failure_code', 'error', 'processed_at'])
-            if monthly:
+            if inr_credit:
+                from .inr_principal import record_captured_inr_principal
+                record_captured_inr_principal(event_id=event.pk, body=body)
+            elif monthly:
                 attribute_razorpay_instalment(event_id=event.pk, body=body)
             _record_webhook_attempt(event=event, source=WebhookProcessingAttempt.Source.PROVIDER_DELIVERY,
                 outcome=WebhookProcessingAttempt.Outcome.PROCESSED,
@@ -1906,6 +1965,12 @@ def process_razorpay_webhook(*, gateway_mode, event_id, body, payload):
         PaymentWebhookEvent.Status.REVIEW_REQUIRED,
     }:
         if (event.status == PaymentWebhookEvent.Status.PROCESSED and event.contribution_id
+            and event.contribution.scheme_account.savings_mode == SchemeAccount.SavingsMode.INR_CREDIT):
+            from .plan_policies import require_current_payment_workflow
+            from .inr_principal import record_captured_inr_principal
+            require_current_payment_workflow(event.contribution.scheme_account)
+            record_captured_inr_principal(event_id=event.pk, body=body)
+        elif (event.status == PaymentWebhookEvent.Status.PROCESSED and event.contribution_id
             and has_monthly_instalments(event.contribution.scheme_account)):
             # A provider retry after API recovery can supply the original signed timing.
             attribute_razorpay_instalment(event_id=event.pk, body=body)
@@ -2060,6 +2125,9 @@ def _classify_webhook_recovery(*, event, contribution, inspection):
             "MANUAL_REVIEW_REQUIRED",
             "No mode-matched local contribution exists for this Razorpay order.",
         )
+    if contribution.scheme_account.savings_mode == SchemeAccount.SavingsMode.INR_CREDIT:
+        return ("MANUAL_REVIEW_REQUIRED",
+            "INR API-recovery principal evidence is not integrated; retain the source for reconciliation.")
     expected_amount = int(contribution.amount * 100)
     if (
         inspection.payment_id != event.gateway_reference
@@ -2582,6 +2650,9 @@ def reverse_in_store_cash_contribution(
     locked.save(update_fields=["status"])
     if has_monthly_instalments(account):
         reverse_cash_instalment(contribution_id=locked.pk)
+    if account.savings_mode == SchemeAccount.SavingsMode.INR_CREDIT:
+        from .inr_principal import record_cash_inr_correction
+        record_cash_inr_correction(cash_reversal_id=reversal.pk, actor=processed_by)
     record_audit_event(
         action=AuditEvent.Action.IN_STORE_CASH_REVERSAL,
         actor=processed_by,

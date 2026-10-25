@@ -56,8 +56,9 @@ def _next_scheduled_opening(*, windows, local_now):
     return None
 
 
-def get_payment_availability(*, metal_grade, at=None, lock=False):
-    if metal_grade is None or metal_grade.metal not in MetalGrade.Metal.values:
+def get_payment_availability(*, metal_grade, at=None, lock=False, savings_mode=None):
+    inr_credit = savings_mode == "INR_CREDIT" and metal_grade is None
+    if not inr_credit and (metal_grade is None or metal_grade.metal not in MetalGrade.Metal.values):
         return _blocked(
             code="UNSUPPORTED_SAVINGS_MODE",
             default_message="Online contributions are unavailable for this savings mode.",
@@ -88,7 +89,7 @@ def get_payment_availability(*, metal_grade, at=None, lock=False):
             default_message="Online contributions are temporarily paused.",
             control=control,
         )
-    metal = metal_grade.metal
+    metal = metal_grade.metal if metal_grade else None
     if metal == MetalGrade.Metal.GOLD and control.gold_pause:
         return _blocked(
             code="MANUAL_METAL_PAUSE",
@@ -131,6 +132,9 @@ def get_payment_availability(*, metal_grade, at=None, lock=False):
                 ),
             )
 
+    # INR principal has no grade/rate; global pause, kill switch and hours still apply.
+    if inr_credit:
+        return OPEN
     scheme_rate = get_current_scheme_rate(metal_grade, at=current_time)
     if scheme_rate is None:
         return _blocked(
