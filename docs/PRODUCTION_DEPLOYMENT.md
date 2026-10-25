@@ -7,6 +7,24 @@ explicit Razorpay Test/Live modes, and manually published Scheme Rate build. Dev
 
 ## Production-readiness boundary
 
+### Optional online request evidence (0043; not activated)
+
+`schemes.0043_optional_payment_order_evidence` adds immutable optional order intents
+and response/recovery bindings. It backfills no historical contribution and changes
+no balance, rate or deadline. Keep configured-plan readiness gates closed; this is
+not an instruction to deploy or activate incomplete schema-2 families.
+
+Include `python manage.py check_optional_payment_orders` in the eventual exact-image
+rehearsal. It is read-only and makes no provider calls. `status=review` identifies
+unbound requests/unstarted pending attempts, not permission to delete them or blindly
+retry. Integrity errors fail the command. Owner recovery requires exact authenticated
+provider correlation; recovered orders are not resumable checkout. No optional owner
+recovery UI or automatic recovery task is supplied by this development increment.
+
+Reverse migration refuses once any optional request exists, including an uncertain
+request without a bound order. Preserve evidence and use compatible forward recovery.
+Never run an older application over these requests to retry provider creation.
+
 ### Independent contribution frequency (0042; not activated)
 
 `schemes.0042_contribution_independent_frequency` adds the `ONCE_PER_PERIOD` model

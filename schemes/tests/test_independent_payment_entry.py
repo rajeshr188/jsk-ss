@@ -250,12 +250,13 @@ class IndependentPaymentEntryTests(TestCase):
                          (Decimal("1000"), Decimal("500"), Decimal("500")))
         self.assertFalse(summary.needs_review)
 
-    def test_test_mock_and_optional_online_still_rejected_before_provider(self):
+    def test_test_mock_still_rejected_before_provider(self):
         account = self.account(True)
         for name, mode in (("mock", ""), ("razorpay", "test")):
             with self.assertRaises(ValidationError):
                 initiate_contribution(scheme_account=account, amount=Decimal("500"), payment_gateway=name, gateway_mode=mode)
         gateway = self.gateway()
+        gateway.mode = "test"
         with self.assertRaises(ValidationError):
             initiate_razorpay_contribution(scheme_account=self.account(), amount=Decimal("500"), gateway=gateway)
         gateway.create_order.assert_not_called()

@@ -737,9 +737,24 @@ preferences do not become fixed, and no old agreement receives a configuration i
   Actual INR cash source, receipt, principal, schedule evidence and audit commit
   atomically; no grams or legacy cash bonus are created. Required-monthly online
   initiation retains durable order intent and cannot blindly retry a lost response.
-  Optional independent online initiation remains blocked until equivalent recovery
-  exists. All these paths still require operational readiness; no activation follows
-  from service integration or the ONCE_PER_PERIOD contribution field choice.
+  Optional schema-2 online initiation uses separate immutable request/binding records,
+  never artificial instalment obligations. Commit the UUID/amount/rate/deadline intent
+  before provider I/O. A lost, invalid or locally unrecorded response blocks retries
+  and cash; elapsed time or FAILED alone cannot release it. At most one outstanding
+  optional checkout is admitted per agreement, including flexible plans. A normally
+  bound checkout can resume only with the same amount and unchanged deadline/rate,
+  while current payment/closure/privacy controls permit it. Optional period ceilings
+  and a disallow-post-duration boundary cap the original checkout deadline.
+  Exact recovery requires an active owner and authenticated Live order identity
+  matching request UUID/receipt, contribution, exact INR amount and creation time.
+  Recovery records immutable actor/reason/evidence, retains the old deadline/rate,
+  creates no principal or metal and is reconciliation-only, never resumed checkout.
+  Only existing provider-backed untouched-order abandonment can permit replacement;
+  later captured funds remain in the exception workflow. Pauses/expiry during order I/O
+  retain the returned identity but refuse checkout. No automatic retry, cancellation,
+  refund or absence inference is introduced. All paths still require operational
+  readiness; service integration does not activate configured plans. Callback/API
+  principal reconciliation and complete matrix acceptance remain separate gates.
 
 P4 supersedes the earlier unconditional preparation-only gate with the above default-off
 controlled gate. Earlier B/P checkpoints describe their implementation boundaries, not

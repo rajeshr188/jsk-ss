@@ -2,6 +2,38 @@
 
 ## Current milestone
 
+**26 October 2026 - optional independent online orders integrated locally (0043).**
+Checkpointed the preceding financial work through 0042 as `7be2be1`, excluding the
+separate dropdown UI changes and nested worktrees. Optional schema-2 online payments
+now use immutable, obligation-free request/binding evidence. The intent commits before
+provider I/O; uncertainty prevents new online/cash attempts. Successful unchanged
+checkout can resume, but authenticated exact lost-response recovery is reconciliation-
+only and never creates funds, resets the original deadline/rate, or reopens checkout.
+Optional calendar/anniversary ceilings cap deadlines. Pauses, expiry or containment
+during network I/O retain provider identity but refuse checkout. The existing verified
+untouched-order abandonment remains the only supported replacement route.
+
+Migration 0043 adds two evidence models, no historical backfill. Reversal refuses
+retained requests. `check_optional_payment_orders` distinguishes uncertain/unstarted
+requests from identity-integrity errors without network calls/writes. Recovery remains
+an internal owner-authorized service; UI and full collection acceptance are pending.
+Actual publication/runtime gates remain closed with either release-flag value.
+
+Verification: existing 19 entry tests passed (101.623s). The first optional
+suite exposed test-fixture mistakes (NULL versus empty provider ID and a misspelled
+pause field); corrected these without weakening invariants. Expanded 19-case optional
+suite passed (87.814s). The final 39-test optional/entry rerun, including the additional
+untracked-source guard, passed (186.933s). All 269 combined financial regression tests
+passed (916.401s), including principal/settlement/correction, instalment recovery,
+Razorpay, cash, operations, contribution and storage coverage. Suites overlap; the
+final 39-case rerun covers the additional admission guard. Django checks, migration
+consistency and whitespace checks passed. Disposable localhost PostgreSQL databases
+were destroyed. This is not full normal CI or production acceptance. No normal database
+migration, environment edit, push or deployment. The tested increment is a separate
+local commit; unrelated UI edits/worktrees remain excluded. Next:
+callback/API-recovery principal evidence and collection acceptance, then the remaining
+eligibility/benefit and complete-builder acceptance gates.
+
 **26 October 2026 - scoped local financial checkpoint before optional order recovery.**
 Reviewed the accumulated schema-2 schedule/enrolment, verified-source principal and
 payment-entry changes through 0042, including their fail-closed boundaries and prior

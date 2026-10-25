@@ -1349,6 +1349,86 @@ class InstalmentPaymentDecision(models.Model):
         raise ValidationError("Instalment payment decisions cannot be deleted.")
 
 
+class OptionalPaymentOrderRequest(models.Model):
+    """Durable optional-payment intent, independent of instalment obligations."""
+    contribution = models.OneToOneField("Contribution", on_delete=models.PROTECT, related_name="optional_order_request")
+    request_token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    amount_subunits = models.PositiveBigIntegerField()
+    checkout_expires_at = models.DateTimeField()
+    scheme_rate = models.ForeignKey("SchemeRate", null=True, blank=True, on_delete=models.PROTECT)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.CheckConstraint(condition=models.Q(amount_subunits__gte=100), name="optional_order_amount_positive")]
+
+    def clean(self):
+        super().clean()
+        from .agreement_contracts import validate_independent_account_terms
+        c = self.contribution
+        terms = validate_independent_account_terms(c.scheme_account)
+        if (terms.policy.obligation != "OPTIONAL" or c.payment_gateway != "razorpay"
+                or c.payment_channel != "RAZORPAY" or c.gateway_mode != "live"
+                or self.amount_subunits != c.amount * 100
+                or self.checkout_expires_at != c.checkout_expires_at or self.scheme_rate_id != c.scheme_rate_id):
+            raise ValidationError("Optional order intent must match its frozen Live contribution.")
+
+    def save(self, *args, **kwargs):
+        if self.pk and type(self).objects.filter(pk=self.pk).exists():
+            raise ValidationError("Optional order requests are immutable.")
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Optional order requests cannot be deleted.")
+
+
+class OptionalPaymentOrderBinding(models.Model):
+    """Append-only response/recovery identity; never proof of payment or refund."""
+    request = models.OneToOneField(OptionalPaymentOrderRequest, on_delete=models.PROTECT, related_name="binding")
+    gateway_order_id = models.CharField(max_length=120, unique=True)
+    recovered = models.BooleanField(default=False)
+    provider_created_at = models.DateTimeField(null=True, blank=True)
+    provider_status = models.CharField(max_length=12, blank=True)
+    observed_at = models.DateTimeField(default=timezone.now)
+    actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True)
+    actor_label = models.CharField(max_length=254)
+    reason = models.TextField(max_length=2000)
+    evidence_reference = models.CharField(max_length=254, blank=True)
+    idempotency_key = models.UUIDField(unique=True, default=uuid.uuid4)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(condition=~models.Q(gateway_order_id="") & ~models.Q(actor_label="")
+                & ~models.Q(reason=""), name="optional_binding_evidence"),
+            models.CheckConstraint(condition=(models.Q(recovered=False, actor__isnull=True,
+                actor_label="system:razorpay-order", provider_created_at__isnull=True, provider_status="", evidence_reference="")
+                | (models.Q(recovered=True, actor__isnull=False, provider_created_at__isnull=False,
+                    provider_status__in=["created", "attempted", "paid"], observed_at__gte=models.F("provider_created_at"))
+                   & ~models.Q(evidence_reference=""))), name="optional_binding_source_shape"),
+        ]
+
+    def clean(self):
+        super().clean()
+        from .payments import RAZORPAY_ID_PATTERN
+        intent = self.request
+        intent.full_clean()
+        if (not self.gateway_order_id.startswith("order_") or not RAZORPAY_ID_PATTERN.fullmatch(self.gateway_order_id)
+                or self.gateway_order_id != intent.contribution.gateway_order_id
+                or self.observed_at < intent.created_at
+                or (self.recovered and (self.provider_created_at is None
+                    or self.provider_created_at < intent.created_at.replace(microsecond=0)))):
+            raise ValidationError("Optional order binding must retain its original request and provider identity.")
+
+    def save(self, *args, **kwargs):
+        if self.pk and type(self).objects.filter(pk=self.pk).exists():
+            raise ValidationError("Optional order bindings are immutable.")
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Optional order bindings cannot be deleted.")
+
+
 class InstalmentOrderRecovery(models.Model):
     """Authenticated provider identity recovery, NOT payment verification or release."""
 

@@ -1066,8 +1066,6 @@ def initiate_contribution(
     if locked_account.agreement_schema_version == 2:
         if payment_gateway != "razorpay" or gateway_mode != GatewayMode.LIVE:
             raise ValidationError("Independent online contributions require live Razorpay.")
-        if not has_monthly_instalments(locked_account):
-            raise ValidationError("Optional independent online order recovery is not integrated yet.")
     ensure_payment_initiation_allowed(
         metal_grade=locked_account.metal_grade,
         lock=True,
@@ -1103,6 +1101,11 @@ def initiate_contribution(
         reservation = reserve_instalment(contribution_id=contribution.pk)
         contribution.checkout_expires_at = reservation.expires_at
         contribution.save(update_fields=['checkout_expires_at'])
+    elif locked_account.agreement_schema_version == 2:
+        from .independent_payment_selectors import optional_checkout_deadline
+        contribution.checkout_expires_at = optional_checkout_deadline(locked_account,
+            contribution.checkout_expires_at, at=timezone.now())
+        contribution.save(update_fields=["checkout_expires_at"])
     return contribution
 
 
@@ -1665,6 +1668,22 @@ def initiate_razorpay_contribution(
 
     # Always reload immutable contract evidence rather than trusting a caller's cached object.
     scheme_account = SchemeAccount.objects.get(pk=scheme_account.pk)
+    if scheme_account.agreement_schema_version == 2 and not has_monthly_instalments(scheme_account):
+        from .independent_payment_selectors import resumable_optional_contribution
+        if gateway.mode != GatewayMode.LIVE:
+            raise ValidationError("Independent optional checkout requires Live Razorpay.")
+        with transaction.atomic():
+            account = SchemeAccount.objects.select_for_update().get(pk=scheme_account.pk)
+            contribution = resumable_optional_contribution(account)
+            normalized_amount, _ = validate_contribution_allowed(account, amount, contribution_date,
+                exclude_contribution_id=contribution.pk if contribution else None)
+            if contribution is not None:
+                if contribution.amount != normalized_amount:
+                    raise ValidationError("The pending optional checkout has a different amount; reconcile it first.")
+            else:
+                contribution = initiate_contribution(scheme_account=account, amount=normalized_amount,
+                    payment_gateway=gateway.name, gateway_mode=gateway.mode, contribution_date=contribution_date)
+        return _create_razorpay_order(contribution=contribution, gateway=gateway)
     if has_monthly_instalments(scheme_account):
         if gateway.mode != GatewayMode.LIVE:
             raise ValidationError('Monthly real instalments require the live payment mode.')
@@ -1741,7 +1760,8 @@ def _create_razorpay_order(*, contribution, gateway):
     order_error = None
     monthly = has_monthly_instalments(contribution.scheme_account)
     if contribution.scheme_account.agreement_schema_version == 2 and not monthly:
-        raise ValidationError("Optional independent online order recovery is not integrated yet.")
+        from .optional_orders import create_optional_order
+        return create_optional_order(contribution=contribution, gateway=gateway)
     order_started = begin_instalment_order_request(contribution_id=contribution.pk) if monthly else False
     with transaction.atomic():
         SchemeAccount.objects.select_for_update().get(pk=contribution.scheme_account_id)

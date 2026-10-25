@@ -1,5 +1,28 @@
 # Testing
 
+## Optional independent online order evidence (0043, 26 October 2026)
+
+`test_optional_orders` exercises actual creation/resumption and exact recovery on
+synthetic optional contracts, simulating only runtime readiness and provider I/O.
+Cover INR/exact-grade separation; no artificial periods/reservations; period-capped
+deadlines; fixed amount/rate on resume; concurrent starts; timeout/provider/local-write
+failure; malformed/duplicate order responses; exact UUID/receipt/amount/currency/time
+recovery; owner and Live-mode checks; stale evidence; pause/expiry/containment during
+I/O; reconciliation-only recovered checkout; evidenced abandonment before replacement;
+captured principal idempotency; model/database evidence guards and reverse-migration
+refusal. Outer application transactions must refuse provider I/O before sending an
+order. Diagnostic checks distinguish uncertain/unstarted attempts from integrity errors.
+An untracked FAILED source cannot authorize another payment merely by its status.
+
+The existing 19 entry tests passed (101.623s); after fixture corrections the expanded
+19-case optional suite passed (87.814s). The final 39-test optional/entry suite,
+including the added untracked-source guard, passed (186.933s). All 269 combined
+financial regression tests passed (916.401s). Suites overlap, not 308 unique tests;
+the final 39-case rerun covers the last added admission guard. Django checks,
+migration consistency and whitespace checks passed. Disposable localhost PostgreSQL
+databases were destroyed; no normal database was migrated. Full normal CI,
+owner/customer acceptance and exact-image release rehearsal remain separate gates.
+
 ## Independent payment admission/entry (0042, 25 October 2026)
 
 `test_independent_payment_entry` exercises actual cash preview/record/correction and

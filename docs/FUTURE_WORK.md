@@ -72,9 +72,16 @@ Gated owner-enrolment orchestration now freezes the accepted independent revisio
 and account/schedule/audit atomically, with runtime readiness still closed.
 Verified-capture and cash/correction principal hooks now exist (0041 system provenance),
 and gated independent admission/actual cash/required-monthly online entry now exists
-(0042 frequency choice). Optional online durable order/recovery, callback/API recovery,
+(0042 frequency choice). Optional online durable order/exact identity recovery now
+has a separate gated, obligation-free evidence path (0043); owner recovery-interface
+integration and collection acceptance are still required. Callback/API recovery,
 collection and benefit-schedule acceptance, request/form/email integration, eligibility/benefit
 variants, statements/privacy handling and acceptance remain open in MVP_PLAN.md.
+Optional recovery cannot infer provider absence from a failed lookup. Expired attempts
+without a usable request/order identity remain held; no manual checkbox or blind
+replacement clears them. A future verified never-sent/negative-evidence disposition
+must be explicitly implemented and accepted, alongside the existing held-provider
+closure boundary, before claiming complete attempt-lifecycle acceptance.
 Replacement refunds exceeding a source's cumulative provider-refund capacity remain
 held: customer returns do not replenish the provider limit. A separate approved-route
 reconciliation workflow is needed for those cases; no silent cash substitution.

@@ -194,6 +194,11 @@ class RazorpayPaymentGateway(PaymentGateway):
             intent = durable_order_request(contribution)
             receipt = f"inst_{intent.request_token.hex}"
             notes["instalment_request"] = str(intent.request_token)
+        elif getattr(contribution, "scheme_account", None) is not None and contribution.scheme_account.agreement_schema_version == 2:
+            from .independent_payment_selectors import optional_order_request
+            intent = optional_order_request(contribution)
+            receipt = f"opt_{intent.request_token.hex}"
+            notes["optional_request"] = str(intent.request_token)
         payload = self._request_json(
             "POST",
             "/orders",
@@ -316,6 +321,7 @@ class RazorpayPaymentGateway(PaymentGateway):
             raise PaymentGatewayValidationError("The Razorpay order ID is invalid.")
         order = self._request_json("GET", f"/orders/{order_id}")
         notes = order.get("notes")
+        request_note = "optional_request" if str(order.get("receipt", "")).startswith("opt_") else "instalment_request"
         if (order.get("id") != order_id or order.get("entity") != "order"
             or type(order.get("amount")) is not int or order["amount"] < 100
             or order.get("currency") != "INR" or not isinstance(order.get("status"), str)
@@ -323,10 +329,10 @@ class RazorpayPaymentGateway(PaymentGateway):
             or type(order.get("created_at")) is not int or order["created_at"] <= 0
             or not isinstance(order.get("receipt"), str) or not 1 <= len(order["receipt"]) <= 40
             or not isinstance(notes, dict) or not isinstance(notes.get("contribution_id"), str)
-            or not isinstance(notes.get("instalment_request"), str)):
+            or not isinstance(notes.get(request_note), str)):
             raise PaymentGatewayError("Razorpay returned insufficient or invalid order identity evidence.")
         return PaymentOrderIdentity(order_id=order_id, receipt=order["receipt"],
-            contribution_id=notes["contribution_id"], request_token=notes["instalment_request"],
+            contribution_id=notes["contribution_id"], request_token=notes[request_note],
             amount_subunits=order["amount"], currency=order["currency"], status=order["status"], created_at=order["created_at"])
 
     def inspect_payment(self, *, payment_id):

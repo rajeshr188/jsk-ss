@@ -7,7 +7,93 @@ from django.utils import timezone
 
 from .agreement_contracts import validate_independent_account_terms
 from .instalments import AGREEMENT_TIMEZONE, period_boundary
-from .models import PaymentWebhookEvent
+from .models import PaymentWebhookEvent, OptionalPaymentOrderRequest, Contribution
+
+
+def optional_order_summary():
+    result = dict(requests=0, unbound_requests=0, recovered_orders=0, pending_without_request=0, integrity_errors=0)
+    sources = Contribution.objects.filter(scheme_account__agreement_schema_version=2,
+        payment_gateway="razorpay").exclude(scheme_account__configuration_snapshot__instalment_policy="MONTHLY_COMPLETION")
+    missing = sources.filter(optional_order_request__isnull=True)
+    unstarted = Q(status="PENDING") & (Q(gateway_order_id="") | Q(gateway_order_id__isnull=True))
+    result["pending_without_request"] = missing.filter(unstarted).count()
+    result["integrity_errors"] = missing.exclude(unstarted).count()
+    for intent in OptionalPaymentOrderRequest.objects.select_related("contribution__scheme_account", "binding").iterator():
+        result["requests"] += 1
+        binding = getattr(intent, "binding", None)
+        result["unbound_requests"] += int(binding is None)
+        result["recovered_orders"] += int(binding is not None and binding.recovered)
+        try:
+            intent.full_clean()
+            if binding:
+                binding.full_clean()
+            elif intent.contribution.gateway_order_id or intent.contribution.status not in ("PENDING", "FAILED"):
+                raise ValidationError("Unbound request has contradictory source state.")
+        except ValidationError:
+            result["integrity_errors"] += 1
+    return result
+
+
+def optional_order_request(contribution):
+    intent = OptionalPaymentOrderRequest.objects.select_related("contribution__scheme_account").get(contribution=contribution)
+    intent.full_clean()
+    return intent
+
+
+def require_optional_order_integrity(account, *, exclude_contribution_id=None):
+    """Account-locked callers may resume one attempt, never discard uncertainty."""
+    unstarted = Q(status="PENDING") & (Q(gateway_order_id="") | Q(gateway_order_id__isnull=True))
+    if account.contributions.filter(payment_gateway="razorpay", optional_order_request__isnull=True).exclude(unstarted).exists():
+        raise ValidationError("Optional provider history without durable request evidence requires reconciliation.")
+    for intent in OptionalPaymentOrderRequest.objects.select_related(
+            "contribution__scheme_account", "binding").filter(contribution__scheme_account=account):
+        intent.full_clean()
+        c = intent.contribution
+        binding = getattr(intent, "binding", None)
+        if binding is None:
+            raise ValidationError("An optional order request is unresolved; recover its exact provider identity before another payment.")
+        binding.full_clean()
+        if c.status == "FAILED":
+            raise ValidationError("A failed optional order still needs provider reconciliation.")
+        if c.status == "ABANDONED" and not c.audit_events.filter(action="PAYMENT_ORDER_RECONCILIATION",
+                details__applied=True, details__outcome="ELIGIBLE_FOR_ABANDONMENT",
+                details__gateway_order_id=c.gateway_order_id).exists():
+            raise ValidationError("An abandoned optional order needs its retained provider reconciliation evidence.")
+    pending = account.contributions.filter(payment_gateway="razorpay", status="PENDING")
+    if exclude_contribution_id is not None:
+        pending = pending.exclude(pk=exclude_contribution_id)
+    if pending.exists():
+        raise ValidationError("Complete or reconcile the existing optional checkout before another payment.")
+
+
+def resumable_optional_contribution(account):
+    pending = list(account.contributions.filter(payment_gateway="razorpay", status="PENDING").order_by("pk")[:2])
+    if not pending:
+        require_optional_order_integrity(account)
+        return None
+    if len(pending) != 1:
+        raise ValidationError("Multiple pending optional checkouts require reconciliation.")
+    contribution = pending[0]
+    require_optional_order_integrity(account, exclude_contribution_id=contribution.pk)
+    if contribution.gateway_mode != "live" or contribution.razorpay_checkout_expired:
+        raise ValidationError("This checkout is expired or mode-mismatched; reconcile it before another payment.")
+    intent = getattr(contribution, "optional_order_request", None)
+    if contribution.gateway_order_id:
+        if intent is None or not hasattr(intent, "binding") or intent.binding.recovered:
+            raise ValidationError("Recovered or unproven orders are reconciliation-only, not resumable checkout.")
+    elif intent is not None:
+        raise ValidationError("This order request is already underway; do not send it again.")
+    return contribution
+
+
+def optional_checkout_deadline(account, deadline, *, at):
+    terms = validate_independent_account_terms(account)
+    if terms.policy.payment_limit == "ONCE_PER_PERIOD":
+        _, end = optional_payment_window(terms, at.astimezone(AGREEMENT_TIMEZONE).date())
+        deadline = min(deadline, datetime.combine(end, time.min, tzinfo=AGREEMENT_TIMEZONE))
+    if terms.duration_not_before and not terms.policy.allow_post_eligibility:
+        deadline = min(deadline, datetime.combine(terms.duration_not_before, time.min, tzinfo=AGREEMENT_TIMEZONE))
+    return deadline
 
 
 def optional_payment_window(terms, today):
@@ -42,6 +128,8 @@ def validate_independent_payment_window(account, *, contribution_date=None,
     if account.status not in ("ACTIVE", "REDEMPTION_ELIGIBLE") or today < account.start_date:
         raise ValidationError("This agreement is not open for new contributions.")
     sources = account.contributions.all()
+    if policy.obligation == "OPTIONAL":
+        require_optional_order_integrity(account, exclude_contribution_id=exclude_contribution_id)
     unresolved = PaymentWebhookEvent.objects.filter(gateway="razorpay", gateway_mode="live",
         event_type="payment.captured").filter(Q(contribution__in=sources) | Q(
             gateway_order_id__in=sources.exclude(gateway_order_id="").values("gateway_order_id"))
