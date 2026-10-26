@@ -1,5 +1,31 @@
 # Testing
 
+## Independent owner preparation editor (26 October 2026)
+
+The separate schema-2 editor tests cover both accumulation types, compatible amount
+policies, both period bases, independent duration/count and conditional benefits.
+Preview creates no records. Explicit save uses the existing owner service; subsequent
+versions preserve earlier evidence and reject an already-replaced predecessor.
+Invalid combinations, forged schema/provenance/settlement controls, changed preview
+input and missing save actions cannot write. Owner permissions, CSRF, allowed methods,
+private responses and the earlier editor are covered. Offer creation remains blocked
+even with the configured-plan flag enabled; no financial records are created.
+
+The focused editor and independent-policy run passed **16 tests in 15.812s**.
+The final editor, earlier configuration, independent-policy, calendar/anniversary
+schedule and owner-manual regression passed **69 tests in 191.104s**, including
+historical migration round trips and competing-version/schedule transactions.
+An earlier regression expectation still assumed schema-2 new-version forms were
+blocked and used superseded presentation wording; it now requires the preparation
+form while retaining the offer-creation block. Empty POSTs remain bound forms and
+display validation errors. Django system checks and migration-drift checks pass;
+there is no new migration. Database tests use unique disposable localhost PostgreSQL
+databases, destroyed afterward. Normal databases and external providers are untouched.
+
+Full normal CI, browser/mobile/keyboard acceptance and coherent release rehearsal
+remain pending. This editor prepares immutable policy versions; it does not enable
+schema-2 offers, enrolment or financial execution.
+
 ## Independent family presentation and gated reminders (26 October 2026)
 
 `test_independent_presentation` renders all five accepted policy families in both

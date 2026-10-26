@@ -110,6 +110,8 @@ urlpatterns = [
     path("owner/plan-manual/assets/<str:filename>", manual_views.plan_manual_asset, name="plan_manual_asset"),
     path("owner/plan-configurations/", views.plan_configuration_list, name="plan_configuration_list"),
     path("owner/plan-configurations/add/", views.plan_configuration_create, name="plan_configuration_create"),
+    path("owner/plan-configurations/independent/add/", views.plan_configuration_create,
+        {"independent": True}, name="independent_configuration_create"),
     path("owner/plan-configurations/<int:configuration_id>/", views.plan_configuration_detail, name="plan_configuration_detail"),
     path("owner/plan-configurations/<int:previous_id>/new-version/", views.plan_configuration_create, name="plan_configuration_new_version"),
     path("owner/plan-configurations/<int:configuration_id>/plan/", views.configured_plan_create, name="configured_plan_create"),

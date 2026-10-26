@@ -7,8 +7,8 @@
   <div class="page-actions">
     <a class="btn btn-outline-dark" href="{% url 'schemes:plan_manual' %}">Plan reference manual</a>
     <a class="btn btn-outline-dark" href="{% url 'schemes:plan_configuration_list' %}">Catalogue</a>
-    {% if configuration.policy_schema_version == 1 %}
     <a class="btn btn-outline-dark" href="{% url 'schemes:plan_configuration_new_version' configuration.pk %}">Create next version</a>
+    {% if configuration.policy_schema_version == 1 %}
     <a class="btn btn-jsk" href="{% url 'schemes:configured_plan_create' configuration.pk %}">Use in a draft plan</a>
     {% endif %}
   </div>

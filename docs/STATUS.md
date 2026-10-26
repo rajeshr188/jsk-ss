@@ -2,6 +2,25 @@
 
 ## Current milestone
 
+**26 October 2026 - owner independent-policy preparation editor.**
+Owners can now open Configuration catalogue > Prepare independent policy and choose
+the accepted independent dimensions in grouped Bootstrap fields. Amount, accumulation,
+obligation, payment ceiling, period basis, duration/count, missed-payment consequences
+and conditional benefits remain separate. The shared compatibility/model validators
+reject incomplete or contradictory terms; unsupported controls cannot be forged.
+
+Review configuration saves nothing. Save immutable version revalidates through the
+existing owner service and retains actor/reason evidence. Create next version appends
+to a locked predecessor and rejects an already-replaced version. Existing policy,
+plan and agreement history is untouched; the earlier editor retains its semantics.
+The owner manual includes the new preparation path and the boundary between review
+and activation. Permission, CSRF, safe-method and non-cacheable form checks are covered.
+
+No migration, offer publication, enrolment, financial mutation, normal-database change,
+push or deployment is included. Verification is recorded in TESTING.md. Next:
+schema-2 draft-offer preparation and owner operational-screen acceptance, followed
+by full lifecycle/CI and the single release rehearsal. Unrelated edits are preserved.
+
 **26 October 2026 - independent plan presentation and gated date reminders.**
 Shared policy facts now describe accumulation, obligation, period basis, payment
 limit, duration/count, missed-payment consequences and benefits consistently in

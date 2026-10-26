@@ -802,6 +802,13 @@ preferences do not become fixed, and no old agreement receives a configuration i
   Policy schema 2 persists independent duration/count/benefit terms but is preparation-
   only even when the release flag is on. Schema 1 keeps its exact historical evidence;
   new immutable versions do not reinterpret agreements or downgrade their schema.
+  Owners may prepare schema-2 versions in a separate grouped editor and review a
+  no-write preview. The same model/policy validation runs again at save through the
+  owner service; invalid combinations are not silently normalized. Server-controlled
+  schema, provenance, zero grace, no catch-up and full-only settlement cannot be
+  submitted as overrides. New versions append to a single locked predecessor;
+  existing configurations/plans/agreements remain untouched. This preparation editor
+  does not create or publish schema-2 offers or enable any financial workflow.
   Independent agreement-term resolution reloads the pinned policy and exact grade;
   a variable amount preference does not become a fixed instalment. Duration and
   required count stay independent. A duration floor is not completed eligibility;

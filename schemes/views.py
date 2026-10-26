@@ -19,7 +19,7 @@ from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
-from django.views.decorators.http import require_GET, require_POST
+from django.views.decorators.http import require_GET, require_POST, require_http_methods
 from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import csrf_exempt
 
@@ -1280,15 +1280,35 @@ def plan_configuration_list(request):
 
 
 @owner_required
-def plan_configuration_create(request, previous_id=None):
+@require_http_methods(["GET", "POST"])
+@never_cache
+def plan_configuration_create(request, previous_id=None, independent=False):
     from .forms import PlanConfigurationForm
     from .models import SchemePlanConfiguration
     from .plan_configuration import EDITABLE_CONFIGURATION_FIELDS, create_configuration_version
 
     previous = get_object_or_404(SchemePlanConfiguration, pk=previous_id) if previous_id else None
-    if previous and previous.policy_schema_version == 2:
-        messages.warning(request, "Independent-policy versions are preparation-only; the legacy editor cannot change them.")
-        return redirect("schemes:plan_configuration_detail", configuration_id=previous.pk)
+    if independent or (previous and previous.policy_schema_version == 2):
+        from .configuration_forms import IndependentConfigurationForm
+        form = IndependentConfigurationForm(request.POST if request.method == "POST" else None, previous=previous)
+        preview = None
+        if request.method == "POST" and form.is_valid():
+            action = request.POST.get("action")
+            if action == "preview":
+                preview = form.configuration
+            elif action == "save":
+                try:
+                    configuration = create_configuration_version(values=form.configuration_values(),
+                        actor=request.user, reason=form.cleaned_data["reason"], previous_id=previous_id)
+                except ValidationError as error:
+                    _add_service_errors(form, error)
+                else:
+                    messages.success(request, "Preparation version recorded. Publication, enrolment and payments remain gated.")
+                    return redirect("schemes:plan_configuration_detail", configuration_id=configuration.pk)
+            else:
+                form.add_error(None, "Choose Review configuration or Save immutable version.")
+        return render(request, "schemes/independent_configuration_form.html",
+            {"form": form, "previous": previous, "preview": preview})
     initial = {field: getattr(previous, field) for field in EDITABLE_CONFIGURATION_FIELDS} if previous else None
     if previous:
         initial["schedule_family"] = "MONTHLY_COMPLETION" if previous.instalment_policy == "MONTHLY_COMPLETION" else "CALENDAR"
