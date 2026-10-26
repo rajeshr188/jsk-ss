@@ -2,6 +2,26 @@
 
 ## Current milestone
 
+**27 October 2026 - owner metal settlement/benefit workspace acceptance.**
+Operational-screen review found the metal form still described a no-benefit-only
+workflow although the gated services support contracted VA. Owners can now submit
+invoice/eligible-charge/customer-receipt evidence for a no-write signed preview,
+then separately confirm the exact full quantity and server-calculated benefit.
+Forged posted quantities/discounts do not replace signed evidence. Full-return forms
+require corrected-invoice, customer confirmation and actual return time when a benefit
+was consumed; principal and benefit reversal remain atomic in the existing services.
+
+The INR route no longer presents a gram-based settlement form: it shows a private
+read-only boundary and links to the principal statement, rejecting mutation POSTs.
+Closure history uses denomination-appropriate wording. No financial service, policy
+formula, readiness gate or migration was changed. Verification is in TESTING.md;
+normal databases, external providers, activation and deployment are untouched.
+
+Still required: the dedicated owner INR proposal/fulfilment/completion/correction
+interface, benefit reapplication review interface, remaining operational/lifecycle/
+notification acceptance, mobile/keyboard and performance checks, normal CI and the
+coherent release rehearsal. This checkpoint is not complete-builder acceptance.
+
 **26 October 2026 - independent draft-offer preparation (0050).**
 Owners can reuse a schema-2 configuration in an inactive, unlisted named draft.
 Duration columns now retain the actual independent duration or null for count-only/

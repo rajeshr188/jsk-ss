@@ -1,5 +1,34 @@
 # Testing
 
+## Owner metal settlement/benefit workspace (27 October 2026)
+
+`test_owner_settlement_workspace` passed **5 tests in 37.652s**. Its HTTP matrix
+uses real cash, closure, signed preview, full-settlement and full-return services
+for the five independent families, simulating only operational readiness in the
+disposable database. It proves preview creates no award/redemption, the signed
+server-derived quantity/discount defeats forged POST amounts, replay is idempotent,
+and missing return evidence cannot reverse principal alone. Full return restores
+the entitlement while retaining benefit reversal and payment containment.
+
+Invalid invoice precision/NaN, missing receipt, tampered/expired/unconfirmed tokens,
+early versus qualified benefits, CSRF, owner-only access, unknown operations and
+private responses are covered. Actual readiness rejects previews/apply with either
+release-flag value. INR GET shows the separate boundary; POST cannot call metal
+services. Initial failures were test fixtures: an unsupported duration-only monthly
+policy and a clock jump past login expiry. The corrected fixture uses an optional
+duration policy and signs the owner in at the simulated review time.
+
+The configured/independent metal settlement and settlement-document regression
+passed **50 tests in 298.753s**, including financial history and concurrency cases.
+The revised owner's manual passed **10 tests in 0.085s**. Django system and
+migration-drift checks pass; no migration was created. Financial tests use unique
+disposable localhost PostgreSQL databases, destroyed afterward. No normal local or
+production database, provider, release gate or real email is changed.
+
+This is functional HTTP acceptance, not browser/mobile/keyboard acceptance or
+complete builder release approval. INR fulfilment and benefit reapplication owner
+interfaces remain pending, along with the remaining lifecycle/notification review.
+
 ## Independent draft-offer preparation (0050; 26 October 2026)
 
 `test_independent_plan_drafts` checks the five accepted families in both denominations
