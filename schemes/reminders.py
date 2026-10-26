@@ -104,6 +104,7 @@ def _candidate(
 
 
 def build_scheme_reminder_plan(*, as_of):
+    from .independent_reminders import upcoming_independent_accounts
     owner_emails = get_scheme_reminder_owner_emails()
     candidates = []
     invalid_customer_recipients = 0
@@ -115,6 +116,7 @@ def build_scheme_reminder_plan(*, as_of):
         accounts = chain(
             get_upcoming_eligibility_accounts(as_of=as_of, lead_days=settings.SCHEME_REMINDER_ELIGIBILITY_DAYS),
             get_upcoming_monthly_completion_accounts(as_of=as_of, lead_days=settings.SCHEME_REMINDER_ELIGIBILITY_DAYS),
+            upcoming_independent_accounts(as_of=as_of, lead_days=settings.SCHEME_REMINDER_ELIGIBILITY_DAYS),
         )
         for account in accounts:
             terms = eligibility_reminder_terms(account, as_of=as_of)
@@ -229,14 +231,20 @@ def _action_url(candidate):
 
 
 def _build_message(candidate):
+    from .enrolment_contracts import policy_description
+    independent_notice = candidate.scheme_account.agreement_schema_version == 2 and candidate.kind in (
+        SchemeReminder.Kind.UPCOMING_ELIGIBILITY, SchemeReminder.Kind.UPCOMING_MONTHLY_COMPLETION)
     context = {
+        "independent_notice": independent_notice,
+        "policy_terms": policy_description(candidate.scheme_account.configuration_snapshot) if independent_notice else (),
         "audience": candidate.audience,
         "kind": candidate.kind,
         "customer_name": candidate.scheme_account.customer.full_name,
         "scheme_number": candidate.scheme_account.scheme_number,
         "eligible_from": candidate.scheme_account.eligible_from,
         "completion_date": candidate.event_date,
-        "required_payments": candidate.scheme_account.agreed_months,
+        "required_payments": (candidate.scheme_account.required_count_snapshot if independent_notice
+                              else candidate.scheme_account.agreed_months),
         "eligibility_lead_days": candidate.eligibility_lead_days,
         "contribution_id": candidate.contribution.pk if candidate.contribution else None,
         "redemption_number": (
@@ -307,6 +315,9 @@ def deliver_scheme_reminder(candidate, *, as_of=None):
     candidate = replace(candidate, scheme_account=account)
     eligibility_kinds = (SchemeReminder.Kind.UPCOMING_ELIGIBILITY, SchemeReminder.Kind.UPCOMING_MONTHLY_COMPLETION)
     allowed = settings.SCHEME_REMINDERS_ENABLED
+    if account.agreement_schema_version == 2:
+        from .independent_reminders import reminder_workflow_available
+        allowed = allowed and reminder_workflow_available(account)
     if candidate.audience == SchemeReminder.Audience.CUSTOMER:
         allowed = allowed and _customer_recipient(account) == candidate.recipient_email
     elif candidate.audience == SchemeReminder.Audience.OWNER:
@@ -317,7 +328,7 @@ def deliver_scheme_reminder(candidate, *, as_of=None):
         today = timezone.localdate(timezone=AGREEMENT_TIMEZONE)
         # Explicit legacy date replay remains available. Monthly evidence is a
         # current projection, so even a confirmed CLI override cannot replay it.
-        processing_date = today if candidate.kind == SchemeReminder.Kind.UPCOMING_MONTHLY_COMPLETION else (as_of or today)
+        processing_date = today if (account.agreement_schema_version == 2 or candidate.kind == SchemeReminder.Kind.UPCOMING_MONTHLY_COMPLETION) else (as_of or today)
         allowed = allowed and (
             settings.SCHEME_REMINDER_CUSTOMER_ELIGIBILITY if candidate.audience == SchemeReminder.Audience.CUSTOMER
             else settings.SCHEME_REMINDER_OWNER_ELIGIBILITY)

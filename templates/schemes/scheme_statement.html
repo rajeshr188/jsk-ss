@@ -22,16 +22,7 @@
     <p class="text-muted mb-0">Customer savings scheme statement</p>
   </div>
   {% if statement.includes_practice_activity %}<div class="alert alert-warning">Contains Test/practice records. They do not represent Live money collected. Check the payment labels below.</div>{% endif %}
-  {% if statement.scheme_account.configuration_snapshot.policy_schema_version == 2 %}
-  <section class="border rounded p-3 my-3" aria-labelledby="statement-contract">
-    <h2 id="statement-contract" class="h5">Recorded agreement terms</h2>
-    <p>{{ statement.scheme_account.display_plan_name }} &middot; {{ statement.scheme_account.entitlement_name }} &middot; {{ statement.scheme_account.get_status_display }}</p>
-    <p>Normal eligibility rule: {{ statement.scheme_account.configuration_snapshot.get_eligibility_policy_display }}.
-      {% if statement.scheme_account.configuration_snapshot.required_count %}Required qualifying instalments: {{ statement.scheme_account.configuration_snapshot.required_count }}. Period basis: {{ statement.scheme_account.configuration_snapshot.get_period_basis_display }}.{% endif %}</p>
-    <p>Contracted benefit: {{ statement.scheme_account.configuration_snapshot.get_benefit_policy_display }}. Qualification, invoice application and principal settlement are separate. Full closure requires review and customer confirmation; partial redemption is unavailable.</p>
-    <p class="small mb-0">These are the pinned agreement terms. Current plan edits and this statement do not change them or authorize new payments or settlement.</p>
-  </section>
-  {% else %}{% include 'schemes/includes/agreement_basis.html' with scheme_account=statement.scheme_account %}{% endif %}
+  {% include 'schemes/includes/agreement_basis.html' with scheme_account=statement.scheme_account %}
   <dl class="row">
     <dt class="col-sm-3">Customer</dt><dd class="col-sm-9">{{ statement.scheme_account.customer.full_name }} ({{ statement.scheme_account.customer.customer_number }})</dd>
     <dt class="col-sm-3">Scheme</dt><dd class="col-sm-9">{{ statement.scheme_account.scheme_number }} · {{ statement.scheme_account.entitlement_name }}</dd>

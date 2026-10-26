@@ -5,6 +5,18 @@ from django import template
 register = template.Library()
 
 
+@register.simple_tag
+def configured_policy_terms(configuration):
+    from schemes.enrolment_contracts import policy_description
+    return policy_description(configuration)
+
+
+@register.inclusion_tag("schemes/includes/independent_agreement.html")
+def independent_agreement(account):
+    from schemes.presentation import independent_agreement_presentation
+    return {"presentation": independent_agreement_presentation(account)}
+
+
 @register.simple_tag(takes_context=True)
 def page_link(context, number, key="page"):
     query = context["request"].GET.copy()

@@ -1,4 +1,6 @@
-{% if plan.configuration_id %}
+{% if plan.configuration.policy_schema_version == 2 %}
+{% include 'schemes/includes/policy_facts.html' with configuration=plan.configuration %}
+{% elif plan.configuration_id %}
 <p class="small mt-2">Contributions accumulate the agreed exact-grade gold or silver quantity, not INR purchase credit. No bonus or discount is included.</p>
 {% if plan.configuration.instalment_policy == 'MONTHLY_COMPLETION' %}
 <p class="small">Normal eligibility requires both the agreed duration and qualifying instalment count; it cannot precede the final qualifying period end. At most one instalment qualifies per selected period: {{ plan.configuration.get_period_basis_display }}. {% if plan.configuration.period_basis == 'CALENDAR_MONTH' %}Your enrolment month is the first required month, even when you join near month-end. A payment on enrolment day counts; the deadline is before the first of the next month.{% endif %} There is no catch-up or additional grace period. Up to {{ plan.configuration.max_extension_months }} ordinary extension periods are available; continued shortfall requires review, not forfeiture of paid metal. Verified showroom outages are reviewed separately; compensation is not automatic.</p>

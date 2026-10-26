@@ -1705,9 +1705,8 @@ def eligibility_reminder_terms(account, *, as_of):
     from .closure_selectors import accepted_closure
 
     if account.agreement_schema_version == 2:
-        # Independent progress is readable, but the legacy reminder kind/content
-        # promises a duration-and-count date. Do not send it for a different rule.
-        return None
+        from .independent_reminders import independent_reminder_terms
+        return independent_reminder_terms(account, as_of=as_of)
     if account.status in (SchemeAccount.Status.REDEEMED, SchemeAccount.Status.CANCELLED) or accepted_closure(account):
         return None
     if has_monthly_instalments(account):

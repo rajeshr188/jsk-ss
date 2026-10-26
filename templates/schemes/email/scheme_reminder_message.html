@@ -2,7 +2,12 @@
 <html lang="en">
 <body>
   <p>{% if audience == 'CUSTOMER' %}Hello {{ customer_name }},{% else %}Hello,{% endif %}</p>
-  {% if kind == 'UPCOMING_MONTHLY_COMPLETION' %}
+  {% if independent_notice %}
+    <p>Scheme <strong>{{ scheme_number }}</strong> for {{ customer_name }} has a current principal-rule date of <strong>{{ completion_date|date:'d M Y' }}</strong> (India time), in {{ eligibility_lead_days }} day{{ eligibility_lead_days|pluralize }}.</p>
+    {% if kind == 'UPCOMING_MONTHLY_COMPLETION' %}<p>All {{ required_payments }} required qualifying payments are recorded. Both duration and final qualifying-period boundaries still apply.</p>{% endif %}
+    <p>This is a current-evidence progress notice, not settlement approval, an automatic closure or a benefit award. Corrections, pending payments or review can change the result. Benefit qualification is separate; a missed benefit instalment does not silently postpone principal maturity.</p>
+    <dl>{% for label, value in policy_terms %}<dt>{{ label }}</dt><dd>{{ value }}</dd>{% endfor %}</dl>
+  {% elif kind == 'UPCOMING_MONTHLY_COMPLETION' %}
     <p>Scheme <strong>{{ scheme_number }}</strong> for {{ customer_name }} currently has all <strong>{{ required_payments }}</strong> required qualifying payments recorded. Its normal completion date, after both duration and qualifying-period requirements, is <strong>{{ completion_date|date:"d M Y" }}</strong> (India time), in {{ eligibility_lead_days }} day{{ eligibility_lead_days|pluralize }}.</p>
     <p>Original calendar date: {{ eligible_from|date:"d M Y" }}.</p>
     <p>This is a payment-and-date progress notice, not redemption approval, an automatic account closure, or a bonus/discount award. A subsequent correction or review can change completion.</p>

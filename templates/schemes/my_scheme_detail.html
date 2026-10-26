@@ -24,6 +24,8 @@
 <div class="alert alert-secondary" role="status">This unused agreement has been cancelled without a redemption or refund. Your login and other agreements are unchanged.</div>
 {% elif scheme_account.status == 'REDEEMED' %}
 <div class="alert alert-secondary" role="status">This agreement has been redeemed. Its statement and settlement history remain available; your login and other agreements are unchanged.</div>
+{% elif scheme_account.agreement_schema_version == 2 %}
+<div class="alert alert-secondary" role="status">Full settlement needs showroom review and customer confirmation. Paid principal and any purchase benefit remain separate. No partial redemption is available.</div>
 {% elif scheme_account.configuration_snapshot_id %}
 <div class="alert alert-secondary" role="status">Configured agreements require full jewellery settlement with showroom review and customer confirmation. Your recorded entitlement is retained until settlement; no partial redemption is available.</div>
 {% elif scheme_account.effective_status == 'REDEMPTION_ELIGIBLE' %}
@@ -71,18 +73,19 @@
 </div></div>
 {% endif %}
 
+{% if scheme_account.savings_mode == "INR_CREDIT" %}<p class="alert alert-info">INR jewellery purchase credit has no metal rate or allocated grams. <a href="{% url 'schemes:scheme_statement' scheme_account.scheme_number %}">View the validated principal and settlement statement</a> for outstanding principal, handovers, refunds and separate benefits.</p>{% endif %}
 <div class="section-heading"><div><h2>Contribution history</h2><p>Verified payments, allocations, and pending attempts.</p></div></div>
 {% include 'schemes/includes/pagination.html' %}
 <div class="table-responsive d-none d-md-block">
   <table class="table align-middle">
-    <thead><tr><th scope="col">Date</th><th scope="col">Period</th><th scope="col">Amount paid</th><th scope="col">Metal credited</th><th scope="col">Scheme Rate</th><th scope="col">Status</th><th scope="col">Reference</th></tr></thead>
+    <thead><tr><th scope="col">Date</th><th scope="col">Period</th><th scope="col">Amount paid</th><th scope="col">{% if scheme_account.savings_mode == "INR_CREDIT" %}Principal record{% else %}Metal credited{% endif %}</th><th scope="col">Scheme Rate</th><th scope="col">Status</th><th scope="col">Reference</th></tr></thead>
     <tbody>
       {% for contribution in contributions %}
       <tr>
         <td>{{ contribution.created_at|date:'d M Y, g:i A' }}</td>
         <td>{{ contribution.contribution_period|date:'F Y' }}</td>
         <td>₹{{ contribution.amount|inr }}</td>
-        <td>{% if contribution.metal_allocation %}{{ contribution.metal_allocation.quantity|floatformat:3 }} g {{ contribution.metal_allocation.metal_grade.display_name }}{% else %}—{% endif %}</td>
+        <td>{% if scheme_account.savings_mode == "INR_CREDIT" %}See validated receipt / statement{% elif contribution.metal_allocation %}{{ contribution.metal_allocation.quantity|floatformat:3 }} g {{ contribution.metal_allocation.metal_grade.display_name }}{% else %}—{% endif %}</td>
         <td>{% if contribution.metal_allocation %}₹{{ contribution.metal_allocation.scheme_rate.rate_per_gram|inr:4 }}/g{% elif contribution.scheme_rate %}₹{{ contribution.scheme_rate.rate_per_gram|inr:4 }}/g locked{% else %}—{% endif %}</td>
         <td>
           {% if contribution.status == 'PAID' %}<span class="badge text-bg-success">Paid</span>
@@ -133,7 +136,7 @@
     </div>
     <dl class="row small">
       <dt class="col-5">Date</dt><dd class="col-7 text-end">{{ contribution.created_at|date:'d M Y, g:i A' }}</dd>
-      <dt class="col-5">Metal credited</dt><dd class="col-7 text-end">{% if contribution.metal_allocation %}{{ contribution.metal_allocation.quantity|floatformat:3 }} g {{ contribution.metal_allocation.metal_grade.display_name }}{% else %}—{% endif %}</dd>
+      <dt class="col-5">{% if scheme_account.savings_mode == "INR_CREDIT" %}Principal record{% else %}Metal credited{% endif %}</dt><dd class="col-7 text-end">{% if scheme_account.savings_mode == "INR_CREDIT" %}See validated receipt / statement{% elif contribution.metal_allocation %}{{ contribution.metal_allocation.quantity|floatformat:3 }} g {{ contribution.metal_allocation.metal_grade.display_name }}{% else %}—{% endif %}</dd>
       <dt class="col-5">Scheme Rate</dt><dd class="col-7 text-end">{% if contribution.metal_allocation %}₹{{ contribution.metal_allocation.scheme_rate.rate_per_gram|inr:4 }}/g{% elif contribution.scheme_rate %}₹{{ contribution.scheme_rate.rate_per_gram|inr:4 }}/g locked{% else %}—{% endif %}</dd>
       <dt class="col-5">Reference</dt><dd class="col-7 text-end text-break">{{ contribution.gateway_reference|default:'—' }}</dd>
       {% if contribution.gateway_reference %}<dt class="col-5">Payment method</dt><dd class="col-7 text-end">{{ contribution.payment_method_display }}</dd>{% endif %}
@@ -161,7 +164,7 @@
 </div>
 
 {% include 'schemes/includes/pagination.html' %}
-<details class="card card-body mb-4"><summary>Agreed plan terms</summary><dl class="row mt-3 mb-0"><dt class="col-sm-5">Duration</dt><dd class="col-sm-7">{{ scheme_account.agreed_months }} months</dd><dt class="col-sm-5">Contribution frequency</dt><dd class="col-sm-7">{{ scheme_account.get_frequency_rule_snapshot_display }}</dd><dt class="col-sm-5">Agreed contribution</dt><dd class="col-sm-7">{% if scheme_account.amount_rule_snapshot == "FIXED" %}₹{{ scheme_account.fixed_amount_snapshot|inr }}{% else %}From ₹{{ scheme_account.minimum_amount_snapshot|inr }}{% if scheme_account.maximum_amount_snapshot %}, up to ₹{{ scheme_account.maximum_amount_snapshot|inr }}{% endif %}{% endif %}</dd><dt class="col-sm-5">Agreed amount rule</dt><dd class="col-sm-7">{{ scheme_account.get_amount_rule_snapshot_display }}</dd></dl></details>
+<details class="card card-body mb-4"><summary>Agreed plan terms</summary><dl class="row mt-3 mb-0"><dt class="col-sm-5">Duration</dt><dd class="col-sm-7">{% if scheme_account.agreed_months is not None %}{{ scheme_account.agreed_months }} months{% else %}No fixed-duration condition{% endif %}</dd><dt class="col-sm-5">Contribution frequency</dt><dd class="col-sm-7">{{ scheme_account.get_frequency_rule_snapshot_display }}</dd><dt class="col-sm-5">Agreed contribution</dt><dd class="col-sm-7">{% if scheme_account.amount_rule_snapshot == "FIXED" %}₹{{ scheme_account.fixed_amount_snapshot|inr }}{% else %}From ₹{{ scheme_account.minimum_amount_snapshot|inr }}{% if scheme_account.maximum_amount_snapshot %}, up to ₹{{ scheme_account.maximum_amount_snapshot|inr }}{% endif %}{% endif %}</dd><dt class="col-sm-5">Agreed amount rule</dt><dd class="col-sm-7">{{ scheme_account.get_amount_rule_snapshot_display }}</dd></dl></details>
 <div class="section-heading"><div><h2>Redemption history</h2><p>Completed settlements and preserved reversals.</p></div></div>
 <div class="table-responsive d-none d-md-block">
   <table class="table align-middle">

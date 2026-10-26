@@ -1,0 +1,21 @@
+<section class="card p-3 my-3" aria-labelledby="agreement-{{ presentation.account.pk }}">
+  <h2 id="agreement-{{ presentation.account.pk }}" class="h5">Your recorded agreement</h2>
+  {% if presentation.needs_review %}
+  <p class="alert alert-warning mb-0">The frozen agreement requires showroom reconciliation. No eligibility or new transaction permission is confirmed.</p>
+  {% else %}
+  {% with account=presentation.account progress=presentation.progress %}
+  <p>{{ account.display_plan_name }} · {{ account.display_plan_code }} · {{ account.entitlement_name }}</p>
+  <p>Started {{ account.start_date|date:'d M Y' }}. {% if account.agreed_months is not None %}Recorded duration: {{ account.agreed_months }} months; duration floor {{ account.eligible_from|date:'d M Y' }}.{% else %}No fixed-duration maturity date.{% endif %}</p>
+  <p>{% if account.amount_rule_snapshot == 'FIXED' %}Agreed fixed contribution: INR {{ account.fixed_amount_snapshot|floatformat:2 }}.{% else %}Variable contribution: minimum INR {{ account.minimum_amount_snapshot|floatformat:2 }}{% if account.maximum_amount_snapshot %}, maximum INR {{ account.maximum_amount_snapshot|floatformat:2 }}{% endif %}.{% endif %}</p>
+  <div class="alert alert-info">
+    <p>{{ progress.message }}</p>
+    {% if progress.required_payments %}<p>Recorded qualifying payments: {{ progress.qualified_payments }} of {{ progress.required_payments }}. Benefit qualification is separate from principal eligibility.</p>{% endif %}
+    {% if progress.completion_date %}<p>Current rule completion date: {{ progress.completion_date|date:'d M Y' }} (India time). This is not settlement approval or a benefit award.</p>{% endif %}
+    <p class="mb-0">Payment, closure and benefit rules still apply. A progress update does not authorize a payment, settlement or benefit use.</p>
+  </div>
+  <details><summary>Agreed policy and settlement rules</summary><dl class="row mt-3">{% for label, value in presentation.terms %}<dt class="col-sm-4">{{ label }}</dt><dd class="col-sm-8">{{ value }}</dd>{% endfor %}</dl></details>
+  <p class="small mt-3">Pinned revision {{ account.plan_revision_id }}. Subsequent plan edits do not replace these terms. Cancelled or closed agreements retain their history; accepted closure prevents further contributions. Returns require reconciliation and fresh full-settlement review, not automatic reopening.</p>
+  <a href="{% url 'schemes:closure_workspace' account.scheme_number %}">View closure and settlement history</a>
+  {% endwith %}
+  {% endif %}
+</section>

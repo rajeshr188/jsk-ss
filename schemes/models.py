@@ -728,6 +728,17 @@ class SchemeAccount(models.Model):
 
     @property
     def effective_status_label(self):
+        if self.agreement_schema_version == 2:
+            progress = self.independent_eligibility
+            return {
+                "ELIGIBLE": "Requirements met — settlement review",
+                "CANCELLED": "Unused agreement cancelled", "CLOSED": "Agreement closed",
+                "CLOSURE_PENDING": "Closure / settlement review", "REVIEW": "Evidence needs review",
+                "PAYMENT_PENDING": "Payment confirmation pending", "NOT_STARTED": "Not started",
+                "NO_ENTITLEMENT": "No verified principal", "WAITING_DURATION": "Awaiting duration date",
+                "WAITING_PERIOD_END": "Awaiting duration / period end", "COLLECTING": "Qualifying payments pending",
+                "DISCONTINUATION_REVIEW": "Discontinuation review",
+            }.get(progress.state, "Agreement review")
         if self.status == self.Status.CANCELLED:
             return self.Status.CANCELLED.label
         if self.status == self.Status.REDEEMED:

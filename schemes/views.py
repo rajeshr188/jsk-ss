@@ -1451,7 +1451,7 @@ def my_schemes(request, section="home"):
         account.next_action = get_customer_plan_next_action(account, account.payment_availability)
         if account.savings_mode == SchemeAccount.SavingsMode.CASH:
             account.cash_bonus = get_cash_bonus_summary(account)
-        else:
+        elif account.metal_grade_id:
             account.current_scheme_rate = get_current_scheme_rate(account.metal_grade)
     applications = list(get_customer_plan_applications(request.user)[:3])
     actions = {account.pk: account.next_action for account in accounts}
@@ -1509,7 +1509,7 @@ def my_scheme_detail(request, scheme_number):
         raise Http404
     current_scheme_rate = (
         get_current_scheme_rate(account.metal_grade)
-        if account.savings_mode != SchemeAccount.SavingsMode.CASH
+        if account.metal_grade_id
         else None
     )
     payment_availability = get_customer_payment_availability(account)

@@ -2,6 +2,28 @@
 
 ## Current milestone
 
+**26 October 2026 - independent plan presentation and gated date reminders.**
+Shared policy facts now describe accumulation, obligation, period basis, payment
+limit, duration/count, missed-payment consequences and benefits consistently in
+prepared offers, owner inspection, accepted agreements and statements. Agreement
+reads validate the pinned version; current offer edits never replace its terms.
+Invalid contracts show reconciliation. Customer/owner cards avoid invented maturity
+dates, and INR agreement pages link to validated principal statements without a
+metal rate or a misleading zero-gram balance. Status labels are read-only progress.
+
+The gated duration-reminder integration uses current verified evidence and checks
+again under the account lock at dispatch. Duration-and-count notices use the actual
+required count, not months. Count-only/anytime have no scheduled maturity forecast;
+benefit-only schedules do not silently postpone principal maturity or imply awards.
+Both release/readiness gates stay closed. The owner manual distinguishes the earlier
+editor walkthrough from the broader independent-policy families. Verification and
+remaining acceptance boundaries are recorded in TESTING.md/MVP_PLAN.md.
+
+No migration, normal-database change, activation, push or deployment is included.
+Next: complete cross-family owner editing/operational-screen and lifecycle acceptance,
+then normal CI and the single release rehearsal. Existing UI/production-note edits
+remain outside this checkpoint.
+
 **26 October 2026 - settlement statements and privacy disposition integration.**
 Read-only INR purchase-credit statements now separate recorded principal, corrections,
 proposals, actual jewellery/refund fulfilments, complete returns and historical closure.

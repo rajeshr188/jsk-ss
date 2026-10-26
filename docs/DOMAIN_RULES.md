@@ -844,8 +844,21 @@ preferences do not become fixed, and no old agreement receives a configuration i
   cannot manufacture verification rights. Closed/accepted-disposition histories are
   not fresh spendable entitlements. This read changes no dates, statuses or benefits
   and does not replace locked settlement proof or operational readiness. Schema-2
-  accounts are excluded from legacy maturity reminders until their family-specific
-  content and lifecycle integration are ready.
+  date notices use separate current-evidence selection and family-specific content,
+  behind both configured-plan and operational-policy readiness gates. DURATION needs
+  positive verified principal and no unresolved hold; DURATION_AND_COUNT additionally
+  needs the full verified count and the later duration/final-period boundary. Dispatch
+  rechecks under the account lock; stale, closed, corrected, held or replayed evidence
+  cannot send. Count-only/anytime have no invented scheduled maturity forecast.
+  A notice grants neither settlement permission nor an award; benefit-only schedule
+  compliance remains separate from principal maturity. Existing legacy reminders
+  keep their original rules and identities.
+  Shared policy facts describe obligation, period basis, payment ceiling, duration,
+  count, missed-payment outcome and conditional benefits separately. Agreement reads
+  reload and validate the pinned contract/revision; current offer edits cannot change
+  the display. Invalid evidence shows reconciliation rather than replacement terms.
+  INR cards link to validated principal statements instead of reporting grams or a
+  misleading zero balance. Displayed progress never opens payment/settlement gates.
   Public/model enrolment, payment entry, owner instalment review and outage resolution
   remain blocked for schema 2 pending complete release acceptance. Gated integrations
   and synthetic regression tests do not activate these workflows. Tests use synthetic

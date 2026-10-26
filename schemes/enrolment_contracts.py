@@ -59,10 +59,14 @@ def validate_request_terms(request):
 def policy_description(configuration):
     """Plain, escaped template/email facts from the immutable policy, not the live plan."""
     policy = policy_from_configuration(configuration)
+    from .plan_policies import validate_plan_policy
+    validate_plan_policy(policy)
     rows = [("Accumulation", "INR jewellery purchase credit; no metal rate or grams" if policy.accumulation == "INR_PURCHASE_CREDIT"
              else "One agreed exact metal grade; no conversion between grades")]
     rows.append(("Amount rule", {"PLAN_FIXED": "Plan-fixed contribution amount", "CUSTOMER_FIXED": "Customer-selected amount, fixed at enrolment",
                                "VARIABLE": "Variable contributions within the recorded bounds; the requested amount is a preference"}[policy.amount_policy]))
+    if policy.amount_policy == "PLAN_FIXED":
+        rows.append(("Fixed amount", f"INR {configuration.fixed_amount:.2f}"))
     rows.append(("Amount bounds", f"Minimum INR {configuration.minimum_amount:.2f}; " +
         (f"maximum INR {configuration.maximum_amount:.2f}" if configuration.maximum_amount is not None else "no configured maximum") +
         (f"; increments of INR {configuration.amount_step:.2f} from the minimum" if configuration.amount_step else "")))
@@ -70,6 +74,13 @@ def policy_description(configuration):
     rows.append(("Required schedule", f"{policy.required_count} qualifying monthly payments" if policy.required_count else "No mandatory instalments"))
     rows.append(("Payment limit", "Flexible contributions" if policy.payment_limit == "FLEXIBLE" else
         "At most one qualifying contribution per " + ("calendar month (India time; enrolment month counts)" if policy.period_basis == "CALENDAR_MONTH" else "agreement-anniversary month")))
+    if policy.period_basis:
+        rows.append(("Period boundaries", "The first period starts on enrolment day and ends before the first of the next month, even near month-end. An enrolment-day payment counts. Later periods are whole calendar months."
+            if policy.period_basis == "CALENDAR_MONTH" else
+            "Periods follow the original enrolment-day anniversary, clamped at month-end; each ends before the next anniversary."))
+    if policy.obligation == "REQUIRED_MONTHLY":
+        rows.append(("Payment timing", "India time; no advance instalments, bulk catch-up or extra grace. An online attempt reserves its agreed period; delayed verification or an expired attempt requires the recorded timing/reconciliation checks, not a new backdated payment."))
+        rows.append(("Outage relief", "Only an explicitly reviewed and customer-acknowledged amendment can add up to three compensation periods, separate from ordinary replacements. No automatic free instalment or benefit is granted."))
     rows.append(("Normal eligibility", {"DURATION": "Agreed duration; schedule compliance for benefits is separate",
         "COUNT": "Final required payment verified and conclusively attributed; no wait for its month to end",
         "DURATION_AND_COUNT": "Required count complete and both duration and final qualifying period ended",
@@ -85,6 +96,8 @@ def policy_description(configuration):
         if policy.benefit_on_miss != "NONE":
             rows.append(("Benefit on missed payments", "Preserved on approved extended completion" if policy.benefit_on_miss == "PRESERVE_ON_COMPLETION" else "Disqualify the unearned benefit; unresolved outages require review"))
     rows.append(("Settlement", "One final full settlement; no partial withdrawals. Request submission creates no entitlement."))
+    rows.append(("Further contributions", "Permitted only within the recorded payment/count rules and before accepted closure; payment controls still apply."
+        if policy.allow_post_eligibility else "Not permitted after the recorded eligibility cutoff; the agreed count and payment controls still apply."))
     if policy.accumulation == "INR_PURCHASE_CREDIT":
         rows.append(("Unused paid principal", "Recorded showroom invoice application and any agreed manual refund together close the full agreement; no replacement-credit voucher or automatic gateway refund. Benefits are separate and not refunded as cash."))
     return tuple(rows)

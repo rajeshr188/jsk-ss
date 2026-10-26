@@ -1,5 +1,40 @@
 # Testing
 
+## Independent family presentation and gated reminders (26 October 2026)
+
+`test_independent_presentation` renders all five accepted policy families in both
+denominations against frozen synthetic contracts. It checks that duration and
+required count remain separate, current offer edits cannot replace accepted terms,
+invalid contracts show reconciliation, policy text is escaped, and reads issue no
+INSERT/UPDATE/DELETE. Customer agreement/dashboard and owner cards avoid invented
+maturity dates, metal rates and zero-gram INR balances. Existing payment gates stay
+closed, including the owner cash-entry link for independent agreements.
+
+Reminder fixtures use real verified principal/attribution, simulating only future
+operational readiness. Selection and locked dispatch retain actual count, later
+duration/period boundaries, separate benefit qualification and current server time.
+Closed/gated/stale candidates and a new pending payment after selection are skipped;
+successful sends retain idempotency. Count-only/anytime and incomplete count have no
+maturity forecast. No real email provider is contacted.
+
+The first run passed **27 tests in 89.472s**, including the existing independent
+eligibility class. The affected presentation, legacy/monthly reminders, document and
+settlement/privacy regression passed **54 tests in 322.740s**. Application-request,
+customer-page and owner-manual regressions passed **27 tests in 107.688s**. The added
+pending-payment dispatch race passed **1 test in 2.936s**. The revised manual's
+permissions, private responses, links and assets passed **10 tests in 0.078s**.
+The final customer/dashboard/owner-page path passed **1 test in 2.401s** after
+adding the owner link guard.
+Django system checks and migration-drift checks pass; there is no new migration.
+Database tests use unique disposable localhost PostgreSQL databases, destroyed
+afterward. Normal local/production databases, provider calls and activation are untouched.
+
+These are affected functional checks, not full normal CI, production latency testing,
+mobile/keyboard owner acceptance or the cross-family release rehearsal. Count-only
+and anytime currently expose progress in the account rather than scheduled date
+notices; complete notification coverage and operational-screen review remain in the
+coherent builder acceptance checklist.
+
 ## Settlement documents and privacy disposition (26 October 2026; no migration)
 
 `schemes.tests.test_settlement_documents` uses real gated principal, settlement,
