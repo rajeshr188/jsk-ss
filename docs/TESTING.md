@@ -1,5 +1,34 @@
 # Testing
 
+## Invoice benefit fulfilment and full-return evidence (26 October 2026; 0047)
+
+`test_benefit_fulfilments` exercises INR purchase bonus, INR VA discount and exact-grade
+metal VA discount against real retained principal-disposition validators. Future
+principal handovers/returns are explicitly synthetic fixtures; only the operational
+readiness gate is simulated for the new services. These are primitive-level tests,
+not claims that current settlement entry points accept benefit-bearing agreements.
+
+Coverage includes invoice/net-principal consistency, eligible-charge proof, original
+payment/allocation identity, insufficient invoice refusal, zero rounded VA, signed
+preview expiry/authority, source drift, duplicate/conflicting requests, concurrent
+fulfilment/reversal retries, insert-failure rollback, database shape/uniqueness,
+immutability and migration reverse retention. Full returns require actual linked
+principal correction evidence; neither original awards nor principal/metal sources
+are rewritten. Returned benefits stay review-only rather than automatically spendable.
+Diagnostics are read-only; tampered/missing lifecycle evidence is flagged. Real gates
+stay closed with CONFIGURED_PLANS_ENABLED off or on.
+
+The combined invoice/award/qualification, independent eligibility, INR settlement/
+correction and configured metal-settlement regression run passed **128 tests in
+563.040s**. The final focused run passed **12 tests in 75.620s**, including the final
+same-agreement handover lookup hardening. Django system checks and
+`makemigrations --check --dry-run` passed.
+
+All runs use unique disposable localhost PostgreSQL databases. No migration is applied
+to the normal local or production database. Atomic principal/benefit settlement and
+replacement-disposition integration, owner UI and complete lifecycle acceptance remain
+pending; these checks do not approve builder activation.
+
 ## Retained benefit awards (26 October 2026; migration 0046)
 
 `test_benefit_awards` exercises the five-family, three benefit/denomination matrix

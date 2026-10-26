@@ -2222,6 +2222,105 @@ class SchemeBenefitAward(models.Model):
         raise ValidationError("Benefit awards must be retained, not deleted.")
 
 
+class BenefitInvoiceFulfilment(models.Model):
+    """One actual invoice application, linked to recorded full principal handover."""
+    award = models.OneToOneField(SchemeBenefitAward, on_delete=models.PROTECT, related_name="invoice_fulfilment")
+    inr_fulfilment = models.OneToOneField(InrSettlementFulfilment, null=True, blank=True, on_delete=models.PROTECT)
+    metal_settlement = models.OneToOneField(ConfiguredSettlement, null=True, blank=True, on_delete=models.PROTECT)
+    invoice_reference = models.CharField(max_length=120)
+    invoice_before_benefit = models.DecimalField(max_digits=14, decimal_places=2)
+    eligible_charges = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True)
+    benefit_amount = models.DecimalField(max_digits=14, decimal_places=2)
+    invoice_after_benefit = models.DecimalField(max_digits=14, decimal_places=2)
+    invoice_evidence_reference = models.CharField(max_length=254)
+    eligible_charge_reference = models.CharField(max_length=254, blank=True)
+    customer_receipt_reference = models.CharField(max_length=254)
+    fulfilled_at = models.DateTimeField()
+    evidence = models.JSONField()
+    evidence_digest = models.CharField(max_length=64)
+    recorded_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    actor_label = models.CharField(max_length=254)
+    reason = models.TextField()
+    idempotency_key = models.UUIDField(unique=True)
+    recorded_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(models.functions.Lower("invoice_reference"), name="benefit_invoice_once_ci"),
+            models.CheckConstraint(condition=(models.Q(inr_fulfilment__isnull=False, metal_settlement__isnull=True)
+                | models.Q(inr_fulfilment__isnull=True, metal_settlement__isnull=False)), name="benefit_invoice_one_source"),
+            models.CheckConstraint(condition=models.Q(invoice_before_benefit__gt=0,
+                invoice_before_benefit__lte=Decimal("999999999999.99"), benefit_amount__gte=0,
+                invoice_after_benefit__gt=0, invoice_before_benefit=models.F("benefit_amount") + models.F("invoice_after_benefit"))
+                & (models.Q(eligible_charges__isnull=True, eligible_charge_reference="")
+                   | (models.Q(eligible_charges__isnull=False, eligible_charges__gte=0,
+                        eligible_charges__lte=models.F("invoice_before_benefit")) & ~models.Q(eligible_charge_reference=""))),
+                name="benefit_invoice_amount_shape"),
+            models.CheckConstraint(condition=~models.Q(invoice_reference="") & ~models.Q(invoice_evidence_reference="")
+                & ~models.Q(customer_receipt_reference="") & ~models.Q(evidence_digest="")
+                & ~models.Q(actor_label="") & ~models.Q(reason=""), name="benefit_invoice_evidence_required"),
+        ]
+
+    def clean(self):
+        super().clean()
+        from .benefit_fulfilment_selectors import validate_benefit_fulfilment
+        validate_benefit_fulfilment(self)
+
+    def save(self, *args, **kwargs):
+        if self.pk and type(self).objects.filter(pk=self.pk).exists():
+            raise ValidationError("Benefit invoice fulfilment is immutable.")
+        from .plan_policies import require_operational_configuration
+        from .benefit_fulfilment_selectors import validate_benefit_fulfilment
+        require_operational_configuration(self.award.scheme_account.configuration_snapshot)
+        self.full_clean()
+        validate_benefit_fulfilment(self, current=True)
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Benefit invoice fulfilment must be retained.")
+
+
+class BenefitInvoiceReversal(models.Model):
+    """Full linked invoice correction; never restores spendable benefit or principal."""
+    fulfilment = models.OneToOneField(BenefitInvoiceFulfilment, on_delete=models.PROTECT, related_name="reversal")
+    inr_return = models.OneToOneField(InrFulfilmentReturn, null=True, blank=True, on_delete=models.PROTECT)
+    metal_reversal = models.OneToOneField(ConfiguredSettlementReversal, null=True, blank=True, on_delete=models.PROTECT)
+    amount = models.DecimalField(max_digits=14, decimal_places=2)
+    invoice_correction_reference = models.CharField(max_length=120)
+    customer_confirmation = models.CharField(max_length=254)
+    returned_at = models.DateTimeField()
+    recorded_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    actor_label = models.CharField(max_length=254)
+    reason = models.TextField()
+    idempotency_key = models.UUIDField(unique=True)
+    recorded_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(condition=(models.Q(inr_return__isnull=False, metal_reversal__isnull=True)
+                | models.Q(inr_return__isnull=True, metal_reversal__isnull=False)), name="benefit_return_one_source"),
+            models.CheckConstraint(condition=models.Q(amount__gte=0, amount__lte=Decimal("999999999999.99"))
+                & ~models.Q(invoice_correction_reference="") & ~models.Q(customer_confirmation="")
+                & ~models.Q(actor_label="") & ~models.Q(reason=""), name="benefit_return_evidence_required"),
+        ]
+
+    def clean(self):
+        super().clean()
+        from .benefit_fulfilment_selectors import validate_benefit_reversal
+        validate_benefit_reversal(self)
+
+    def save(self, *args, **kwargs):
+        if self.pk and type(self).objects.filter(pk=self.pk).exists():
+            raise ValidationError("Benefit reversals are append-only.")
+        from .plan_policies import require_operational_configuration
+        require_operational_configuration(self.fulfilment.award.scheme_account.configuration_snapshot)
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Benefit reversal evidence must be retained.")
+
+
 class InStoreCashReceipt(models.Model):
     contribution = models.OneToOneField(
         Contribution,

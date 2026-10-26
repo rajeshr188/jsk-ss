@@ -643,6 +643,21 @@ preferences do not become fixed, and no old agreement receives a configuration i
   recorded award, not silently recomputing it, reducing principal or authorizing spend.
   This is not automatic awarding or final invoice consumption. Benefit-bearing settlement
   remains blocked until fulfilment and linked correction/reversal are integrated.
+  The gated invoice foundation (0047) links one immutable award consumption to the
+  agreement's actual normal full-principal jewellery handover, never just an unlinked
+  invoice number. Purchase bonus uses its retained amount; VA uses evidenced eligible
+  charges, percentage/cap and the retained rounding rule. Invoice-before-benefit equals
+  benefit plus invoice-after-benefit; INR net invoice must match the principal proposal.
+  Benefits do not create principal, additional grams, top-ups or refundable credit.
+  A purchase-bonus invoice too small for the full benefit and positive principal
+  handover requires review, not forfeiture of an earned remainder or benefit cashout.
+  A complete linked principal return plus corrected invoice/customer/time evidence
+  permits one append-only full benefit reversal. It never erases the award or invoice,
+  restores principal itself, allows partial reversal or automatically makes the award
+  spendable again. Returned rights require review. Owner-attested invoice/charge and
+  physical return evidence is not an inventory system or provider-confirmed refund.
+  Atomic benefit/principal settlement and return orchestration remains required before
+  release; existing entry-point gates stay closed. No separate public spending path.
 - **PLAN-007:** Redemption is full-only for every new supported configuration, including
   anytime. The server settles the complete available entitlement at internal precision
   and closes that agreement; customer login/other agreements remain. No reusable wallet.

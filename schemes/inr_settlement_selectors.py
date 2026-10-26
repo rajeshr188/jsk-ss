@@ -24,6 +24,16 @@ def inr_source_evidence(account):
     if (account.agreed_months != config.duration_months
             or account.eligible_from != calculate_eligibility_date(start_date=account.start_date, agreed_months=config.duration_months)):
         raise ValidationError("Frozen INR duration/date evidence requires review.")
+    return inr_payment_source_evidence(account)
+
+
+def inr_payment_source_evidence(account):
+    """Source proof shared with gated benefit fulfilment, never settlement permission.
+
+    The existing disposition entry point above retains its family/benefit gate.
+    """
+    validate_inr_contract(account)
+    config = account.configuration_snapshot
     summary = get_inr_principal_summary(account)
     if summary.needs_review or account.redemptions.exists():
         raise ValidationError("Reconcile principal and legacy settlement history first.")

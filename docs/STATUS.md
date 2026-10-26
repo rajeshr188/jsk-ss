@@ -2,6 +2,35 @@
 
 ## Current milestone
 
+**26 October 2026 - gated invoice benefit fulfilment and full-return evidence (0047).**
+The next ordered dependency records one immutable invoice application per retained
+award, linked to the actual INR jewellery fulfilment or full exact-grade metal
+settlement. It retains gross/net invoice values, eligible-charge evidence for VA,
+calculated benefit, customer receipt and source proof. Owner-bound expiring previews,
+account locking, source revalidation and database uniqueness prevent stale or repeated
+consumption. Invoice arithmetic never increases principal, grams or refundable credit.
+
+Append-only benefit reversal requires the matching recorded full principal return,
+corrected invoice, customer confirmation and actual return time. Original awards and
+invoice evidence survive. Returned benefits stay in review; there is no automatic
+re-spending, cash payout, partial reversal or replacement-credit wallet. An invoice
+unable to consume the full purchase bonus plus a positive principal handover remains
+blocked rather than silently forfeiting a remainder. Metal invoice amounts/charges
+and physical handover/return references are owner-attested, not an inventory or invoice
+system; INR net invoice must match its retained principal-disposition split.
+
+Migration 0047 preserves existing rows and refuses rollback over new benefit invoice
+or return evidence. The read-only check_benefit_awards diagnostic now distinguishes
+awards, invoice fulfilments, reversals and review. Verification is recorded in
+TESTING.md; only disposable localhost PostgreSQL test databases were migrated.
+
+Next: integrate independent eligibility, award timing, benefit fulfilment and complete
+principal settlement/return atomically, then presentation/reminders/privacy and full
+lifecycle acceptance. Existing settlement entry points still reject benefit-bearing
+contracts. No owner UI, normal-database migration, activation, push or deployment is
+included; the coherent builder release remains unfinished. Unrelated production notes
+and UI edits are preserved outside this checkpoint.
+
 **26 October 2026 - gated retained benefit awards implemented locally (0046).**
 The next ordered benefit dependency now retains one immutable award per agreement:
 an INR purchase-bonus amount/base or a VA-discount right with no invented monetary

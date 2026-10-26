@@ -29,12 +29,6 @@ def benefit_award_evidence(account):
     if not qualification.qualification_met:
         raise ValidationError("Benefit qualification is not met; resolve the recorded review or schedule first.")
     policy = terms.policy
-    payments = account.contributions.all()
-    events = PaymentWebhookEvent.objects.filter(Q(contribution__in=payments) | Q(
-        gateway_order_id__in=payments.exclude(gateway_order_id="").values("gateway_order_id")))
-    periods = account.instalment_periods.all()
-    from .models import InstalmentReservation, InstalmentPaymentDecision, InstalmentReview
-    claims = InstalmentReservation.objects.filter(period__in=periods)
     evidence = dict(version=1, account=account.pk, configuration=terms.configuration_id,
         revision=account.plan_revision_id, revision_digest=proof_digest(account.plan_revision.terms),
         contract=terms.account_snapshots(), kind=policy.benefit_kind,
@@ -45,6 +39,23 @@ def benefit_award_evidence(account):
         amount=qualification.calculation.amount if qualification.calculation else None,
         source_receipt_ids=list(qualification.source_receipt_ids),
         qualified_payments=qualification.qualified_payments, required_payments=qualification.required_payments,
+        **benefit_source_snapshot(account))
+    return json.loads(json.dumps(evidence, cls=DjangoJSONEncoder))
+
+
+def benefit_source_snapshot(account):
+    """Financial source facts only, not eligibility or permission to spend an award.
+
+    Kept identical to the source portion of v1 award evidence so closing an agreement
+    never requires pretending that it is still active or rewriting a retained award.
+    """
+    payments = account.contributions.all()
+    events = PaymentWebhookEvent.objects.filter(Q(contribution__in=payments) | Q(
+        gateway_order_id__in=payments.exclude(gateway_order_id="").values("gateway_order_id")))
+    periods = account.instalment_periods.all()
+    from .models import InstalmentReservation, InstalmentPaymentDecision, InstalmentReview
+    claims = InstalmentReservation.objects.filter(period__in=periods)
+    evidence = dict(
         payments=_rows(payments, "pk", "amount", "status", "paid_at", "payment_channel", "payment_gateway",
             "gateway_mode", "gateway_order_id", "gateway_reference", "scheme_rate_id", "rate_locked_at",
             "cash_receipt__pk", "cash_reversal__pk", "metal_allocation__pk", "metal_allocation__quantity"),
