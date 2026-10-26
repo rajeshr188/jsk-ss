@@ -42,6 +42,8 @@ class Command(BaseCommand):
         for settlement in ConfiguredSettlement.objects.all().iterator(chunk_size=100):
             try:
                 validate_configured_settlement(settlement)
+                from schemes.independent_settlement_selectors import validate_independent_settlement_benefit
+                validate_independent_settlement_benefit(settlement)
             except ValidationError:
                 errors += 1
         errors += Redemption.objects.filter(scheme_account__configuration_snapshot__isnull=False, configured_settlement__isnull=True).count()

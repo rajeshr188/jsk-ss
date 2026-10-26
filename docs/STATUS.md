@@ -2,6 +2,31 @@
 
 ## Current milestone
 
+**26 October 2026 - gated independent metal settlement and benefit integration.**
+The first exact-grade full disposition now evaluates the accepted independent contract
+through a closure-specific read. Public progress still reports closure pending; no
+account is temporarily reopened and count-only/anytime receive no invented maturity.
+Normal and early closure retain all verified principal, subject to payment/outage
+review. Missing benefit-only instalments cannot forfeit date-eligible principal.
+
+Owner-bound expiring previews include current qualification, source evidence and any
+actual VA invoice. Apply locks the agreement and commits retained award/right, full
+metal redemption, invoice benefit consumption, audit and closure together. A prior
+unchanged award is reused, never stacked. Complete return records linked principal
+and benefit reversals in one transaction and leaves the agreement contained; returned
+rights cannot automatically fund another settlement. Diagnostics check both lifecycles.
+
+Verification is recorded in TESTING.md. This is service-level integration on synthetic
+future contracts, not owner UI or release acceptance. No new migration, normal-database
+mutation, activation, push or deployment is included. Unrelated production notes and
+UI edits are preserved outside this checkpoint.
+
+Next in order: integrate independent INR final-disposition eligibility and benefits
+with its separate manual invoice/refund fulfilment and correction workflow, then
+resolve replacement-disposition handling without automatic benefit re-spending.
+Presentation, reminders, privacy and full lifecycle/CI/release acceptance still follow.
+The coherent builder is not finished; operational/publication gates remain closed.
+
 **26 October 2026 - gated invoice benefit fulfilment and full-return evidence (0047).**
 The next ordered dependency records one immutable invoice application per retained
 award, linked to the actual INR jewellery fulfilment or full exact-grade metal

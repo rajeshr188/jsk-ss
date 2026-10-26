@@ -19,13 +19,19 @@ def _rows(queryset, *fields):
     return list(queryset.order_by("pk").values(*fields))
 
 
-def benefit_award_evidence(account):
+def benefit_award_evidence(account, *, closure=None):
     """Current proof. Mutation callers must hold the agreement lock throughout."""
     account = SchemeAccount.objects.select_related("configuration_snapshot", "plan_revision").get(pk=account.pk)
     if account.agreement_schema_version != 2 or not account.configuration_snapshot_id or not account.plan_revision_id:
         raise ValidationError("A benefit award requires its retained independent contract and revision.")
     terms = validate_independent_account_terms(account)
-    qualification = get_benefit_qualification(account)
+    if closure is not None:
+        from .benefit_selectors import get_closure_benefit_qualification
+        if closure.scheme_account_id != account.pk:
+            raise ValidationError("The award's closure must belong to this agreement.")
+        qualification = get_closure_benefit_qualification(closure)
+    else:
+        qualification = get_benefit_qualification(account)
     if not qualification.qualification_met:
         raise ValidationError("Benefit qualification is not met; resolve the recorded review or schedule first.")
     policy = terms.policy
@@ -40,6 +46,8 @@ def benefit_award_evidence(account):
         source_receipt_ids=list(qualification.source_receipt_ids),
         qualified_payments=qualification.qualified_payments, required_payments=qualification.required_payments,
         **benefit_source_snapshot(account))
+    if closure is not None:
+        evidence["closure"] = str(closure.pk)
     return json.loads(json.dumps(evidence, cls=DjangoJSONEncoder))
 
 
@@ -86,6 +94,10 @@ def validate_benefit_award(award):
     policy = terms.policy
     e = award.evidence
     try:
+        if "closure" in e:
+            from .models import SchemeClosureRequest
+            if not SchemeClosureRequest.objects.filter(pk=e["closure"], scheme_account=account).exists():
+                raise ValueError
         expected = dict(version=1, account=account.pk, configuration=terms.configuration_id,
             revision=account.plan_revision_id, revision_digest=proof_digest(account.plan_revision.terms),
             contract=json.loads(json.dumps(terms.account_snapshots(), cls=DjangoJSONEncoder)),

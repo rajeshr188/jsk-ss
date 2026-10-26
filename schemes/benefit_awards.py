@@ -37,7 +37,6 @@ def preview_benefit_award(*, account_id, actor):
 
 @transaction.atomic
 def record_benefit_award(*, account_id, actor, preview_token, reason, idempotency_key):
-    from .services import _actor_label
     account, actor = _locked(account_id, actor)
     key = _key(idempotency_key)
     reason = _text(reason, 2000, "the benefit award reason")
@@ -63,6 +62,11 @@ def record_benefit_award(*, account_id, actor, preview_token, reason, idempotenc
         raise ValidationError("A benefit award is already retained; do not stack or replace it.")
     if benefit_award_evidence(account) != evidence:
         raise ValidationError("Benefit sources or qualification changed; reload the preview.")
+    return _create_award(facts, evidence, actor, key)
+
+
+def _create_award(facts, evidence, actor, key):
+    from .services import _actor_label
     return SchemeBenefitAward.objects.create(**facts, configuration_id=evidence["configuration"],
         revision_id=evidence["revision"], kind=evidence["kind"],
         qualifying_principal=Decimal(evidence["qualifying_principal"]) if evidence["qualifying_principal"] is not None else None,
@@ -71,3 +75,20 @@ def record_benefit_award(*, account_id, actor, preview_token, reason, idempotenc
         eligible_charge_definition=evidence["eligible_charge_definition"],
         calculation_version=evidence["calculation_version"], rounding_rule=evidence["rounding_rule"],
         evidence=evidence, actor_label=_actor_label(actor), idempotency_key=key, recorded_at=timezone.now())
+
+
+def _retain_closure_award(*, account, closure, actor, evidence, reason, idempotency_key):
+    """Called inside a signed full-settlement transaction, never as a projection write."""
+    account, actor = _locked(account.pk, actor)
+    existing = SchemeBenefitAward.objects.select_for_update().filter(scheme_account=account).first()
+    if existing:
+        from .benefit_fulfilment_selectors import require_unchanged_award_sources
+        require_unchanged_award_sources(existing)
+        if existing.evidence != evidence or hasattr(existing, "invoice_fulfilment"):
+            raise ValidationError("The retained award changed or was consumed; review it.")
+        return existing
+    if benefit_award_evidence(account, closure=closure) != evidence:
+        raise ValidationError("Closure benefit qualification changed; reload the settlement preview.")
+    return _create_award(dict(scheme_account_id=account.pk, recorded_by_id=actor.pk,
+        reason=_text(reason, 2000, "benefit reason"), evidence_digest=proof_digest(evidence)),
+        evidence, actor, _key(idempotency_key))

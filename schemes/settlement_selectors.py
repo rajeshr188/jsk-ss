@@ -14,7 +14,7 @@ def proof_digest(evidence):
     return hashlib.sha256(json.dumps(evidence, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
 
 
-def full_settlement_evidence(account, closure):
+def full_settlement_evidence(account, closure, *, benefit_invoice=None):
     from .closure_selectors import validate_closure_history
     from .instalments import AGREEMENT_TIMEZONE, has_monthly_instalments
     from .instalment_selectors import instalment_payment_ledger_summary, validated_instalment_periods
@@ -26,8 +26,16 @@ def full_settlement_evidence(account, closure):
         raise ValidationError("Full settlement requires an accepted configured closure on an open agreement.")
     account.full_clean()
     config = account.configuration_snapshot
-    if config.accumulation != "EXACT_METAL" or config.benefit_policy != "NONE" or config.settlement_policy != "FULL_ONLY":
-        raise ValidationError("Only exact-metal, no-benefit, full-only agreements are supported.")
+    independent = None
+    if account.agreement_schema_version == 2:
+        from .plan_policies import require_operational_configuration
+        from .independent_settlement_selectors import independent_closure_proof
+        require_operational_configuration(config)
+        independent = independent_closure_proof(account, closure, benefit_invoice)
+    elif benefit_invoice is not None:
+        raise ValidationError("Legacy settlement does not accept independent benefit invoices.")
+    if config.accumulation != "EXACT_METAL" or (independent is None and config.benefit_policy != "NONE") or config.settlement_policy != "FULL_ONLY":
+        raise ValidationError("Use a supported exact-metal full-only contract; legacy benefit settlement is not enabled.")
     payments = list(account.contributions.select_related("scheme_rate", "metal_allocation", "cash_receipt", "cash_reversal").order_by("pk"))
     orders = [p.gateway_order_id for p in payments if p.gateway_order_id]
     events = PaymentWebhookEvent.objects.filter(Q(contribution__in=payments) | Q(gateway_order_id__in=orders)).order_by("pk")
@@ -66,9 +74,9 @@ def full_settlement_evidence(account, closure):
             raise ValidationError("Existing settlement history requires explicit review; no partial or legacy cutover is supplied.")
         validate_configured_settlement(redemption.configured_settlement)
     today = timezone.localdate(timezone=AGREEMENT_TIMEZONE)
-    normal = today >= account.eligible_from
+    normal = independent["progress"]["state"] == "ELIGIBLE" if independent else today >= account.eligible_from
     monthly_proof = None
-    if has_monthly_instalments(account):
+    if independent is None and has_monthly_instalments(account):
         periods = validated_instalment_periods(account)
         ledger = instalment_payment_ledger_summary(account_id=account.pk)
         if any(ledger[key] for key in ("integrity_errors", "review_required", "awaiting_timing", "order_requests_pending", "paid_unallocated", "unresolved_capture_events", "outage_held_accounts")):
@@ -81,11 +89,14 @@ def full_settlement_evidence(account, closure):
     quantity = get_metal_balance(account)
     if quantity <= 0:
         raise ValidationError("A positive recorded entitlement is required; zero balance is not a settlement.")
-    return dict(version=1, account=account.pk, closure=str(closure.pk), sequence=sequence,
+    evidence = dict(version=1, account=account.pk, closure=str(closure.pk), sequence=sequence,
         configuration=account.configuration_snapshot_id, grade=account.metal_grade_id,
         quantity=format(quantity, ".6f"), basis="NORMAL" if normal else "EARLY", as_of=str(today),
         payments=facts, redemptions=[dict(id=r.pk, reversal=r.reversal.pk) for r in redemptions],
         webhooks=list(events.values("pk", "status", "event_type", "gateway_reference")), monthly=monthly_proof)
+    if independent is not None:
+        evidence["independent"] = independent
+    return evidence
 
 
 def validate_configured_settlement(settlement):

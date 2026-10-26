@@ -75,6 +75,14 @@ def get_benefit_qualification(account):
     Future mutations must recompute source proof under the agreement lock, never
     accept this non-locking projection or a caller-supplied calculation as authority.
     """
+    return _benefit_qualification(account)
+
+
+def get_closure_benefit_qualification(closure):
+    return _benefit_qualification(closure.scheme_account, closure=closure)
+
+
+def _benefit_qualification(account, *, closure=None):
     account = SchemeAccount.objects.select_related("configuration_snapshot", "plan_revision").get(pk=account.pk)
     if account.agreement_schema_version != 2:
         raise ValidationError("Configured purchase benefits do not reinterpret legacy cash bonuses.")
@@ -89,11 +97,15 @@ def get_benefit_qualification(account):
         values.update(kind=policy.benefit_kind, required_payments=policy.required_count)
         if policy.benefit_kind == "NONE":
             return result("NONE", "No bonus or discount is included in this recorded agreement.")
-        progress = get_independent_eligibility(account)
+        if closure is not None:
+            from .agreement_eligibility import get_closure_eligibility
+            progress = get_closure_eligibility(closure)
+        else:
+            progress = get_independent_eligibility(account)
         values["qualified_payments"] = progress.qualified_payments
         if progress.state in ("CANCELLED", "CLOSED", "CLOSURE_PENDING"):
             return result("HISTORY_REVIEW", "Review retained closure and benefit history; do not infer a new award or erase an earlier benefit.")
-        if progress.state in ("REVIEW", "PAYMENT_PENDING", "DISCONTINUATION_REVIEW"):
+        if progress.state in ("REVIEW", "PAYMENT_PENDING") or (closure is None and progress.state == "DISCONTINUATION_REVIEW"):
             return result("REVIEW", "Resolve payment, source and outage evidence before deciding benefit qualification. Principal is retained.")
         if policy.obligation == "REQUIRED_MONTHLY":
             if policy.benefit_on_miss == "DISQUALIFY_UNEARNED":

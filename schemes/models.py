@@ -2214,7 +2214,9 @@ class SchemeBenefitAward(models.Model):
         from .benefit_award_selectors import benefit_award_evidence
         require_operational_configuration(self.scheme_account.configuration_snapshot)
         self.full_clean()
-        if self.evidence != benefit_award_evidence(self.scheme_account):
+        closure = (SchemeClosureRequest.objects.get(pk=self.evidence["closure"], scheme_account=self.scheme_account)
+            if self.evidence.get("closure") else None)
+        if self.evidence != benefit_award_evidence(self.scheme_account, closure=closure):
             raise ValidationError("Benefit qualification changed; reload the locked award preview.")
         return super().save(*args, **kwargs)
 

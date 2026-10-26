@@ -641,8 +641,8 @@ preferences do not become fixed, and no old agreement receives a configuration i
   retained; reverse migration refuses to discard existing awards. Later source changes,
   corrections or accepted/closed disposition history flag review while preserving the
   recorded award, not silently recomputing it, reducing principal or authorizing spend.
-  This is not automatic awarding or final invoice consumption. Benefit-bearing settlement
-  remains blocked until fulfilment and linked correction/reversal are integrated.
+  The standalone award foundation is not automatic awarding or invoice consumption;
+  actual use requires the linked settlement lifecycle below and operational readiness.
   The gated invoice foundation (0047) links one immutable award consumption to the
   agreement's actual normal full-principal jewellery handover, never just an unlinked
   invoice number. Purchase bonus uses its retained amount; VA uses evidenced eligible
@@ -656,8 +656,16 @@ preferences do not become fixed, and no old agreement receives a configuration i
   restores principal itself, allows partial reversal or automatically makes the award
   spendable again. Returned rights require review. Owner-attested invoice/charge and
   physical return evidence is not an inventory system or provider-confirmed refund.
-  Atomic benefit/principal settlement and return orchestration remains required before
-  release; existing entry-point gates stay closed. No separate public spending path.
+  The gated first independent exact-metal settlement now uses closure-scoped eligibility
+  and qualification under the agreement lock. Accepted closure history/customer authority
+  must match; ordinary progress still reports closure pending. It creates or reuses the
+  unchanged qualified VA right and commits full principal, invoice consumption and closure
+  atomically. Early closure grants no unearned completion benefit; benefit-only misses
+  cannot remove principal. Complete return requires linked customer/invoice/time evidence
+  and reverses consumed benefit with principal atomically, leaving the account contained.
+  Prior returned dispositions are not automatically spendable or replacement-ready.
+  Independent INR orchestration, replacement handling and lifecycle acceptance remain
+  required before release; operational gates stay closed. No separate public spending path.
 - **PLAN-007:** Redemption is full-only for every new supported configuration, including
   anytime. The server settles the complete available entitlement at internal precision
   and closes that agreement; customer login/other agreements remain. No reusable wallet.

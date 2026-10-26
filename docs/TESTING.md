@@ -1,5 +1,42 @@
 # Testing
 
+## Independent metal settlement integration (26 October 2026; no migration)
+
+`test_independent_metal_settlement` exercises real closure request/review, independent
+eligibility, retained award, exact-grade redemption, invoice fulfilment and linked
+full-return services on synthetic future contracts. Operational readiness alone is
+simulated; source validation, customer/owner authority, calculations and transactional
+mutations remain real. Public progress remains closure-pending throughout preparation.
+
+Coverage includes all five eligibility families with VA, count/anytime without benefits,
+early full-principal closure, calendar/anniversary benefit misses without principal
+forfeiture, reuse of an existing immutable award, invoice/authority/token validation,
+stale outage and pending-provider evidence, and refusal of the separate INR path.
+Customer-requested 22K closure and authorized owner-assisted 24K/silver closure retain
+the exact grade and six-decimal entitlement through settlement and complete return.
+Injected failures after actual invoice/reversal insertion prove rollback of principal,
+benefit, audit and closure together. Concurrent settlement and full-return retries must
+produce one lifecycle/restoration. Missing linked benefit evidence fails diagnostics.
+Real gates remain closed with CONFIGURED_PLANS_ENABLED either off or on; returned
+histories cannot authorize an automatic replacement settlement or benefit re-spend.
+
+The final focused run passed **14 tests in 93.048s**. Its first expanded run exposed
+a test expectation error (the unused metal column is NULL, not zero); correcting the
+assertion required no application change. Django checks and
+`makemigrations --check --dry-run` pass; no schema changes are needed.
+
+The broader nine-module run executed **173 tests in 777.350s**: 172 passed and one
+old closure migration test errored because it used current runtime models against
+the 0030/0031 schema. That test now uses MigrationExecutor historical app registries
+on both sides of the migration while still comparing every historical financial
+field and requiring zero invented closure requests/events. No migration or runtime
+financial rule was changed for that repair. The repaired historical migration test
+and all 14 integration tests then passed together: **15 tests in 108.428s**. The full
+173-test group was not repeated after that test-only repair; full CI remains pending.
+
+Only disposable localhost PostgreSQL databases are used. Independent INR orchestration,
+replacement handling, owner UI and complete lifecycle/release acceptance remain pending.
+
 ## Invoice benefit fulfilment and full-return evidence (26 October 2026; 0047)
 
 `test_benefit_fulfilments` exercises INR purchase bonus, INR VA discount and exact-grade

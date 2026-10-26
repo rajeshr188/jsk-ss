@@ -100,6 +100,19 @@ def get_independent_eligibility(account, *, as_of=None):
     Reload the account and frozen contract to avoid stale/caller-modified snapshots.
     Operational readiness remains separate, even when this projection says ELIGIBLE.
     """
+    return _evaluate_independent_eligibility(account, as_of=as_of)
+
+
+def get_closure_eligibility(closure):
+    """First full disposition only; accepted consent is not a payment bypass.
+
+    Call under the account lock for mutations. Ordinary progress reads still report
+    CLOSURE_PENDING. No account is temporarily reopened or given a fictional date.
+    """
+    return _evaluate_independent_eligibility(closure.scheme_account, closure=closure)
+
+
+def _evaluate_independent_eligibility(account, *, as_of=None, closure=None):
     now = timezone.now()
     today = now.astimezone(AGREEMENT_TIMEZONE).date()
     if as_of is not None and (type(as_of) is not date or as_of != today):
@@ -124,7 +137,17 @@ def get_independent_eligibility(account, *, as_of=None):
     if account.status == "REDEEMED":
         return result("CLOSED", "This agreement is closed; retained payment history is not a new entitlement.")
     from .closure_selectors import accepted_closure
-    if (account.status == "CLOSURE_PENDING" or accepted_closure(account)
+    if closure is not None:
+        from .closure_selectors import validate_closure_history
+        from .models import SchemeClosureRequest
+        closure = SchemeClosureRequest.objects.get(pk=closure.pk)
+        validate_closure_history(closure)
+        if (closure.scheme_account_id != account.pk or closure.status != "ACCEPTED"
+                or account.status not in ("ACTIVE", "REDEMPTION_ELIGIBLE", "CLOSURE_PENDING")
+                or (closure.source == "OWNER_ASSISTED" and not closure.authorization_reference.strip())
+                or account.redemptions.exists() or account.inr_settlements.exists()):
+            raise ValidationError("Review the accepted first full closure and retained disposition history.")
+    elif (account.status == "CLOSURE_PENDING" or accepted_closure(account)
             or account.redemptions.exists() or account.inr_settlements.exists()):
         return result("CLOSURE_PENDING", "Inspect the full closure/disposition history. This progress view cannot authorize another settlement.")
 
