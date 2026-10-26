@@ -2,7 +2,7 @@
 
 ## Current milestone
 
-**26 October 2026 - checkout duplicate prevention and uncertainty recovery (local candidate).**
+**26 October 2026 - checkout duplicate prevention and uncertainty recovery (PR #76 candidate).**
 The isolated production-based hotfix now retains signed browser submission/history
 context and durable submission aliases, with one unresolved online contribution per
 agreement enforced by account locking and the database. Flexible agreements retain
@@ -33,8 +33,18 @@ owner/customer/fragment/permission and onboarding journeys passed. Real HMAC/API
 adapters with mocked responses exercised signed forms, duplicate/stale replay,
 one allocation, lost create response, owner identity preview/fresh apply, closed
 recovered checkout and inspected unpaid closure. No real provider call was made;
-the isolated source/restore databases contain only fixtures. Hosted CI and final
-published-image/production acceptance remain pending. The existing Better Stack heartbeat and
+the isolated source/restore databases contain only fixtures. The exact implementation
+commit `1d6636d4782b484d524850e0f3c54313d3cbeee5` was published to PR #76 with
+explicit owner permission. All 591 tests passed locally (645.949s) and in hosted
+pull-request CI run `40280789442` (311.935s). Migration/drift/application/deployment
+checks, static collection, container build and the fixable-critical vulnerability
+gate passed. CI's TLS warning concerns its disposable localhost database.
+The exact-commit local image (`sha256:9cb7a05da72c6ec12dc83d6174df25e195c75ee4839db611d044a6e53440447b`)
+repeated the dump/restore/upgrade and synthetic payment/recovery rehearsal successfully;
+the labelled disposable PostgreSQL container was then removed. A read-only production
+preflight found zero unresolved Razorpay attempts and zero overlapping accounts;
+the web container remained healthy. These counts must be rechecked during cutover.
+Final published-image/production acceptance remains pending. The existing Better Stack heartbeat and
 inspection/recovery candidate remain part of this focused release. Main development
 and its uncommitted builder/UI work remain separate. No production deployment,
 database migration, new payment, refund or external alert was performed for this work.
