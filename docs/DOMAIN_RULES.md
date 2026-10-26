@@ -632,6 +632,17 @@ preferences do not become fixed, and no old agreement receives a configuration i
   liability. Closed/accepted-disposition histories require retained lifecycle review;
   a later changed projection must never erase an already recorded benefit. Award,
   one-time invoice fulfilment and append-only correction remain separate gated work.
+  The gated retained award foundation (0046) stores one immutable purchase-bonus
+  amount or VA-discount right per agreement with its pinned revision, exact terms,
+  source/qualification/outage proof and calculation/rounding identifiers. A VA right
+  has no monetary amount before invoice-charge evidence. Owner authority is reloaded;
+  signed short-lived previews bind owner/account and apply recomputes under the account
+  lock. Idempotent retries do not stack awards. Records and database uniqueness are
+  retained; reverse migration refuses to discard existing awards. Later source changes,
+  corrections or accepted/closed disposition history flag review while preserving the
+  recorded award, not silently recomputing it, reducing principal or authorizing spend.
+  This is not automatic awarding or final invoice consumption. Benefit-bearing settlement
+  remains blocked until fulfilment and linked correction/reversal are integrated.
 - **PLAN-007:** Redemption is full-only for every new supported configuration, including
   anytime. The server settles the complete available entitlement at internal precision
   and closes that agreement; customer login/other agreements remain. No reusable wallet.

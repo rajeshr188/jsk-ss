@@ -2166,6 +2166,62 @@ class InrFulfilmentReturn(models.Model):
         raise ValidationError("Physical return evidence must be retained.")
 
 
+class SchemeBenefitAward(models.Model):
+    """Retained purchase benefit/right, not principal or invoice fulfilment."""
+    scheme_account = models.OneToOneField(SchemeAccount, on_delete=models.PROTECT, related_name="benefit_award")
+    configuration = models.ForeignKey(SchemePlanConfiguration, on_delete=models.PROTECT)
+    revision = models.ForeignKey(SchemePlanRevision, on_delete=models.PROTECT)
+    kind = models.CharField(max_length=24, choices=[("INR_PURCHASE_BONUS", "INR purchase bonus"),
+        ("VA_DISCOUNT", "Invoice VA discount right")])
+    qualifying_principal = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True)
+    amount = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True)
+    percentage = models.DecimalField(max_digits=5, decimal_places=2)
+    cap_inr = models.DecimalField(max_digits=14, decimal_places=2)
+    eligible_charge_definition = models.TextField(blank=True)
+    calculation_version = models.CharField(max_length=40)
+    rounding_rule = models.CharField(max_length=40)
+    evidence = models.JSONField()
+    evidence_digest = models.CharField(max_length=64)
+    recorded_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    actor_label = models.CharField(max_length=254)
+    reason = models.TextField()
+    idempotency_key = models.UUIDField(unique=True)
+    recorded_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(condition=(models.Q(kind="INR_PURCHASE_BONUS", qualifying_principal__isnull=False,
+                qualifying_principal__gt=0, qualifying_principal__lte=Decimal("999999999999.99"),
+                amount__isnull=False, amount__gte=0, amount__lte=models.F("cap_inr"), eligible_charge_definition="")
+                | (models.Q(kind="VA_DISCOUNT", qualifying_principal__isnull=True, amount__isnull=True)
+                   & ~models.Q(eligible_charge_definition=""))), name="benefit_award_shape_valid"),
+            models.CheckConstraint(condition=models.Q(percentage__gt=0, percentage__lte=100,
+                cap_inr__gt=0, cap_inr__lte=Decimal("999999999999.99")), name="benefit_award_parameters_valid"),
+            models.CheckConstraint(condition=~models.Q(actor_label="") & ~models.Q(reason="")
+                & ~models.Q(evidence_digest="") & ~models.Q(calculation_version="") & ~models.Q(rounding_rule=""),
+                name="benefit_award_evidence_required"),
+        ]
+
+    def clean(self):
+        super().clean()
+        from .benefit_award_selectors import validate_benefit_award
+        validate_benefit_award(self)
+
+    def save(self, *args, **kwargs):
+        if self.pk and type(self).objects.filter(pk=self.pk).exists():
+            raise ValidationError("Benefit awards are immutable; retain linked correction evidence.")
+        from .plan_policies import require_operational_configuration
+        from .benefit_award_selectors import benefit_award_evidence
+        require_operational_configuration(self.scheme_account.configuration_snapshot)
+        self.full_clean()
+        if self.evidence != benefit_award_evidence(self.scheme_account):
+            raise ValidationError("Benefit qualification changed; reload the locked award preview.")
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Benefit awards must be retained, not deleted.")
+
+
 class InStoreCashReceipt(models.Model):
     contribution = models.OneToOneField(
         Contribution,

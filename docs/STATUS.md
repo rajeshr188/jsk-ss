@@ -2,6 +2,33 @@
 
 ## Current milestone
 
+**26 October 2026 - gated retained benefit awards implemented locally (0046).**
+The next ordered benefit dependency now retains one immutable award per agreement:
+an INR purchase-bonus amount/base or a VA-discount right with no invented monetary
+amount before invoice-charge evidence. Frozen configuration/revision, accepted terms,
+source receipts/payments, qualification decisions, outage history and calculation/
+rounding identifiers survive current-offer edits and later source changes.
+
+The owner-only service reloads authority, locks the agreement, checks the existing
+operational gate and requires a short-lived actor/account-bound signed preview.
+Apply recomputes evidence under the same lock; retries retain the same award and
+conflicting requests cannot stack it. Source corrections/new payments/closure
+changes trigger read-only review while preserving the recorded award and principal;
+this is not automatic revocation, re-award, spending or a principal deduction.
+
+Migration 0046 creates the retained award with database uniqueness/value/shape
+constraints and refuses reversal when award evidence exists. It was exercised only
+in disposable localhost PostgreSQL test databases, not the normal local/production
+database. Verification is recorded in TESTING.md. The read-only
+check_benefit_awards diagnostic is not activation or settlement readiness.
+
+Invoice fulfilment, linked benefit corrections/reversal and complete settlement
+integration remain next. Existing settlement services still reject benefit-bearing
+contracts; no public/owner award UI, automatic award trigger or release-gate bypass
+was added. Post-award changes stay review-only until the linked lifecycle exists.
+The coherent builder release remains unfinished; no push or deployment occurred.
+Unrelated production notes, UI edits and worktrees remain outside this checkpoint.
+
 **26 October 2026 - unawarded benefit qualification and calculations implemented locally.**
 Schema-2 progress now evaluates the accepted benefit policy separately from principal
 eligibility. Required schedules must qualify even when principal is duration-only.

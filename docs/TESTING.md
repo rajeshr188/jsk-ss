@@ -1,5 +1,29 @@
 # Testing
 
+## Retained benefit awards (26 October 2026; migration 0046)
+
+`test_benefit_awards` exercises the five-family, three benefit/denomination matrix
+using real cash/principal/allocation services on synthetic future contracts. The
+operational gate alone is simulated; qualification, source validation, owner authority,
+calculation and database constraints remain real. Signed previews bind actor/account,
+expire and reject changed sources; retries do not duplicate or replace awards.
+Database constraints retain the separate monetary-bonus versus unvalued-VA-right shape.
+
+Tests cover immutable records, current-offer edits, source correction, incomplete/
+held/early-closure refusal, closed-history review, rollback on insertion failure and
+reverse-migration refusal over retained awards. Reads/diagnostics do not write or
+alter principal. Concurrent retries and simultaneous new cash/award recording use
+the agreement lock. Real gates remain closed with CONFIGURED_PLANS_ENABLED off/on,
+including direct model creation. No invoice fulfilment or benefit correction is
+claimed by these foundation tests; those are the next integration dependency.
+
+The combined award/qualification, independent eligibility, INR settlement/correction
+and configured metal-settlement regression run passed **120 tests in 570.392s**.
+The final focused award run passed **12 tests in 76.902s**, including pending-provider
+exposure after preview and both concurrency cases. Django system checks and migration
+consistency passed. Migration 0046 was exercised in unique disposable localhost
+PostgreSQL databases only; no normal local or production database was migrated.
+
 ## Purchase-benefit qualification and arithmetic (26 October 2026; no migration)
 
 `test_benefit_qualification` covers the five approved families across INR purchase
