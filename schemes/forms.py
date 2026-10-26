@@ -584,6 +584,40 @@ class ContributionForm(forms.Form):
         return validated_amount
 
 
+class RazorpayContributionForm(ContributionForm):
+    submission_key = forms.UUIDField(widget=forms.HiddenInput)
+    submission_context = forms.CharField(widget=forms.HiddenInput, max_length=4096)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not self.is_bound:
+            key = self.initial.setdefault("submission_key", uuid.uuid4())
+            latest = Contribution.objects.filter(scheme_account=self.scheme_account).order_by("-pk").values_list("pk", flat=True).first() or 0
+            self.initial["submission_context"] = signing.dumps(dict(key=str(key),
+                account=self.scheme_account.pk, mode=settings.RAZORPAY_MODE, latest=latest), salt="schemes.checkout-submission.v1")
+
+    def clean(self):
+        cleaned = super().clean()
+        if "submission_context" not in cleaned or "submission_key" not in cleaned:
+            return cleaned
+        try:
+            context = signing.loads(cleaned["submission_context"], salt="schemes.checkout-submission.v1")
+        except signing.BadSignature:
+            raise forms.ValidationError("This payment form is invalid. Open your plan and review a fresh form.") from None
+        if (not isinstance(context, dict) or context.get("key") != str(cleaned["submission_key"])
+                or context.get("account") != self.scheme_account.pk or context.get("mode") != settings.RAZORPAY_MODE
+                or type(context.get("latest")) is not int or context["latest"] < 0):
+            raise forms.ValidationError("This payment form differs from the original review. Open your plan again.")
+        cleaned["expected_latest_id"] = context["latest"]
+        return cleaned
+
+    def clean_amount(self):
+        # Admission is checked under the account lock by the service. A completed
+        # or stale submission must still be able to return its recorded result.
+        from .services import validate_contribution_amount
+        return validate_contribution_amount(self.scheme_account, self.cleaned_data["amount"])
+
+
 class InStoreCashContributionForm(ContributionForm):
     idempotency_key = forms.UUIDField(widget=forms.HiddenInput)
     expected_scheme_rate_id = forms.IntegerField(

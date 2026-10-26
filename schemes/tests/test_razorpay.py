@@ -716,9 +716,6 @@ class RazorpayServiceTests(TestCase):
         first = initiate_razorpay_contribution(
             scheme_account=account, amount=Decimal("5000.00"), gateway=gateway
         )
-        second = initiate_razorpay_contribution(
-            scheme_account=account, amount=Decimal("5000.00"), gateway=gateway
-        )
         Contribution.objects.filter(pk=first.pk).update(
             created_at=timezone.now() - timedelta(hours=48),
             checkout_expires_at=timezone.now() - timedelta(hours=47, minutes=50),
@@ -731,6 +728,9 @@ class RazorpayServiceTests(TestCase):
             gateway=gateway,
         )
 
+        second = initiate_razorpay_contribution(
+            scheme_account=account, amount=Decimal("5000.00"), gateway=gateway
+        )
         first.refresh_from_db()
         second.refresh_from_db()
         self.assertEqual(first.status, Contribution.Status.ABANDONED)
@@ -738,25 +738,25 @@ class RazorpayServiceTests(TestCase):
         self.assertNotEqual(first.gateway_order_id, second.gateway_order_id)
 
     @override_settings(**{**RAZORPAY_SETTINGS, "DEBUG": True})
-    def test_expired_flexible_attempt_hides_payment_until_reconciled_despite_later_paid_order(self):
+    def test_expired_flexible_attempt_hides_payment_until_reconciled_despite_existing_paid_order(self):
         customer, account = make_account(
             email="expired-flexible-continuation@example.com",
             frequency=SchemePlan.FrequencyRule.FLEXIBLE,
         )
         gateway = FakeRazorpayGateway()
-        expired = initiate_razorpay_contribution(
-            scheme_account=account, amount=Decimal("5000.00"), gateway=gateway,
-        )
-        Contribution.objects.filter(pk=expired.pk).update(
-            created_at=timezone.now() - timedelta(hours=48),
-            checkout_expires_at=timezone.now() - timedelta(minutes=1),
-        )
         later = initiate_razorpay_contribution(
             scheme_account=account, amount=Decimal("5000.00"), gateway=gateway,
         )
         confirm_razorpay_contribution(
             contribution_id=later.pk, callback_order_id=later.gateway_order_id,
             payment_id="pay_later_flexible_order", signature="verified-signature", gateway=gateway,
+        )
+        expired = initiate_razorpay_contribution(
+            scheme_account=account, amount=Decimal("5000.00"), gateway=gateway,
+        )
+        Contribution.objects.filter(pk=expired.pk).update(
+            created_at=timezone.now() - timedelta(hours=48),
+            checkout_expires_at=timezone.now() - timedelta(minutes=1),
         )
         self.assertTrue(get_customer_payment_availability(account).allowed)
         action = get_customer_plan_next_action(account)
@@ -1318,6 +1318,12 @@ class RazorpayViewTests(TestCase):
         )
         self.client.force_login(self.customer.user)
 
+    def payment_data(self):
+        response = self.client.get(reverse("schemes:pay_contribution", args=[self.account.scheme_number]))
+        form = response.context["form"]
+        return dict(amount="5000.00", submission_key=str(form.initial["submission_key"]),
+                    submission_context=form.initial["submission_context"])
+
     def test_customer_creates_order_and_sees_checkout(self):
         order = PaymentOrder("order_view", 500000, "INR")
         with patch(
@@ -1325,7 +1331,7 @@ class RazorpayViewTests(TestCase):
         ):
             response = self.client.post(
                 reverse("schemes:pay_contribution", args=[self.account.scheme_number]),
-                {"amount": "5000.00"},
+                self.payment_data(),
                 follow=True,
             )
         self.assertContains(response, "Razorpay test checkout")
@@ -1376,7 +1382,7 @@ class RazorpayViewTests(TestCase):
         ):
             response = self.client.post(
                 reverse("schemes:pay_contribution", args=[self.account.scheme_number]),
-                {"amount": "5000.00"},
+                self.payment_data(),
                 follow=True,
             )
 
@@ -1411,7 +1417,7 @@ class RazorpayViewTests(TestCase):
         self.assertNotContains(response, "rzp_live_public_key")
         self.assertNotContains(response, "Resume payment")
 
-    def test_order_authentication_failure_returns_401_and_no_entitlement(self):
+    def test_order_authentication_failure_retains_pending_request_without_entitlement(self):
         with patch(
             "schemes.payments.RazorpayPaymentGateway.create_order",
             side_effect=PaymentGatewayAuthenticationError(
@@ -1420,29 +1426,29 @@ class RazorpayViewTests(TestCase):
         ):
             response = self.client.post(
                 reverse("schemes:pay_contribution", args=[self.account.scheme_number]),
-                {"amount": "5000.00"},
+                self.payment_data(),
             )
-        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.status_code, 503)
         self.assertContains(
             response,
-            "Razorpay authentication failed.",
-            status_code=401,
+            "awaiting provider reconciliation",
+            status_code=503,
         )
         contribution = Contribution.objects.get()
-        self.assertEqual(contribution.status, Contribution.Status.FAILED)
+        self.assertEqual(contribution.status, Contribution.Status.PENDING)
         self.assertEqual(get_metal_balance(self.account), Decimal("0.000000"))
 
-    def test_order_provider_failure_returns_500_and_no_entitlement(self):
+    def test_order_provider_failure_retains_pending_request_without_entitlement(self):
         with patch(
             "schemes.payments.RazorpayPaymentGateway.create_order",
             side_effect=PaymentGatewayError("Razorpay could not be reached."),
         ):
             response = self.client.post(
                 reverse("schemes:pay_contribution", args=[self.account.scheme_number]),
-                {"amount": "5000.00"},
+                self.payment_data(),
             )
-        self.assertEqual(response.status_code, 500)
-        self.assertEqual(Contribution.objects.get().status, Contribution.Status.FAILED)
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(Contribution.objects.get().status, Contribution.Status.PENDING)
         self.assertEqual(get_metal_balance(self.account), Decimal("0.000000"))
 
     def test_customer_cannot_open_another_customers_checkout(self):

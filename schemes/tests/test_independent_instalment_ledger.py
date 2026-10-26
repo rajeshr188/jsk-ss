@@ -178,7 +178,9 @@ class IndependentInstalmentLedgerTests(TestCase):
     def test_late_capture_is_review_and_test_gateway_cannot_reserve(self):
         account = self.account()
         with patch("django.utils.timezone.now", return_value=NOW):
-            test_payment = source(account, gateway_mode="test")
+            # Independent invalid-mode and late-capture cases must not create
+            # two unresolved online attempts on the same agreement.
+            test_payment = source(self.account(), gateway_mode="test")
             with self.assertRaises(ValidationError):
                 reserve_instalment(contribution_id=test_payment.pk)
             contribution = source(account)

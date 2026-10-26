@@ -144,9 +144,11 @@ class InstalmentPaymentTests(TestCase):
     def test_completed_online_payment_cannot_acquire_reservation_retroactively(self):
         for changes in ({"status": "PAID_UNALLOCATED", "paid_at": NOW, "gateway_reference": "already-paid"},
             {"gateway_order_id": "order_already_created"}):
-            c = payment(self.account, **changes)
-            with self.assertRaises(ValidationError):
-                reserve_instalment(contribution_id=c.pk)
+            with transaction.atomic():
+                c = payment(self.account, **changes)
+                with self.assertRaises(ValidationError):
+                    reserve_instalment(contribution_id=c.pk)
+                transaction.set_rollback(True)
         self.assertFalse(InstalmentReservation.objects.exists())
 
     def test_boundary_deadline_future_and_inconsistent_timing_require_review(self):
@@ -186,9 +188,11 @@ class InstalmentPaymentTests(TestCase):
     def test_test_mock_wrong_amount_expired_and_corrupt_schedule_rejected(self):
         for changes in ({"gateway_mode": "test"}, {"gateway": "mock"}, {"amount": "999"},
             {"checkout_expires_at": NOW}):
-            c = payment(self.account, **changes)
-            with self.assertRaises(ValidationError):
-                reserve_instalment(contribution_id=c.pk)
+            with transaction.atomic():
+                c = payment(self.account, **changes)
+                with self.assertRaises(ValidationError):
+                    reserve_instalment(contribution_id=c.pk)
+                transaction.set_rollback(True)
         self.account.instalment_periods.filter(number=2).update(amount="2000")
         c = payment(self.account)
         with self.assertRaises(ValidationError):

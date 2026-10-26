@@ -309,8 +309,9 @@ def main():
             print("isolation=ok fresh_databases=2 configured_application_database_untouched=true outbound_network=blocked", flush=True)
             with tempfile.TemporaryDirectory(prefix="jsk-workflow-synthetic-") as directory:
                 executor = MigrationExecutor(connection)
-                targets = [node for node in executor.loader.graph.leaf_nodes() if node[0] not in {"accounts", "pages"}]
-                targets += [("accounts", "0006_customer_deletion_completion"), ("pages", "0001_initial")]
+                targets = [node for node in executor.loader.graph.leaf_nodes() if node[0] not in {"accounts", "pages", "schemes"}]
+                targets += [("accounts", "0006_customer_deletion_completion"), ("pages", "0001_initial"),
+                            ("schemes", "0020_scheme_enrolment_requests")]
                 executor.migrate(targets)
                 ids = seed_legacy(executor.loader.project_state(targets).apps)
                 before = digest(legacy_snapshot())

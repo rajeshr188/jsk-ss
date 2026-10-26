@@ -5,16 +5,17 @@ from django.db import connection
 from django.db.migrations.executor import MigrationExecutor
 from django.test import TransactionTestCase
 
+from .migration_helpers import applied_migration_apps
+
 
 class PlanGovernanceMigrationTests(TransactionTestCase):
     def setUp(self):
         super().setUp()
         executor = MigrationExecutor(connection)
         self.latest = executor.loader.graph.leaf_nodes()
-        self.other_targets = [target for target in self.latest if target[0] != "schemes"]
-        target = [*self.other_targets, ("schemes", "0020_scheme_enrolment_requests")]
+        target = [("schemes", "0020_scheme_enrolment_requests")]
         executor.migrate(target)
-        self.old_apps = executor.loader.project_state(target).apps
+        self.old_apps = applied_migration_apps()
 
     def tearDown(self):
         MigrationExecutor(connection).migrate(self.latest)
@@ -36,9 +37,9 @@ class PlanGovernanceMigrationTests(TransactionTestCase):
             frequency_rule_snapshot="FLEXIBLE", minimum_amount_snapshot=Decimal("75.00"))
         before = Account.objects.filter(pk=account.pk).values().get()
         executor = MigrationExecutor(connection)
-        target = [*self.other_targets, ("schemes", "0021_plan_agreement_governance")]
+        target = [("schemes", "0021_plan_agreement_governance")]
         executor.migrate(target)
-        new_apps = executor.loader.project_state(target).apps
+        new_apps = applied_migration_apps()
         after = new_apps.get_model("schemes", "SchemeAccount").objects.values().get(pk=account.pk)
         self.assertEqual({key: after[key] for key in before}, before)
         self.assertEqual(after["plan_name_snapshot"], plan.name)

@@ -826,6 +826,11 @@ def get_customer_plan_next_action(scheme_account, availability=None):
         "created_at", "pk",
     ).first()
     if unresolved is not None:
+        from .checkout_selectors import checkout_can_resume
+        if (not scheme_account.configuration_snapshot_id
+                and availability.allowed and checkout_can_resume(unresolved)):
+            return dict(stage="Payment checkout ready", message="Continue your existing checkout to complete this contribution.",
+                label="Continue payment", url=reverse("schemes:razorpay_checkout", args=[unresolved.pk]), can_pay=True)
         mode = "Test payment" if unresolved.gateway_mode == GatewayMode.TEST else (
             "Practice payment" if unresolved.payment_gateway == "mock" else "Payment"
         )

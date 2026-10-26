@@ -33,6 +33,7 @@ from .enrolment_notifications import (
 from .forms import (
     AuditReasonForm,
     ContributionForm,
+    RazorpayContributionForm,
     CustomerCreateForm,
     EnrolmentForm,
     EnrolmentRequestConversionForm,
@@ -1563,7 +1564,15 @@ def pay_contribution(request, scheme_number):
     from accounts.application_selectors import first_payment_preference
     preference = first_payment_preference(account, request.user)
     initial = {"amount": preference} if preference is not None else {}
-    form = ContributionForm(request.POST or None, scheme_account=account, initial=initial)
+    online = razorpay_payment_is_enabled()
+    from .instalments import has_monthly_instalments
+    legacy_identity = online and account.agreement_schema_version == 1 and not has_monthly_instalments(account)
+    if legacy_identity:
+        initial["submission_key"] = uuid.uuid4()
+    form_class = RazorpayContributionForm if legacy_identity else ContributionForm
+    form = form_class(request.POST if request.method == "POST" else None, scheme_account=account, initial=initial)
+    if legacy_identity and request.method == "POST":
+        response_status = 400
     payment_availability = (
         get_payment_availability(metal_grade=account.metal_grade)
         if account.savings_mode
@@ -1609,6 +1618,8 @@ def pay_contribution(request, scheme_number):
                 contribution = initiate_razorpay_contribution(
                     scheme_account=account,
                     amount=form.cleaned_data["amount"],
+                    submission_key=form.cleaned_data.get("submission_key"),
+                    expected_latest_id=form.cleaned_data.get("expected_latest_id"),
                 )
         except (ImproperlyConfigured, PaymentGatewayError, ValidationError) as error:
             if isinstance(error, (ImproperlyConfigured, PaymentGatewayError)):
@@ -1627,6 +1638,8 @@ def pay_contribution(request, scheme_number):
                 response_status = 400
         else:
             if razorpay_payment_is_enabled():
+                if not contribution.gateway_order_id or contribution.status != "PENDING":
+                    return redirect("schemes:payment_status", contribution_id=contribution.pk)
                 return redirect("schemes:razorpay_checkout", contribution_id=contribution.pk)
             if contribution.status == Contribution.Status.PAID:
                 if contribution.scheme_account.savings_mode == SchemeAccount.SavingsMode.CASH:
@@ -1658,6 +1671,8 @@ def pay_contribution(request, scheme_number):
                 get_payment_gateway().mode if razorpay_payment_is_enabled() else ""
             ),
             "current_scheme_rate": current_scheme_rate,
+            "pending_contribution": Contribution.objects.filter(scheme_account=account,
+                status="PENDING", payment_gateway="razorpay").order_by("created_at", "pk").first() if online else None,
         },
         status=response_status,
     )
@@ -1679,7 +1694,7 @@ def razorpay_checkout(request, contribution_id):
         scheme_account__customer__user=request.user,
     )
     if not contribution.gateway_order_id:
-        raise Http404
+        return redirect("schemes:payment_status", contribution_id=contribution.pk)
     from .closure_selectors import accepted_closure
     if accepted_closure(contribution.scheme_account):
         messages.warning(request, "Closure has been accepted. Checkout cannot resume; contact the showroom to reconcile any existing payment.")
@@ -1742,6 +1757,9 @@ def razorpay_checkout(request, contribution_id):
             "schemes:my_scheme_detail",
             scheme_number=contribution.scheme_account.scheme_number,
         )
+    from .checkout_selectors import checkout_can_resume
+    if not checkout_can_resume(contribution):
+        return redirect("schemes:payment_status", contribution_id=contribution.pk)
     checkout_timeout_seconds = max(
         1,
         math.ceil((contribution.checkout_expires_at - timezone.now()).total_seconds()),
@@ -1836,7 +1854,8 @@ def payment_status(request, contribution_id):
         payment_gateway="razorpay",
         scheme_account__customer__user=request.user,
     )
-    return render(request, private_read_template(request, "schemes/payment_status.html", "schemes/includes/payment_status_panel.html"), {"contribution": contribution, "checked_at": timezone.now()})
+    from .checkout_selectors import checkout_can_resume
+    return render(request, private_read_template(request, "schemes/payment_status.html", "schemes/includes/payment_status_panel.html"), {"contribution": contribution, "checked_at": timezone.now(), "checkout_can_resume": checkout_can_resume(contribution)})
 
 
 @csrf_exempt

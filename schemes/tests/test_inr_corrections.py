@@ -371,6 +371,8 @@ class InrCorrectionTransactionTests(TransactionTestCase):
         from importlib import import_module
         from types import SimpleNamespace
         from django.apps import apps
+        leaves = MigrationExecutor(connection).loader.graph.leaf_nodes()
+        self.addCleanup(lambda: MigrationExecutor(connection).migrate(leaves))
         owner, account, p = self.setup_proposal()
         resolution = resolve(p, owner, kind="VOID")
         with self.assertRaisesMessage(RuntimeError, "Cannot reverse 0040"):

@@ -1,5 +1,60 @@
 # Testing
 
+## Isolated checkout/builder integration (26 October 2026)
+
+The local integration joins production release `d0e5dd1` with builder checkpoint
+`372580e` through the empty `0047_merge_checkout_prevention` migration. It preserves
+configured reservation workflows and closed activation gates, routes legacy forms
+through durable checkout identity, and uses one strict provider identity adapter for
+legacy, optional and monthly request receipts. The legacy service explicitly rejects
+configured reservations. Historical migration tests restore every current schema
+leaf; invalid-payment fixture alternatives use separate rolled-back transactions.
+
+Five correction/migration cases passed in **74.774 seconds with normal hashing**.
+The full **1,226-case run completed in 2221.301s**, initially reporting four failed
+assertions and six errors. Corrections preserve configured monthly status actions and
+accepted-closure errors, isolate invalid pending fixtures, use historical models for
+historical tables, construct model state from actual applied migrations, and restore
+all current schema leaves after a reverse guard refuses a downgrade.
+
+The combined **231-case payment run completed in 351.953s**: 230 passed, with one
+historical closure-model error subsequently corrected and passing alone in **43.288s**
+with normal hashing. The final **six schema/concurrency cases passed in 190.256s**
+with normal hashing, including reverse-refusal cleanup immediately before concurrent
+INR crediting, configuration/governance history, closure and unused cancellation.
+The invalid-mode/late-capture fixture passed in **1.992s**, and both configured-boundary
+checks passed in **5.189s**, also with normal hashing. No entire full-suite repeat is
+claimed after these corrections.
+
+Two account-menu style subtest failures belong to the unchanged builder snapshot
+(`AccountMenuPresentationTests`); an isolated repeat confirms them. Their matching
+template edit remains uncommitted in the active worktree and is not imported into
+this checkout change. The whole builder release is therefore not claimed green.
+
+Test databases have unique disposable names on localhost. Broad runs use a
+test-process-only fast password hasher, following the existing regression convention;
+application password settings and the normal local database are unchanged. JavaScript
+syntax and Django/migration consistency checks pass. This verifies local checkout
+compatibility, not activation of the unfinished builder release.
+
+## Checkout prevention and identity recovery (26 October 2026)
+
+`schemes.tests.test_checkout_idempotency` covers retained submission replay and
+concurrent-tab aliases; signed account/mode/history context; stale unsubmitted forms;
+monthly versus sequential flexible payments; one unresolved source across modes and
+months; immutable original terms; durable request commit before provider I/O; timeout,
+malformed response and interrupted binding holds; legacy missing identity; provider
+receipt/token adapters; owner/CSRF/preview/fresh-apply recovery; reconciliation-only
+recovered checkout and idempotent capture. Migration tests exercise overlapping-history
+preflight refusal, preservation through upgrade and retained-evidence reverse refusal.
+All fixtures are synthetic; provider responses are mocked. No real order is created.
+
+Protocol references: [Create an order](https://razorpay.com/docs/api/orders/create/)
+and [Fetch an order](https://razorpay.com/docs/api/orders/fetch-with-id/).
+The receipt and request token correlate a single durable application request; they
+are not treated as a provider idempotency API. Final combined release verification
+and production/monitoring acceptance are recorded in STATUS.md as completed.
+
 ## Retained benefit awards (26 October 2026; migration 0046)
 
 `test_benefit_awards` exercises the five-family, three benefit/denomination matrix

@@ -440,13 +440,19 @@ class ClosureMigrationTests(TransactionTestCase):
         make_paid_contribution(account)
         try:
             executor = MigrationExecutor(connection)
-            executor.migrate([("schemes", "0030_monthly_completion_reminders")])
-            before = (list(SchemeAccount.objects.values()), list(Contribution.objects.values()))
+            previous = [("schemes", "0030_monthly_completion_reminders")]
+            executor.migrate(previous)
+            old_apps = executor.loader.project_state(previous).apps
+            before = (list(old_apps.get_model("schemes", "SchemeAccount").objects.values()),
+                list(old_apps.get_model("schemes", "Contribution").objects.values()))
             executor = MigrationExecutor(connection)
-            executor.migrate([("schemes", "0031_scheme_closure_lifecycle")])
-            self.assertEqual(before, (list(SchemeAccount.objects.values()), list(Contribution.objects.values())))
-            self.assertFalse(SchemeClosureRequest.objects.exists())
-            self.assertFalse(SchemeClosureEvent.objects.exists())
+            target = [("schemes", "0031_scheme_closure_lifecycle")]
+            executor.migrate(target)
+            new_apps = executor.loader.project_state(target).apps
+            self.assertEqual(before, (list(new_apps.get_model("schemes", "SchemeAccount").objects.values()),
+                list(new_apps.get_model("schemes", "Contribution").objects.values())))
+            self.assertFalse(new_apps.get_model("schemes", "SchemeClosureRequest").objects.exists())
+            self.assertFalse(new_apps.get_model("schemes", "SchemeClosureEvent").objects.exists())
         finally:
             executor = MigrationExecutor(connection)
             executor.migrate(executor.loader.graph.leaf_nodes())
