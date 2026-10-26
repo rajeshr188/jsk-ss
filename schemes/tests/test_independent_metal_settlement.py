@@ -137,7 +137,7 @@ class IndependentMetalSettlementTests(MetalClosureFixture, TestCase):
                 self.assertEqual(a.status, "REDEEMED")
                 self.assertEqual(get_metal_balance(a), 0)
                 award = SchemeBenefitAward.objects.get(scheme_account=a)
-                f = award.invoice_fulfilment
+                f = award.invoice_fulfilments.get()
                 self.assertEqual(f.benefit_amount, Decimal("20.00"))
                 self.assertEqual(f.metal_settlement.redemption_id, r.pk)
                 self.assertEqual(award.evidence["closure"], str(request.pk))

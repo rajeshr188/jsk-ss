@@ -81,13 +81,13 @@ class ReapplicationTests(ReapplicationFixture, TestCase):
             self.assertEqual(before, [list(m.objects.values()) for m in models])
             a.refresh_from_db()
             self.assertEqual(a.status, "CLOSURE_PENDING")
-            # Review alone must not remove the existing consumption barrier.
-            with self.assertRaisesMessage(ValidationError, "reapplication"):
-                if metal:
-                    with future_award_readiness():
-                        preview_full_settlement(request_id=r.pk, actor=self.owner, benefit_invoice=MetalClosureFixture.invoice(self))
-                else:
-                    self.prepare(r, invoice=self.invoice())
+            # Approval permits a fresh settlement preview, never consumption by itself.
+            if metal:
+                with future_award_readiness():
+                    preview_full_settlement(request_id=r.pk, actor=self.owner, benefit_invoice=MetalClosureFixture.invoice(self))
+            else:
+                self.prepare(r, "360" if kind == "INR_PURCHASE_BONUS" else "380", invoice=self.invoice(kind))
+            self.assertEqual(before, [list(m.objects.values()) for m in models])
         out = StringIO()
         call_command("check_benefit_reapplications", stdout=out)
         self.assertIn("approved_review=3", out.getvalue())
@@ -281,4 +281,4 @@ class ReapplicationTransactionTests(ReapplicationFixture, TransactionTestCase):
         MigrationExecutor(connection).migrate([("schemes", "0047_benefit_invoice_fulfilment")])
         MigrationExecutor(connection).migrate(leaves)
         self.assertFalse(BenefitReapplicationDecision.objects.exists())
-        self.assertTrue(BenefitInvoiceFulfilment._meta.get_field("award").one_to_one)
+        self.assertIn("benefit_invoice_one_root", [c.name for c in BenefitInvoiceFulfilment._meta.constraints])

@@ -9,41 +9,50 @@ from .replacement_settlement_selectors import (disposition_history, history_entr
 from .settlement_selectors import proof_digest
 
 
-def return_basis(reversal, *, closure_sequence=None, current=True):
+def return_basis(reversal, *, closure_sequence=None, disposition_count=None, current=True):
     """Require complete original principal/benefit return, not a balance inference."""
     validate_benefit_reversal(reversal)
     f, award = reversal.fulfilment, reversal.fulfilment.award
     account = award.scheme_account
+    account.refresh_from_db()
     history = disposition_history(account)
     validate_replacement_links(history)
+    if disposition_count is not None:
+        if type(disposition_count) is not int or not 1 <= disposition_count <= len(history):
+            raise ValidationError("The retained disposition prefix is invalid.")
+        history = history[:disposition_count]
+    elif (account.savings_mode == "INR_CREDIT" and history and not history[-1].retired
+            and history[-1].evidence.get("independent", {}).get("reapplication", {}).get("previous") == f.pk):
+        # An unconsumed proposal does not use up a review. A later HOLD must still
+        # be possible; its existing proposal must be voided before fresh approval.
+        history = history[:-1]
     if not history or any("independent" not in row.evidence for row in history):
         raise ValidationError("Reapplication review requires a retained independent full disposition.")
     closure = history[0].closure
     sequence = validate_closure_history(closure)
-    if account.status != "CLOSURE_PENDING" or closure.status != "ACCEPTED":
+    if current and (account.status != "CLOSURE_PENDING" or closure.status != "ACCEPTED"):
         raise ValidationError("Retain the accepted closure and block contributions during return review.")
     root = history[0].evidence["independent"]
     if (history[0].basis != "NORMAL" or root["award_evidence"] != award.evidence
             or root["progress"]["state"] != "ELIGIBLE"):
         raise ValidationError("Retain the originally qualified award; correction cannot earn a new benefit.")
     if account.savings_mode == "INR_CREDIT":
-        from .inr_correction_selectors import validate_inr_disposition_state
-        from .independent_inr_settlement_selectors import validate_independent_inr_benefit
-        validate_inr_disposition_state(account)
-        for row in history:
-            validate_independent_inr_benefit(row, current=current)
-        if not f.inr_fulfilment_id or f.inr_fulfilment.proposal_id != history[-1].pk:
+        from .inr_correction_selectors import validate_inr_history
+        validate_inr_history(account)
+        if not f.inr_fulfilment_id or f.inr_fulfilment.proposal_id not in [p.pk for p in history]:
             raise ValidationError("Review the latest fully returned invoice, not an unrelated predecessor.")
     else:
-        from .independent_settlement_selectors import validate_independent_settlement_benefit
+        from .settlement_selectors import validate_configured_settlement
         for row in history:
-            validate_independent_settlement_benefit(row)
-        if f.metal_settlement_id != history[-1].pk:
+            validate_configured_settlement(row)
+        if f.metal_settlement_id not in [p.pk for p in history]:
             raise ValidationError("Review the latest fully returned exact-grade invoice.")
     entries = [history_entry(row) for row in history]
     if current:
         from .benefit_award_selectors import benefit_source_snapshot
         require_unchanged_award_sources(award)
+        if award.invoice_fulfilments.order_by("-pk").first().pk != f.pk:
+            raise ValidationError("Review the latest returned benefit, not an already replaced invoice.")
         if root["sources"] != benefit_source_snapshot(account):
             raise ValidationError("Reconcile changed original payment, schedule or review sources first.")
     if closure_sequence is None:
@@ -83,7 +92,8 @@ def validate_reapplication_decision(row):
                 or row.recorded_at is None or timezone.is_naive(row.recorded_at)
                 or not row.reversal.recorded_at <= row.recorded_at <= timezone.now()
                 or (previous and row.recorded_at < previous.recorded_at)
-                or e["basis"] != return_basis(row.reversal, closure_sequence=e["basis"]["closure_sequence"], current=False)):
+                or e["basis"] != return_basis(row.reversal, closure_sequence=e["basis"]["closure_sequence"],
+                    disposition_count=len(e["basis"]["dispositions"]), current=False)):
             raise ValueError
     except (KeyError, TypeError, AttributeError, ValueError):
         raise ValidationError("Retained benefit reapplication decision requires investigation; do not rewrite it.") from None
@@ -102,6 +112,9 @@ def decision_evidence(reversal, outcome, authorization_reference):
     if outcome not in ("APPROVE", "HOLD") or bool(authorization_reference) != (outcome == "APPROVE"):
         raise ValidationError("Approval needs fresh customer authorization; a hold must not claim approval.")
     rows = decision_history(reversal)
+    from .models import BenefitInvoiceFulfilment
+    if BenefitInvoiceFulfilment.objects.filter(reapplication_decision__reversal=reversal).exists():
+        raise ValidationError("This review was consumed by an invoice; review its own full return instead.")
     basis = return_basis(reversal)
     if outcome == "APPROVE":
         require_fresh_replacement_references(reversal.fulfilment.award.scheme_account, authorization_reference, "")
@@ -121,6 +134,12 @@ def reapplication_review_status(reversal):
     rows = decision_history(reversal)
     if not rows:
         return "UNREVIEWED"
+    from .models import BenefitInvoiceFulfilment
+    consumed = BenefitInvoiceFulfilment.objects.filter(reapplication_decision__reversal=reversal).first()
+    if consumed:
+        from .benefit_fulfilment_selectors import validate_benefit_fulfilment
+        validate_benefit_fulfilment(consumed)
+        return "CONSUMED"
     latest = rows[-1]
     if latest.evidence["basis"] != return_basis(reversal):
         return "STALE"

@@ -2226,7 +2226,10 @@ class SchemeBenefitAward(models.Model):
 
 class BenefitInvoiceFulfilment(models.Model):
     """One actual invoice application, linked to recorded full principal handover."""
-    award = models.OneToOneField(SchemeBenefitAward, on_delete=models.PROTECT, related_name="invoice_fulfilment")
+    award = models.ForeignKey(SchemeBenefitAward, on_delete=models.PROTECT, related_name="invoice_fulfilments")
+    previous = models.OneToOneField("self", null=True, blank=True, on_delete=models.PROTECT, related_name="replacement")
+    reapplication_decision = models.OneToOneField("BenefitReapplicationDecision", null=True, blank=True,
+        on_delete=models.PROTECT, related_name="consumption")
     inr_fulfilment = models.OneToOneField(InrSettlementFulfilment, null=True, blank=True, on_delete=models.PROTECT)
     metal_settlement = models.OneToOneField(ConfiguredSettlement, null=True, blank=True, on_delete=models.PROTECT)
     invoice_reference = models.CharField(max_length=120)
@@ -2249,6 +2252,9 @@ class BenefitInvoiceFulfilment(models.Model):
     class Meta:
         constraints = [
             models.UniqueConstraint(models.functions.Lower("invoice_reference"), name="benefit_invoice_once_ci"),
+            models.UniqueConstraint(fields=["award"], condition=models.Q(previous__isnull=True), name="benefit_invoice_one_root"),
+            models.CheckConstraint(condition=(models.Q(previous__isnull=True, reapplication_decision__isnull=True)
+                | models.Q(previous__isnull=False, reapplication_decision__isnull=False)), name="benefit_invoice_reapp_shape"),
             models.CheckConstraint(condition=(models.Q(inr_fulfilment__isnull=False, metal_settlement__isnull=True)
                 | models.Q(inr_fulfilment__isnull=True, metal_settlement__isnull=False)), name="benefit_invoice_one_source"),
             models.CheckConstraint(condition=models.Q(invoice_before_benefit__gt=0,
@@ -2309,7 +2315,7 @@ class BenefitInvoiceReversal(models.Model):
     def clean(self):
         super().clean()
         from .benefit_fulfilment_selectors import validate_benefit_reversal
-        validate_benefit_reversal(self)
+        validate_benefit_reversal(self, current=self._state.adding)
 
     def save(self, *args, **kwargs):
         if self.pk and type(self).objects.filter(pk=self.pk).exists():

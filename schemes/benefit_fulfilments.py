@@ -47,6 +47,12 @@ def _invoice_row(award, *, invoice_before_benefit, eligible_charges=None, inr_fu
     except (InrSettlementFulfilment.DoesNotExist, ConfiguredSettlement.DoesNotExist):
         raise ValidationError("Select a recorded jewellery handover for this agreement.") from None
     _, row.invoice_reference, row.fulfilled_at, _ = fulfilment_source(row)
+    previous = award.invoice_fulfilments.order_by("-pk").first()
+    if previous:
+        from .benefit_application_selectors import validate_bound_review
+        disposition = row.inr_fulfilment.proposal if row.inr_fulfilment_id else row.metal_settlement
+        decision = validate_bound_review(disposition, current=True)
+        row.previous, row.reapplication_decision = previous, decision
     row.evidence = benefit_fulfilment_evidence(row)
     row.evidence_digest = proof_digest(row.evidence)
     validate_benefit_fulfilment(row, current=True)
@@ -57,8 +63,6 @@ def _invoice_row(award, *, invoice_before_benefit, eligible_charges=None, inr_fu
 def preview_benefit_fulfilment(*, account_id, award_id, actor, **invoice):
     account, actor = _locked(account_id, actor)
     award = _award(account, award_id)
-    if BenefitInvoiceFulfilment.objects.filter(award=award).exists():
-        raise ValidationError("This award already has invoice evidence; never spend it twice.")
     row = _invoice_row(award, **invoice)
     return signing.dumps(dict(actor=actor.pk, account=account.pk, evidence=row.evidence), salt=SALT)
 
@@ -86,8 +90,6 @@ def record_benefit_fulfilment(*, account_id, actor, preview_token, reason, idemp
         signing.loads(preview_token, salt=SALT, max_age=600)
     except signing.BadSignature:
         raise ValidationError("The invoice preview expired; reload it.") from None
-    if BenefitInvoiceFulfilment.objects.filter(award=award).exists():
-        raise ValidationError("An invoice already consumed this award; a return does not reset it.")
     row = _invoice_row(award, invoice_before_benefit=Decimal(evidence["invoice_before_benefit"]),
         eligible_charges=Decimal(evidence["eligible_charges"]) if evidence["eligible_charges"] is not None else None,
         inr_fulfilment_id=evidence["source"]["id"] if evidence["source"]["kind"] == "INR" else None,
@@ -133,6 +135,6 @@ def reverse_benefit_fulfilment(*, account_id, fulfilment_id, actor, reason, idem
     else:
         ConfiguredSettlementReversal.objects.select_for_update().get(pk=metal_reversal_id)
     row = BenefitInvoiceReversal(**facts, actor_label=_actor_label(actor), idempotency_key=key, recorded_at=timezone.now())
-    validate_benefit_reversal(row)
+    validate_benefit_reversal(row, current=True)
     row.save()
     return row

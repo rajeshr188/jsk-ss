@@ -2,6 +2,29 @@
 
 ## Current milestone
 
+**26 October 2026 - atomic approved-benefit replacement integration (0049).**
+Returned invoice rights now enter the gated replacement workflow only with the latest
+valid owner/customer reapplication approval. A new invoice retains its predecessor
+and consumes that approval atomically with principal jewellery handover. Database
+constraints enforce one original invoice per award, one successor per invoice and one
+consumption per approval. Historical awards, invoice proofs and reversals are retained.
+Purchase bonuses keep their original amount; VA uses the new evidenced invoice charges
+under the original percentage/cap. No benefit becomes refundable principal or grams.
+
+INR proposals bind approval but debit nothing. A later hold blocks new fulfilment;
+void/full-return recovery remains possible and requires fresh review when evidence
+changes. A consumed review cannot be reopened; any further correction must evidence
+the new invoice's own full return. Exact-grade metal settlement and benefit consumption
+remain one transaction. Historical validation distinguishes old returns from current
+spendability, and diagnostics inspect the full invoice chain.
+
+Migration 0049 preserves version-1 invoice proofs and refuses reversal once replacement
+bindings or consumptions exist. Verification is tracked in TESTING.md. Only disposable
+local databases are migrated; no normal-database migration, production activation,
+push or deployment is included. Next: consistent statements/privacy, offers/agreements,
+reminders and owner presentation, followed by full lifecycle/CI/release acceptance.
+The coherent builder remains gated; unrelated production notes/UI edits are preserved.
+
 **26 October 2026 - returned-benefit review authorization/history (0048).**
 The next ordered foundation retains append-only owner APPROVE/HOLD decisions for
 an evidenced full principal/benefit return. Owner-bound ten-minute previews bind the

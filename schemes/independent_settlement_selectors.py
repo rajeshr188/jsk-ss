@@ -44,7 +44,7 @@ def closure_qualification_proof(account, closure):
     evidence = None
     if award:
         require_unchanged_award_sources(award)
-        if not qualification.qualification_met or hasattr(award, "invoice_fulfilment"):
+        if not qualification.qualification_met or award.invoice_fulfilments.exists():
             raise ValidationError("Retain and review the existing award; it cannot be silently omitted or re-spent.")
         evidence = award.evidence
     elif qualification.qualification_met:
@@ -109,8 +109,8 @@ def validate_independent_settlement_benefit(settlement):
             return
         if award is None or award.evidence_digest != proof_digest(expected) or award.evidence != expected:
             raise ValueError
-        f = award.invoice_fulfilment
-        if f.metal_settlement_id != settlement.pk:
+        f = award.invoice_fulfilments.filter(metal_settlement=settlement).first()
+        if f is None:
             raise ValueError
         validate_benefit_fulfilment(f)
         invoice = proof["invoice"]

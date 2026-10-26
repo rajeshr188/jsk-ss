@@ -1,5 +1,39 @@
 # Testing
 
+## Atomic approved-benefit replacement (0049; 26 October 2026)
+
+`test_benefit_replacement_integration` exercises the real gated review, replacement,
+handover and return services for INR bonus/VA and exact-grade metal VA. It retains
+the original award and tests multiple complete return/reapplication generations,
+the new invoice's actual VA charge base/cap, explicit approval consumption, stale
+previews, holds after proposals, void/full-return recovery and new review afterward.
+A refund before jewellery handover does not consume the approval. Original contribution,
+principal receipt, metal allocation and award records remain unchanged.
+
+Injected post-invoice failure must roll back principal handover and approval use;
+concurrent INR retries and competing metal replacements must consume at most once.
+PostgreSQL constraints protect the root and predecessor/approval shape. Diagnostic
+checks detect damaged decision evidence. Actual migration round trips preserve
+original version-1 invoice proofs; reverse migration refuses even an unconsumed
+replacement proposal bound to an approval, as well as consumed replacement invoices.
+
+Historical validation reloads mutable closure/account state when a caller retains
+an earlier return object across later settlements. It still validates original
+invoice/return proofs and sources; no financial check is bypassed to accommodate
+new closure states. Only disposable localhost PostgreSQL databases are migrated.
+The normal local database, production and release gates remain untouched.
+
+The initial five-module regression ran **69 tests in 708.429s**: 66 passed and
+three original invoice-status checks exposed cached pre-settlement account state.
+After correcting the mutable-state reload, the complete benefit fulfilment and
+reapplication modules passed **26 tests in 350.939s**. The additional refund-before-
+handover/hold/return scenario passed **1 test in 61.090s**. The final integration
+module, including that scenario and deduplicated historical validation, passed
+**10 tests in 549.279s**, including both concurrency cases and actual migration
+forward/reverse/retention checks. Django system checks, migration-drift checks and
+staged whitespace checks pass. Full normal CI remains part of release acceptance,
+rather than being implied by these affected checks.
+
 ## Returned-benefit review decisions (0048; 26 October 2026)
 
 `test_benefit_reapplications` creates actual INR bonus/VA and exact-grade VA

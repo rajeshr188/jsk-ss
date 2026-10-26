@@ -138,7 +138,8 @@ def propose_inr_settlement(*, request_id, actor, preview_token, invoice_referenc
     if independent and independent["award_evidence"]:
         from .benefit_awards import _retain_closure_award
         _retain_closure_award(account=account, closure=request, actor=actor,
-            evidence=independent["award_evidence"], reason=reason, idempotency_key=uuid5(key, "benefit-award"))
+            evidence=independent["award_evidence"], reason=reason, idempotency_key=uuid5(key, "benefit-award"),
+            reapplication=independent.get("reapplication"))
     proposal = InrSettlementProposal.objects.create(**facts, principal=split.principal,
         invoice_payable=split.invoice_payable, principal_to_invoice=split.principal_to_invoice,
         principal_refund=split.principal_refund, separate_top_up=split.separate_top_up,
@@ -152,6 +153,10 @@ def propose_inr_settlement(*, request_id, actor, preview_token, invoice_referenc
 def _pending_proposal(proposal):
     require_independent_inr_gate(proposal)
     validate_independent_inr_benefit(proposal, current=True)
+    if (proposal.evidence.get("independent", {}).get("reapplication")
+            and not proposal.fulfilments.filter(kind="JEWELLERY").exists()):
+        from .benefit_application_selectors import validate_bound_review
+        validate_bound_review(proposal, current=True)
     request = proposal.closure
     if (proposal.retired or hasattr(proposal, "resolution") or hasattr(proposal, "completion") or request.status != "ACCEPTED"
             or proposal.scheme_account.status != "CLOSURE_PENDING"

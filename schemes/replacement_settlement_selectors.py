@@ -1,13 +1,12 @@
 """Replacement proof reads; never reopen contributions or re-earn a benefit.
 
-Consumed (even subsequently reversed) benefits stay held pending explicit invoice
-reapplication support. This boundary supports only unconsumed retained rights.
+Consumed benefits require a complete return and current explicit reapplication review.
 """
 from copy import deepcopy
 
 from django.core.exceptions import ValidationError
 
-from .models import BenefitInvoiceFulfilment, ConfiguredSettlement, InrSettlementProposal, SchemeBenefitAward
+from .models import ConfiguredSettlement, InrSettlementProposal, SchemeBenefitAward
 
 
 def disposition_history(account):
@@ -103,8 +102,6 @@ def replacement_qualification_proof(account, closure):
     validate_replacement_links(history)
     if any("independent" not in r.evidence for r in history):
         raise ValidationError("Do not convert an older foundation disposition into an independent replacement.")
-    if BenefitInvoiceFulfilment.objects.filter(award__scheme_account=account).exists():
-        raise ValidationError("A previously consumed benefit needs explicit reapplication support; a full return is not permission to spend it again.")
     if account.savings_mode == "INR_CREDIT":
         from .inr_correction_selectors import validate_inr_disposition_state
         from .independent_inr_settlement_selectors import validate_independent_inr_benefit
@@ -134,6 +131,9 @@ def replacement_qualification_proof(account, closure):
         require_unchanged_award_sources(award)
     proof = deepcopy(root)
     proof.update(invoice=None, award_id=award.pk if award else None, replacement_history=entries)
+    if award and award.invoice_fulfilments.exists():
+        from .benefit_application_selectors import current_reapplication
+        proof["reapplication"] = current_reapplication(award)
     return proof
 
 

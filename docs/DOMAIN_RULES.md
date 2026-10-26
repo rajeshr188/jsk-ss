@@ -664,8 +664,20 @@ preferences do not become fixed, and no old agreement receives a configuration i
   revalidation reject concurrent/stale decisions. Review neither changes monetary
   rights/caps nor reopens contributions, grants principal or consumes an invoice.
   A new closure note makes the latest review stale; source drift requires reconciliation.
-  The existing single-invoice constraint remains until atomic replacement integration
-  can consume the correct current approval and retain every application/reversal.
+  Atomic replacement integration (0049) replaces the single-invoice-per-award storage
+  restriction with one original invoice and a linear chain: each successor requires
+  the predecessor's complete return and one current approved decision, consumed once.
+  Original invoice evidence stays version 1; version 2 additionally binds predecessor,
+  reversal and approval. A signed replacement preview retains that exact approval.
+  INR proposal creation consumes no approval or principal; actual jewellery handover
+  and invoice benefit consumption are atomic. A superseding hold prevents new
+  fulfilment but permits evidenced void/full-return recovery. A consumed review cannot
+  be reused or superseded; the new invoice needs its own full return and fresh review.
+  Purchase bonus reuses its original amount. VA is calculated from the new invoice's
+  eligible charges under the unchanged right/percentage/cap, not an extra accrued bonus.
+  No benefit is refunded as principal or converted into grams. Historical reviews and
+  returns are validated against retained prefixes; current spending rechecks present
+  sources, closure state and latest approval. All workflow gates remain in force.
   Rollback must not discard recorded decisions. No standalone public spend path exists.
   The gated first independent exact-metal settlement now uses closure-scoped eligibility
   and qualification under the agreement lock. Accepted closure history/customer authority
@@ -682,10 +694,10 @@ preferences do not become fixed, and no old agreement receives a configuration i
   require their own completed-source/customer evidence, and every principal leg must
   be fulfilled before closure. Complete physical returns link principal and consumed
   benefit reversals atomically; void retains an unconsumed right. Returned/voided
-  independent dispositions with a consumed benefit cannot yet be replaced or used
-  to re-spend that award. A completed void/full return with no consumed benefit may
-  enter the gated replacement path, retaining original sources, qualification and
-  normal/early basis. An unconsumed award may be reused once, not duplicated.
+  independent dispositions may enter the gated replacement path only with complete
+  return/void evidence, retaining original sources, qualification and normal/early
+  basis. Previously consumed benefits additionally require the explicit approved
+  reapplication chain above; an unconsumed award is retained, not duplicated.
   Existing optional/calendar/no-benefit foundation proofs remain readable and separate.
   Both INR and closure diagnostics validate the linked benefit lifecycle. Replacement
   handling and lifecycle acceptance remain required before release; operational gates
@@ -762,8 +774,8 @@ preferences do not become fixed, and no old agreement receives a configuration i
   or re-earn a previously unearned benefit as dates pass. Fresh customer authorization
   must not recycle a prior settlement/return authorization; invoice references must
   be new. Principal-only returns and unconsumed INR rights are supported internally.
-  Any consumed benefit invoice, even with a full reversal, requires explicit future
-  reapplication authorization/history; the current one-invoice invariant still holds.
+  Any consumed benefit invoice, even with a full reversal, requires explicit current
+  reapplication approval and atomic consumption in its one linked successor invoice.
   Customer returns do not reset original online-payment refund capacity. Retain all
   gross provider refunds across generations; a proposed further refund must fit the
   original captured amount after those refunds. Otherwise hold the disposition for

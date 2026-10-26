@@ -14,9 +14,9 @@ class Command(BaseCommand):
         count = review = fulfilled = reversed_count = 0
         for award in awards:
             count += 1
-            if hasattr(award, "invoice_fulfilment"):
-                fulfilled += 1
-                reversed_count += int(hasattr(award.invoice_fulfilment, "reversal"))
+            if award.invoice_fulfilments.exists():
+                fulfilled += award.invoice_fulfilments.count()
+                reversed_count += award.invoice_fulfilments.filter(reversal__isnull=False).count()
                 review += int(get_benefit_invoice_status(award).needs_review)
             else:
                 review += int(get_benefit_award_status(award.scheme_account).needs_review)

@@ -62,13 +62,17 @@ def fulfilment_source(row):
 
 def benefit_fulfilment_evidence(row):
     closure, reference, at, source = fulfilment_source(row)
-    return dict(version=1, award=row.award_id, award_digest=row.award.evidence_digest,
+    evidence = dict(version=1, award=row.award_id, award_digest=row.award.evidence_digest,
         closure=str(closure.pk), source=source, invoice_reference=reference,
         invoice_before_benefit=str(row.invoice_before_benefit), eligible_charges=str(row.eligible_charges) if row.eligible_charges is not None else None,
         benefit_amount=str(row.benefit_amount), invoice_after_benefit=str(row.invoice_after_benefit),
         invoice_evidence_reference=row.invoice_evidence_reference, eligible_charge_reference=row.eligible_charge_reference,
         customer_receipt_reference=row.customer_receipt_reference, fulfilled_at=at.isoformat(),
         calculation_version=row.award.calculation_version, rounding_rule=row.award.rounding_rule)
+    if row.previous_id:
+        from .benefit_application_selectors import decision_reference
+        evidence.update(version=2, reapplication=decision_reference(row.reapplication_decision))
+    return evidence
 
 
 def require_unchanged_award_sources(award):
@@ -103,8 +107,14 @@ def validate_benefit_fulfilment(row, *, current=False):
             or bool(row.eligible_charge_reference.strip()) != (award.kind == "VA_DISCOUNT")
             or row.evidence != benefit_fulfilment_evidence(row) or row.evidence_digest != proof_digest(row.evidence)):
         raise ValidationError("Benefit fulfilment amount, invoice or retained evidence differs.")
+    from .benefit_application_selectors import validate_application_link
+    validate_application_link(row, current=current)
     if not current:
         return
+    # The caller may hold the award from before its principal handover completed.
+    # Read mutable status from storage, without replacing immutable invoice proof.
+    award.scheme_account.refresh_from_db()
+    closure.refresh_from_db()
     require_unchanged_award_sources(award)
     validate_closure_history(closure)
     account = award.scheme_account
@@ -130,9 +140,14 @@ def validate_benefit_fulfilment(row, *, current=False):
         expected = ("REDEEMED", "SETTLED") if completed else ("CLOSURE_PENDING", "ACCEPTED")
     else:
         s = row.metal_settlement
+        from .replacement_settlement_selectors import disposition_history, validate_replacement_links
+        history = disposition_history(account)
+        validate_replacement_links(history)
         total = sum((Decimal(p["metal_allocation__quantity"]) for p in award.evidence["payments"] if p["status"] == "PAID"), Decimal(0))
         if (hasattr(s, "correction") or total != s.redemption.entitlement_amount
-                or account.redemptions.exclude(pk=s.redemption_id).exists() or account.inr_settlements.exists()):
+                or not history or history[-1].pk != s.pk
+                or any(not hasattr(prior, "correction") for prior in history[:-1])
+                or account.inr_settlements.exists()):
             raise ValidationError("Reconcile the exact full metal disposition before benefit fulfilment.")
         expected = ("REDEEMED", "SETTLED")
     if (account.status, closure.status) != expected:
@@ -145,7 +160,7 @@ def validate_benefit_fulfilment(row, *, current=False):
         raise ValidationError("The invoice reference is already linked to another principal disposition.")
 
 
-def validate_benefit_reversal(row):
+def validate_benefit_reversal(row, *, current=False):
     f = row.fulfilment
     validate_benefit_fulfilment(f)
     if bool(row.inr_return_id) == bool(row.metal_reversal_id) or row.amount != f.benefit_amount:
@@ -169,8 +184,12 @@ def validate_benefit_reversal(row):
         closure = r.settlement.closure
         corrected_at = r.event.created_at
     account = f.award.scheme_account
+    # These mutable states may have advanced since a caller loaded an old return.
+    # Keep the immutable invoice/return evidence intact while reading current state.
+    closure.refresh_from_db()
+    account.refresh_from_db()
     validate_closure_history(closure)
-    if (account.status != "CLOSURE_PENDING" or closure.status != "ACCEPTED"
+    if ((current and (account.status != "CLOSURE_PENDING" or closure.status != "ACCEPTED"))
             or not row.invoice_correction_reference.strip() or not row.customer_confirmation.strip()
             or row.returned_at is None or timezone.is_naive(row.returned_at)
             or row.recorded_at is None or timezone.is_naive(row.recorded_at)
@@ -186,16 +205,20 @@ class BenefitInvoiceStatus:
 
 
 def get_benefit_invoice_status(award):
-    f = BenefitInvoiceFulfilment.objects.filter(award=award).first()
-    if not f:
+    rows = list(award.invoice_fulfilments.order_by("pk"))
+    if not rows:
         return BenefitInvoiceStatus(Decimal("0.00"), Decimal("0.00"), False)
+    f = rows[-1]
     r = getattr(f, "reversal", None)
     review = bool(r)  # A returned invoice never automatically reopens an award for spending.
     try:
+        from .benefit_application_selectors import application_history
+        application_history(award)
         if r:
-            validate_benefit_reversal(r)
+            validate_benefit_reversal(r, current=True)
         else:
             validate_benefit_fulfilment(f, current=True)
     except ValidationError:
         review = True
-    return BenefitInvoiceStatus(f.benefit_amount, r.amount if r else Decimal("0.00"), review)
+    return BenefitInvoiceStatus(sum((f.benefit_amount for f in rows), Decimal("0.00")),
+        sum((f.reversal.amount for f in rows if hasattr(f, "reversal")), Decimal("0.00")), review)

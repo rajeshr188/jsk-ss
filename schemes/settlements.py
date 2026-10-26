@@ -80,7 +80,8 @@ def settle_configured_agreement(*, request_id, actor, preview_token, invoice_ref
     if independent and independent["award_evidence"]:
         from .benefit_awards import _retain_closure_award
         award = _retain_closure_award(account=account, closure=request, actor=actor,
-            evidence=independent["award_evidence"], reason=reason, idempotency_key=uuid5(key, "benefit-award"))
+            evidence=independent["award_evidence"], reason=reason, idempotency_key=uuid5(key, "benefit-award"),
+            reapplication=independent.get("reapplication"))
     redemption = Redemption(redemption_number=_reference("RED", Redemption, "redemption_number"),
         idempotency_key=key, scheme_account=account, metal_grade=account.metal_grade,
         settlement_type="JEWELLERY_PURCHASE", external_reference=invoice, notes=reason, processed_by=actor, completed_at=timezone.now(),

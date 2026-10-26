@@ -64,14 +64,21 @@ def validate_independent_inr_benefit(proposal, *, current=False):
                 or Decimal(invoice["invoice_before_benefit"]) - Decimal(invoice["benefit_amount"]) != proposal.invoice_payable):
             raise ValueError
         handover = proposal.fulfilments.filter(kind="JEWELLERY").first()
-        f = getattr(award, "invoice_fulfilment", None)
+        f = award.invoice_fulfilments.filter(inr_fulfilment=handover).first() if handover else None
         if handover is None:
-            if f is not None:
+            if proof.get("reapplication"):
+                from .benefit_application_selectors import validate_bound_review
+                validate_bound_review(proposal)
+            for f in award.invoice_fulfilments.all():
                 # A retired unconsumed proposal may precede the one actual invoice.
                 ids = [p.pk for p in history]
-                if (not proposal.retired or not f.inr_fulfilment_id
-                        or f.inr_fulfilment.proposal_id not in ids
-                        or ids.index(f.inr_fulfilment.proposal_id) <= ids.index(proposal.pk)):
+                if not f.inr_fulfilment_id or f.inr_fulfilment.proposal_id not in ids:
+                    raise ValueError
+                if ids.index(f.inr_fulfilment.proposal_id) < ids.index(proposal.pk):
+                    if not hasattr(f, "reversal") or not proof.get("reapplication"):
+                        raise ValueError
+                    validate_benefit_reversal(f.reversal)
+                elif not proposal.retired:
                     raise ValueError
                 validate_benefit_fulfilment(f)
             return

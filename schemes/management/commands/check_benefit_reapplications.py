@@ -10,7 +10,7 @@ class Command(BaseCommand):
     help = "Read-only returned-benefit review history; never authorizes consumption."
 
     def handle(self, *args, **options):
-        counts = dict(UNREVIEWED=0, APPROVED_REVIEW=0, HELD=0, STALE=0, INVALID=0)
+        counts = dict(UNREVIEWED=0, APPROVED_REVIEW=0, HELD=0, STALE=0, CONSUMED=0, INVALID=0)
         for reversal in BenefitInvoiceReversal.objects.all():
             try:
                 state = reapplication_review_status(reversal)
@@ -19,7 +19,7 @@ class Command(BaseCommand):
             counts[state] += 1
         invalid = counts["INVALID"] + counts["STALE"]
         self.stdout.write(f"benefit_reapplications status={'error' if invalid else 'ok'} "
-            f"release={settings.APP_RELEASE} workflow=review_only spending_enabled=false "
+            f"release={settings.APP_RELEASE} workflow=gated_invoice_integration spending_enabled=false "
             + " ".join(f"{name.lower()}={count}" for name, count in counts.items()))
         if invalid:
             raise CommandError("Reconcile stale or invalid return-review evidence; nothing was changed.")

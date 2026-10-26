@@ -77,15 +77,19 @@ def _create_award(facts, evidence, actor, key):
         evidence=evidence, actor_label=_actor_label(actor), idempotency_key=key, recorded_at=timezone.now())
 
 
-def _retain_closure_award(*, account, closure, actor, evidence, reason, idempotency_key):
+def _retain_closure_award(*, account, closure, actor, evidence, reason, idempotency_key, reapplication=None):
     """Called inside a signed full-settlement transaction, never as a projection write."""
     account, actor = _locked(account.pk, actor)
     existing = SchemeBenefitAward.objects.select_for_update().filter(scheme_account=account).first()
     if existing:
         from .benefit_fulfilment_selectors import require_unchanged_award_sources
         require_unchanged_award_sources(existing)
-        if existing.evidence != evidence or hasattr(existing, "invoice_fulfilment"):
+        if existing.evidence != evidence:
             raise ValidationError("The retained award changed or was consumed; review it.")
+        if existing.invoice_fulfilments.exists():
+            from .benefit_application_selectors import current_reapplication
+            if not reapplication or current_reapplication(existing) != reapplication:
+                raise ValidationError("Retain a current reapplication approval for this returned right.")
         return existing
     if benefit_award_evidence(account, closure=closure) != evidence:
         raise ValidationError("Closure benefit qualification changed; reload the settlement preview.")

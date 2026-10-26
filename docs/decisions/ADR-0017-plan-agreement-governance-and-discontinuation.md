@@ -396,6 +396,22 @@ locking prevent forks. Rollback refuses existing decisions. The next atomic repl
 step must require a current approval and record its consumption with the new invoice;
 until then the single-invoice constraint and all activation barriers remain intact.
 
+**Atomic reapplication checkpoint (0049, 26 October 2026):** retain one original
+invoice and explicit predecessor/approval links for each replacement application.
+One successor per predecessor and one consumption per approval replace the old
+one-invoice-per-award restriction without permitting parallel or automatic spending.
+Original proof JSON is unchanged. The replacement proof binds the current approved
+review, complete return history and exact invoice; a new invoice consumes it only
+when actual principal handover commits. INR proposals alone neither consume review
+nor discharge liability. A hold after proposal prevents new fulfilment while still
+allowing an evidenced void/full return and fresh review. A consumed approval remains
+historical; further correction requires the successor's own full return and review.
+Purchase bonus retains its original amount; VA is recalculated for the new invoice
+using the same contracted percentage/cap and charge definition. This changes no paid
+principal or metal and creates no refundable benefit balance. All prior invoices,
+reviews and reversals remain readable after subsequent closure states. Reverse migration
+refuses new bindings even before invoice consumption. Full release gates stay closed.
+
 The owner may create a validated configuration or reuse an existing approved one,
 then use its immutable version in one or more offered plans. A reusable configuration
 is not a live pointer that can rewrite every plan/agreement using it. Editing means a
