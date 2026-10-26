@@ -1,5 +1,34 @@
 # Testing
 
+## INR final-completion notices (27 October 2026)
+
+Migration `0051_inr_completion_reminders` adds a protected optional completion
+reference, a distinct reminder kind and target-shape constraints. Existing keys and
+records are unchanged. Reverse migration refuses retained INR notification evidence.
+
+`test_inr_completion_reminders` exercises real proposal, handover, source-specific
+refund, completion and full-return services. Proposals, one fulfilled leg and even
+all fulfilled legs without the final closure event produce no notice. The five
+approved families use the completion event date, not a guessed maturity date;
+early all-refund closure remains distinct from a jewellery purchase/benefit award.
+Source/benefit/closure validation, account scope, recipient privacy, switches and
+real operational gates are rechecked before dispatch. Failed-email retry after a
+full return retains the old attempt and sends nothing. The command and delivery
+service retain idempotency and do not change financial rows.
+
+Migration tests cover empty INR-link rollback/reapply, existing legacy reminder
+identity and delivery preservation, target-shape database constraints, immutability
+and refusal to roll back retained INR-linked reminders. Message assertions cover
+plain text, HTML, exact principal splits, tracking headers and authenticated links.
+Production SMTP/inbox, browser/mobile rendering and exact-image rehearsal remain
+separate acceptance work; this checkpoint does not activate configured families.
+
+Validation: the combined INR/event/legacy/independent-presentation run passed
+**32 tests in 132.047s**. The final INR suite, including legacy migration preservation,
+passed **7 tests in 83.001s**. Unique disposable localhost PostgreSQL databases were
+destroyed after both runs. Django checks passed and `makemigrations --check --dry-run`
+reported no changes. Migration 0051 was exercised only on these disposable databases.
+
 ## Cross-family notification acceptance review (27 October 2026)
 
 The acceptance review maps the existing service suites rather than treating one
@@ -11,7 +40,7 @@ successful plan as proof of every family. Release/readiness gates remain closed.
 | Collection and provider exceptions | `test_collection_matrix`, `test_independent_payment_entry`, `test_inr_api_payments`: real-source collection, capture timing, uncertain orders, callback/webhook replay, manual recovery and original-source refund proof | Consolidated normal CI and exact-image rehearsal |
 | Eligibility notices | `test_independent_presentation`: duration/count distinction, no forecast for count-only/anytime, separate benefit qualification, current-source and lifecycle revalidation | Mobile/email rendering and query budgets |
 | Full disposition and correction | `test_independent_metal_settlement`, `test_independent_inr_settlement`, replacement/reapplication suites: full closure, return, retained rights and atomic corrections | Combined owner/customer operational acceptance |
-| Event notice dispatch | `test_event_reminder_revalidation`: resolved allocation, full return, settings, event/account/date shape and real configured settlement return | INR completion notification still needs its own source-aware path |
+| Event notice dispatch | `test_event_reminder_revalidation` and `test_inr_completion_reminders`: current sources, full return, audience settings, event/account/date shape, completion and retained delivery history | Consolidated CI, delivered-message and browser acceptance |
 
 Queued allocation-exception and completed-redemption notices now re-read the event
 under the existing account lock before creating a reminder or attempting SMTP.
@@ -20,11 +49,10 @@ dates, cross-account events and unsupported event kinds are skipped. Messages us
 the refreshed event. This does not change any entitlement, add financial mutations
 or promise atomic/exactly-once SMTP delivery.
 
-**Open notification boundary:** the current completed-redemption selector reads
-`Redemption`, not INR final-settlement completion. An INR proposal or a single
-fulfilment leg must never be described as completed full settlement. The next
-notification implementation must use retained final completion evidence, recheck
-full returns and privacy/recipient eligibility, and retain delivery idempotency.
+**Identified boundary, now implemented above:** the completed-redemption selector
+reads `Redemption`; INR uses a separate completion-linked selector. An INR proposal
+or a single fulfilment leg must never be described as completed full settlement.
+Both paths recheck current evidence and preserve delivery history.
 No new count-only/anytime maturity date, benefit-award email or automatic closure
 is implied by this review.
 

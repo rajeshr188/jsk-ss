@@ -3100,6 +3100,7 @@ class InStoreCashContributionReversal(models.Model):
 
 class SchemeReminder(models.Model):
     class Kind(models.TextChoices):
+        COMPLETED_INR_SETTLEMENT = "COMPLETED_INR_SETTLEMENT", "Completed INR settlement"
         UPCOMING_ELIGIBILITY = (
             "UPCOMING_ELIGIBILITY",
             "Upcoming eligibility",
@@ -3144,6 +3145,10 @@ class SchemeReminder(models.Model):
         null=True,
         blank=True,
     )
+    inr_completion = models.ForeignKey(
+        InrSettlementCompletion, on_delete=models.PROTECT, related_name="reminders",
+        null=True, blank=True,
+    )
     event_date = models.DateField()
     eligibility_lead_days = models.PositiveSmallIntegerField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -3158,6 +3163,7 @@ class SchemeReminder(models.Model):
                         "UPCOMING_MONTHLY_COMPLETION",
                         "ALLOCATION_EXCEPTION",
                         "COMPLETED_REDEMPTION",
+                        "COMPLETED_INR_SETTLEMENT",
                     ]
                 ),
                 name="scheme_reminder_kind_valid",
@@ -3173,17 +3179,25 @@ class SchemeReminder(models.Model):
                         contribution__isnull=True,
                         redemption__isnull=True,
                         eligibility_lead_days__isnull=False,
+                        inr_completion__isnull=True,
                     )
                     | models.Q(
                         kind="ALLOCATION_EXCEPTION",
+                        inr_completion__isnull=True,
                         contribution__isnull=False,
                         redemption__isnull=True,
                         eligibility_lead_days__isnull=True,
                     )
                     | models.Q(
                         kind="COMPLETED_REDEMPTION",
+                        inr_completion__isnull=True,
                         contribution__isnull=True,
                         redemption__isnull=False,
+                        eligibility_lead_days__isnull=True,
+                    )
+                    | models.Q(
+                        kind="COMPLETED_INR_SETTLEMENT", inr_completion__isnull=False,
+                        contribution__isnull=True, redemption__isnull=True,
                         eligibility_lead_days__isnull=True,
                     )
                 ),
@@ -3200,6 +3214,12 @@ class SchemeReminder(models.Model):
     def clean(self):
         super().clean()
         errors = {}
+        if self.inr_completion_id:
+            completion = self.inr_completion
+            if completion.proposal.scheme_account_id != self.scheme_account_id:
+                errors["inr_completion"] = "The completion must belong to this agreement."
+            if self.event_date != timezone.localdate(completion.event.created_at):
+                errors["event_date"] = "Retain the India-local final completion date."
         if self.contribution_id:
             if self.contribution.scheme_account_id != self.scheme_account_id:
                 errors["contribution"] = (

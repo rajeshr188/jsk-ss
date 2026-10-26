@@ -2,7 +2,13 @@
 <html lang="en">
 <body>
   <p>{% if audience == 'CUSTOMER' %}Hello {{ customer_name }},{% else %}Hello,{% endif %}</p>
-  {% if independent_notice %}
+  {% if kind == 'COMPLETED_INR_SETTLEMENT' %}
+    <p>Final INR purchase-credit settlement <strong>{{ inr_completion.pk }}</strong> for scheme <strong>{{ scheme_number }}</strong> was recorded on {{ inr_completion.event.created_at|date:'d M Y' }} (India time).</p>
+    <p>All paid principal of <strong>INR {{ inr_completion.proposal.principal|floatformat:2 }}</strong> has been recorded as fulfilled:</p>
+    <ul><li>INR {{ inr_completion.proposal.principal_to_invoice|floatformat:2 }} applied toward jewellery.</li><li>INR {{ inr_completion.proposal.principal_refund|floatformat:2 }} returned through the recorded original-source refund routes.</li></ul>
+    <p>The agreement was closed after these portions were fulfilled. These figures describe paid principal only. Benefits and any separate invoice top-up are retained separately in the settlement history.</p>
+    <p>This notice records showroom fulfilment; it does not initiate a payment or refund. Please review the retained history and contact the showroom if anything differs from what you received.</p>
+  {% elif independent_notice %}
     <p>Scheme <strong>{{ scheme_number }}</strong> for {{ customer_name }} has a current principal-rule date of <strong>{{ completion_date|date:'d M Y' }}</strong> (India time), in {{ eligibility_lead_days }} day{{ eligibility_lead_days|pluralize }}.</p>
     {% if kind == 'UPCOMING_MONTHLY_COMPLETION' %}<p>All {{ required_payments }} required qualifying payments are recorded. Both duration and final qualifying-period boundaries still apply.</p>{% endif %}
     <p>This is a current-evidence progress notice, not settlement approval, an automatic closure or a benefit award. Corrections, pending payments or review can change the result. Benefit qualification is separate; a missed benefit instalment does not silently postpone principal maturity.</p>

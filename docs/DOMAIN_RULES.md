@@ -389,7 +389,7 @@ authorize new production CASH enrolments or contributions under `SCH-007`.
   redemption. Selection and dispatch exclude reversed redemptions; later reversal
   does not rewrite or delete already retained communication evidence. Dispatch
   rechecks event/account/date shape and the current audience setting. INR final
-  settlement is a separate record and is not covered by this redemption notice.
+  settlement uses its own completion-linked notice, never a metal redemption row.
 - **REM-005:** Each event, audience, and normalized recipient has one deterministic
   reminder identity. An email already accepted by the backend is not sent again;
   failed attempts may be retried only to the configured bounded limit.
@@ -404,6 +404,17 @@ authorize new production CASH enrolments or contributions under `SCH-007`.
   externally scheduled management command. Dry-run is read-only, historical-date
   apply requires explicit confirmation, output is aggregate rather than recipient-
   identifying, and each audience may be independently disabled.
+- **REM-009:** Independent INR completion notices require the retained final
+  completion event, validated principal/fulfilment/benefit and closure history,
+  a settled closure and redeemed agreement, and no retired/full-return disposition.
+  Proposals, individual fulfilment legs and even all fulfilled legs without the
+  final closure event are not completion notices. Selection and locked dispatch
+  recheck these rules and the configured-family gates. The existing customer/owner
+  redemption-notification switches also control INR completion notices. Messages
+  separate principal applied to jewellery from actual original-source refunds;
+  they never trigger transfers or imply that benefits/top-ups are paid principal.
+  Later returns suppress unsent/retried notices without deleting historical email
+  evidence. Rollback must retain existing INR-linked reminders and attempts.
 - **RED-001 / FIN-006:** A customer cannot redeem more than the outstanding entitlement.
 - **RED-002:** Before redemption, effective status is derived under ELIG-001 through
   ELIG-004: before `eligible_from` is `ACTIVE / NOT YET ELIGIBLE`; on or after

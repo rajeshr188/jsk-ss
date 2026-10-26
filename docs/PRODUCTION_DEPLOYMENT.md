@@ -3356,6 +3356,20 @@ SCHEME_REMINDER_RETRY_LIMIT=3
 SCHEME_REMINDER_BASE_URL=https://jaishrikrishnajewellery.com
 ```
 
+Configured-builder extension (migration `0051_inr_completion_reminders`): the
+existing customer/owner `*_REDEMPTIONS` switches also govern final INR settlement
+notices; no new scheduler or credentials are required. Apply the additive migration
+before running the new reminder code. Keep `CONFIGURED_PLANS_ENABLED=False` until
+the coherent builder release is approved. Per-family operational readiness is
+checked independently; setting the flag alone does not activate these notices.
+Only fully recorded completion events qualify, never proposals or partial
+fulfilment. Full returns and invalid source/benefit evidence suppress dispatch.
+Old reminder identities and attempts are preserved. Once an INR-linked reminder
+exists, migration reversal is refused: retain the records and use forward recovery.
+These notices share the existing same-day processing/date-override and SMTP retry
+limitations. Review dry-run counts and recipient settings before enabling dispatch;
+SMTP acceptance is not proof of inbox delivery.
+
 Use the exact protected-`main` GHCR digest from the successful Actions run. Do not
 build on the Linode. Record the current immutable image/release, a current managed
 PostgreSQL recovery point, capacity, customer/account/liability/exception baselines,

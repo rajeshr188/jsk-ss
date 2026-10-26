@@ -2,6 +2,25 @@
 
 ## Current milestone
 
+**27 October 2026 - gated INR final-completion notices.**
+The existing reminder job now supports a distinct immutable INR completion event.
+Proposals, partial fulfilment and all legs without final closure do not qualify.
+Selection and locked dispatch validate current principal, fulfilment, benefit and
+closure history, account/date scope, recipient eligibility and audience switches.
+Full returns suppress unsent/retried messages while preserving earlier attempts.
+Emails distinguish paid principal applied to jewellery from principal refunded;
+benefits and invoice top-ups remain separate. No transfer or financial mutation is
+triggered by notification.
+
+Migration 0051 preserves legacy reminder identities and protects the new completion
+link; reversal refuses retained INR notification evidence. Configured-plan and
+per-family readiness gates remain closed. No normal-database migration, provider
+action or production deployment occurred. TESTING.md records validation.
+
+Next: consolidated lifecycle/provider-exception acceptance and query/latency review,
+then browser/mobile/keyboard and delivered-message review, normal CI and exact-image
+release rehearsal. The complete builder remains unactivated.
+
 **27 October 2026 - cross-family event notification review.**
 The acceptance map now identifies existing request, collection/provider-exception,
 eligibility and full-disposition suites and their remaining release checks.

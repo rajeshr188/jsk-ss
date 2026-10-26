@@ -13,6 +13,7 @@ from django.utils import timezone
 
 from .models import (
     Contribution,
+    InrSettlementCompletion,
     Redemption,
     SchemeAccount,
     SchemeReminder,
@@ -38,6 +39,7 @@ class SchemeReminderCandidate:
     contribution: Contribution | None = None
     redemption: Redemption | None = None
     eligibility_lead_days: int | None = None
+    inr_completion: InrSettlementCompletion | None = None
 
     @property
     def idempotency_key(self):
@@ -54,6 +56,9 @@ class SchemeReminderCandidate:
                 self.event_date.isoformat(),
             ]
         )
+        # Preserve every pre-existing reminder identity across this migration.
+        if self.inr_completion is not None:
+            identity += "|inr-completion|" + str(self.inr_completion.pk)
         return hashlib.sha256(identity.encode("utf-8")).hexdigest()
 
 
@@ -90,6 +95,7 @@ def _candidate(
     contribution=None,
     redemption=None,
     eligibility_lead_days=None,
+    inr_completion=None,
 ):
     return SchemeReminderCandidate(
         kind=kind,
@@ -100,6 +106,7 @@ def _candidate(
         contribution=contribution,
         redemption=redemption,
         eligibility_lead_days=eligibility_lead_days,
+        inr_completion=inr_completion,
     )
 
 
@@ -208,6 +215,24 @@ def build_scheme_reminder_plan(*, as_of):
                         )
                     )
 
+    if settings.SCHEME_REMINDER_CUSTOMER_REDEMPTIONS or settings.SCHEME_REMINDER_OWNER_REDEMPTIONS:
+        from .inr_reminder_selectors import completed_inr_events
+        for completion in completed_inr_events(as_of=as_of):
+            account = completion.proposal.scheme_account
+            recipients = []
+            if settings.SCHEME_REMINDER_CUSTOMER_REDEMPTIONS:
+                recipient = _customer_recipient(account)
+                if recipient:
+                    recipients.append((SchemeReminder.Audience.CUSTOMER, recipient))
+                else:
+                    invalid_customer_recipients += 1
+            if settings.SCHEME_REMINDER_OWNER_REDEMPTIONS:
+                recipients.extend((SchemeReminder.Audience.OWNER, email) for email in owner_emails)
+            for audience, recipient in recipients:
+                candidates.append(_candidate(kind=SchemeReminder.Kind.COMPLETED_INR_SETTLEMENT,
+                    audience=audience, recipient_email=recipient, scheme_account=account,
+                    event_date=timezone.localdate(completion.event.created_at), inr_completion=completion))
+
     return SchemeReminderPlan(
         candidates=tuple(candidates),
         owner_recipient_count=len(owner_emails),
@@ -221,6 +246,8 @@ def _action_url(candidate):
             "schemes:my_scheme_detail",
             args=[candidate.scheme_account.scheme_number],
         )
+    elif candidate.kind == SchemeReminder.Kind.COMPLETED_INR_SETTLEMENT:
+        path = reverse("schemes:configured_settlement", args=[candidate.inr_completion.proposal.closure_id])
     elif candidate.kind in (SchemeReminder.Kind.UPCOMING_ELIGIBILITY, SchemeReminder.Kind.UPCOMING_MONTHLY_COMPLETION):
         path = reverse("schemes:redemption_eligibility")
     elif candidate.kind == SchemeReminder.Kind.ALLOCATION_EXCEPTION:
@@ -254,6 +281,7 @@ def _build_message(candidate):
             candidate.redemption.completed_at if candidate.redemption else None
         ),
         "action_url": _action_url(candidate),
+        "inr_completion": candidate.inr_completion,
     }
     subject = render_to_string(
         "schemes/email/scheme_reminder_subject.txt",
@@ -324,6 +352,8 @@ def deliver_scheme_reminder(candidate, *, as_of=None):
         allowed = allowed and candidate.recipient_email in get_scheme_reminder_owner_emails()
     else:
         allowed = False
+    if candidate.kind != SchemeReminder.Kind.COMPLETED_INR_SETTLEMENT:
+        allowed = allowed and candidate.inr_completion is None
     if candidate.kind in eligibility_kinds:
         today = timezone.localdate(timezone=AGREEMENT_TIMEZONE)
         # Explicit legacy date replay remains available. Monthly evidence is a
@@ -366,6 +396,18 @@ def deliver_scheme_reminder(candidate, *, as_of=None):
             audience_enabled and redemption is not None
             and candidate.contribution is None and candidate.eligibility_lead_days is None)
         candidate = replace(candidate, redemption=redemption)
+    elif candidate.kind == SchemeReminder.Kind.COMPLETED_INR_SETTLEMENT:
+        from .inr_reminder_selectors import completed_inr_events
+        completion = None
+        if candidate.inr_completion is not None:
+            completion = next(completed_inr_events(as_of=candidate.event_date, account=account,
+                completion_id=candidate.inr_completion.pk), None)
+        audience_enabled = (settings.SCHEME_REMINDER_CUSTOMER_REDEMPTIONS
+            if candidate.audience == SchemeReminder.Audience.CUSTOMER else settings.SCHEME_REMINDER_OWNER_REDEMPTIONS)
+        allowed = allowed and (audience_enabled and completion is not None
+            and candidate.contribution is None and candidate.redemption is None
+            and candidate.eligibility_lead_days is None)
+        candidate = replace(candidate, inr_completion=completion)
     else:
         allowed = False
     if not allowed:
@@ -379,6 +421,7 @@ def deliver_scheme_reminder(candidate, *, as_of=None):
             "scheme_account": candidate.scheme_account,
             "contribution": candidate.contribution,
             "redemption": candidate.redemption,
+            "inr_completion": candidate.inr_completion,
             "event_date": candidate.event_date,
             "eligibility_lead_days": candidate.eligibility_lead_days,
         },
@@ -394,6 +437,7 @@ def deliver_scheme_reminder(candidate, *, as_of=None):
         and reminder.redemption_id
         == (candidate.redemption.pk if candidate.redemption else None)
         and reminder.event_date == candidate.event_date
+        and reminder.inr_completion_id == (candidate.inr_completion.pk if candidate.inr_completion else None)
         and reminder.eligibility_lead_days == candidate.eligibility_lead_days
     )
     if not expected:
