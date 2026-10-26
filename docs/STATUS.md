@@ -2,6 +2,21 @@
 
 ## Current milestone
 
+**27 October 2026 - owner query review and lifecycle regression.**
+Local profiling identified repeated full-history validation in returned-benefit
+and INR settlement workspaces. Page builds now reuse their own freshly validated
+decision/history and balance reads. Financial services still revalidate under
+their locks; no trusted caller proof or cross-request cache was added. Real GET
+profiles check private, write-free responses, and fresh reads must still detect
+holds, later approvals and source drift. Measurements and affected regression
+results are recorded in TESTING.md.
+
+This is a measured reduction, not production performance acceptance. Next review
+longer correction histories and remaining read amplification, then complete
+browser/mobile/keyboard and delivered-message acceptance, normal CI and exact-image
+rehearsal. Gates remain closed; no migration, production action or activation is
+included in this checkpoint.
+
 **27 October 2026 - gated INR final-completion notices.**
 The existing reminder job now supports a distinct immutable INR completion event.
 Proposals, partial fulfilment and all legs without final closure do not qualify.

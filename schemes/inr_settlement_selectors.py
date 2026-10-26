@@ -137,6 +137,15 @@ class InrSettlementBalance:
 
 
 def inr_settlement_balance(account):
+    return inr_settlement_snapshot(account)[1]
+
+
+def inr_settlement_snapshot(account):
+    """Validate fresh history once and return its paired balance for this read.
+
+    No caller-supplied proof or cross-request cache is accepted. Mutation services
+    continue to call the balance selector afresh under their existing locks.
+    """
     summary = get_inr_principal_summary(account)
     if summary.needs_review:
         raise ValidationError("INR principal sources require reconciliation.")
@@ -144,9 +153,9 @@ def inr_settlement_balance(account):
     proposals = validate_inr_history(account)
     proposal = next((p for p in proposals if not p.retired), None)
     if proposal is None:
-        return InrSettlementBalance(summary.principal_recorded, Decimal(0), summary.principal_recorded, Decimal(0), Decimal(0))
+        return proposals, InrSettlementBalance(summary.principal_recorded, Decimal(0), summary.principal_recorded, Decimal(0), Decimal(0))
     jewellery, refund = proposal_fulfilment_totals(proposal)
-    return InrSettlementBalance(summary.principal_recorded, jewellery + refund,
+    return proposals, InrSettlementBalance(summary.principal_recorded, jewellery + refund,
         summary.principal_recorded - jewellery - refund,
         proposal.principal_refund - refund, proposal.principal_to_invoice - jewellery)
 

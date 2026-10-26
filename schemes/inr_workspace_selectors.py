@@ -1,6 +1,5 @@
 """Validated owner presentation of retained INR settlement and exact fulfilment legs."""
-from .inr_correction_selectors import validate_inr_history
-from .inr_settlement_selectors import inr_settlement_balance
+from .inr_settlement_selectors import inr_settlement_snapshot
 
 
 def fulfilment_legs(proposal):
@@ -15,7 +14,7 @@ def fulfilment_legs(proposal):
 
 
 def inr_owner_workspace(closure):
-    history = validate_inr_history(closure.scheme_account)
+    history, balance = inr_settlement_snapshot(closure.scheme_account)
     current = next((p for p in history if not p.retired and p.closure_id == closure.pk), None)
     remaining = []
     if current:
@@ -23,4 +22,4 @@ def inr_owner_workspace(closure):
         remaining = [leg for leg in fulfilment_legs(current).values()
             if (leg["kind"], leg["receipt_id"]) not in fulfilled]
     return dict(history=history, current=current, remaining=remaining,
-        balance=inr_settlement_balance(closure.scheme_account))
+        balance=balance)

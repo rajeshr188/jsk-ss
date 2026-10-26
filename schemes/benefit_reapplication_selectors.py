@@ -129,21 +129,26 @@ def decision_evidence(reversal, outcome, authorization_reference):
         outcome=outcome, authorization_reference=authorization_reference)
 
 
-def reapplication_review_status(reversal):
-    """Read-only review status; none of these states authorizes another invoice."""
-    rows = decision_history(reversal)
+def _status_from_validated_history(reversal, rows):
+    """Reuse this invocation's validated rows; return any current basis we read."""
     if not rows:
-        return "UNREVIEWED"
+        return "UNREVIEWED", None
     from .models import BenefitInvoiceFulfilment
     consumed = BenefitInvoiceFulfilment.objects.filter(reapplication_decision__reversal=reversal).first()
     if consumed:
         from .benefit_fulfilment_selectors import validate_benefit_fulfilment
         validate_benefit_fulfilment(consumed)
-        return "CONSUMED"
+        return "CONSUMED", None
     latest = rows[-1]
-    if latest.evidence["basis"] != return_basis(reversal):
-        return "STALE"
-    return "APPROVED_REVIEW" if latest.outcome == "APPROVE" else "HELD"
+    basis = return_basis(reversal)
+    if latest.evidence["basis"] != basis:
+        return "STALE", basis
+    return ("APPROVED_REVIEW" if latest.outcome == "APPROVE" else "HELD"), basis
+
+
+def reapplication_review_status(reversal):
+    """Fresh read; none of these states authorizes another invoice."""
+    return _status_from_validated_history(reversal, decision_history(reversal))[0]
 
 
 def owner_reapplication_workspace(account):
@@ -158,9 +163,10 @@ def owner_reapplication_workspace(account):
         decisions, blocked, status = [], "", "REVIEW_REQUIRED"
         try:
             decisions = decision_history(reversal)
-            status = reapplication_review_status(reversal)
+            status, basis = _status_from_validated_history(reversal, decisions)
             if status != "CONSUMED":
-                return_basis(reversal)
+                if basis is None:
+                    return_basis(reversal)
                 reviewable.append(reversal.pk)
         except ValidationError as error:
             blocked = " ".join(error.messages)

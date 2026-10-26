@@ -1,5 +1,55 @@
 # Testing
 
+## Owner workflow query review and combined lifecycle regression (27 October 2026)
+
+`test_owner_workflow_queries` profiles real owner HTTP GETs after real full
+settlement/return and benefit-review services on disposable PostgreSQL fixtures.
+GET profiling rejects INSERT/UPDATE/DELETE and checks private responses. Query
+counts are regression budgets for these fixtures, not production latency SLAs.
+Local wall-clock observations include the test client and are not browser/network
+or Linode measurements.
+
+The same one-return fixtures measured:
+
+| Owner page | Before queries | After queries | Before / after local seconds |
+| --- | ---: | ---: | ---: |
+| INR unreviewed benefit | 457 | 456 | 0.901 / 0.393 |
+| INR approved benefit | 1,402 | 711 | 1.719 / 0.783 |
+| Returned INR settlement | 383 | 238 | 0.418 / 0.233 |
+| Metal unreviewed benefit | 206 | 205 | 0.230 / 0.198 |
+| Metal approved benefit | 543 | 285 | 0.694 / 0.255 |
+
+Wall-clock variation includes warm-up and concurrent local regression load; query
+counts are the reliable comparison. Three INR review decisions measured 1,219
+queries / 1.047s after the change. Conservative fixture ceilings are 500/1,100/340/
+240/450 for the rows above, and 3,000 for the three-decision case. These prevent
+regression, not declare these still-high counts acceptable for all production data.
+
+Repeated complete decision/history validation was identified in the page builders.
+A workspace now reuses only its own freshly validated history and
+current review basis; the INR read returns paired history and balance from one
+validation. Public status/balance calls still start fresh, and mutations retain
+their existing locks and independent checks. No cross-request cache or
+caller-supplied trusted proof was introduced.
+
+The combined affected run covers owner benefit/INR workspaces, retained review
+decisions, the contribution family matrix, INR callback/recovery/source-refund
+paths, and unused/early/full-return closure journeys. Additional profiling checks
+three review decisions and fresh detection of source drift using the same Python
+agreement objects. No production performance or full normal-CI acceptance is
+claimed. Longer disposition chains, remaining read amplification, browser/mobile/
+keyboard, delivered-message and exact-image rollout acceptance remain open.
+
+The baseline profile passed **1 test in 28.698s**. The final budget/freshness profile
+passed **2 tests in 37.555s**, with write-free GETs and no cross-request stale result.
+Django checks passed; `makemigrations --check --dry-run` found no changes. Both
+profiles used disposable localhost PostgreSQL databases, destroyed after the runs.
+The combined affected lifecycle run passed **62 tests in 725.223s** across the
+profile, owner benefit/INR workspaces, retained reapplication decisions, collection
+matrix, INR API payment/recovery and closure acceptance suites. It reproduced the
+same query counts. Its disposable database was also destroyed. This is broader
+affected regression, not the complete repository CI/concurrency/migration suite.
+
 ## INR final-completion notices (27 October 2026)
 
 Migration `0051_inr_completion_reminders` adds a protected optional completion
