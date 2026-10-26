@@ -2,6 +2,25 @@
 
 ## Current milestone
 
+**27 October 2026 - owner INR settlement workspace.**
+Independent INR agreements now have a dedicated owner interface for signed no-write
+split preview, customer-authorized proposal, actual source-specific jewellery/refund
+fulfilment, full completion and signed void/full-return correction. Amounts and refund
+routes come from retained proposals, never editable POST amounts. Saving a proposal
+leaves principal outstanding. Every actual portion must be fulfilled before closure;
+full-return evidence restores principal and consumed benefits atomically through the
+existing services, retaining history and blocking payments.
+
+Owner authorization, CSRF, private responses, signed expiry/current-evidence checks,
+idempotency and operational readiness remain enforced. Older agreements and foundation
+proofs are read-only here, including foundation proofs on schema-2 accounts.
+No financial formula, gate or migration changed. Test results are
+recorded in TESTING.md. Normal databases, providers and production are untouched.
+
+Next: benefit reapplication review interface, then remaining operational/lifecycle/
+notification coverage, query/latency and browser/mobile/keyboard acceptance before
+normal CI and a coherent release rehearsal. This is not builder activation.
+
 **27 October 2026 - owner metal settlement/benefit workspace acceptance.**
 Operational-screen review found the metal form still described a no-benefit-only
 workflow although the gated services support contracted VA. Owners can now submit

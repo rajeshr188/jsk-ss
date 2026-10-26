@@ -129,7 +129,7 @@ class OwnerSettlementWorkspaceTests(MetalClosureFixture, TestCase):
             response = self.client.get(self.url(closure))
             self.assertContains(response, "INR purchase-credit settlement")
             self.assertNotContains(response, 'name="preview_token"')
-            self.assertEqual(self.client.post(self.url(closure), {"confirmed": True}).status_code, 405)
+            self.assertEqual(self.client.post(self.url(closure), {"confirmed": True}).status_code, 400)
         self.assertEqual((Redemption.objects.count(), InrSettlementProposal.objects.count()), before)
 
     def test_early_unearned_benefit_can_be_omitted_but_qualified_right_cannot(self):

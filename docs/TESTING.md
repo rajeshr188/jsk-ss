@@ -1,5 +1,41 @@
 # Testing
 
+## Owner INR settlement workspace (27 October 2026)
+
+`test_owner_inr_settlement_workspace` covers the real signed preview, proposal,
+actual fulfilment, completion and void/full-return services through the owner route.
+The final workspace run passed **9 tests in 178.457s**, including read-only handling
+of older foundation proofs even on schema-2 accounts. Posted cash-route/amount
+overrides cannot replace a retained provider refund leg. The ten existing manual
+checks also passed in the earlier combined **17-test run (187.127s)**.
+The HTTP matrix exercises five independent families with both purchase bonus and
+VA benefits. Proposal/preview reduce no principal; incomplete refunds block closure;
+full returns restore discharged principal and reverse the consumed benefit together.
+
+Coverage includes actual-receipt/top-up evidence, pure-refund/equal-invoice/external-
+top-up splits without an earned benefit, void and fresh replacement, idempotent
+proposal/fulfilment replay, missing/changed return evidence, owner-only access, CSRF,
+private GETs, cross-closure IDs, invalid amounts, tampered/expired previews and real
+readiness rejection with either release-flag value. These are synthetic agreements
+with only operational readiness simulated; financial services remain real. No
+provider API or real email is invoked. Existing five metal-workspace tests passed in
+the initial combined run. Its two INR failures were duplicate `confirmed` keyword
+overrides in test helpers; corrected helpers passed the subsequent run above.
+
+The independent INR/correction/document regression ran **47 tests in 407.482s**:
+45 passed; two migration tests expected the older 0040 guard even though 0050 now
+stops rollback first. Updated tests assert that earlier refusal, explicitly call
+0040's protection, and still verify retained proposals/corrections and 0039's guard.
+The affected three-test transaction class then passed **3 tests in 51.482s**.
+No migration or financial guard was changed to make the assertions pass.
+
+Django system checks, migration-drift checks and whitespace checks pass. No migration
+was added or applied to a normal database. Every financial test uses a unique
+disposable localhost PostgreSQL database and destroys it afterward. These results
+are functional HTTP acceptance, not browser/mobile/keyboard or complete builder
+release approval. Benefit reapplication approval UI, broader operational acceptance
+and coherent release rehearsal remain pending; activation and production are unchanged.
+
 ## Owner metal settlement/benefit workspace (27 October 2026)
 
 `test_owner_settlement_workspace` passed **5 tests in 37.652s**. Its HTTP matrix

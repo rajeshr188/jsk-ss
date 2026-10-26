@@ -339,6 +339,18 @@ class InrCorrectionTests(TestCase):
 
 
 class InrCorrectionTransactionTests(TransactionTestCase):
+    def assert_independent_rollback_blocked(self):
+        from importlib import import_module
+        from types import SimpleNamespace
+        from django.apps import apps
+        # 0050 now encounters retained schema-2 plan/revision evidence first.
+        with self.assertRaisesMessage(RuntimeError, "Retain independent draft policies and revisions"):
+            MigrationExecutor(connection).migrate([("schemes", "0038_inr_manual_settlement")])
+        # Still exercise 0040's independent-agreement protection explicitly.
+        with self.assertRaisesMessage(RuntimeError, "Cannot reverse 0040"):
+            import_module("schemes.migrations.0040_independent_agreement_storage").preserve_independent_agreements(
+                apps, SimpleNamespace(connection=connection))
+
     def setup_proposal(self):
         owner, customer = make_owner(), make_customer()
         account = future_contract(owner, customer)
@@ -375,8 +387,7 @@ class InrCorrectionTransactionTests(TransactionTestCase):
         self.addCleanup(lambda: MigrationExecutor(connection).migrate(leaves))
         owner, account, p = self.setup_proposal()
         resolution = resolve(p, owner, kind="VOID")
-        with self.assertRaisesMessage(RuntimeError, "Cannot reverse 0040"):
-            MigrationExecutor(connection).migrate([("schemes", "0038_inr_manual_settlement")])
+        self.assert_independent_rollback_blocked()
         MigrationExecutor(connection).migrate(leaves)
         with self.assertRaisesMessage(RuntimeError, "Cannot reverse 0039"):
             import_module("schemes.migrations.0039_inr_settlement_corrections").preserve_correction_history(
@@ -387,8 +398,7 @@ class InrCorrectionTransactionTests(TransactionTestCase):
         owner, account, p = self.setup_proposal()
         leaves = MigrationExecutor(connection).loader.graph.leaf_nodes()
         self.addCleanup(lambda: MigrationExecutor(connection).migrate(leaves))
-        with self.assertRaisesMessage(RuntimeError, "Cannot reverse 0040"):
-            MigrationExecutor(connection).migrate([("schemes", "0038_inr_manual_settlement")])
+        self.assert_independent_rollback_blocked()
         MigrationExecutor(connection).migrate(leaves)
         p.refresh_from_db()
         self.assertFalse(p.retired)

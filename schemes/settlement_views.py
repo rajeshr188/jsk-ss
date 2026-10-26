@@ -71,11 +71,8 @@ def settlement_workspace(request, request_id):
         pk=request_id, scheme_account__configuration_snapshot__isnull=False)
     if closure.scheme_account.savings_mode == "INR_CREDIT":
         # Do not reinterpret INR principal through a gram-based form or service.
-        response = render(request, "schemes/inr_settlement_boundary.html", {"closure": closure},
-            status=405 if request.method == "POST" else 200)
-        if request.method == "POST":
-            response["Allow"] = "GET"
-        return response
+        from .inr_settlement_views import inr_settlement_workspace
+        return inr_settlement_workspace(request, closure)
     operation = request.POST.get("operation", "settle")
     preview_post = request.method == "POST" and operation == "preview"
     reverse_post = request.method == "POST" and request.POST.get("operation") == "reverse"

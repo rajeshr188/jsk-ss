@@ -1,9 +1,0 @@
-{% extends '_base.html' %}
-{% block title %}INR settlement review{% endblock %}
-{% block content %}
-<h1>INR purchase-credit settlement</h1>
-<p>{{ closure.scheme_account.scheme_number }} · {{ closure.get_status_display }}</p>
-<div class="alert alert-warning">The owner INR fulfilment interface is not yet available. This agreement cannot be settled through the metal workspace. No refund, delivery or closure has been recorded by opening this page.</div>
-<p>The agreed boundary is one final settlement: recorded jewellery fulfilment plus any unused paid-principal refund. A proposal alone does not discharge liability. Benefits remain separate from refundable principal. No replacement-credit voucher or automated Razorpay refund is created.</p>
-<p><a href="{% url 'schemes:scheme_statement' closure.scheme_account.scheme_number %}">Review principal and retained settlement history</a> · <a href="{% url 'schemes:closure_workspace' closure.scheme_account.scheme_number %}">Return to closure review</a></p>
-{% endblock %}
