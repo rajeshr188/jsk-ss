@@ -1,5 +1,37 @@
 # Testing
 
+## Independent collection matrix (26 October 2026; no migration)
+
+`test_collection_matrix` adds eight tests. Its 120 first-payment subcases span all
+five approved rule families, both principal denominations (22K exact-metal fixture
+and INR purchase credit), permitted fixed/variable amount policies, flexible or
+calendar/anniversary ceilings, and actual cash/online creation services. Optional
+ceilings create no obligations; required schedules retain their independent count.
+Additional cases exercise INR bonus/VA terms without awarding benefits, missing a
+benefit-only month without extending maturity, count replacement windows, full cash
+correction and retained history, duplicate capture delivery, and delayed delivery
+across India-local boundaries. The last whole provider second remains ambiguous and
+requires review; paid principal is preserved even when timing cannot qualify.
+
+Fixtures simulate readiness and provider responses, not principal/attribution writes.
+Webhook cases enter the post-authentication service; signature validation is covered
+separately by adapter/view tests. Unpatched readiness tests reject every family with
+the release flag both off and on. Benefit percentages/caps here are synthetic test
+parameters, not published business promises. No runtime guards were changed.
+
+The combined run of `test_collection_matrix`, `test_independent_payment_entry`,
+`test_independent_instalment_ledger`, `test_independent_enrolment` and
+`test_inr_api_payments` passed all **70 tests in 231.179s**, including concurrency
+and migration cases, with normal hashing and a unique disposable localhost PostgreSQL
+database, subsequently destroyed. Initial fixture mistakes used a nonexistent snapshot
+attribute and moved the clock backwards after recording future payments; both were
+corrected. A subsequent eight-test run (110.731s) passed the 120-case matrix but failed
+two boundary expectations that incorrectly treated last-second provider precision as
+conclusive. Corrected tests explicitly retain that review safeguard; the final combined
+run is clean. Django checks, migration consistency and whitespace checks also passed.
+This is a local collection checkpoint, not full normal CI, benefit lifecycle acceptance
+or permission to activate configured plans. No normal database migration was run.
+
 ## INR callback/API capture evidence (0044, 26 October 2026)
 
 `test_inr_api_payments` exercises the real HMAC/API adapter with synthetic responses:

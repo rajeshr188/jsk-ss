@@ -2,6 +2,32 @@
 
 ## Current milestone
 
+**26 October 2026 - gated collection-matrix regression checkpoint completed locally.**
+Added eight service-level tests covering 120 first-payment combinations across the
+five approved families: optional duration/anytime, required count/duration-and-count,
+and required-for-benefit duration. They exercise both principal denominations,
+supported amount policies, calendar/anniversary ceilings and cash/online entry.
+Additional cases cover both defined benefit vocabularies, missed benefit windows
+without maturity extension, count replacements, full cash corrections, duplicate
+captures and delayed/boundary timing. Benefit terms never inflate collected principal
+or grams; payment qualification does not grant benefit or settlement eligibility.
+Whole-second provider evidence in the last second remains REVIEW, not assumed on time.
+
+All 70 tests in the combined collection, independent payment-entry, instalment-ledger,
+owner-enrolment and INR API suites passed (231.179s, normal hashing), including
+concurrency/migration cases, on a unique disposable localhost PostgreSQL database
+which was destroyed. Initial fixture failures were corrected (snapshot field and
+clock chronology); boundary expectations were aligned with the existing conservative
+timestamp precision rule without weakening it. Django checks, migration consistency
+and whitespace checks pass. This is not full normal CI or complete lifecycle acceptance.
+
+No runtime code, schema, release gate, normal database or production change.
+Configured activation remains blocked. Next integrate the public enrolment request,
+form and email journey with frozen independent terms; owner review/outage handling,
+eligibility, benefit execution, settlement and final cross-family acceptance remain
+explicit unfinished work. Existing production notes, UI edits and nested worktrees
+are outside this checkpoint.
+
 **26 October 2026 - gated INR callback/API principal integration completed locally (0044).**
 Building on `fa9340d`, callbacks now retain minimal authenticated Live capture
 observations after HMAC verification. Owner recovery retains actor/reason/event
