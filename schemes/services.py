@@ -7,7 +7,7 @@ from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.core.exceptions import ImproperlyConfigured, ValidationError
+from django.core.exceptions import ImproperlyConfigured, ObjectDoesNotExist, ValidationError
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 
@@ -543,7 +543,9 @@ def _normalize_requested_contribution(*, plan, amount):
 
 
 def enrolment_request_offer_is_current(enrolment_request):
-    plan = enrolment_request.plan
+    # A request may hold a cached plan from before an owner edit. Current-offer
+    # comparison must read persisted terms; conversion already holds its row lock.
+    plan = SchemePlan.objects.select_related("configuration", "publication_revision").get(pk=enrolment_request.plan_id)
     from .plan_publication import require_configured_offer
     try:
         require_configured_offer(plan)
@@ -551,6 +553,17 @@ def enrolment_request_offer_is_current(enrolment_request):
         return False
     if not plan.active or not plan.publicly_listed:
         return False
+    if enrolment_request.request_schema_version == 2:
+        from .enrolment_contracts import validate_request_terms
+        from .plan_governance import plan_edit_digest
+        try:
+            validate_request_terms(enrolment_request)
+        except (ValidationError, ObjectDoesNotExist):
+            return False
+        return (enrolment_request.configuration_snapshot_id == plan.configuration_id
+            and enrolment_request.plan_revision_snapshot_id == plan.publication_revision_id
+            and enrolment_request.offer_digest == plan_edit_digest(plan)
+            and enrolment_request.disclosure_version == settings.CUSTOMER_ENROLMENT_REQUEST_DISCLOSURE_VERSION)
     if not SchemePlanOffering.objects.filter(
         plan=plan,
         metal_grade=enrolment_request.metal_grade,
@@ -584,7 +597,11 @@ def _request_audit_details(enrolment_request):
         "enrolment_request_id": str(enrolment_request.pk),
         "customer_number": enrolment_request.customer.customer_number,
         "plan_code": enrolment_request.plan_code_snapshot,
-        "metal_grade": enrolment_request.metal_grade.code,
+        "metal_grade": enrolment_request.metal_grade.code if enrolment_request.metal_grade_id else None,
+        **({"request_schema_version": 2, "savings_mode": enrolment_request.savings_mode_snapshot,
+            "plan_revision_id": enrolment_request.plan_revision_snapshot_id,
+            "eligibility_policy": enrolment_request.eligibility_policy_snapshot,
+            "required_count": enrolment_request.required_count_snapshot} if enrolment_request.request_schema_version == 2 else {}),
         "requested_contribution_amount": str(
             enrolment_request.requested_contribution_amount
         ),
@@ -616,6 +633,7 @@ def submit_scheme_enrolment_request(
     requested_months,
     customer_message,
     actor,
+    expected_plan_digest=None,
 ):
     if not settings.CUSTOMER_ENROLMENT_REQUESTS_ENABLED:
         raise ValidationError("Online enrolment requests are currently unavailable.")
@@ -624,13 +642,25 @@ def submit_scheme_enrolment_request(
     )
     _validate_customer_actor(customer=customer, actor=actor)
     plan = SchemePlan.objects.select_for_update().get(pk=plan.pk)
-    metal_grade = MetalGrade.objects.get(pk=metal_grade.pk)
     from .plan_publication import require_configured_offer
     require_configured_offer(plan)
-    plan.full_clean()
+    independent = bool(plan.configuration_id and plan.configuration.policy_schema_version == 2)
+    inr_credit = independent and plan.configuration.accumulation == "INR_PURCHASE_CREDIT"
+    if not independent:
+        plan.full_clean()
+    if inr_credit and metal_grade is not None:
+        raise ValidationError("INR purchase credit cannot carry a metal grade.")
+    if not inr_credit and metal_grade is None:
+        raise ValidationError({"metal_grade": "Select the exact offered grade."})
+    if metal_grade is not None:
+        metal_grade = MetalGrade.objects.get(pk=metal_grade.pk)
+    if independent:
+        from .plan_governance import plan_edit_digest
+        if expected_plan_digest != plan_edit_digest(plan):
+            raise ValidationError("The displayed offer changed or expired; review it and submit again.")
     if not plan.active or not plan.publicly_listed:
         raise ValidationError({"plan": "This plan is not open for online requests."})
-    if not SchemePlanOffering.objects.filter(
+    if not inr_credit and not SchemePlanOffering.objects.filter(
         plan=plan,
         metal_grade=metal_grade,
         active=True,
@@ -671,20 +701,13 @@ def submit_scheme_enrolment_request(
     if existing is not None:
         return EnrolmentRequestSubmission(existing, False)
 
-    try:
-        requested_months = int(requested_months)
-    except (TypeError, ValueError):
-        raise ValidationError(
-            {"requested_months": "Enter a valid preferred duration."}
-        ) from None
-    if requested_months < plan.minimum_months:
-        raise ValidationError(
-            {
-                "requested_months": (
-                    f"This plan requires at least {plan.minimum_months} months."
-                )
-            }
-        )
+    if not independent:
+        try:
+            requested_months = int(requested_months)
+        except (TypeError, ValueError):
+            raise ValidationError({"requested_months": "Enter a valid preferred duration."}) from None
+        if requested_months < plan.minimum_months:
+            raise ValidationError({"requested_months": f"This plan requires at least {plan.minimum_months} months."})
     normalized_amount = _normalize_requested_contribution(
         plan=plan,
         amount=requested_contribution_amount,
@@ -719,6 +742,14 @@ def submit_scheme_enrolment_request(
         expires_at=now
         + timedelta(days=settings.CUSTOMER_ENROLMENT_REQUEST_EXPIRY_DAYS),
     )
+    if independent:
+        from .enrolment_contracts import independent_request_values
+        values = independent_request_values(configuration_id=plan.configuration_id,
+            metal_grade_id=metal_grade.pk if metal_grade else None, amount=normalized_amount, months=requested_months)
+        for field, value in values.items():
+            setattr(enrolment_request, field, value)
+        enrolment_request.plan_revision_snapshot_id = plan.publication_revision_id
+        enrolment_request.offer_digest = expected_plan_digest
     enrolment_request.save()
     record_audit_event(
         action=AuditEvent.Action.ENROLMENT_REQUEST_SUBMITTED,
@@ -733,7 +764,7 @@ def submit_scheme_enrolment_request(
 @transaction.atomic
 def withdraw_scheme_enrolment_request(*, enrolment_request, actor):
     enrolment_request = (
-        SchemeEnrolmentRequest.objects.select_for_update()
+        SchemeEnrolmentRequest.objects.select_for_update(of=("self", "customer", "customer__user", "plan"))
         .select_related("customer__user", "plan", "metal_grade")
         .get(pk=enrolment_request.pk)
     )
@@ -772,7 +803,7 @@ def decide_scheme_enrolment_request(*, enrolment_request, status, actor, reason)
     }:
         raise ValidationError("Select a supported enrolment request decision.")
     enrolment_request = (
-        SchemeEnrolmentRequest.objects.select_for_update()
+        SchemeEnrolmentRequest.objects.select_for_update(of=("self", "customer", "customer__user", "plan"))
         .select_related("customer__user", "plan", "metal_grade")
         .get(pk=enrolment_request.pk)
     )
@@ -816,7 +847,7 @@ def enroll_customer_from_request(
 ):
     _validate_owner(actor)
     enrolment_request = (
-        SchemeEnrolmentRequest.objects.select_for_update()
+        SchemeEnrolmentRequest.objects.select_for_update(of=("self", "customer", "customer__user"))
         .select_related("customer__user", "metal_grade")
         .get(pk=enrolment_request.pk)
     )
@@ -844,7 +875,7 @@ def enroll_customer_from_request(
         raise ValidationError(
             "This request has expired. Record expiry and ask the customer to submit again."
         )
-    if not current_terms_confirmed:
+    if current_terms_confirmed is not True:
         raise ValidationError(
             "Confirm that the current terms were reviewed with the customer."
         )

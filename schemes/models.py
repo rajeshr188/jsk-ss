@@ -895,6 +895,8 @@ class SchemeEnrolmentRequest(models.Model):
         Status.ENROLLED,
     }
     SNAPSHOT_FIELDS = (
+        "request_schema_version", "plan_revision_snapshot_id", "offer_digest",
+        "savings_mode_snapshot", "eligibility_policy_snapshot", "required_count_snapshot",
         "configuration_snapshot_id",
         "customer_id",
         "plan_id",
@@ -918,6 +920,14 @@ class SchemeEnrolmentRequest(models.Model):
     )
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    request_schema_version = models.PositiveSmallIntegerField(default=1)
+    plan_revision_snapshot = models.ForeignKey(
+        SchemePlanRevision, null=True, blank=True, on_delete=models.PROTECT, related_name="enrolment_requests",
+    )
+    offer_digest = models.CharField(max_length=64, blank=True)
+    savings_mode_snapshot = models.CharField(max_length=10, blank=True)
+    eligibility_policy_snapshot = models.CharField(max_length=24, blank=True)
+    required_count_snapshot = models.PositiveSmallIntegerField(null=True, blank=True)
     customer = models.ForeignKey(
         Customer,
         on_delete=models.PROTECT,
@@ -932,6 +942,7 @@ class SchemeEnrolmentRequest(models.Model):
         MetalGrade,
         on_delete=models.PROTECT,
         related_name="enrolment_requests",
+        null=True, blank=True,
     )
     plan_name_snapshot = models.CharField(max_length=120)
     plan_code_snapshot = models.CharField(max_length=30)
@@ -943,7 +954,7 @@ class SchemeEnrolmentRequest(models.Model):
         decimal_places=2,
     )
     requested_months = models.PositiveSmallIntegerField(
-        validators=[MinValueValidator(12)],
+        null=True, blank=True, validators=[MinValueValidator(1)],
     )
     customer_message = models.TextField(blank=True)
     amount_rule_snapshot = models.CharField(
@@ -952,7 +963,7 @@ class SchemeEnrolmentRequest(models.Model):
     )
     frequency_rule_snapshot = models.CharField(
         max_length=20,
-        choices=SchemePlan.FrequencyRule.choices,
+        choices=[*SchemePlan.FrequencyRule.choices, ("ONCE_PER_PERIOD", "Once per agreed period")],
     )
     fixed_contribution_amount_snapshot = models.DecimalField(
         max_digits=14,
@@ -970,8 +981,8 @@ class SchemeEnrolmentRequest(models.Model):
         null=True,
         blank=True,
     )
-    minimum_months_snapshot = models.PositiveSmallIntegerField()
-    default_months_snapshot = models.PositiveSmallIntegerField()
+    minimum_months_snapshot = models.PositiveSmallIntegerField(null=True, blank=True)
+    default_months_snapshot = models.PositiveSmallIntegerField(null=True, blank=True)
     allow_post_eligibility_contributions_snapshot = models.BooleanField()
     disclosure_version = models.CharField(max_length=30)
     disclosure_accepted_at = models.DateTimeField()
@@ -1007,17 +1018,39 @@ class SchemeEnrolmentRequest(models.Model):
             models.UniqueConstraint(
                 fields=["customer", "plan", "metal_grade"],
                 condition=models.Q(status="PENDING_OWNER_REVIEW"),
+                nulls_distinct=False,
                 name="enrol_request_unique_pending_offering",
             ),
             models.CheckConstraint(
-                condition=models.Q(requested_months__gte=12),
+                condition=models.Q(request_schema_version=2) | models.Q(requested_months__gte=12),
                 name="enrol_request_months_gte_12",
             ),
             models.CheckConstraint(
-                condition=models.Q(
+                condition=models.Q(request_schema_version=2) | models.Q(
                     requested_months__gte=models.F("minimum_months_snapshot")
                 ),
                 name="enrol_request_months_gte_minimum",
+            ),
+            models.CheckConstraint(
+                condition=(models.Q(request_schema_version=1, metal_grade__isnull=False,
+                    requested_months__isnull=False, minimum_months_snapshot__isnull=False,
+                    default_months_snapshot__isnull=False, plan_revision_snapshot__isnull=True,
+                    offer_digest="", savings_mode_snapshot="", eligibility_policy_snapshot="", required_count_snapshot__isnull=True)
+                | (models.Q(request_schema_version=2, configuration_snapshot__isnull=False,
+                    plan_revision_snapshot__isnull=False) & ~models.Q(offer_digest="")
+                    & (models.Q(savings_mode_snapshot="INR_CREDIT", metal_grade__isnull=True)
+                       | models.Q(savings_mode_snapshot__in=["GOLD", "SILVER"], metal_grade__isnull=False))
+                    & (models.Q(eligibility_policy_snapshot__in=["DURATION", "DURATION_AND_COUNT"],
+                        requested_months__isnull=False, requested_months__gte=1,
+                        minimum_months_snapshot=models.F("requested_months"), minimum_months_snapshot__isnull=False,
+                        default_months_snapshot=models.F("requested_months"), default_months_snapshot__isnull=False)
+                       | models.Q(eligibility_policy_snapshot__in=["COUNT", "ANYTIME"], requested_months__isnull=True,
+                           minimum_months_snapshot__isnull=True, default_months_snapshot__isnull=True))
+                    & (models.Q(eligibility_policy_snapshot__in=["COUNT", "DURATION_AND_COUNT"],
+                        required_count_snapshot__isnull=False, required_count_snapshot__gte=1)
+                       | models.Q(eligibility_policy_snapshot="DURATION")
+                       | models.Q(eligibility_policy_snapshot="ANYTIME", required_count_snapshot__isnull=True)))),
+                name="enrol_request_versioned_terms",
             ),
             models.CheckConstraint(
                 condition=models.Q(minimum_contribution_snapshot__gt=Decimal("0")),
@@ -1138,12 +1171,31 @@ class SchemeEnrolmentRequest(models.Model):
         return self.status
 
     @property
+    def entitlement_name(self):
+        return "INR jewellery purchase credit" if self.savings_mode_snapshot == "INR_CREDIT" else self.metal_grade.display_name
+
+    @property
+    def independent_terms(self):
+        if self.request_schema_version != 2:
+            return ()
+        from .enrolment_contracts import policy_description
+        return policy_description(self.configuration_snapshot)
+
+    @property
     def effective_status_label(self):
         return self.Status(self.effective_status).label
 
     def clean(self):
         super().clean()
         errors = {}
+        if self.request_schema_version == 2:
+            from .enrolment_contracts import validate_request_terms
+            validate_request_terms(self)
+            if self._state.adding:
+                from .plan_publication import require_configured_offer
+                require_configured_offer(self.plan)
+        elif self.configuration_snapshot_id and self.configuration_snapshot.policy_schema_version == 2:
+            raise ValidationError("Independent offers require versioned request terms.")
         if self.metal_grade_id and self.plan_id:
             if self.metal_grade.metal not in {
                 SchemeAccount.SavingsMode.GOLD,

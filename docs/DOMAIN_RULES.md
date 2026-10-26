@@ -732,8 +732,18 @@ preferences do not become fixed, and no old agreement receives a configuration i
   and count-only/anytime have no invented date. Owner authority, exact current offer
   digest/configuration and explicit boolean confirmation remain required. Account,
   full required schedule and enrolment audit commit or roll back together. This
-  internal integration does not remove operational publication/model gates; future
-  request/form/email and payment integrations still require their own acceptance.
+  internal integration does not remove operational publication/model gates.
+  Version-2 existing-customer interest requests pin configuration, publication revision and reviewed
+  offer digest, separately retaining duration, required count and denomination.
+  They create no account, contribution, rate lock, principal receipt or allocation.
+  Signed forms bind the displayed offer/disclosure version; conversion rechecks the
+  persisted current offer under lock and rejects substitution. INR requests have no
+  metal grade; count-only/anytime requests have no invented duration. Duplicate
+  pending INR requests are excluded even with a null grade. Conversion, schedule,
+  linked decision and audit are atomic/idempotent. Messages use frozen terms, not
+  current-plan defaults. Schema-1 requests retain their old rules. Migration 0045
+  refuses unversioned independent requests and refuses reversal while version-2
+  evidence exists. These gated form/service paths still require full release acceptance.
   Schema-2 new-payment admission uses the frozen independent contract and server time,
   never a caller-selected historical month. Accounting month is not an anniversary
   window. Required counts remain independent of duration; optional ceilings create no

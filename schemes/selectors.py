@@ -601,8 +601,10 @@ def get_public_scheme_plans(*, limit=None):
         get_enrollable_scheme_plans().filter(
             active=True,
             publicly_listed=True,
-            metal_offerings__active=True,
-        )
+        ).filter(Q(metal_offerings__active=True) | Q(
+            configuration__policy_schema_version=2,
+            configuration__accumulation="INR_PURCHASE_CREDIT",
+        ))
         .prefetch_related("metal_offerings__metal_grade")
         .distinct()
         .order_by("name", "code")

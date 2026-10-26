@@ -2,6 +2,41 @@
 
 ## Current milestone
 
+**26 October 2026 - independent existing-customer request integration completed locally (0045).**
+The builder remains on the approved coherent-release track, not ready for activation.
+Version-2 enrolment requests now pin the publication revision, configuration and
+reviewed offer digest; INR purchase credit has no grade, count-only/anytime have no
+invented duration, and required count remains separate. Signed request forms bind
+offer/disclosure versions. Owner conversion retains exact requested terms and commits
+account/schedule/decision/audit together. Customer/owner details, inbox and emails
+describe frozen rules and conditional benefits without awarding anything.
+
+Migration 0045 preserves schema-1 request history, supports null-grade pending
+uniqueness, refuses unversioned independent requests and blocks reversal while
+version-2 evidence exists. Diagnostics accept matching null INR grades and validate
+independent provenance. Current-offer comparison reloads persisted terms rather than
+trusting a cached plan. Row locks retain customer/login protection while excluding
+the nullable grade join. Submission itself creates no financial state.
+
+The 111-test combined request, owner-enrolment, publication, governance, configured
+agreement and owner-workspace regression run passed (176.352s). The final 16-test
+focused rerun passed (56.571s), including the latest locking and migration guards.
+Django checks, migration consistency and whitespace checks pass. Tests use unique
+disposable localhost PostgreSQL databases, not the normal application database.
+Initial runs exposed stale cached-offer display and a null-grade diagnostic mismatch;
+both were corrected rather than bypassing the checks.
+
+No production changes, normal-database migration, push or configured activation.
+Operational readiness still rejects schema 2 even with the release flag enabled.
+Next finish the separate registration-first PlanApplication/confirmation journey
+with the same frozen independent terms; do not confuse it with the existing-customer
+SchemeEnrolmentRequest completed here. Then integrate owner instalment/outage review,
+count/anytime eligibility, benefit qualification/fulfilment/corrections and complete
+settlement/presentation/privacy acceptance, followed by normal CI and exact-image
+rehearsal. The prior collection/accounting/settlement primitives remain foundations,
+not evidence that these end-to-end workflows are all finished. Existing production
+notes, unrelated UI edits and nested worktrees are preserved outside this checkpoint.
+
 **26 October 2026 - gated collection-matrix regression checkpoint completed locally.**
 Added eight service-level tests covering 120 first-payment combinations across the
 five approved families: optional duration/anytime, required count/duration-and-count,

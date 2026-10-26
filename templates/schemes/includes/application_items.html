@@ -12,7 +12,7 @@
       {% else %}
       <p class="page-eyebrow mb-1">Agreement review · {{ item.record.effective_status_label }}</p>
       <h3 class="h5 mb-1">{{ item.record.customer.full_name }}</h3>
-      <p class="small text-secondary mb-2">{{ item.record.customer.customer_number }} · {{ item.record.plan_name_snapshot }} · {{ item.record.metal_grade.display_name }}<br>₹{{ item.record.requested_contribution_amount|inr }} {% if item.record.configuration_snapshot.amount_policy == 'CUSTOMER_FIXED' %}selected fixed amount{% else %}preferred{% endif %} · {{ item.record.requested_months }} months</p>
+      <p class="small text-secondary mb-2">{{ item.record.customer.customer_number }} · {{ item.record.plan_name_snapshot }} · {{ item.record.entitlement_name }}<br>₹{{ item.record.requested_contribution_amount|inr }} {% if item.record.configuration_snapshot.amount_policy == 'CUSTOMER_FIXED' %}selected fixed amount{% else %}preferred{% endif %} · {% if item.record.requested_months %}{{ item.record.requested_months }} months{% else %}No duration condition{% endif %}</p>
       {% endif %}
       <p class="mb-1"><strong>Next:</strong> {{ item.next_action }}</p>
       <small class="text-secondary">Submitted {{ item.submitted_at|date:'d M Y, g:i A' }}</small>

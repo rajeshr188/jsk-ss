@@ -3,7 +3,7 @@
 <body>
   <p>Hello{% if audience == 'customer' %} {{ enrolment_request.customer.full_name }}{% endif %},</p>
   {% if audience == 'owner' %}
-  <p>A customer submitted a non-binding request for <strong>{{ enrolment_request.plan_name_snapshot }} — {{ enrolment_request.metal_grade.display_name }}</strong>. Review the request before creating any agreement.</p>
+  <p>A customer submitted a non-binding request for <strong>{{ enrolment_request.plan_name_snapshot }} — {{ enrolment_request.entitlement_name }}</strong>. Review the request before creating any agreement.</p>
   {% elif event == 'enrolled' %}
   <p>Your <strong>{{ enrolment_request.plan_name_snapshot }}</strong> agreement has been created after showroom review. Sign in to see the recorded agreement. Payment is available only under its recorded terms and current payment controls.</p>
   {% elif event == 'declined' %}
@@ -11,9 +11,13 @@
   {% elif event == 'expired' %}
   <p>Your request is no longer active. No scheme account or payment access was created. You may review the currently available plans and submit a new request.</p>
   {% else %}
-  <p>We received your non-binding request for <strong>{{ enrolment_request.plan_name_snapshot }} — {{ enrolment_request.metal_grade.display_name }}</strong>. This is not enrolment and does not create payment access. The showroom will contact you and review the current terms before any agreement is created.</p>
+  <p>We received your non-binding request for <strong>{{ enrolment_request.plan_name_snapshot }} — {{ enrolment_request.entitlement_name }}</strong>. This is not enrolment and does not create payment access. The showroom will contact you and review the current terms before any agreement is created.</p>
   {% endif %}
   <p><a href="{{ action_url }}">Open the request</a></p>
+  {% if enrolment_request.request_schema_version == 2 %}
+  <p>Recorded request: {{ enrolment_request.entitlement_name }}; requested amount INR {{ enrolment_request.requested_contribution_amount }}.</p>
+  <dl>{% for label, value in enrolment_request.independent_terms %}<dt>{{ label }}</dt><dd>{{ value }}</dd>{% endfor %}</dl>
+  {% endif %}
   <p>Jai Sri Krishna Jewellery</p>
 </body>
 </html>

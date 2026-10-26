@@ -2,6 +2,7 @@ import uuid
 from decimal import Decimal
 
 from django import forms
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core import signing
 from django.core.exceptions import ValidationError
@@ -269,6 +270,7 @@ class EnrolmentForm(forms.Form):
     metal_grade = forms.ModelChoiceField(
         queryset=MetalGrade.objects.none(),
         label="Metal grade",
+        required=False,
     )
     start_date = forms.DateField(
         widget=forms.DateInput(attrs={"type": "date"}),
@@ -277,10 +279,10 @@ class EnrolmentForm(forms.Form):
         ),
     )
     agreed_months = forms.IntegerField(
-        min_value=12,
+        min_value=1, required=False,
         help_text=(
-            "Calendar plans use the agreed duration. Monthly-completion plans also require "
-            "qualifying instalments; missed periods can extend completion."
+            "Use the published duration for an independent plan; leave blank for count-only "
+            "or anytime eligibility. Required payment count is a separate condition."
         ),
     )
     audit_reason = forms.CharField(
@@ -324,9 +326,15 @@ class EnrolmentForm(forms.Form):
                 self.add_error(None, "The displayed configuration changed or expired. Reload and review it again.")
             if not cleaned.get("selected_amount_confirmed"):
                 self.add_error(None, "Confirm the individual amount with the customer.")
-            from .plan_configuration import agreement_snapshot_values
             try:
-                agreement_snapshot_values(plan=plan, selected_amount=cleaned.get("selected_contribution_amount"))
+                if plan.configuration.policy_schema_version == 2:
+                    from .enrolment_contracts import independent_request_values
+                    independent_request_values(configuration_id=plan.configuration_id,
+                        metal_grade_id=metal_grade.pk if metal_grade else None,
+                        amount=cleaned.get("selected_contribution_amount"), months=agreed_months)
+                else:
+                    from .plan_configuration import agreement_snapshot_values
+                    agreement_snapshot_values(plan=plan, selected_amount=cleaned.get("selected_contribution_amount"))
             except ValidationError as error:
                 self.add_error(None, error)
         if plan and metal_grade and not SchemePlanOffering.objects.filter(
@@ -338,15 +346,17 @@ class EnrolmentForm(forms.Form):
                 "metal_grade",
                 "This metal grade is not offered by the selected plan.",
             )
-        if plan and agreed_months and agreed_months < plan.minimum_months:
-            self.add_error(
-                "agreed_months",
-                f"This plan requires at least {plan.minimum_months} months.",
-            )
+        independent = plan and plan.configuration_id and plan.configuration.policy_schema_version == 2
+        if plan and not independent:
+            if not metal_grade:
+                self.add_error("metal_grade", "Choose the agreed metal grade.")
+            if agreed_months is None or agreed_months < max(12, plan.minimum_months):
+                self.add_error("agreed_months", f"This plan requires at least {max(12, plan.minimum_months)} months.")
         return cleaned
 
 
 class SchemeEnrolmentRequestForm(forms.Form):
+    offer_token = forms.CharField(required=False, widget=forms.HiddenInput)
     metal_grade = forms.ModelChoiceField(
         queryset=MetalGrade.objects.none(),
         label="Metal grade",
@@ -383,6 +393,32 @@ class SchemeEnrolmentRequestForm(forms.Form):
             plan_offerings__plan=plan,
             plan_offerings__active=True,
         ).order_by("display_order", "code")
+        self.independent_terms = ()
+        if plan.configuration_id and plan.configuration.policy_schema_version == 2:
+            from .enrolment_contracts import policy_description
+            from .plan_governance import plan_edit_digest
+            from .plan_policies import policy_from_configuration
+            policy = policy_from_configuration(plan.configuration)
+            self.independent_terms = policy_description(plan.configuration)
+            self.fields["metal_grade"].required = policy.accumulation != "INR_PURCHASE_CREDIT"
+            if not self.fields["metal_grade"].required:
+                self.fields["metal_grade"].queryset = MetalGrade.objects.none()
+                self.fields["metal_grade"].help_text = "INR purchase credit has no metal grade."
+            self.fields["requested_months"] = forms.IntegerField(required=False, min_value=1,
+                initial=policy.duration_months, label="Agreed duration (months)",
+                help_text="Use the exact published duration; leave blank when no duration condition applies. Required payment count is separate.")
+            amount = self.fields["requested_contribution_amount"]
+            configuration = plan.configuration
+            amount.initial = configuration.fixed_amount if policy.amount_policy == "PLAN_FIXED" else configuration.minimum_amount
+            amount.disabled = policy.amount_policy == "PLAN_FIXED"
+            amount.label = "Your fixed contribution amount" if policy.amount_policy == "CUSTOMER_FIXED" else "Requested contribution amount"
+            amount.help_text = "Within the published bounds and step. Customer-fixed amounts are fixed on the agreement; variable amounts remain a preference."
+            if not self.is_bound:
+                self.fields["offer_token"].initial = signing.dumps(
+                    {"digest": plan_edit_digest(plan), "disclosure": settings.CUSTOMER_ENROLMENT_REQUEST_DISCLOSURE_VERSION},
+                    salt="customer-enrolment-offer")
+            return
+        self.fields.pop("offer_token")
         self.fields["requested_months"].min_value = plan.minimum_months
         self.fields["requested_months"].initial = plan.default_months
         if plan.amount_rule == SchemePlan.AmountRule.FIXED:
@@ -419,6 +455,25 @@ class SchemeEnrolmentRequestForm(forms.Form):
         grade = cleaned.get("metal_grade")
         amount = cleaned.get("requested_contribution_amount")
         months = cleaned.get("requested_months")
+        if self.plan.configuration_id and self.plan.configuration.policy_schema_version == 2:
+            from .enrolment_contracts import independent_request_values
+            from .plan_governance import plan_edit_digest
+            from .plan_publication import require_configured_offer
+            try:
+                offer = signing.loads(cleaned.get("offer_token", ""), salt="customer-enrolment-offer", max_age=7200)
+                if (offer.get("digest") != plan_edit_digest(self.plan)
+                        or offer.get("disclosure") != settings.CUSTOMER_ENROLMENT_REQUEST_DISCLOSURE_VERSION):
+                    raise signing.BadSignature
+                cleaned["expected_plan_digest"] = offer["digest"]
+            except signing.BadSignature:
+                self.add_error(None, "The displayed offer changed or expired. Reload and review it again.")
+            try:
+                require_configured_offer(self.plan)
+                independent_request_values(configuration_id=self.plan.configuration_id,
+                    metal_grade_id=grade.pk if grade else None, amount=amount, months=months)
+            except ValidationError as error:
+                self.add_error(None, error)
+            return cleaned
         if grade and not SchemePlanOffering.objects.filter(
             plan=self.plan,
             metal_grade=grade,
@@ -466,7 +521,7 @@ class EnrolmentRequestDecisionForm(forms.Form):
 class EnrolmentRequestConversionForm(EnrolmentForm):
     current_terms_confirmed = forms.BooleanField(
         label=(
-            "I reviewed the current plan, grade, amount, duration, and start date "
+            "I reviewed the current plan, accumulation, amount, independent eligibility and benefit rules, and start date "
             "with the customer."
         ),
     )

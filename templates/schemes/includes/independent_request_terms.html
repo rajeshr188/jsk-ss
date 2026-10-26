@@ -1,0 +1,10 @@
+{% if terms %}
+<section class="card mb-3" aria-label="Recorded independent plan terms">
+  <div class="card-body p-4">
+    <h2 class="h4">Plan rules to review</h2>
+    <dl class="mb-0">
+      {% for label, value in terms %}<dt>{{ label }}</dt><dd>{{ value }}</dd>{% endfor %}
+    </dl>
+  </div>
+</section>
+{% endif %}

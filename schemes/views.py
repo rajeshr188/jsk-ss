@@ -1015,6 +1015,7 @@ def scheme_enrolment_request_create(request, plan_id):
                 requested_months=form.cleaned_data["requested_months"],
                 customer_message=form.cleaned_data["customer_message"],
                 actor=request.user,
+                expected_plan_digest=form.cleaned_data.get("expected_plan_digest"),
             )
         except ValidationError as error:
             _add_service_errors(form, error)

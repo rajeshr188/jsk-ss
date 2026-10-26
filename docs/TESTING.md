@@ -1,5 +1,28 @@
 # Testing
 
+## Independent existing-customer requests (0045, 26 October 2026)
+
+`test_independent_requests` exercises the five accepted families with both exact-metal
+and INR denomination through non-financial submission and exact owner conversion.
+It covers separate duration/count, signed stale-offer/disclosure rejection, exact
+confirmation and owner authority, snapshot substitution, null-grade pending uniqueness,
+idempotent retries, concurrent submission/conversion, audit-failure rollback (including
+the final conversion audit), frozen text/HTML email facts and escaping, and a browser
+request/review/approval/email journey. The migrated legacy row round-trips unchanged;
+forward migration refuses unversioned schema-2 requests and reversal refuses to erase
+new confirmed evidence. Readiness is mocked only in synthetic future-path fixtures;
+unpatched gate tests still reject schema 2 with the release flag off and on.
+
+The combined request, existing request, independent owner-enrolment, publication,
+plan-governance, configured-agreement and owner-workspace suites passed **111 tests
+in 176.352s**. The final **16-test focused rerun passed in 56.571s**, covering explicit
+non-null row-lock preservation and the added forward-guard regression. Tests ran in unique disposable
+localhost PostgreSQL databases. Existing test modules retain their own hasher overrides;
+no global fast-hasher override was introduced. Django checks/migration consistency
+and whitespace checks pass. This is not full normal CI, visual/mobile acceptance,
+registration-first PlanApplication integration or permission to activate the builder.
+No normal-database migration or production mutation was performed.
+
 ## Independent collection matrix (26 October 2026; no migration)
 
 `test_collection_matrix` adds eight tests. Its 120 first-payment subcases span all

@@ -14,14 +14,14 @@
     {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
     <fieldset class="form-section">
       <legend>Scheme terms</legend>
-      <p class="form-section-description">Select the plan and exact metal grade. The grade becomes a permanent part of this agreement.</p>
+      <p class="form-section-description">Select the plan. Metal plans require an exact grade, permanently recorded on the agreement. INR purchase-credit plans have no metal grade.</p>
       {{ form.plan|as_crispy_field }}
       {{ form.metal_grade|as_crispy_field }}
       {% if form.selected_contribution_amount %}{{ form.selected_contribution_amount|as_crispy_field }}{{ form.selected_amount_confirmed|as_crispy_field }}{% endif %}
     </fieldset>
     <fieldset class="form-section">
       <legend>Agreement schedule and record</legend>
-      <p class="form-section-description">Calendar plans use exact calendar months. Monthly-completion plans also require qualifying instalments and can extend after missed periods; outages need separate evidenced review.</p>
+      <p class="form-section-description">Review duration, required payment count and benefit conditions separately. Count-only and anytime plans have no duration condition. Only plans with an extension policy gain replacement periods; outages need separate evidenced review.</p>
       <p>Confirm the selected plan's eligibility, full-settlement rules, duration and contribution amount with the customer. Later plan edits do not change this agreement.</p>
       {{ form.start_date|as_crispy_field }}
       {{ form.agreed_months|as_crispy_field }}
