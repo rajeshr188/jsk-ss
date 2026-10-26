@@ -2,6 +2,34 @@
 
 ## Current milestone
 
+**26 October 2026 - independent registration-first applications completed locally (accounts 0009).**
+The separate PlanApplication journey now retains schema-2 confirmation history,
+publication revision, INR/exact-grade denomination and independent duration/count/
+benefit rules. Forms, progress email, customer inbox and owner review use recorded
+terms. Changed offers, including a changed denomination, require fresh confirmation;
+old consent remains untouched. Owner approval atomically creates identity, exact
+agreement, required schedule, audit and invitation, with idempotent/concurrent
+approval protection. Contact/verification/completion create no financial state.
+
+Migration 0009 preserves legacy application/confirmation data, adds explicit version
+and nullable INR/no-duration storage, refuses unversioned independent consent and
+blocks reversal while new evidence exists. Diagnostics validate independent terms
+and nullable agreement links. No model/publication/readiness gate has been removed.
+
+The combined registration-first, legacy application, public registration, activation
+continuation and independent-request regression run passed 103 tests (111.077s).
+The final 15-test focused suite passed (38.138s), including changed-denomination
+reconfirmation, forward/reverse migration guards, identity rollback and concurrent
+approval. Tests ran on unique disposable localhost PostgreSQL databases; no global
+fast-hasher override was added. Django checks and migration consistency pass.
+
+Next in order: schema-2 owner instalment/outage review; count/anytime eligibility;
+benefit qualification/fulfilment/corrections; cross-family full settlement,
+presentation/privacy acceptance; then normal CI and exact-image release rehearsal.
+This completes another gated integration, not FW-PLAN-003/004 or the entire builder.
+No production changes, normal-database migration, push or activation. Existing
+production notes, unrelated UI edits and nested worktrees are outside this checkpoint.
+
 **26 October 2026 - independent existing-customer request integration completed locally (0045).**
 The builder remains on the approved coherent-release track, not ready for activation.
 Version-2 enrolment requests now pin the publication revision, configuration and

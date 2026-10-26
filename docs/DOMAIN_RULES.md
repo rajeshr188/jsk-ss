@@ -744,6 +744,20 @@ preferences do not become fixed, and no old agreement receives a configuration i
   current-plan defaults. Schema-1 requests retain their old rules. Migration 0045
   refuses unversioned independent requests and refuses reversal while version-2
   evidence exists. These gated form/service paths still require full release acceptance.
+  Separate registration-first PlanApplication confirmations also carry an explicit
+  schema version. Each version-2 confirmation pins its publication revision and
+  independent configuration/denomination/amount/duration/count/benefit evidence.
+  Old confirmations are never rewritten when an applicant reviews a changed offer;
+  explicit reconfirmation appends a new record, including a change of denomination.
+  Contact, email verification and completion create no identity or financial account.
+  Owner approval rechecks the persisted current offer and latest confirmed terms,
+  then commits identity, exact agreement, schedule, audit and invitation together.
+  Strict owner attestations, verified private progress access and the existing
+  identity/financial release gates still apply. Messages and review history use
+  recorded terms, not current-plan defaults. Accounts migration 0009 preserves
+  schema-1 JSON and refuses unversioned independent consent or reversal while
+  version-2 evidence exists. Diagnostics validate nullable INR/no-duration links and
+  the confirmed agreement provenance; none of this grants payment or benefit rights.
   Schema-2 new-payment admission uses the frozen independent contract and server time,
   never a caller-selected historical month. Accounting month is not an anniversary
   window. Required counts remain independent of duration; optional ceilings create no

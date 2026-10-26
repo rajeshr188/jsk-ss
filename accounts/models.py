@@ -281,9 +281,10 @@ class PlanApplication(models.Model):
         CustomerRegistration, on_delete=models.PROTECT, related_name="plan_application",
     )
     plan = models.ForeignKey("schemes.SchemePlan", on_delete=models.PROTECT)
-    metal_grade = models.ForeignKey("schemes.MetalGrade", on_delete=models.PROTECT)
+    terms_schema_version = models.PositiveSmallIntegerField(default=1)
+    metal_grade = models.ForeignKey("schemes.MetalGrade", on_delete=models.PROTECT, null=True, blank=True)
     requested_amount = models.DecimalField(max_digits=14, decimal_places=2)
-    requested_months = models.PositiveSmallIntegerField()
+    requested_months = models.PositiveSmallIntegerField(null=True, blank=True)
     customer_message = models.TextField(blank=True)
     start_date = models.DateField(null=True, blank=True)
     completed_at = models.DateTimeField(null=True, blank=True)
@@ -300,7 +301,10 @@ class PlanApplication(models.Model):
     class Meta:
         constraints = [
             models.CheckConstraint(condition=models.Q(requested_amount__gt=0), name="plan_application_amount_positive"),
-            models.CheckConstraint(condition=models.Q(requested_months__gte=12), name="plan_application_months_valid"),
+            models.CheckConstraint(condition=(
+                models.Q(terms_schema_version=1, requested_months__isnull=False, requested_months__gte=12, metal_grade__isnull=False)
+                | (models.Q(terms_schema_version=2) & (models.Q(requested_months__isnull=True) | models.Q(requested_months__gte=1)))
+            ), name="plan_application_months_valid"),
             models.CheckConstraint(
                 condition=models.Q(completed_at__isnull=True) | models.Q(start_date__isnull=False),
                 name="plan_application_completion_date",
@@ -315,11 +319,28 @@ class PlanApplication(models.Model):
         if self.pk:
             stored = type(self).objects.filter(pk=self.pk).first()
             if stored and stored.scheme_account_id:
-                fields = ("registration_id", "plan_id", "metal_grade_id", "requested_amount",
+                fields = ("terms_schema_version", "registration_id", "plan_id", "metal_grade_id", "requested_amount",
                           "requested_months", "start_date", "completed_at", "scheme_account_id")
                 if any(getattr(stored, field) != getattr(self, field) for field in fields):
                     raise ValidationError("Approved application terms and agreement linkage are immutable.")
         return super().save(*args, **kwargs)
+
+    @property
+    def confirmed_offer(self):
+        latest = self.confirmations.order_by("-sequence").first()
+        return latest.offer if latest else {}
+
+    @property
+    def display_plan_name(self):
+        return self.confirmed_offer.get("name", self.plan.name)
+
+    @property
+    def entitlement_name(self):
+        return self.confirmed_offer.get("grade_name", "Terms require review")
+
+    @property
+    def independent_terms(self):
+        return self.confirmed_offer.get("independent_terms", ())
 
 
 class PlanApplicationConfirmation(models.Model):
@@ -327,8 +348,10 @@ class PlanApplicationConfirmation(models.Model):
     sequence = models.PositiveIntegerField()
     final = models.BooleanField(default=False)
     offer = models.JSONField()
+    terms_schema_version = models.PositiveSmallIntegerField(default=1)
+    plan_revision = models.ForeignKey("schemes.SchemePlanRevision", on_delete=models.PROTECT, null=True, blank=True)
     requested_amount = models.DecimalField(max_digits=14, decimal_places=2)
-    requested_months = models.PositiveSmallIntegerField()
+    requested_months = models.PositiveSmallIntegerField(null=True, blank=True)
     start_date = models.DateField(null=True, blank=True)
     confirmed_at = models.DateTimeField(auto_now_add=True)
 
@@ -337,13 +360,21 @@ class PlanApplicationConfirmation(models.Model):
         constraints = [
             models.UniqueConstraint(fields=["application", "sequence"], name="plan_confirmation_sequence_unique"),
             models.CheckConstraint(condition=models.Q(requested_amount__gt=0), name="plan_confirmation_amount_positive"),
-            models.CheckConstraint(condition=models.Q(requested_months__gte=12), name="plan_confirmation_months_valid"),
+            models.CheckConstraint(condition=(
+                models.Q(terms_schema_version=1, requested_months__isnull=False, requested_months__gte=12, plan_revision__isnull=True)
+                | (models.Q(terms_schema_version=2, plan_revision__isnull=False)
+                   & (models.Q(requested_months__isnull=True) | models.Q(requested_months__gte=1)))
+            ), name="plan_confirmation_months_valid"),
             models.CheckConstraint(condition=models.Q(final=False) | models.Q(start_date__isnull=False), name="plan_confirmation_final_date"),
         ]
 
     def save(self, *args, **kwargs):
         if not self._state.adding:
             raise ValidationError("Application confirmations are append-only.")
+        if self.terms_schema_version == 2:
+            from .application_contracts import validate_independent_confirmation
+            validate_independent_confirmation(self)
+            self.full_clean()
         return super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):

@@ -1,5 +1,30 @@
 # Testing
 
+## Independent registration-first applications (accounts 0009, 26 October 2026)
+
+`accounts.test_independent_applications` exercises all five approved families in
+both denominations through contact, verification, completion and atomic identity/
+agreement approval. It covers frozen revisions and confirmation history, no-duration
+preferences, plan-fixed amounts, strict owner attestations, stale offers/consent,
+changed-denomination reconfirmation, expired private grants, disabled updates,
+tampered provenance, audit rollback and concurrent/idempotent approval. A browser
+journey verifies forms, owner review and invitation delivery; the progress email
+retains independent terms with link/open tracking disabled. Contact/verification/
+completion never create an agreement, contribution, principal receipt or allocation.
+Migration tests preserve legacy rows/JSON, refuse invented independent consent and
+refuse reversal over schema-2 evidence. Readiness mocks are confined to future-path
+fixtures; unpatched gates still reject schema 2 with the release flag off and on.
+
+The combined registration-first, legacy application, public registration, activation
+continuation and independent-request run passed **103 tests in 111.077s**. The final
+**15-test focused rerun passed in 38.138s**, including the additional offer-change
+and forward-migration guards. Unique disposable localhost PostgreSQL databases were
+destroyed after testing. New tests use normal hashing; older modules retain their
+own overrides. Django checks/migration consistency pass. No normal-database migration,
+production change or activation; full normal CI and visual/mobile acceptance remain
+release requirements. An initial browser fixture incorrectly expected the plan entry
+redirect to render a form; it was corrected to exercise the actual registration URL.
+
 ## Independent existing-customer requests (0045, 26 October 2026)
 
 `test_independent_requests` exercises the five accepted families with both exact-metal

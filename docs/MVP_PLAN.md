@@ -22,7 +22,7 @@ Use the existing FW-PLAN items; do not create further numbered micro-milestones.
 | Flexible anytime metal (`FW-PLAN-007`) | Existing grade, payment and full-closure services | Implement no-maturity-wait eligibility, guarded full settlement, late-payment/reversal handling and consistent offers/reminders. No partial withdrawals. |
 | INR purchase credit | Gated append-oriented principal, cash/online/API collection and manual full-disposition/correction primitives; frozen independent contracts | Complete independent eligibility, benefit-aware final settlement, statements/privacy and end-to-end acceptance. Obtain business/legal/accounting/provider approvals and usable refund routes before publication. Do not reuse legacy CASH promises by implication. |
 | Defined benefits (`FW-PLAN-005`, `FW-PRICE-002`) | Approved vocabulary/formulas/base/cap and immutable terms; schedule attribution retains principal separately | Implement auditable qualification, award, invoice fulfilment and append-only corrections/reversal; integrate missed-payment/outage and early-exit consequences. Do not erase principal for lost unearned benefits. |
-| Cross-family owner builder (`FW-PLAN-003/004/006`) | Approved compatibility matrix, versioned policies, gated collection and existing-customer request/form/email integration | Complete registration-first applications, all eligibility/benefit/reminder/closure paths and consistent public/owner presentation. Unsupported combinations remain unavailable; normal CI and one coherent activation are still pending. |
+| Cross-family owner builder (`FW-PLAN-003/004/006`) | Approved compatibility matrix, versioned policies, gated collection, existing-customer requests and registration-first application/confirmation integration | Complete owner review/outage, eligibility/benefit/reminder/closure paths and consistent public/owner presentation. Unsupported combinations remain unavailable; normal CI and one coherent activation are still pending. |
 
 ### Single completion checklist
 
@@ -46,7 +46,8 @@ Use the existing FW-PLAN items; do not create further numbered micro-milestones.
   - Callback/API principal integration (0044, 26 October): immutable minimal authenticated capture observations, separate from signed webhook timing. Callback HMAC plus exact Live API capture and owner preview/apply recovery commit source confirmation/principal together. Retries retain the original receipt source; later signed capture can supply monthly timing without double credit. Migration reversal preserves retained API evidence. Runtime gates stay closed; verification is tracked in STATUS.md/TESTING.md.
   - Collection-matrix regression checkpoint (26 October): eight new service-level tests cover 120 first-payment combinations across the five approved families, plus benefit-schedule misses, replacements, correction and delayed/ambiguous capture timing. The combined 70-test collection/entry/ledger/enrolment/API run passed. This validates collection behaviour on synthetic contracts, not benefit awards, completed settlement, full normal CI or activation. No runtime/schema change was needed.
   - Gated request/form/email integration (0045, 26 October): versioned requests pin the reviewed configuration, publication revision and offer digest. Duration/count and INR/exact-grade denomination remain independent. Signed forms reject stale terms; owner conversion preserves the requested contract atomically, and messages render frozen rules rather than legacy twelve-month/metal assumptions. Existing requests stay schema 1; rollback refuses to discard version-2 evidence. Operational publication/model gates remain closed. Local verification is recorded in STATUS.md/TESTING.md; this is not release acceptance.
-  - Still required: schema-2 owner review/outage handling, count/anytime/benefit eligibility and settlement integration, statements/privacy-disposition integration, broader registration/public-offer/owner presentation and full lifecycle acceptance. No owner-facing INR offer is enabled by these foundations.
+  - Gated registration-first application integration (accounts 0009, 26 October): versioned append-only confirmations retain the published revision and independent terms. INR has no grade; count-only/anytime have no invented duration. Contact/verification/completion create no financial account; owner approval creates identity, exact agreement, required schedule and invitation atomically. Stale or changed-denomination offers require fresh consent. Legacy confirmation JSON remains untouched; migration guards refuse unversioned independent consent or reversal over new evidence. Local verification is recorded in STATUS.md/TESTING.md; publication/readiness gates remain closed.
+  - Still required: schema-2 owner review/outage handling, count/anytime/benefit eligibility and settlement integration, statements/privacy-disposition integration, complete public-offer/owner presentation and full lifecycle acceptance. No owner-facing INR offer is enabled by these foundations.
 - [ ] Implement count-only and anytime eligibility and the agreed additional amount/schedule combinations, including consistent UI, reminders and full closure.
 - [ ] Implement only defined benefit policies, including qualification, actual fulfilment and append-only corrections/reversal.
 - [ ] Complete verified provider-history disposition needed for closure; ambiguous payments must not be cleared by an owner checkbox.
@@ -94,9 +95,11 @@ readiness gates. Optional online durable order creation/exact recovery now has a
 separate obligation-free evidence path (0043). Callback/API-recovery principal now
 has distinct immutable API evidence (0044), not fabricated signed capture timing.
 Collection/benefit-schedule service-level regression now covers the approved families;
-complete public enrolment request/form/email integration against frozen independent
-terms next, without opening publication or removing readiness gates. This checkpoint
-does not complete owner review/outage, eligibility, benefit or settlement acceptance.
+existing-customer requests and separate registration-first applications now retain
+frozen independent terms through forms, confirmation, messages and exact approval.
+Next integrate schema-2 owner instalment/outage review, then count/anytime eligibility,
+benefit execution and full-settlement/presentation/privacy acceptance in that order.
+Do not open publication or remove readiness gates as a shortcut to those workflows.
 Required regression examples: January 30 short month; final qualifying payment before
 period end (count-only versus both); missed payment with retained versus lost unearned
 benefit; optional monthly ceiling without any debt; invoice below/equal/above full INR

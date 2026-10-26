@@ -6,15 +6,21 @@
 <div class="row justify-content-center application-journey"><div class="col-lg-8">
   <div class="page-header"><div><p class="page-eyebrow">Your plan application</p><h1>{{ stage }}</h1><p class="page-subtitle">{{ next_action }} <a href="#application-support">Showroom support</a></p></div></div>
   {% include 'account/includes/application_timeline.html' %}
-  <div class="card mb-3"><div class="card-body"><h2 class="h5">Your saved preferences</h2><p class="mb-1">{% if journey.scheme_account %}{{ journey.scheme_account.display_plan_name }}{% else %}{{ journey.plan.name }}{% endif %} · {{ journey.metal_grade.display_name }}</p><p class="mb-1">₹{{ journey.requested_amount|inr }} · {{ journey.requested_months }} months{% if journey.start_date %} · Start {{ journey.start_date|date:'d M Y' }}{% endif %}</p><p class="small mb-0">Email verified{% if journey.completed_at %} · Details confirmed {{ journey.completed_at|date:'d M Y, g:i A' }}{% endif %}</p></div></div>
+  {% if journey.independent_terms %}
+  <p class="fw-semibold">Previously confirmed rules</p>
+  {% include 'schemes/includes/independent_request_terms.html' with terms=journey.independent_terms %}
+  {% endif %}
+  <div class="card mb-3"><div class="card-body"><h2 class="h5">Your saved preferences</h2><p class="mb-1">{% if journey.scheme_account %}{{ journey.scheme_account.display_plan_name }}{% else %}{{ journey.display_plan_name }}{% endif %} · {{ journey.entitlement_name }}</p><p class="mb-1">₹{{ journey.requested_amount|inr }} · {% if journey.requested_months %}{{ journey.requested_months }} months{% else %}No duration condition{% endif %}{% if journey.start_date %} · Start {{ journey.start_date|date:'d M Y' }}{% endif %}</p><p class="small mb-0">Email verified{% if journey.completed_at %} · Details confirmed {{ journey.completed_at|date:'d M Y, g:i A' }}{% endif %}</p></div></div>
   {% if journey.scheme_account %}<div class="alert alert-success">Approved plan: {{ journey.scheme_account.scheme_number }}. <a href="{{ continuation_url }}">Sign in to your approved plan</a> {% if not journey.scheme_account.customer.user.has_usable_password %}after setting up your login from the activation email.{% endif %} <a href="{% url 'customer_activation_help' %}">Setup help</a>.</div>{% endif %}
   {% if form %}
     {% if needs_confirmation %}
     <p class="fw-semibold">Complete your details and confirm current terms</p>
     {% else %}<details class="mb-3"><summary>Update your details or preferences</summary>{% endif %}
-    {% include 'account/includes/application_offer.html' with plan=journey.plan %}
+    {% if form.independent_terms %}
+    {% include 'schemes/includes/independent_request_terms.html' with terms=form.independent_terms %}
+    {% else %}{% include 'account/includes/application_offer.html' with plan=journey.plan %}{% endif %}
     <form method="post" class="card form-card mb-3" novalidate>
-      {% csrf_token %}{{ form.offer_digest }}
+      {% csrf_token %}{{ form.offer_digest }}{% if form.offer_token %}{{ form.offer_token }}{% endif %}
       {% if form.errors %}<div class="alert alert-danger" role="alert">Please check the details below. {{ form.non_field_errors }}<a href="{{ request.path }}">Reload current terms</a></div>{% endif %}
       <fieldset class="form-section"><legend>Remaining details</legend>{{ form.address|as_crispy_field }}</fieldset>
       <fieldset class="form-section"><legend>Confirm your plan</legend>{{ form.metal_grade|as_crispy_field }}{{ form.requested_contribution_amount|as_crispy_field }}{{ form.requested_months|as_crispy_field }}{{ form.start_date|as_crispy_field }}<details class="mb-3"><summary>Add a message (optional)</summary>{{ form.customer_message|as_crispy_field }}</details>{{ form.disclosure_accepted|as_crispy_field }}</fieldset>

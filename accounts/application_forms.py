@@ -26,7 +26,7 @@ class PlanApplicationCompletionForm(SchemeEnrolmentRequestForm):
     address = CustomerRegistrationForm.base_fields["address"]
     start_date = forms.DateField(
         label="Requested agreement start date", widget=forms.DateInput(attrs={"type": "date"}),
-        help_text="Eligibility is calculated from this date using your confirmed duration. Choose today or later; approval is still required.",
+        help_text="This anchors the agreement and any monthly windows. Duration, qualifying payment count and benefit rules are separate. Choose today or later; approval is still required.",
     )
     offer_digest = forms.CharField(widget=forms.HiddenInput)
     clean_address = CustomerRegistrationForm.clean_address
@@ -35,7 +35,7 @@ class PlanApplicationCompletionForm(SchemeEnrolmentRequestForm):
         super().__init__(*args, **kwargs)
         self.fields["requested_months"].max_value = 32767
         self.fields["disclosure_accepted"].label = (
-            "I confirm this plan, grade, amount, duration and requested start date. "
+            "I confirm this plan, accumulation, amount, eligibility and benefit rules, and requested start date. "
             "This is a non-binding application; the showroom must verify my contact details "
             "and approve it before an agreement and payment access are available."
         )
@@ -49,5 +49,5 @@ class PlanApplicationCompletionForm(SchemeEnrolmentRequestForm):
 
 class PlanApplicationApprovalForm(CustomerRegistrationApprovalForm):
     terms_reviewed = forms.BooleanField(
-        label="I reviewed the customer-confirmed plan, grade, amount, duration and start date with the applicant.",
+        label="I reviewed the customer-confirmed plan, accumulation, amount, independent eligibility and benefit rules, and start date with the applicant.",
     )

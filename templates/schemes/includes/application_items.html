@@ -8,7 +8,7 @@
       <p class="page-eyebrow mb-1">{% if item.record.plan_application %}Plan application{% else %}Identity review{% endif %} · {{ item.record.lifecycle_status }}</p>
       <h3 class="h5 mb-1">{{ item.record.full_name }}</h3>
       <p class="small text-secondary mb-2">{{ item.record.email }} · {{ item.record.mobile_number }}</p>
-      {% if item.record.plan_application %}<p class="small mb-2">{% if item.record.plan_application.scheme_account %}{{ item.record.plan_application.scheme_account.display_plan_name }}{% else %}{{ item.record.plan_application.plan.name }}{% endif %} · {{ item.record.plan_application.metal_grade.display_name }} · ₹{{ item.record.plan_application.requested_amount|inr }} · {{ item.record.plan_application.requested_months }} months</p>{% endif %}
+      {% if item.record.plan_application %}<p class="small mb-2">{% if item.record.plan_application.scheme_account %}{{ item.record.plan_application.scheme_account.display_plan_name }}{% else %}{{ item.record.plan_application.display_plan_name }}{% endif %} · {{ item.record.plan_application.entitlement_name }} · ₹{{ item.record.plan_application.requested_amount|inr }} · {% if item.record.plan_application.requested_months %}{{ item.record.plan_application.requested_months }} months{% else %}No duration condition{% endif %}</p>{% endif %}
       {% else %}
       <p class="page-eyebrow mb-1">Agreement review · {{ item.record.effective_status_label }}</p>
       <h3 class="h5 mb-1">{{ item.record.customer.full_name }}</h3>
