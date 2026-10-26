@@ -314,6 +314,37 @@ outcome by itself. Source: [official HTMX documentation](https://htmx.org/docs/)
 
 ## Payments, cash, and audit
 
+- **FW-PAY-008 — Expired Checkout operations:** Implemented in the isolated
+  `fix/expired-checkout-operations` local candidate: shared expired-pending owner
+  queue/counts, exact-payment POST inspect/confirm with signed bounded review and
+  fresh provider verification, expiry-aware operator command, and five-minute
+  bounded inspection with combined aggregate heartbeat delivery. The timer is
+  inspection-only; owner apply still uses the existing audited financial service.
+
+  The 26 October recurrence also requires checkout prevention in this same isolated
+  release: durable submission aliases, signed displayed-history context, one unresolved
+  online attempt per agreement, committed order intent before provider I/O, safe
+  uncertainty holds, and owner/provider-backed identity recovery. Local implementation
+  is present; combined regression, image, rollout and monitoring acceptance remain
+  pending. Recovery alone does not prevent a fresh duplicate checkout.
+
+  - [x] All-mode expired-attempt visibility and pagination/count parity, including
+    missing provider identity and records beyond the inspection batch.
+  - [x] Owner/CSRF/method guards, reason, owner/order/state-bound review and fresh
+    provider inspection. Uncertain, attempted and cross-mode records remain held.
+  - [x] Exact contribution selection, deadline-plus-grace default and redacted
+    monitoring failures. No automatic refunds, entitlement overrides or timer writes.
+  - [x] Hardened timer and combined financial/provider heartbeat wrapper; configured
+    external delivery is required by the shipped unit and cannot silently downgrade.
+  - [ ] Complete final local/CI/exact-image release verification and production rollout.
+  - [ ] Verify/reuse or add the financial heartbeat in the existing Better Stack
+    account, securely configure its URL, and prove delivered failure, missed-job and
+    recovery alerts. A missing host-side financial timer/configuration does not imply
+    the external monitoring service is absent; no Healthchecks.io account is needed.
+    These are owner/operator alerts about expired provider checkouts, not customer
+    overdue-contribution reminder emails. Any latter policy is separate and must
+    respect actual agreed payment obligations, including flexible agreements.
+
 - **FW-PAY-003 — Complete Razorpay webhook-recovery evidence:** ADR-0006 and release
   `69eecf9` provide signed-event classification, append-only attempt evidence, and an
   owner-only provider-backed dry-run/apply workflow. The remaining work is:

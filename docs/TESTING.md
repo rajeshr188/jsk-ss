@@ -1,5 +1,23 @@
 # Testing
 
+## Checkout prevention and identity recovery (26 October 2026)
+
+`schemes.tests.test_checkout_idempotency` covers retained submission replay and
+concurrent-tab aliases; signed account/mode/history context; stale unsubmitted forms;
+monthly versus sequential flexible payments; one unresolved source across modes and
+months; immutable original terms; durable request commit before provider I/O; timeout,
+malformed response and interrupted binding holds; legacy missing identity; provider
+receipt/token adapters; owner/CSRF/preview/fresh-apply recovery; reconciliation-only
+recovered checkout and idempotent capture. Migration tests exercise overlapping-history
+preflight refusal, preservation through upgrade and retained-evidence reverse refusal.
+All fixtures are synthetic; provider responses are mocked. No real order is created.
+
+Protocol references: [Create an order](https://razorpay.com/docs/api/orders/create/)
+and [Fetch an order](https://razorpay.com/docs/api/orders/fetch-with-id/).
+The receipt and request token correlate a single durable application request; they
+are not treated as a provider idempotency API. Final combined release verification
+and production/monitoring acceptance are recorded in STATUS.md as completed.
+
 ## Release rehearsal and stakeholder task protocol (22 October 2026)
 
 Run the opt-in synthetic local drill described in PRODUCTION_DEPLOYMENT.md:
@@ -445,3 +463,12 @@ audit database. Saved screenshots include `.uv-cache/audit-customer-desktop.png`
 removed, viewport reset and temporary tab closed. No application code or production
 configuration changed; this does not replace regression tests for a future UI/HTMX
 implementation or a complete keyboard/screen-reader/accessibility acceptance run.
+
+Expired Checkout operations regressions live in `schemes.tests.test_expired_checkouts`.
+They cover shared expiry boundaries, all-mode and missing-order visibility, queue
+pagination, aggregate redaction, recent/exact/grace/age/limited provider inspection,
+provider errors, owner/CSRF/method guards, signed review binding/tampering/expiry,
+fresh changed-provider evidence, capture during inspection and unchanged balances.
+`CheckoutTimerTests` execute the wrapper with deterministic Docker/curl boundaries,
+including combined failure routing, secret-URL redaction, delivery errors and missing
+required heartbeat configuration. No real provider or monitor is contacted by tests.

@@ -273,7 +273,36 @@ This is the canonical source for stable business rules.
 - **PAY-028:** Daily showroom reconciliation separately reports cash received,
   corrections, and net recorded cash. Cross-record integrity must pass before and
   after deployment and during routine financial review.
+- **PAY-029:** Expired pending Razorpay attempts remain financial exceptions until
+  verified provider reconciliation or confirmed payment resolves them. Owner review
+  and aggregate monitoring share the same expiry projection across all modes. A
+  scheduled inspection may not change payment status; closing a verified untouched
+  order requires an explicit audited apply. Owner apply needs a current owner/order/
+  state-bound review and a fresh provider inspection. Expiry alone never establishes
+  failure, refunds, release of entitlement or provider cancellation.
 - **METAL-001 / FIN-002:** A metal contribution creates at most one successful allocation.
+- **PAY-030:** An agreement may have at most one unresolved Razorpay contribution
+  (PENDING or PAID_UNALLOCATED), across modes and calendar months. This is a checkout
+  coordination rule: FLEXIBLE still permits multiple sequential successful contributions.
+- **PAY-031:** Browser submissions retain a unique identifier and signed agreement,
+  mode and displayed-payment-history context. Repeated submissions and concurrent
+  tabs reuse the original contribution. A stale unsubmitted form returns the recorded
+  result or requires fresh review; it cannot silently create another contribution.
+- **PAY-032:** The contribution, original rate/deadline and order-request evidence
+  commit before a single provider create-order call. Lost responses, malformed
+  responses and interrupted local binding remain held for reconciliation; they
+  never authorize a blind retry, local failure or replacement payment. A legacy
+  pending contribution without provider identity is not sent again.
+- **PAY-033:** Owner order-identity recovery requires provider investigation evidence,
+  signed preview/confirmation and a fresh mode-matched authenticated provider read.
+  Receipt, request token, contribution, amount, INR and creation time must match.
+  Recovery is audited and retains the original rate/deadline. It never reopens
+  checkout, confirms payment or creates entitlement; existing capture/reconciliation
+  services remain authoritative.
+- **PAY-034:** Retained checkout terms, rate locks and bound provider identities are
+  immutable through model/admin workflows. Razorpay attempts cannot be marked failed
+  locally to release a hold. Migration refuses existing overlapping unresolved
+  attempts and does not rewrite history; retained checkout evidence prevents reversal.
 - **METAL-002 / FIN-003:** A Scheme Rate used by an allocation is immutable.
 - **METAL-003 / FIN-004:** Historical allocated grams never change when a newer Scheme Rate is published.
 - **METAL-004:** Allocation quantity equals INR contribution divided by the locked

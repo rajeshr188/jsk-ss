@@ -2,6 +2,112 @@
 
 ## Current milestone
 
+**26 October 2026 - checkout duplicate prevention and uncertainty recovery (PR #76 candidate).**
+The isolated production-based hotfix now retains signed browser submission/history
+context and durable submission aliases, with one unresolved online contribution per
+agreement enforced by account locking and the database. Flexible agreements retain
+sequential successful contributions. Original order intent commits before provider
+I/O; lost/malformed responses or interrupted binding remain held, never blindly
+retried or locally failed. Original terms and rate locks are retained. The customer
+can continue an active checkout; expired/uncertain/recovered requests remain status
+and reconciliation workflows. Owner identity recovery requires signed review plus
+fresh authenticated exact receipt/token/order matching and creates no entitlement.
+Migration 0021 refuses overlapping history and reversal with retained evidence.
+
+The initial 19 new tests passed (36.833s), followed by 113 combined checkout,
+Razorpay, expired-checkout, operations and presentation tests (137.073s, normal
+hashing), on disposable localhost PostgreSQL databases that were destroyed. The
+113-case run predates the additional signed stale-form and final immutable-term
+guards. The initial full 589-test run reported four assertion failures (three were
+subtests of invalid-form HTTP status) and three migration-isolation errors. The
+invalid online POST now returns 400; existing historical migration teardowns restore
+every app's current schema. A cash continuation fixture was covered by the corrected
+agreement-aware selector. The expanded 133-test rerun had one fixture assertion after
+its simulated expiry clock was restored; the clock check was corrected. The final
+35-test checkout/migration/isolation rerun passed (48.881s, normal hashing), with
+system/migration-consistency checks clean. No financial guard was weakened.
+
+A local runtime image passed a synthetic PostgreSQL 18.6 dump/restore/0020-to-0021
+upgrade rehearsal with identical historical financial/identity digest. Restored
+owner/customer/fragment/permission and onboarding journeys passed. Real HMAC/API
+adapters with mocked responses exercised signed forms, duplicate/stale replay,
+one allocation, lost create response, owner identity preview/fresh apply, closed
+recovered checkout and inspected unpaid closure. No real provider call was made;
+the isolated source/restore databases contain only fixtures. The exact implementation
+commit `1d6636d4782b484d524850e0f3c54313d3cbeee5` was published to PR #76 with
+explicit owner permission. All 591 tests passed locally (645.949s) and in hosted
+pull-request CI run `40280789442` (311.935s). Migration/drift/application/deployment
+checks, static collection, container build and the fixable-critical vulnerability
+gate passed. CI's TLS warning concerns its disposable localhost database.
+The exact-commit local image (`sha256:9cb7a05da72c6ec12dc83d6174df25e195c75ee4839db611d044a6e53440447b`)
+repeated the dump/restore/upgrade and synthetic payment/recovery rehearsal successfully;
+the labelled disposable PostgreSQL container was then removed. A read-only production
+preflight found zero unresolved Razorpay attempts and zero overlapping accounts;
+the web container remained healthy. These counts must be rechecked during cutover.
+Final published-image/production acceptance remains pending. The existing Better Stack heartbeat and
+inspection/recovery candidate remain part of this focused release. Main development
+and its uncommitted builder/UI work remain separate. No production deployment,
+database migration, new payment, refund or external alert was performed for this work.
+
+**24 October 2026 — expired Checkout operations hotfix (local candidate).**
+Expired pending Razorpay attempts now participate in the owner Today/exception queue,
+category pagination and aggregate financial alerts across all provider modes. The
+owner can inspect an exact attempt via CSRF-protected POST, review its order and
+payments, and confirm closure using a ten-minute signed owner/payment/state-bound
+review. Apply performs a fresh provider read and uses the existing locked/audited
+service. Unexpired, changed, cross-mode, attempted or uncertain records remain held;
+expiry alone never fails a payment or creates/removes entitlement.
+
+The command defaults to the stored Checkout deadline plus five minutes of grace,
+with optional legacy hour filtering and exact contribution selection. Monitoring
+gets aggregate-only output and a failure exit for the entire unresolved expired
+backlog, including other modes, missing provider IDs and rows outside the inspection
+batch. The five-minute systemd job combines allocation/webhook and expired-checkout
+checks in one heartbeat. Its three-order provider batch fits the four-minute service
+timeout at the gateway's maximum request timeout; later rows remain visible/alerted.
+The unit requires configured external heartbeat delivery and cannot report success
+when it is absent. Neither the timer nor GET requests mutate financial records.
+
+An isolated `fix/expired-checkout-operations` checkout contains only this hotfix;
+unrelated local plan-governance and account-deletion development is excluded.
+Initial 104 affected tests passed. Final isolated focused verification passed all
+73 expired-checkout/Razorpay tests (67.458 seconds, normal hashing), with Django
+system/migration-consistency checks clean. A 558-test initial isolated broad run
+had only the Windows curl-stub test failures; the executable boundary fixture was
+corrected and its combined routing, required configuration and delivery-error tests
+pass. The final configured-instalment/expiry run passed all 62 tests (141.495
+seconds, normal hashing). Both push and pull-request Django/container checks passed
+for implementation commit `80f43b1a90676e2746b3666ac706a31439d73cf9` in draft PR #76;
+the full hosted suite passed all 558 tests (push run 40065410966: 212.533 seconds).
+No image was published because this is not protected main. Systemd verified both units on the production OS
+using temporary files, without installation. Synthetic desktop and 390px mobile
+layout/form order were inspected with database access forbidden; no overflow was
+found and the viewport/preview were closed afterward. No schema change, production
+deployment, new timer activation or external notification is claimed.
+The owner clarified that Better Stack is already in use, as the canonical production
+runbook specifies. The missing financial-heartbeat timer/configuration on the inspected
+host did not establish that external monitoring was absent. The initial recommendation
+to create Healthchecks.io was mistaken and is withdrawn; no new monitoring account is
+required. Verify/reuse or add the financial-exception heartbeat in the existing Better
+Stack account and exercise delivered failure/missed-heartbeat/recovery before activation.
+On 24 October, the JSK Better Stack account (`admin@jaishrikrishnajewellery.com`,
+team `t585600`) was verified and its empty heartbeat list confirmed. Created
+`JSK financial exceptions` (heartbeat `516408`) with a five-minute period,
+six-minute grace and email notifications. The Free account reports that all team
+members receive incident notifications; no plan upgrade was made. Saved settings
+were read back. Its secret URL was transferred over SSH into
+`/opt/jsk/secrets/observability.env`, verified root-owned with mode 0600 and LF
+line endings, and the temporary local secret was removed without printing it.
+The heartbeat remains Pending, awaiting its first ping. No test alert, production
+timer activation or hotfix deployment occurred; failure delivery, missed-run and
+recovery acceptance remain pending activation of the reviewed release. Both push
+and pull-request Django/container checks also passed for documentation commit
+`c32ddc5c3ab71d2cb209969c9280c849e5bfc915` (runs 40070788281 and 40070791358).
+These alerts concern unconfirmed expired provider checkout attempts and go to the
+owner/operator. Customer emails about scheduled unpaid contributions are a separate
+reminder policy and are not implemented by this hotfix; flexible agreements must not
+be assigned invented overdue instalment obligations.
+
 **Release candidate in draft PR #75 (22 October 2026).** Draft UI PR
 [#75](https://github.com/rajeshr188/jsk-ss/pull/75) is isolated on
 agent/customer-owner-ux-release, stacked on the existing Google Play foundation (#74),
