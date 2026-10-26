@@ -1,5 +1,32 @@
 # Testing
 
+## Settlement documents and privacy disposition (26 October 2026; no migration)
+
+`schemes.tests.test_settlement_documents` uses real gated principal, settlement,
+return and replacement services on disposable future agreements. It checks that
+proposals discharge nothing, actual jewellery/refund handovers discharge principal,
+full returns restore it and replacement history retains gross movements and net
+liability. INR purchase benefits and exact-grade VA rights remain separate from
+principal and grams. Read selectors run under an SQL execution wrapper rejecting
+INSERT/UPDATE/DELETE; customer documents omit private authority/reason evidence.
+
+Customer/owner access, stranger rejection, non-cacheable invalid-document responses,
+cash correction, unknown-principal handling, invalid benefit proof, identity retention
+for open rights and completed-profile minimization are covered. Financial source and
+invoice/return records remain unchanged and readable after permitted minimization.
+
+The final module passed **8 tests in 97.261s**. An initial cash-correction fixture
+used the real field-default clock against a frozen service clock; aligning the test
+timestamp fixed the fixture without weakening production time checks. The affected
+legacy document/closure, INR principal and account deletion/completion regression
+passed **82 tests in 289.740s**. Django system checks and migration-drift checks pass.
+Tests used unique disposable localhost PostgreSQL databases, destroyed afterward;
+the normal local/production databases and operational gates were not changed.
+
+Full normal CI, long-history query/latency profiling and mobile/keyboard acceptance
+remain part of the coherent release review. These functional tests do not establish
+production performance or visual/accessibility acceptance.
+
 ## Atomic approved-benefit replacement (0049; 26 October 2026)
 
 `test_benefit_replacement_integration` exercises the real gated review, replacement,

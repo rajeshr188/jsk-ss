@@ -276,7 +276,6 @@ class InrPrincipalTests(TestCase):
         self.assertEqual(InrPrincipalReceipt.objects.count(), 0)
 
     def test_existing_entrypoints_remain_blocked_even_with_release_flag(self):
-        from accounts.selectors import customer_account_deletion_disposition
         source, cash = cash_source(self.account, self.owner)
         with override_settings(CONFIGURED_PLANS_ENABLED=True, CASH_SCHEMES_ENABLED=True):
             for operation in (
@@ -291,7 +290,6 @@ class InrPrincipalTests(TestCase):
                 lambda: Redemption(scheme_account=self.account).clean(),
                 lambda: enroll_customer(customer=self.customer, plan=self.account.plan, savings_mode="INR_CREDIT"),
                 self.account.save,
-                lambda: customer_account_deletion_disposition(SimpleNamespace(customer=self.customer)),
             ):
                 with self.subTest(operation=operation), self.assertRaises(ValidationError):
                     operation()

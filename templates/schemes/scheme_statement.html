@@ -22,37 +22,59 @@
     <p class="text-muted mb-0">Customer savings scheme statement</p>
   </div>
   {% if statement.includes_practice_activity %}<div class="alert alert-warning">Contains Test/practice records. They do not represent Live money collected. Check the payment labels below.</div>{% endif %}
-  {% include 'schemes/includes/agreement_basis.html' with scheme_account=statement.scheme_account %}
+  {% if statement.scheme_account.configuration_snapshot.policy_schema_version == 2 %}
+  <section class="border rounded p-3 my-3" aria-labelledby="statement-contract">
+    <h2 id="statement-contract" class="h5">Recorded agreement terms</h2>
+    <p>{{ statement.scheme_account.display_plan_name }} &middot; {{ statement.scheme_account.entitlement_name }} &middot; {{ statement.scheme_account.get_status_display }}</p>
+    <p>Normal eligibility rule: {{ statement.scheme_account.configuration_snapshot.get_eligibility_policy_display }}.
+      {% if statement.scheme_account.configuration_snapshot.required_count %}Required qualifying instalments: {{ statement.scheme_account.configuration_snapshot.required_count }}. Period basis: {{ statement.scheme_account.configuration_snapshot.get_period_basis_display }}.{% endif %}</p>
+    <p>Contracted benefit: {{ statement.scheme_account.configuration_snapshot.get_benefit_policy_display }}. Qualification, invoice application and principal settlement are separate. Full closure requires review and customer confirmation; partial redemption is unavailable.</p>
+    <p class="small mb-0">These are the pinned agreement terms. Current plan edits and this statement do not change them or authorize new payments or settlement.</p>
+  </section>
+  {% else %}{% include 'schemes/includes/agreement_basis.html' with scheme_account=statement.scheme_account %}{% endif %}
   <dl class="row">
     <dt class="col-sm-3">Customer</dt><dd class="col-sm-9">{{ statement.scheme_account.customer.full_name }} ({{ statement.scheme_account.customer.customer_number }})</dd>
     <dt class="col-sm-3">Scheme</dt><dd class="col-sm-9">{{ statement.scheme_account.scheme_number }} · {{ statement.scheme_account.entitlement_name }}</dd>
-    <dt class="col-sm-3">Agreement</dt><dd class="col-sm-9">{{ statement.scheme_account.start_date|date:'d M Y' }} · {{ statement.scheme_account.agreed_months }} months · {% if statement.scheme_account.configuration_snapshot.instalment_policy == 'MONTHLY_COMPLETION' %}original calendar date (payment count also required){% else %}eligible{% endif %} {{ statement.scheme_account.eligible_from|date:'d M Y' }}</dd>
+    <dt class="col-sm-3">Agreement</dt><dd class="col-sm-9">Started {{ statement.scheme_account.start_date|date:'d M Y' }}. {% if statement.scheme_account.agreed_months is not None %}{{ statement.scheme_account.agreed_months }} months; recorded duration date {{ statement.scheme_account.eligible_from|date:'d M Y' }}. Other recorded qualification rules still apply.{% else %}No fixed-duration maturity date; use the recorded eligibility rule above.{% endif %}</dd>
     <dt class="col-sm-3">Generated</dt><dd class="col-sm-9">{{ statement.generated_at|date:'d M Y, g:i A' }}</dd>
   </dl>
 
   <div class="card bg-light my-4"><div class="card-body">
-    <div class="text-muted">Remaining entitlement</div>
+    <div class="text-muted">{% if statement.inr_balance %}Outstanding INR purchase-credit principal{% else %}Remaining entitlement{% endif %}</div>
     {% if statement.entitlement_unit == 'INR' %}<div class="display-6">₹{{ statement.remaining_entitlement|inr }}</div>{% else %}<div class="display-6">{{ statement.remaining_entitlement|floatformat:3 }} {{ statement.entitlement_unit }}</div>{% endif %}
     {% if statement.cash_bonus %}<div class="small text-muted">Principal ₹{{ statement.cash_bonus.principal_outstanding|inr }} · earned bonus ₹{{ statement.cash_bonus.earned_bonus|inr }} · projected bonus ₹{{ statement.cash_bonus.projected_bonus|inr }} (not redeemable)</div>{% endif %}
+    {% if statement.inr_balance %}<p class="small mb-0">Recorded principal after corrections: ₹{{ statement.inr_balance.principal_recorded|inr }}. Pending jewellery handover: ₹{{ statement.inr_balance.jewellery_pending|inr }}. Pending principal refund: ₹{{ statement.inr_balance.refund_pending|inr }}. A proposal does not reduce liability. Benefits and external top-ups are excluded from principal.</p>{% endif %}
   </div></div>
 
   <div class="table-responsive"><table class="table table-sm align-middle">
-    <thead><tr><th scope="col">Date</th><th scope="col">Description</th><th scope="col">Reference</th><th scope="col">Amount paid</th><th scope="col">Scheme Rate</th><th scope="col">Metal allocation</th><th scope="col">Redemption / restoration</th><th scope="col">Status</th></tr></thead>
+    <thead><tr><th scope="col">Date</th><th scope="col">Description</th><th scope="col">Reference</th><th scope="col">Amount paid</th><th scope="col">{% if statement.inr_balance %}Principal credited / restored{% else %}Scheme Rate{% endif %}</th><th scope="col">{% if statement.inr_balance %}Principal discharged / corrected{% else %}Metal allocation{% endif %}</th><th scope="col">Redemption / restoration</th><th scope="col">Status</th></tr></thead>
     <tbody>
       {% for entry in statement.entries %}
       <tr>
         <td>{{ entry.occurred_at|date:'d M Y, g:i A' }}</td>
-        <td>{{ entry.description }}{% if entry.settlement_basis %}<span class="small d-block">Full settlement · {{ entry.settlement_basis }}</span>{% endif %}{% if entry.invoice_reference %}<span class="small d-block">Invoice: {{ entry.invoice_reference }}</span>{% endif %}</td>
+        <td>{{ entry.description }}{% if entry.detail %}<span class="small d-block">{{ entry.detail }}</span>{% endif %}{% if entry.settlement_basis %}<span class="small d-block">Full settlement · {{ entry.settlement_basis }}</span>{% endif %}{% if entry.invoice_reference %}<span class="small d-block">Invoice: {{ entry.invoice_reference }}</span>{% endif %}</td>
         <td>{{ entry.reference|default:'—' }}{% if entry.contribution_id %}<span class="d-print-none"><br><a href="{% url 'schemes:contribution_receipt' entry.contribution_id %}">Receipt</a></span>{% endif %}</td>
         <td>{% if entry.amount_inr is not None %}₹{{ entry.amount_inr|inr }}{% else %}—{% endif %}</td>
-        <td>{% if entry.scheme_rate is not None %}₹{{ entry.scheme_rate|inr:4 }}/g{% else %}—{% endif %}</td>
-        <td>{% if entry.metal_allocation is not None %}{{ entry.metal_allocation|floatformat:3 }} g{% else %}—{% endif %}</td>
+        <td>{% if entry.principal_credit is not None %}₹{{ entry.principal_credit|inr }}{% elif entry.scheme_rate is not None %}₹{{ entry.scheme_rate|inr:4 }}/g{% else %}—{% endif %}</td>
+        <td>{% if entry.principal_debit is not None %}₹{{ entry.principal_debit|inr }}{% elif entry.metal_allocation is not None %}{{ entry.metal_allocation|floatformat:3 }} g{% else %}—{% endif %}</td>
         <td>{% if entry.redemption is not None %}{{ entry.redemption }} {{ entry.entitlement_unit }} redeemed{% elif entry.restoration is not None %}{{ entry.restoration }} {{ entry.entitlement_unit }} restored{% elif entry.metal_reversal is not None %}{{ entry.metal_reversal|floatformat:3 }} {{ entry.entitlement_unit }} removed{% else %}—{% endif %}</td>
         <td>{{ entry.status }}{% if entry.payment_label %}<span class="small d-block">{{ entry.payment_label }}</span>{% endif %}</td>
       </tr>
       {% empty %}<tr><td colspan="8" class="text-center text-muted py-4">No verified financial activity.</td></tr>{% endfor %}
     </tbody>
   </table></div>
-  <p class="small text-muted border-top pt-3 mt-4 mb-0">This on-demand statement is generated from recorded payments, metal credits, completed redemptions and corrections. Projected bonus is informational and is not part of the remaining redeemable entitlement.</p>
+  {% if statement.benefit %}
+  <section class="border-top pt-3 mt-4" aria-labelledby="statement-benefit">
+    <h2 id="statement-benefit" class="h5">Purchase benefit history</h2>
+    <p>{{ statement.benefit.kind }}: {% if statement.benefit.amount is not None %}₹{{ statement.benefit.amount|inr }}{% else %}{{ statement.benefit.percentage|floatformat:2 }}% of evidenced eligible invoice charges, capped at ₹{{ statement.benefit.cap|inr }}{% endif %}. This is separate from paid principal and metal grams; it is not a cash-refund balance.</p>
+    {% if statement.benefit.needs_review %}<p class="alert alert-warning">Benefit evidence requires showroom reconciliation. The retained right has not been erased.</p>{% elif statement.benefit.pending_right %}<p class="alert alert-info">The retained right awaits reviewed invoice application. An approval or return does not itself apply the benefit again.</p>{% endif %}
+    <div class="table-responsive"><table class="table table-sm">
+      <caption>Recorded award, applications, full returns and reviews. Amounts are historical events, not additional credits to sum.</caption>
+      <thead><tr><th scope="col">Date</th><th scope="col">Event</th><th scope="col">Benefit amount</th><th scope="col">Status</th></tr></thead>
+      <tbody>{% for entry in statement.benefit.entries %}<tr><td>{{ entry.occurred_at|date:'d M Y, g:i A' }}</td><td>{{ entry.description }} &middot; {{ entry.reference }}{% if entry.invoice_reference %}<br>Invoice: {{ entry.invoice_reference }}{% endif %}{% if entry.detail %}<br>{{ entry.detail }}{% endif %}</td><td>{% if entry.benefit_amount is not None %}₹{{ entry.benefit_amount|inr }}{% else %}&mdash;{% endif %}</td><td>{{ entry.status }}</td></tr>{% endfor %}</tbody>
+    </table></div>
+  </section>
+  {% endif %}
+  <p class="small text-muted border-top pt-3 mt-4 mb-0">This on-demand acknowledgement is generated from recorded payments, principal/metal credits, handovers and corrections. It is not a tax invoice or settlement authorization. Showroom-recorded refunds are not an assertion of API-verified provider delivery.</p>
 </div></article>
 {% endblock %}

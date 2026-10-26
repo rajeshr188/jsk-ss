@@ -19,8 +19,8 @@
     <div class="table-responsive">
       <table class="table table-sm align-middle">
         <caption>Current financial-selector balances; no cross-account netting or purity conversion.</caption>
-        <thead><tr><th scope="col">Scheme</th><th scope="col">Status</th><th scope="col">Grade</th><th scope="col">Principal (INR)</th><th scope="col">Earned bonus (INR)</th><th scope="col">Grams</th></tr></thead>
-        <tbody>{% for balance in disposition.account_balances %}<tr><td>{{ balance.scheme_number }}</td><td>{{ balance.status }}</td><td>{{ balance.grade }}</td><td>{{ balance.cash_principal|floatformat:2 }}</td><td>{{ balance.cash_earned_bonus|floatformat:2 }}</td><td>{{ balance.metal_quantity|floatformat:6 }}</td></tr>{% empty %}<tr><td colspan="6">No scheme agreements recorded.</td></tr>{% endfor %}</tbody>
+        <thead><tr><th scope="col">Scheme</th><th scope="col">Status</th><th scope="col">Grade / denomination</th><th scope="col">Legacy cash principal (INR)</th><th scope="col">Legacy earned bonus (INR)</th><th scope="col">Grams</th><th scope="col">Purchase-credit principal (INR)</th><th scope="col">Separate purchase benefit</th></tr></thead>
+        <tbody>{% for balance in disposition.account_balances %}<tr><td>{{ balance.scheme_number }}</td><td>{{ balance.status }}</td><td>{{ balance.grade }}</td><td>{{ balance.cash_principal|floatformat:2 }}</td><td>{{ balance.cash_earned_bonus|floatformat:2 }}</td><td>{{ balance.metal_quantity|floatformat:6 }}</td><td>{% if balance.purchase_credit_principal is None %}Unknown &mdash; reconciliation required{% else %}{{ balance.purchase_credit_principal|floatformat:2 }}{% endif %}</td><td>{% if balance.benefit_pending %}Unfulfilled or under review; retain support identity{% else %}No unfulfilled recorded right identified{% endif %}</td></tr>{% empty %}<tr><td colspan="8">No scheme agreements recorded.</td></tr>{% endfor %}</tbody>
       </table>
     </div>
     </details>

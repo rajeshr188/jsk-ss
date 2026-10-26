@@ -60,6 +60,14 @@ This is the canonical source for stable business rules.
   A completed-with-retention outcome must identify the retained categories, purpose,
   next review date, and support route without claiming that provider, backup, or
   statutory transaction evidence was erased.
+  INR purchase-credit principal is distinct from legacy cash principal/bonus and
+  each exact metal grade. Retained benefit rights are separately inventoried; no
+  review or return creates a cash-refund benefit balance. Unknown principal is shown
+  as needing reconciliation, never zero. Invalid principal/disposition/benefit evidence
+  blocks completion or further identity removal. Open principal or an unfulfilled
+  recorded benefit requires showroom name/email retention with a stated purpose.
+  Completed minimization preserves proposal, fulfilment, full-return, award, invoice,
+  reversal and review evidence, including embedded identity requiring justified retention.
 
 - **AUTH-022:** Plan progress is not a public identity lookup or a login credential. A
   separately minted, digest-only, expiring email secret grants a server-side session
@@ -1040,6 +1048,14 @@ capabilities, not a retroactive change to existing production/legacy agreements.
   and exports. Indicative current metal exposure is not exported as booked cash
   liability.
 - **DOC-007:** MVP documents are on-demand printable HTML acknowledgements, not tax invoices or archived legal snapshots.
+- **DOC-008:** INR purchase-credit statements show original receipts/corrections,
+  proposals, actual principal handover/refund, full returns and historical completion
+  separately. A proposal discharges nothing; top-ups and purchase benefits are excluded
+  from principal. Showroom refund evidence is not presented as API-verified delivery.
+  Retained benefit history never adds to INR principal or exact-grade grams; full return
+  and approval alone do not reapply it. Customer documents omit private review reasons
+  and authority references. Invalid principal/disposition proofs produce a non-cacheable
+  review response, not an invented balance. Reads cannot activate or settle a plan.
 
 ## Catalogue boundaries
 

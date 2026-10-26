@@ -1,6 +1,11 @@
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta
 from decimal import ROUND_HALF_UP, Decimal
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .inr_settlement_selectors import InrSettlementBalance
+    from .statement_selectors import BenefitDocument
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -203,6 +208,7 @@ class ContributionReceiptSummary:
     receipt_number: str
     contribution: Contribution
     allocation: MetalAllocation | None
+    principal_amount: Decimal | None = None
 
 
 @dataclass(frozen=True)
@@ -223,6 +229,10 @@ class StatementEntry:
     practice_record: bool = False
     invoice_reference: str = ""
     settlement_basis: str = ""
+    principal_credit: Decimal | None = None
+    principal_debit: Decimal | None = None
+    benefit_amount: Decimal | None = None
+    detail: str = ""
 
 
 @dataclass(frozen=True)
@@ -233,6 +243,8 @@ class SchemeStatement:
     remaining_entitlement: Decimal
     entitlement_unit: str
     cash_bonus: CashBonusSummary | None = None
+    inr_balance: "InrSettlementBalance | None" = None
+    benefit: "BenefitDocument | None" = None
 
     @property
     def includes_practice_activity(self):
@@ -1180,17 +1192,30 @@ def get_contribution_receipt_summary(contribution):
         allocation = contribution.metal_allocation
     except MetalAllocation.DoesNotExist:
         allocation = None
+    principal = None
+    if contribution.scheme_account.savings_mode == "INR_CREDIT":
+        from .inr_selectors import get_inr_principal_summary
+        from django.core.exceptions import ValidationError
+        if get_inr_principal_summary(contribution.scheme_account).needs_review:
+            raise ValidationError("Purchase-credit receipt evidence requires reconciliation.")
+        recorded_principal = getattr(contribution, "inr_principal_receipt", None)
+        if recorded_principal is None:
+            raise ValidationError("A verified purchase-credit principal receipt is required.")
+        principal = recorded_principal.amount
     return ContributionReceiptSummary(
         receipt_number=contribution_receipt_number(contribution),
         contribution=contribution,
         allocation=allocation,
+        principal_amount=principal,
     )
 
 
 def get_scheme_statement(scheme_account):
     if scheme_account.savings_mode == "INR_CREDIT":
-        from django.core.exceptions import ValidationError
-        raise ValidationError("INR statements require the complete purchase-credit workflow; do not use a metal statement.")
+        from .statement_selectors import inr_statement
+        return inr_statement(scheme_account)
+    from .statement_selectors import validate_metal_document_history
+    validate_metal_document_history(scheme_account)
     entries = []
     contributions = get_contribution_history(scheme_account).filter(
         status__in=RECEIPT_PAYMENT_STATUSES
@@ -1281,6 +1306,7 @@ def get_scheme_statement(scheme_account):
     else:
         remaining_entitlement = get_metal_balance(scheme_account)
         entitlement_unit = f"g {scheme_account.entitlement_name}"
+    from .statement_selectors import benefit_document
     return SchemeStatement(
         scheme_account=scheme_account,
         generated_at=timezone.now(),
@@ -1288,6 +1314,7 @@ def get_scheme_statement(scheme_account):
         remaining_entitlement=remaining_entitlement,
         entitlement_unit=entitlement_unit,
         cash_bonus=cash_bonus,
+        benefit=benefit_document(scheme_account),
     )
 
 

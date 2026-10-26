@@ -126,7 +126,7 @@ def complete_customer_account_deletion(
     if contributions.filter(status__in=["PENDING", "PAID_UNALLOCATED"]).exists():
         raise ValidationError("Reconcile pending payments and unallocated entitlements before completion.")
     preview = customer_account_deletion_disposition(locked)
-    if preview.allocation_exceptions or preview.unresolved_webhooks:
+    if preview.allocation_exceptions or preview.unresolved_webhooks or preview.financial_exceptions:
         raise ValidationError("Financial exceptions need review before completion.")
     has_history = preview.has_financial_history
     by_category = {r["category"]: r for r in rows}
@@ -136,6 +136,7 @@ def complete_customer_account_deletion(
         raise ValidationError("The profile retention category must match the selected fields.")
     outstanding = any(
         b.cash_principal != 0 or b.cash_earned_bonus != 0 or b.metal_quantity != 0
+        or b.purchase_credit_principal != 0 or b.benefit_pending
         for b in preview.account_balances
     )
     open_agreements = any(a.status != "REDEEMED" for a in accounts)
@@ -285,10 +286,11 @@ def review_customer_account_retention(
     if bool(retained) != (by_category["profile"]["treatment"] == "RETAIN"):
         raise ValidationError("The profile category must match the selected retained fields.")
     if set(retained) != set(previous.disposition["retain_profile_fields"]):
-        if contributions.filter(status__in=["PENDING", "PAID_UNALLOCATED"]).exists() or preview.allocation_exceptions or preview.unresolved_webhooks:
+        if contributions.filter(status__in=["PENDING", "PAID_UNALLOCATED"]).exists() or preview.allocation_exceptions or preview.unresolved_webhooks or preview.financial_exceptions:
             raise ValidationError("Resolve financial exceptions before further profile removal.")
         outstanding = any(
             b.cash_principal != 0 or b.cash_earned_bonus != 0 or b.metal_quantity != 0
+            or b.purchase_credit_principal != 0 or b.benefit_pending
             for b in preview.account_balances
         )
         if (outstanding or any(a.status != "REDEEMED" for a in accounts)) and not {"full_name", "email"} <= set(retained):

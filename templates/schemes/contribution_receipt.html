@@ -24,7 +24,7 @@
   {% if receipt.contribution.gateway_mode == 'test' %}<div class="alert alert-warning">Test payment acknowledgement &mdash; no live payment. This record does not establish money collected.</div>{% elif receipt.contribution.payment_gateway == 'mock' %}<div class="alert alert-warning">Practice payment acknowledgement &mdash; no money collected.</div>{% endif %}
   {% if receipt.contribution.status == 'REVERSED' %}
   <div class="alert alert-secondary">
-    <strong>Reversed financial record.</strong> This receipt remains preserved, but its metal entitlement is no longer part of the active scheme balance.<br>
+    <strong>Reversed financial record.</strong> This receipt remains preserved, but its contribution entitlement is no longer part of the active scheme balance.<br>
     Correction {{ receipt.contribution.cash_reversal.reversal_number }} · {{ receipt.contribution.cash_reversal.get_reason_code_display }} · {{ receipt.contribution.cash_reversal.reversed_at|date:'d M Y, g:i A' }}
   </div>
   {% endif %}
@@ -44,7 +44,9 @@
     {% if receipt.contribution.cash_receipt.paper_receipt_number %}<dt class="col-sm-4">Paper receipt</dt><dd class="col-sm-8">{{ receipt.contribution.cash_receipt.paper_receipt_number }}</dd>{% endif %}
     {% endif %}
   </dl>
-  {% if receipt.allocation %}
+  {% if receipt.principal_amount is not None %}
+  <div class="border-top pt-3 mt-3"><h2 class="h5">INR purchase-credit principal</h2><p>Recorded principal: ₹{{ receipt.principal_amount|inr }}. This is not a metal allocation or a purchase benefit. See the statement for corrections and outstanding principal after settlement.</p></div>
+  {% elif receipt.allocation %}
   <div class="border-top pt-3 mt-3">
     <h2 class="h5">Metal allocation</h2>
     <dl class="row mb-0">

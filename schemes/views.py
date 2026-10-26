@@ -556,10 +556,14 @@ def contribution_receipt(request, contribution_id):
     )
     if not _can_view_scheme_account(request.user, contribution.scheme_account):
         raise Http404
+    try:
+        receipt = get_contribution_receipt_summary(contribution)
+    except ValidationError:
+        return render(request, "schemes/document_review_required.html", status=409)
     return render(
         request,
         "schemes/contribution_receipt.html",
-        {"receipt": get_contribution_receipt_summary(contribution)},
+        {"receipt": receipt},
     )
 
 
@@ -572,10 +576,14 @@ def scheme_statement(request, scheme_number):
     )
     if not _can_view_scheme_account(request.user, account):
         raise Http404
+    try:
+        statement = get_scheme_statement(account)
+    except ValidationError:
+        return render(request, "schemes/document_review_required.html", status=409)
     return render(
         request,
         "schemes/scheme_statement.html",
-        {"statement": get_scheme_statement(account)},
+        {"statement": statement},
     )
 
 

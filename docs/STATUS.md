@@ -2,6 +2,28 @@
 
 ## Current milestone
 
+**26 October 2026 - settlement statements and privacy disposition integration.**
+Read-only INR purchase-credit statements now separate recorded principal, corrections,
+proposals, actual jewellery/refund fulfilments, complete returns and historical closure.
+Pending proposals discharge nothing. Receipts describe INR principal without inventing
+metal allocation. Independent agreement statements retain the pinned eligibility rule
+without inventing a maturity date for count-only/anytime contracts.
+
+Purchase benefit documents show retained rights, invoice applications, full reversals
+and replacement-review history separately from principal/grams. Customer documents omit
+private authorization and review-reason evidence. Invalid principal/disposition proofs
+produce a non-cacheable review response, rather than a misleading balance.
+Privacy inventories now include INR and benefit chains; purchase-credit principal is
+separate from legacy cash/bonus and exact grades. Unknown liability is never zero.
+Invalid financial evidence blocks completion/further identity removal, while open
+principal or unfulfilled benefit rights require retained showroom contact identity.
+Financial history remains protected through completed-profile minimization.
+
+No new migration or activation is included. Verification is recorded in TESTING.md;
+normal local/production databases remain unchanged. Next: consistent family-specific
+offers, agreements, reminders and owner presentation, then full lifecycle/CI and the
+single coherent release acceptance. Unrelated UI and production-note edits are preserved.
+
 **26 October 2026 - atomic approved-benefit replacement integration (0049).**
 Returned invoice rights now enter the gated replacement workflow only with the latest
 valid owner/customer reapplication approval. A new invoice retains its predecessor
