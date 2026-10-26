@@ -2,6 +2,21 @@
 
 ## Current milestone
 
+**27 October 2026 - cross-family event notification review.**
+The acceptance map now identifies existing request, collection/provider-exception,
+eligibility and full-disposition suites and their remaining release checks.
+Allocation-exception and completed-redemption dispatch re-read the current event,
+account/date/shape and audience setting before creating delivery evidence or SMTP.
+Resolved exceptions, reversed full settlements and stale/unsupported candidates
+are skipped; retained attempts are preserved. No financial mutation, migration,
+release-gate change or deployment is included.
+
+Next: add source-aware INR final-completion notifications, which the existing
+metal redemption job does not cover. A proposal or individual fulfilment leg is
+not full completion. Then finish consolidated lifecycle/notification acceptance,
+query/latency and browser/mobile/keyboard review, normal CI and exact-image release
+rehearsal. The complete builder remains unactivated; TESTING.md records validation.
+
 **27 October 2026 - owner returned-benefit review workspace.**
 Both INR and exact-metal settlement screens now link to a private owner review of
 completed benefit returns. Owners preview APPROVE or HOLD, then explicitly confirm

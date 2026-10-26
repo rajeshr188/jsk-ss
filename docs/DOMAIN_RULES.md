@@ -382,10 +382,14 @@ authorize new production CASH enrolments or contributions under `SCH-007`.
   create grace, expiry, business-day adjustment, or automatic redemption behavior.
 - **REM-003:** Allocation-exception reminders are owner-only and derive from
   `PAID_UNALLOCATED` contributions. A reminder neither resolves the exception nor
-  replaces the controlled idempotent allocation-retry workflow.
+  replaces the controlled idempotent allocation-retry workflow. Dispatch rechecks
+  the unresolved source, owning agreement and detection date; stale candidates
+  and retries after resolution create no new delivery attempt.
 - **REM-004:** Completed-redemption reminders identify one immutable completed
-  redemption. A redemption reversed before candidate selection is excluded; later
-  reversal does not rewrite or delete already retained communication evidence.
+  redemption. Selection and dispatch exclude reversed redemptions; later reversal
+  does not rewrite or delete already retained communication evidence. Dispatch
+  rechecks event/account/date shape and the current audience setting. INR final
+  settlement is a separate record and is not covered by this redemption notice.
 - **REM-005:** Each event, audience, and normalized recipient has one deterministic
   reminder identity. An email already accepted by the backend is not sent again;
   failed attempts may be retried only to the configured bounded limit.

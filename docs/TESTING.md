@@ -1,5 +1,41 @@
 # Testing
 
+## Cross-family notification acceptance review (27 October 2026)
+
+The acceptance review maps the existing service suites rather than treating one
+successful plan as proof of every family. Release/readiness gates remain closed.
+
+| Boundary | Existing executable coverage | Outstanding acceptance |
+| --- | --- | --- |
+| Request and conversion | `test_independent_requests`: five families, both denominations, frozen email terms, browser conversion, no financial side effects | Browser/mobile and delivered-message review |
+| Collection and provider exceptions | `test_collection_matrix`, `test_independent_payment_entry`, `test_inr_api_payments`: real-source collection, capture timing, uncertain orders, callback/webhook replay, manual recovery and original-source refund proof | Consolidated normal CI and exact-image rehearsal |
+| Eligibility notices | `test_independent_presentation`: duration/count distinction, no forecast for count-only/anytime, separate benefit qualification, current-source and lifecycle revalidation | Mobile/email rendering and query budgets |
+| Full disposition and correction | `test_independent_metal_settlement`, `test_independent_inr_settlement`, replacement/reapplication suites: full closure, return, retained rights and atomic corrections | Combined owner/customer operational acceptance |
+| Event notice dispatch | `test_event_reminder_revalidation`: resolved allocation, full return, settings, event/account/date shape and real configured settlement return | INR completion notification still needs its own source-aware path |
+
+Queued allocation-exception and completed-redemption notices now re-read the event
+under the existing account lock before creating a reminder or attempting SMTP.
+Resolved exceptions, reversed redemptions, disabled audiences, changed detection
+dates, cross-account events and unsupported event kinds are skipped. Messages use
+the refreshed event. This does not change any entitlement, add financial mutations
+or promise atomic/exactly-once SMTP delivery.
+
+**Open notification boundary:** the current completed-redemption selector reads
+`Redemption`, not INR final-settlement completion. An INR proposal or a single
+fulfilment leg must never be described as completed full settlement. The next
+notification implementation must use retained final completion evidence, recheck
+full returns and privacy/recipient eligibility, and retain delivery idempotency.
+No new count-only/anytime maturity date, benefit-award email or automatic closure
+is implied by this review.
+
+Validation: the initial event/legacy/independent presentation run passed **25 tests
+in 49.769s**. The final seven event cases (including failed-SMTP retry after source
+resolution) and fourteen monthly reminder regressions passed **21 tests in
+118.471s**. Both runs used unique disposable localhost PostgreSQL databases, which
+were destroyed. Django checks passed and `makemigrations --check --dry-run`
+reported no changes. Normal CI, production dispatch and browser acceptance were
+not performed by this checkpoint.
+
 ## Owner returned-benefit review workspace (27 October 2026)
 
 Seven new HTTP cases exercise the actual review services for INR purchase bonus,

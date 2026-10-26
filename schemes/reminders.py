@@ -337,6 +337,37 @@ def deliver_scheme_reminder(candidate, *, as_of=None):
             and (candidate.event_date - processing_date).days == candidate.eligibility_lead_days
             and eligibility_reminder_terms(account, as_of=processing_date) == (candidate.kind, candidate.event_date)
             and candidate.contribution is None and candidate.redemption is None)
+    elif candidate.kind == SchemeReminder.Kind.ALLOCATION_EXCEPTION:
+        contribution = None
+        if candidate.contribution is not None:
+            contribution = get_allocation_exception_contributions().filter(
+                pk=candidate.contribution.pk, scheme_account=account,
+            ).first()
+        detected_at = None if contribution is None else (
+            contribution.allocation_attempted_at or contribution.paid_at or contribution.created_at)
+        allowed = allowed and (
+            settings.SCHEME_REMINDER_OWNER_ALLOCATION_EXCEPTIONS
+            and candidate.audience == SchemeReminder.Audience.OWNER
+            and candidate.redemption is None and candidate.eligibility_lead_days is None
+            and detected_at is not None
+            and timezone.localdate(detected_at) == candidate.event_date)
+        candidate = replace(candidate, contribution=contribution)
+    elif candidate.kind == SchemeReminder.Kind.COMPLETED_REDEMPTION:
+        redemption = None
+        if candidate.redemption is not None:
+            redemption = get_completed_redemptions_for_date(as_of=candidate.event_date).filter(
+                pk=candidate.redemption.pk, scheme_account=account,
+            ).first()
+        audience_enabled = (
+            settings.SCHEME_REMINDER_CUSTOMER_REDEMPTIONS
+            if candidate.audience == SchemeReminder.Audience.CUSTOMER
+            else settings.SCHEME_REMINDER_OWNER_REDEMPTIONS)
+        allowed = allowed and (
+            audience_enabled and redemption is not None
+            and candidate.contribution is None and candidate.eligibility_lead_days is None)
+        candidate = replace(candidate, redemption=redemption)
+    else:
+        allowed = False
     if not allowed:
         return SchemeReminderDeliveryResult(reminder=None, outcome="SKIPPED")
     reminder, created = SchemeReminder.objects.get_or_create(
