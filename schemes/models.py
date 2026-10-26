@@ -259,6 +259,7 @@ class SchemePlan(models.Model):
     class FrequencyRule(models.TextChoices):
         ONCE_PER_MONTH = "ONCE_PER_MONTH", "Once per month"
         FLEXIBLE = "FLEXIBLE", "Flexible"
+        ONCE_PER_PERIOD = "ONCE_PER_PERIOD", "Once per agreed period"
 
     name = models.CharField(max_length=120)
     code = models.CharField(max_length=30, unique=True)
@@ -271,10 +272,10 @@ class SchemePlan(models.Model):
         related_name="published_plans", editable=False,
     )
     minimum_months = models.PositiveSmallIntegerField(
-        default=12, validators=[MinValueValidator(12)]
+        default=12, null=True, blank=True, validators=[MinValueValidator(1)]
     )
     default_months = models.PositiveSmallIntegerField(
-        default=12, validators=[MinValueValidator(12)]
+        default=12, null=True, blank=True, validators=[MinValueValidator(1)]
     )
     amount_rule = models.CharField(max_length=10, choices=AmountRule.choices)
     frequency_rule = models.CharField(max_length=20, choices=FrequencyRule.choices)
@@ -319,12 +320,18 @@ class SchemePlan(models.Model):
                 name="configured_plan_publication_required",
             ),
             models.CheckConstraint(
-                condition=models.Q(minimum_months__gte=12),
-                name="plan_minimum_months_gte_12",
+                condition=(
+                    models.Q(minimum_months__isnull=False, default_months__isnull=False,
+                        minimum_months__gte=1, default_months__gte=models.F("minimum_months"))
+                    & (models.Q(configuration__isnull=False) | models.Q(minimum_months__gte=12))
+                    | models.Q(configuration__isnull=False, minimum_months__isnull=True, default_months__isnull=True)
+                ),
+                name="plan_duration_shape",
             ),
             models.CheckConstraint(
-                condition=models.Q(default_months__gte=models.F("minimum_months")),
-                name="plan_default_months_gte_minimum",
+                condition=(models.Q(frequency_rule__in=["FLEXIBLE", "ONCE_PER_MONTH"])
+                    | models.Q(configuration__isnull=False, frequency_rule="ONCE_PER_PERIOD")),
+                name="plan_frequency_shape",
             ),
             models.CheckConstraint(
                 condition=models.Q(minimum_contribution__gt=0),
@@ -360,17 +367,22 @@ class SchemePlan(models.Model):
     def clean(self):
         errors = {}
         if self.configuration_id:
-            from .plan_configuration import configuration_plan_values
+            from .plan_configuration import configuration_draft_values
             if self.active or self.publicly_listed:
                 from .plan_publication import validate_publication_evidence
                 try:
                     validate_publication_evidence(self)
                 except ValidationError as error:
                     errors["active"] = error.messages
-            for field, value in configuration_plan_values(self.configuration).items():
+            for field, value in configuration_draft_values(self.configuration).items():
                 if getattr(self, field) != value:
                     errors[field] = "This value is pinned to an immutable configuration version."
-        if self.default_months < self.minimum_months:
+            if (self.pk and self.configuration.accumulation == "INR_PURCHASE_CREDIT"
+                    and self.metal_offerings.filter(active=True).exists()):
+                errors["configuration"] = "INR purchase credit cannot offer metal grades."
+        elif self.minimum_months is None or self.minimum_months < 12 or self.default_months is None:
+            errors["minimum_months"] = "Existing-style plans require a duration of at least twelve months."
+        if self.default_months is not None and self.minimum_months is not None and self.default_months < self.minimum_months:
             errors["default_months"] = "Default duration cannot be below the minimum."
         if self.amount_rule == self.AmountRule.FIXED:
             if not self.fixed_contribution_amount or self.fixed_contribution_amount <= 0:
@@ -509,7 +521,7 @@ class SchemeAccount(models.Model):
     status = models.CharField(max_length=24, choices=Status.choices, default=Status.ACTIVE)
     amount_rule_snapshot = models.CharField(max_length=10, choices=SchemePlan.AmountRule.choices)
     frequency_rule_snapshot = models.CharField(
-        max_length=20, choices=[*SchemePlan.FrequencyRule.choices, ("ONCE_PER_PERIOD", "Once per agreed period")]
+        max_length=20, choices=SchemePlan.FrequencyRule.choices
     )
     fixed_amount_snapshot = models.DecimalField(
         max_digits=14, decimal_places=2, null=True, blank=True
@@ -980,7 +992,7 @@ class SchemeEnrolmentRequest(models.Model):
     )
     frequency_rule_snapshot = models.CharField(
         max_length=20,
-        choices=[*SchemePlan.FrequencyRule.choices, ("ONCE_PER_PERIOD", "Once per agreed period")],
+        choices=SchemePlan.FrequencyRule.choices,
     )
     fixed_contribution_amount_snapshot = models.DecimalField(
         max_digits=14,
@@ -1704,7 +1716,7 @@ class Contribution(models.Model):
         help_text="First calendar day of the contribution month."
     )
     frequency_rule_snapshot = models.CharField(
-        max_length=20, choices=[*SchemePlan.FrequencyRule.choices, ("ONCE_PER_PERIOD", "Once per agreed period")]
+        max_length=20, choices=SchemePlan.FrequencyRule.choices
     )
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
     payment_gateway = models.CharField(max_length=30)

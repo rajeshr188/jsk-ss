@@ -57,6 +57,9 @@ class CustomerCreateForm(forms.Form):
         return email
 
 class SchemePlanForm(forms.ModelForm):
+    # This is the existing-style editor; independent drafts have a separate form.
+    minimum_months = forms.IntegerField(min_value=12, max_value=32767, initial=12)
+    default_months = forms.IntegerField(min_value=12, max_value=32767, initial=12)
     audit_reason = forms.CharField(
         label="Reason for change", widget=forms.Textarea(attrs={"rows": 2}),
         help_text="Recorded with your identity in the plan revision and audit log.",
@@ -104,6 +107,9 @@ class SchemePlanForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields["frequency_rule"].choices = [
+            choice for choice in SchemePlan.FrequencyRule.choices if choice[0] != "ONCE_PER_PERIOD"
+        ]
         self.fields["metal_grades"].queryset = MetalGrade.objects.all()
         if self.instance.pk:
             self.fields["metal_grades"].initial = MetalGrade.objects.filter(

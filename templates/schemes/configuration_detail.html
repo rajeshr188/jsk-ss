@@ -8,12 +8,10 @@
     <a class="btn btn-outline-dark" href="{% url 'schemes:plan_manual' %}">Plan reference manual</a>
     <a class="btn btn-outline-dark" href="{% url 'schemes:plan_configuration_list' %}">Catalogue</a>
     <a class="btn btn-outline-dark" href="{% url 'schemes:plan_configuration_new_version' configuration.pk %}">Create next version</a>
-    {% if configuration.policy_schema_version == 1 %}
     <a class="btn btn-jsk" href="{% url 'schemes:configured_plan_create' configuration.pk %}">Use in a draft plan</a>
-    {% endif %}
   </div>
 </div>
-<div class="alert alert-warning">Not publishable from this preview. A configuration is not a public offer and cannot create an agreement or permit a payment. {% if configuration.policy_schema_version == 1 %}Prepare a plan, review its publication and obtain release approval.{% else %}This policy schema is not yet supported by plan or agreement creation.{% endif %} The configured-plan release gate defaults to disabled.</div>
+<div class="alert alert-warning">Not publishable from this preview. A configuration is not a public offer and cannot create an agreement or permit a payment. {% if configuration.policy_schema_version == 1 %}Prepare a plan, review its publication and obtain release approval.{% else %}You can prepare an inactive draft from this policy; publication and agreement creation remain blocked.{% endif %} The configured-plan release gate defaults to disabled.</div>
 {% if configuration.policy_schema_version == 2 %}
 {% include 'schemes/includes/independent_policy.html' %}
 {% else %}

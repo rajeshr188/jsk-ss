@@ -3,7 +3,7 @@ from django import forms
 from django.core.exceptions import ValidationError
 from django.forms.models import fields_for_model
 
-from .models import SchemePlanConfiguration
+from .models import MetalGrade, SchemePlanConfiguration
 
 
 POLICY_GROUPS = (
@@ -94,3 +94,36 @@ class IndependentConfigurationForm(forms.Form):
         if not self.is_valid():
             raise ValidationError("Review the configuration errors before saving.")
         return {name: self.cleaned_data[name] for name in POLICY_FIELDS} | POLICY_CONSTANTS
+
+
+class IndependentPlanDraftForm(forms.Form):
+    name = forms.CharField(max_length=120)
+    code = forms.CharField(max_length=30)
+    description = forms.CharField(required=False, label="Internal notes", widget=forms.Textarea(attrs={"rows": 3}))
+    metal_grades = forms.ModelMultipleChoiceField(queryset=MetalGrade.objects.all(), widget=forms.CheckboxSelectMultiple)
+    reason = forms.CharField(max_length=1000, label="Audit reason", widget=forms.Textarea(attrs={"rows": 2}))
+    expected_digest = forms.CharField(widget=forms.HiddenInput)
+
+    def __init__(self, *args, configuration, plan=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if configuration.policy_schema_version != 2:
+            raise ValidationError("This form requires an independent configuration.")
+        self.inr = configuration.accumulation == "INR_PURCHASE_CREDIT"
+        if self.inr:
+            self.fields.pop("metal_grades")
+        if plan:
+            from .plan_governance import plan_edit_digest
+            self.initial.update({name: getattr(plan, name) for name in ("name", "code", "description")})
+            self.initial["expected_digest"] = plan_edit_digest(plan)
+            if not self.inr:
+                self.initial["metal_grades"] = plan.metal_offerings.filter(active=True).values_list("metal_grade_id", flat=True)
+        else:
+            self.fields.pop("expected_digest")
+
+    def clean(self):
+        values = super().clean()
+        if set(self.data) - set(self.fields) - {"csrfmiddlewaretoken"}:
+            raise ValidationError("Only draft identity, notes and offered grades can be edited; policy and activation are locked.")
+        if self.inr:
+            values["metal_grades"] = ()
+        return values

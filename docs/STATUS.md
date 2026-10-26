@@ -2,6 +2,27 @@
 
 ## Current milestone
 
+**26 October 2026 - independent draft-offer preparation (0050).**
+Owners can reuse a schema-2 configuration in an inactive, unlisted named draft.
+Duration columns now retain the actual independent duration or null for count-only/
+anytime, and the period ceiling retains ONCE_PER_PERIOD. Existing rows/revisions are
+not converted. Exact-metal drafts require offered grades; INR purchase-credit drafts
+have no grade offerings. Preparation uses a separate validated storage projection;
+operational publication/enrolment gates remain closed even with the release flag on.
+
+The owner draft editor permits name, code, internal notes and applicable grades only.
+Policy/activation inputs are rejected, stale edits fail under the plan lock, and each
+actual change retains an audited immutable revision. Draft creation, offering changes
+and audit commit atomically. Owner screens/manual distinguish preparation from public
+offers, without invented duration or legacy cash-bonus promises. Read-only diagnostics
+check independent projections, grades and complete latest revision evidence.
+
+Migration 0050 retains legacy duration constraints for unconfigured plans and refuses
+reversal over independent drafts. Verification is recorded in TESTING.md. No normal
+local/production migration, activation, push or deployment was performed. Next is
+owner operational-screen acceptance and full cross-family lifecycle/provider/notification
+review, followed by performance/mobile checks, normal CI and the coherent rehearsal.
+
 **26 October 2026 - owner independent-policy preparation editor.**
 Owners can now open Configuration catalogue > Prepare independent policy and choose
 the accepted independent dimensions in grouped Bootstrap fields. Amount, accumulation,

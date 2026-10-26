@@ -78,7 +78,8 @@ class IndependentConfigurationEditorTests(TestCase):
             with self.settings(CONFIGURED_PLANS_ENABLED=enabled):
                 response = self.client.post(reverse("schemes:configured_plan_create", args=[row.pk]),
                     {"name": "Attempted offer", "code": "BLOCKED", "reason": "Test"})
-                self.assertEqual(response.status_code, 302)
+                self.assertEqual(response.status_code, 200)
+                self.assertTrue(response.context["form"].errors)  # Exact-metal draft needs an offered grade.
                 self.assertFalse(SchemePlan.objects.exists())
 
     def test_new_version_appends_and_refuses_stale_predecessor(self):

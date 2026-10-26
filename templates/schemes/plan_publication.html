@@ -3,18 +3,19 @@
 {% block title %}Review offer publication | Jai Sri Krishna Jewellery{% endblock %}
 {% block content %}
 <div class="page-header"><div><p class="page-eyebrow">Owner plan builder</p><h1>{% if publish %}Review and publish{% else %}Withdraw offer{% endif %}</h1><p class="page-subtitle">{{ plan.name }} ({{ plan.code }}) · Configuration version {{ plan.configuration.version }}</p></div></div>
+{% if plan.configuration.policy_schema_version == 2 %}<div class="alert alert-warning">Independent offers remain preparation-only until the complete-builder release review. Saving a draft does not approve publication.</div>{% endif %}
 {% if not release_enabled %}<div class="alert alert-warning" role="status">The configured-plan release gate is disabled. Publication and new enrolments are blocked; withdrawal remains available. This is not a payment pause for existing agreements.</div>{% endif %}
 <div class="row g-4"><div class="col-lg-7">
-{% include 'account/includes/application_offer.html' %}
+{% if plan.configuration.policy_schema_version == 2 %}{% include 'schemes/includes/policy_facts.html' with configuration=plan.configuration %}{% else %}{% include 'account/includes/application_offer.html' %}{% endif %}
 <section class="card"><div class="card-body"><h2 class="h5">Review before publication</h2>
-<ul><li>Only the listed exact metal grades are offered: {% for offering in plan.metal_offerings.all %}{% if offering.active %}{{ offering.metal_grade.display_name }}{% if not forloop.last %}; {% endif %}{% endif %}{% endfor %}.</li>
+<ul>{% if plan.configuration.accumulation == 'INR_PURCHASE_CREDIT' %}<li>INR purchase credit: no metal grade or allocated grams.</li>{% else %}<li>Only the listed exact metal grades are offered: {% for offering in plan.metal_offerings.all %}{% if offering.active %}{{ offering.metal_grade.display_name }}{% if not forloop.last %}; {% endif %}{% endif %}{% endfor %}.</li>{% endif %}
 <li>Publication records an immutable offer revision. Customers still need approval and an individually confirmed agreement.</li>
 <li>Withdraw before editing identity, description or grades. A policy change requires a new configuration version and a separate draft.</li>
 <li>Withdrawal does not close agreements, change balances, stop their valid payments or rewrite accepted terms.</li></ul>
 <a href="{% url 'schemes:plan_configuration_detail' plan.configuration_id %}">Review amount and missed-payment scenarios</a>
 </div></section></div><div class="col-lg-5"><section class="card"><div class="card-body"><h2 class="h5">Record decision</h2>
 <form method="post">{% csrf_token %}{{ form|crispy }}
-<button type="submit" class="btn btn-jsk" {% if publish and not release_enabled %}disabled{% endif %}>{% if publish %}Publish reviewed offer{% else %}Withdraw from new applications{% endif %}</button>
+<button type="submit" class="btn btn-jsk" {% if publish %}{% if not release_enabled or plan.configuration.policy_schema_version == 2 %}disabled{% endif %}{% endif %}>{% if publish %}Publish reviewed offer{% else %}Withdraw from new applications{% endif %}</button>
 <a class="btn btn-outline-dark mt-2" href="{% url 'schemes:plan_list' %}">Back to plans</a></form>
 </div></section></div></div>
 {% endblock %}

@@ -76,6 +76,25 @@ def configuration_plan_values(configuration):
     }
 
 
+def configuration_draft_values(configuration):
+    """Exact storage projection for preparation; never operational permission."""
+    if configuration.policy_schema_version != 2:
+        return configuration_plan_values(configuration)
+    configuration.full_clean()
+    return {
+        "amount_rule": "FIXED" if configuration.amount_policy == "PLAN_FIXED" else "VARIABLE",
+        "fixed_contribution_amount": configuration.fixed_amount,
+        "minimum_contribution": configuration.minimum_amount,
+        "maximum_contribution": configuration.maximum_amount,
+        "frequency_rule": configuration.frequency_rule,
+        "minimum_months": configuration.duration_months,
+        "default_months": configuration.duration_months,
+        "allow_contributions_after_eligibility": configuration.allow_contributions_after_eligibility,
+        "cash_bonus_percentage": Decimal("0.00"),
+        "cash_bonus_minimum_months": 12,
+    }
+
+
 @transaction.atomic
 def create_configuration_version(*, values, actor, reason, previous_id=None):
     from .services import _actor_label, _validate_owner
@@ -240,12 +259,12 @@ def preview_configuration_agreement(*, configuration, amount, months, metal_grad
 
 
 @transaction.atomic
-def create_configured_plan_draft(*, configuration_id, name, code, metal_grades, actor, reason):
+def create_configured_plan_draft(*, configuration_id, name, code, metal_grades, actor, reason, description=""):
     from .plan_governance import save_scheme_plan
 
     configuration = SchemePlanConfiguration.objects.get(pk=configuration_id)
     # The shared service handles owner permission, plan/offer validation and audit atomically.
     return save_scheme_plan(
-        values={"name": name, "code": code, "active": False, "publicly_listed": False},
+        values={"name": name, "code": code, "description": description, "active": False, "publicly_listed": False},
         configuration_id=configuration.pk, metal_grades=metal_grades, actor=actor, reason=reason,
     )[0]

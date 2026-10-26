@@ -5,6 +5,7 @@ from django.db.models import Q
 
 from schemes.models import SchemeAccount, SchemePlan, SchemePlanConfiguration
 from schemes.plan_configuration import configuration_evidence, validate_agreement_configuration
+from schemes.plan_governance import plan_terms
 
 
 class Command(BaseCommand):
@@ -28,6 +29,11 @@ class Command(BaseCommand):
             revision = plan.revisions.first()
             if not revision or not isinstance(revision.terms, dict) or revision.terms.get("configuration") != configuration_evidence(plan.configuration):
                 mismatches += 1
+            elif plan.configuration.policy_schema_version == 2:
+                inr = plan.configuration.accumulation == "INR_PURCHASE_CREDIT"
+                if (revision.terms != plan_terms(plan)
+                        or plan.metal_offerings.filter(active=True).exists() == inr):
+                    mismatches += 1
         activated = plans.filter(Q(active=True) | Q(publicly_listed=True)).count()
         accounts = SchemeAccount.objects.filter(Q(plan__configuration__isnull=False) | Q(configuration_snapshot__isnull=False))
         agreement_errors = 0

@@ -86,16 +86,26 @@ def save_scheme_plan(*, values, metal_grades, actor, reason, plan_id=None, expec
         if plan_id:
             raise ValidationError("Create a separate draft to use another configuration version.")
         from .models import SchemePlanConfiguration
-        from .plan_configuration import configuration_plan_values
+        from .plan_configuration import configuration_draft_values
         plan.configuration = SchemePlanConfiguration.objects.get(pk=configuration_id)
-        for field, value in configuration_plan_values(plan.configuration).items():
+        for field, value in configuration_draft_values(plan.configuration).items():
             setattr(plan, field, value)
+    independent = bool(plan.configuration_id and plan.configuration.policy_schema_version == 2)
+    if independent:
+        permitted = {"name", "code", "description"}
+        if not plan_id:
+            permitted |= {"active", "publicly_listed"}
+        if set(values) - permitted or values.get("active") or values.get("publicly_listed"):
+            raise ValidationError("Independent drafts permit identity/notes edits only; policy and activation remain locked.")
     if plan_id and expected_digest != plan_edit_digest(plan):
         raise ValidationError("This plan changed since you opened it. Reload and review the latest terms before saving.")
     before = {field: getattr(plan, field) for field in PLAN_FIELDS}
     before["metal_grades"] = tuple(plan_terms(plan)["metal_grades"]) if plan_id else ()
     selected_ids = {grade.pk for grade in metal_grades}
-    if not selected_ids or MetalGrade.objects.filter(pk__in=selected_ids).count() != len(selected_ids):
+    inr = independent and plan.configuration.accumulation == "INR_PURCHASE_CREDIT"
+    if inr and selected_ids:
+        raise ValidationError("INR purchase-credit drafts cannot offer metal grades.")
+    if not inr and (not selected_ids or MetalGrade.objects.filter(pk__in=selected_ids).count() != len(selected_ids)):
         raise ValidationError("Select at least one valid metal grade.")
     for field, value in values.items():
         setattr(plan, field, value)
@@ -111,7 +121,7 @@ def save_scheme_plan(*, values, metal_grades, actor, reason, plan_id=None, expec
         stored = SchemePlan.objects.get(pk=plan_id)
         ensure_plan_revision(plan=stored, actor=actor, reason="Legacy plan terms observed before audited edit; not historical acceptance evidence.")
     plan.save()
-    for grade in MetalGrade.objects.all():
+    for grade in MetalGrade.objects.all() if not inr else ():
         SchemePlanOffering.objects.update_or_create(
             plan=plan, metal_grade=grade, defaults={"active": grade.pk in selected_ids},
         )

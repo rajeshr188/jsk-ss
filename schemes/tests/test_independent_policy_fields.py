@@ -161,8 +161,6 @@ class IndependentPolicyTests(TestCase):
                     lambda: require_operational_configuration(config),
                     lambda: configuration_plan_values(config),
                     lambda: preview_configuration_agreement(configuration=config, amount=Decimal("100"), months=12, metal_grade=None),
-                    lambda: create_configured_plan_draft(configuration_id=config.pk, name="Blocked", code="BLOCKED",
-                                                        metal_grades=[], actor=self.owner, reason="No workflow"),
                 ):
                     with self.assertRaisesMessage(ValidationError, "preparation-only"):
                         action()
@@ -175,7 +173,7 @@ class IndependentPolicyTests(TestCase):
         response = self.client.get(url)
         self.assertContains(response, "INR jewellery purchase credit")
         self.assertContains(response, "No minimum-duration condition")
-        self.assertNotContains(response, "Use in a draft plan")
+        self.assertContains(response, "Use in a draft plan")
         self.assertNotContains(response, "Not INR purchase credit")
         listing = self.client.get(reverse("schemes:plan_configuration_list"))
         self.assertContains(listing, "Preparation only")
@@ -183,7 +181,9 @@ class IndependentPolicyTests(TestCase):
         editor = self.client.post(reverse("schemes:plan_configuration_new_version", args=[config.pk]), {})
         self.assertEqual(editor.status_code, 200)
         self.assertTrue(editor.context["form"].errors)
-        self.assertRedirects(self.client.post(reverse("schemes:configured_plan_create", args=[config.pk]), {}), url)
+        draft = self.client.post(reverse("schemes:configured_plan_create", args=[config.pk]), {})
+        self.assertEqual(draft.status_code, 200)
+        self.assertTrue(draft.context["form"].errors)
         self.assertEqual(SchemePlanConfiguration.objects.count(), 1)
         self.client.force_login(self.customer.user)
         self.assertEqual(self.client.get(url).status_code, 403)

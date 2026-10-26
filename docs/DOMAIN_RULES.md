@@ -808,7 +808,13 @@ preferences do not become fixed, and no old agreement receives a configuration i
   schema, provenance, zero grace, no catch-up and full-only settlement cannot be
   submitted as overrides. New versions append to a single locked predecessor;
   existing configurations/plans/agreements remain untouched. This preparation editor
-  does not create or publish schema-2 offers or enable any financial workflow.
+  does not publish schema-2 offers or enable any financial workflow. A separate draft
+  action may pin the version to an inactive, unlisted named plan and audited revision.
+  Independent draft duration columns equal the policy's duration (or both null for
+  COUNT/ANYTIME); frequency retains the selected period ceiling. INR drafts have no
+  offered grades; exact-metal drafts require them. Identity/notes/grade edits cannot
+  replace the policy or enable publication. Existing rows/revisions are unchanged;
+  migration reversal must not discard independent drafts or substitute legacy terms.
   Independent agreement-term resolution reloads the pinned policy and exact grade;
   a variable amount preference does not become a fixed instalment. Duration and
   required count stay independent. A duration floor is not completed eligibility;

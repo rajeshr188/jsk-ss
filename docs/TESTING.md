@@ -1,5 +1,33 @@
 # Testing
 
+## Independent draft-offer preparation (0050; 26 October 2026)
+
+`test_independent_plan_drafts` checks the five accepted families in both denominations
+and period bases, exact duration/null projections, independent payment ceilings,
+grade rules and immutable actor/reason/revision evidence. Preview/GETs and invalid
+inputs create no financial records. Audit failure rolls back the entire draft;
+stale identity edits, forged policy/activation fields, customer access and missing
+CSRF fail. Database tests retain the unconfigured twelve-month rule, reject mixed
+null duration shapes and block unaudited activation. The diagnostic detects an
+unaudited independent-plan change without repairing it.
+
+The initial **8 tests passed in 20.461s**, including migration forward/reverse
+preservation of legacy rows/revisions and refusal to reverse over independent drafts.
+The existing configuration/governance/publication, configured-agreement, independent
+policy/editor/enrolment and owner-manual regression passed **104 tests in 146.334s**.
+The final draft functional run passed **7 tests in 14.948s**, adding fixed-amount
+purchase-benefit preservation, grade-edit history and owner publication-screen checks.
+After retaining the earlier form's twelve-month minimum and frequency choices,
+the governance/editor/manual regression passed **26 tests in 29.819s**.
+Django checks and migration-drift checks pass. Tests use unique disposable localhost
+PostgreSQL databases, destroyed afterward; normal local/production databases and
+external providers are untouched. Migration 0050 has not been applied to the normal
+database. Existing historical rows and revision JSON are not rewritten.
+
+Public offer readiness, enrolment and financial gates remain closed for schema 2,
+including when CONFIGURED_PLANS_ENABLED is true. This is preparation acceptance,
+not complete lifecycle/provider, browser/mobile/keyboard, full CI or release acceptance.
+
 ## Independent owner preparation editor (26 October 2026)
 
 The separate schema-2 editor tests cover both accumulation types, compatible amount

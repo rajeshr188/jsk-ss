@@ -1355,6 +1355,8 @@ def plan_configuration_detail(request, configuration_id):
 
 
 @owner_required
+@require_http_methods(["GET", "POST"])
+@never_cache
 def configured_plan_create(request, configuration_id):
     from .forms import ConfiguredPlanDraftForm
     from .models import SchemePlanConfiguration
@@ -1362,9 +1364,10 @@ def configured_plan_create(request, configuration_id):
 
     configuration = get_object_or_404(SchemePlanConfiguration, pk=configuration_id)
     if configuration.policy_schema_version == 2:
-        messages.warning(request, "Independent-policy configurations cannot create offers until their financial workflows are complete.")
-        return redirect("schemes:plan_configuration_detail", configuration_id=configuration.pk)
-    form = ConfiguredPlanDraftForm(request.POST or None)
+        from .configuration_forms import IndependentPlanDraftForm
+        form = IndependentPlanDraftForm(request.POST if request.method == "POST" else None, configuration=configuration)
+    else:
+        form = ConfiguredPlanDraftForm(request.POST if request.method == "POST" else None)
     if request.method == "POST" and form.is_valid():
         try:
             create_configured_plan_draft(configuration_id=configuration.pk, actor=request.user, **form.cleaned_data)
@@ -1430,10 +1433,28 @@ def plan_add(request):
 
 
 @owner_required
+@require_http_methods(["GET", "POST"])
+@never_cache
 def plan_edit(request, plan_id):
     from .plan_governance import save_scheme_plan
     from .selectors import get_plan_edit_impact
     plan = get_object_or_404(SchemePlan, pk=plan_id)
+    if plan.configuration_id and plan.configuration.policy_schema_version == 2:
+        from .configuration_forms import IndependentPlanDraftForm
+        form = IndependentPlanDraftForm(request.POST if request.method == "POST" else None,
+            configuration=plan.configuration, plan=plan)
+        if request.method == "POST" and form.is_valid():
+            try:
+                save_scheme_plan(plan_id=plan.pk, expected_digest=form.cleaned_data["expected_digest"],
+                    values={name: form.cleaned_data[name] for name in ("name", "code", "description")},
+                    metal_grades=form.cleaned_data["metal_grades"], actor=request.user, reason=form.cleaned_data["reason"])
+            except ValidationError as error:
+                _add_service_errors(form, error)
+            else:
+                messages.success(request, "Draft reviewed and saved. Policy, publication and enrolment remain locked.")
+                return redirect("schemes:plan_list")
+        return render(request, "schemes/configured_plan_form.html",
+            {"form": form, "configuration": plan.configuration, "plan": plan})
     form = SchemePlanChangeForm(request.POST or None, instance=plan)
     if request.method == "POST" and form.is_valid():
         try:
