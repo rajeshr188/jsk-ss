@@ -2323,6 +2323,53 @@ class BenefitInvoiceReversal(models.Model):
         raise ValidationError("Benefit reversal evidence must be retained.")
 
 
+class BenefitReapplicationDecision(models.Model):
+    """Append-only review of a returned right; never another invoice consumption."""
+    reversal = models.ForeignKey(BenefitInvoiceReversal, on_delete=models.PROTECT, related_name="reapplication_decisions")
+    previous = models.OneToOneField("self", null=True, blank=True, on_delete=models.PROTECT, related_name="successor")
+    sequence = models.PositiveIntegerField()
+    outcome = models.CharField(max_length=8, choices=[("APPROVE", "Approve reapplication review"), ("HOLD", "Hold for review")])
+    authorization_reference = models.CharField(max_length=254, blank=True)
+    evidence = models.JSONField()
+    evidence_digest = models.CharField(max_length=64)
+    recorded_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    actor_label = models.CharField(max_length=254)
+    reason = models.TextField()
+    idempotency_key = models.UUIDField(unique=True)
+    recorded_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["reversal", "sequence"], name="benefit_reapp_sequence_unique"),
+            models.UniqueConstraint(fields=["reversal"], condition=models.Q(previous__isnull=True), name="benefit_reapp_one_root"),
+            models.CheckConstraint(condition=(models.Q(sequence=1, previous__isnull=True)
+                | models.Q(sequence__gt=1, previous__isnull=False)), name="benefit_reapp_chain_shape"),
+            models.CheckConstraint(condition=((models.Q(outcome="APPROVE") & ~models.Q(authorization_reference=""))
+                | models.Q(outcome="HOLD", authorization_reference="")), name="benefit_reapp_decision_shape"),
+            models.CheckConstraint(condition=~models.Q(evidence_digest="") & ~models.Q(actor_label="")
+                & ~models.Q(reason=""), name="benefit_reapp_evidence_required"),
+        ]
+
+    def clean(self):
+        super().clean()
+        from .benefit_reapplication_selectors import validate_reapplication_decision
+        validate_reapplication_decision(self)
+
+    def save(self, *args, **kwargs):
+        if self.pk and type(self).objects.filter(pk=self.pk).exists():
+            raise ValidationError("Benefit reapplication decisions are append-only.")
+        from .plan_policies import require_operational_configuration
+        from .benefit_reapplication_selectors import decision_evidence
+        require_operational_configuration(self.reversal.fulfilment.award.scheme_account.configuration_snapshot)
+        self.full_clean()
+        if self.evidence != decision_evidence(self.reversal, self.outcome, self.authorization_reference):
+            raise ValidationError("Reapplication review evidence changed; reload the preview.")
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Benefit reapplication decisions must be retained.")
+
+
 class InStoreCashReceipt(models.Model):
     contribution = models.OneToOneField(
         Contribution,

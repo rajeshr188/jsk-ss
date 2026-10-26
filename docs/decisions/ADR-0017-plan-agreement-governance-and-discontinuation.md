@@ -383,6 +383,19 @@ reapplication authorization/history and atomic integration are the next dependen
 do not remove the one-invoice constraint just to pass a replacement. No public workflow
 or production acceptance is supplied by this recovery checkpoint.
 
+**Returned-benefit review checkpoint (0048, 26 October 2026):** retain an immutable
+sequence of owner APPROVE/HOLD decisions against the original full benefit reversal.
+Approval records fresh customer authorization for reviewing reuse of the existing
+right; it does not award another benefit or fulfil a replacement invoice. Retain the
+original qualification/cap and complete principal/benefit return proof. A hold appends
+a superseding decision, so an old approval/retry cannot silently override it.
+Signed previews bind the owner, return, closure prefix and predecessor decision.
+New closure evidence invalidates the current review until re-reviewed; changed
+financial sources remain held for reconciliation. Database uniqueness and agreement
+locking prevent forks. Rollback refuses existing decisions. The next atomic replacement
+step must require a current approval and record its consumption with the new invoice;
+until then the single-invoice constraint and all activation barriers remain intact.
+
 The owner may create a validated configuration or reuse an existing approved one,
 then use its immutable version in one or more offered plans. A reusable configuration
 is not a live pointer that can rewrite every plan/agreement using it. Editing means a

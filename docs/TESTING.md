@@ -1,5 +1,42 @@
 # Testing
 
+## Returned-benefit review decisions (0048; 26 October 2026)
+
+`test_benefit_reapplications` creates actual INR bonus/VA and exact-grade VA
+settlements, full principal/benefit returns and owner review decisions on disposable
+future agreements. Only unreleased readiness/provider boundaries are simulated.
+Approval, hold and renewed approval retain every decision and leave principal,
+contributions, allocations, awards, original invoices and reversals unchanged.
+
+Coverage includes fresh customer authority, actor reloading, cross-account refusal,
+signed-preview tampering/expiry, idempotency conflicts, superseded approval retries,
+new closure notes, changed source amounts and incomplete principal returns. Missing
+or changed evidence blocks recording rather than removing a financial safeguard.
+The model is append-only; sequence/root/predecessor uniqueness and decision-shape
+constraints are exercised alongside injected rollback and concurrent retry/race tests.
+Migration tests verify empty forward/reverse application and refusal to discard
+recorded decisions. The existing one-invoice-per-award constraint is preserved.
+
+The initial 13-test run exposed a recording-time inconsistency under the fixture
+clock (fixed by assigning the service timestamp explicitly) and a corruption fixture
+which attempted a cash status prohibited by PostgreSQL. The fixture now alters a
+source amount to test reconciliation; no financial constraint was weakened.
+The corrected focused run passed **13 tests in 208.158s**, including both concurrency
+cases and actual migration forward/reverse/retention checks.
+An additional targeted run passed **2 tests in 32.478s**: the new multi-void predecessor
+case and the extended refusal of reused original-handover authorization references.
+The combined reapplication, original benefit-invoice and replacement-settlement
+regression run passed **39 tests in 395.474s**. It started before the added multi-void
+case; the separate targeted run covers that final test. This is affected regression
+coverage rather than the full normal CI suite.
+Django system checks, migration-drift checks and whitespace checks pass.
+
+`check_benefit_reapplications` distinguishes unreviewed, approved-review, held, stale
+and invalid histories and explicitly reports `spending_enabled=false`. Approval does
+not bypass the consumed-benefit replacement barrier. Atomic review consumption with
+a replacement invoice and full normal CI remain pending. No normal local/production
+database migration, activation or financial mutation is performed during verification.
+
 ## Independent replacement dispositions (26 October 2026; no migration)
 
 `test_replacement_settlements` exercises actual closure, proposal, handover, refund,

@@ -656,6 +656,17 @@ preferences do not become fixed, and no old agreement receives a configuration i
   restores principal itself, allows partial reversal or automatically makes the award
   spendable again. Returned rights require review. Owner-attested invoice/charge and
   physical return evidence is not an inventory system or provider-confirmed refund.
+  The review foundation (0048) retains append-only APPROVE/HOLD decisions for an
+  independent full return, bound to the unchanged award, original qualification,
+  full disposition/return evidence and closure prefix. Approval requires fresh customer
+  authorization; a hold must not claim customer approval. Later decisions supersede
+  rather than erase earlier ones. Fresh owner-bound short-lived previews and locked
+  revalidation reject concurrent/stale decisions. Review neither changes monetary
+  rights/caps nor reopens contributions, grants principal or consumes an invoice.
+  A new closure note makes the latest review stale; source drift requires reconciliation.
+  The existing single-invoice constraint remains until atomic replacement integration
+  can consume the correct current approval and retain every application/reversal.
+  Rollback must not discard recorded decisions. No standalone public spend path exists.
   The gated first independent exact-metal settlement now uses closure-scoped eligibility
   and qualification under the agreement lock. Accepted closure history/customer authority
   must match; ordinary progress still reports closure pending. It creates or reuses the

@@ -2,6 +2,24 @@
 
 ## Current milestone
 
+**26 October 2026 - returned-benefit review authorization/history (0048).**
+The next ordered foundation retains append-only owner APPROVE/HOLD decisions for
+an evidenced full principal/benefit return. Owner-bound ten-minute previews bind the
+original award, qualification, complete return, closure prefix and prior decision.
+Approvals require fresh customer authorization; holds supersede approval without
+erasing it. Concurrent submissions serialize under the agreement lock. Changed
+closure/source evidence requires a fresh review or investigation, not silent reuse.
+
+These decisions do not spend the benefit, change its amount/cap, create principal,
+reopen contributions or authorize a replacement invoice. The existing one-invoice
+constraint and consumed-benefit settlement barrier remain. Atomic consumption of a
+reviewed returned right in a replacement settlement is the next implementation step.
+Read-only review diagnostics and migration rollback protection preserve this boundary.
+Verification is recorded in TESTING.md; only disposable local PostgreSQL databases
+are used. No normal-database migration, activation, push or deployment is included.
+Presentation/statements/privacy/reminders and full coherent release acceptance remain
+pending. Unrelated production notes and dropdown styling are preserved.
+
 **26 October 2026 - gated replacement dispositions with unconsumed rights.**
 The next ordered recovery step permits a linked independent replacement after all
 predecessors have an evidenced void/full return, provided no benefit invoice has ever

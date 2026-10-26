@@ -1,0 +1,127 @@
+"""Review evidence for a returned benefit. Approval is not invoice fulfilment."""
+from django.core.exceptions import ValidationError
+from django.utils import timezone
+
+from .benefit_fulfilment_selectors import require_unchanged_award_sources, validate_benefit_reversal
+from .closure_selectors import validate_closure_history
+from .replacement_settlement_selectors import (disposition_history, history_entry,
+    require_fresh_replacement_references, validate_replacement_links)
+from .settlement_selectors import proof_digest
+
+
+def return_basis(reversal, *, closure_sequence=None, current=True):
+    """Require complete original principal/benefit return, not a balance inference."""
+    validate_benefit_reversal(reversal)
+    f, award = reversal.fulfilment, reversal.fulfilment.award
+    account = award.scheme_account
+    history = disposition_history(account)
+    validate_replacement_links(history)
+    if not history or any("independent" not in row.evidence for row in history):
+        raise ValidationError("Reapplication review requires a retained independent full disposition.")
+    closure = history[0].closure
+    sequence = validate_closure_history(closure)
+    if account.status != "CLOSURE_PENDING" or closure.status != "ACCEPTED":
+        raise ValidationError("Retain the accepted closure and block contributions during return review.")
+    root = history[0].evidence["independent"]
+    if (history[0].basis != "NORMAL" or root["award_evidence"] != award.evidence
+            or root["progress"]["state"] != "ELIGIBLE"):
+        raise ValidationError("Retain the originally qualified award; correction cannot earn a new benefit.")
+    if account.savings_mode == "INR_CREDIT":
+        from .inr_correction_selectors import validate_inr_disposition_state
+        from .independent_inr_settlement_selectors import validate_independent_inr_benefit
+        validate_inr_disposition_state(account)
+        for row in history:
+            validate_independent_inr_benefit(row, current=current)
+        if not f.inr_fulfilment_id or f.inr_fulfilment.proposal_id != history[-1].pk:
+            raise ValidationError("Review the latest fully returned invoice, not an unrelated predecessor.")
+    else:
+        from .independent_settlement_selectors import validate_independent_settlement_benefit
+        for row in history:
+            validate_independent_settlement_benefit(row)
+        if f.metal_settlement_id != history[-1].pk:
+            raise ValidationError("Review the latest fully returned exact-grade invoice.")
+    entries = [history_entry(row) for row in history]
+    if current:
+        from .benefit_award_selectors import benefit_source_snapshot
+        require_unchanged_award_sources(award)
+        if root["sources"] != benefit_source_snapshot(account):
+            raise ValidationError("Reconcile changed original payment, schedule or review sources first.")
+    if closure_sequence is None:
+        closure_sequence = sequence
+    if type(closure_sequence) is not int or not 1 <= closure_sequence <= sequence:
+        raise ValidationError("The retained closure sequence is invalid.")
+    events = list(closure.events.filter(sequence__lte=closure_sequence).order_by("sequence").values(
+        "id", "sequence", "action", "resulting_status", "authorization_reference", "reason", "actor_label"))
+    correction = reversal.inr_return.resolution if reversal.inr_return_id else reversal.metal_reversal
+    if closure_sequence < correction.event.sequence:
+        raise ValidationError("The review must follow the completed principal return.")
+    return dict(account=account.pk, award=award.pk, award_digest=award.evidence_digest,
+        original_qualification=proof_digest(root), sources=proof_digest(root["sources"]),
+        closure=str(closure.pk), closure_sequence=closure_sequence, closure_events=events,
+        dispositions=entries, fulfilment=f.pk, fulfilment_digest=f.evidence_digest,
+        reversal=reversal.pk, returned_amount=str(reversal.amount),
+        inr_return=reversal.inr_return_id, metal_reversal=reversal.metal_reversal_id,
+        invoice_correction=reversal.invoice_correction_reference,
+        customer_confirmation=reversal.customer_confirmation,
+        returned_at=reversal.returned_at.isoformat(), reversal_recorded_at=reversal.recorded_at.isoformat())
+
+
+def validate_reapplication_decision(row):
+    try:
+        e = row.evidence
+        previous = row.previous
+        if (e["version"] != 1 or row.sequence != e["sequence"]
+                or e["outcome"] != row.outcome or e["authorization_reference"] != row.authorization_reference
+                or row.outcome not in ("APPROVE", "HOLD")
+                or bool(row.authorization_reference.strip()) != (row.outcome == "APPROVE")
+                or e["previous"] != (previous.pk if previous else None)
+                or e["previous_digest"] != (previous.evidence_digest if previous else None)
+                or row.sequence != (previous.sequence + 1 if previous else 1)
+                or (previous and previous.reversal_id != row.reversal_id)
+                or row.evidence_digest != proof_digest(e)
+                or not row.reason.strip() or not row.actor_label.strip()
+                or row.recorded_at is None or timezone.is_naive(row.recorded_at)
+                or not row.reversal.recorded_at <= row.recorded_at <= timezone.now()
+                or (previous and row.recorded_at < previous.recorded_at)
+                or e["basis"] != return_basis(row.reversal, closure_sequence=e["basis"]["closure_sequence"], current=False)):
+            raise ValueError
+    except (KeyError, TypeError, AttributeError, ValueError):
+        raise ValidationError("Retained benefit reapplication decision requires investigation; do not rewrite it.") from None
+
+
+def decision_history(reversal):
+    rows = list(reversal.reapplication_decisions.select_related("previous").order_by("sequence"))
+    for number, row in enumerate(rows, 1):
+        if row.sequence != number or row.previous_id != (rows[number - 2].pk if number > 1 else None):
+            raise ValidationError("Benefit reapplication history is incomplete or forked.")
+        validate_reapplication_decision(row)
+    return rows
+
+
+def decision_evidence(reversal, outcome, authorization_reference):
+    if outcome not in ("APPROVE", "HOLD") or bool(authorization_reference) != (outcome == "APPROVE"):
+        raise ValidationError("Approval needs fresh customer authorization; a hold must not claim approval.")
+    rows = decision_history(reversal)
+    basis = return_basis(reversal)
+    if outcome == "APPROVE":
+        require_fresh_replacement_references(reversal.fulfilment.award.scheme_account, authorization_reference, "")
+        used = {r.authorization_reference.casefold() for r in rows if r.authorization_reference}
+        used.add(reversal.customer_confirmation.casefold())
+        used.add(reversal.fulfilment.customer_receipt_reference.casefold())
+        if authorization_reference.casefold() in used:
+            raise ValidationError("Retain fresh customer authorization for this reapplication review.")
+    previous = rows[-1] if rows else None
+    return dict(version=1, basis=basis, sequence=len(rows) + 1,
+        previous=previous.pk if previous else None, previous_digest=previous.evidence_digest if previous else None,
+        outcome=outcome, authorization_reference=authorization_reference)
+
+
+def reapplication_review_status(reversal):
+    """Read-only review status; none of these states authorizes another invoice."""
+    rows = decision_history(reversal)
+    if not rows:
+        return "UNREVIEWED"
+    latest = rows[-1]
+    if latest.evidence["basis"] != return_basis(reversal):
+        return "STALE"
+    return "APPROVED_REVIEW" if latest.outcome == "APPROVE" else "HELD"
