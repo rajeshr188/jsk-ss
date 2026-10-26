@@ -6,7 +6,7 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 
-from .instalments import AGREEMENT_TIMEZONE, compensation_window
+from .instalments import AGREEMENT_TIMEZONE, compensation_window, required_instalment_count
 from .instalment_selectors import require_reconciled_outage_payments, validated_instalment_periods
 from .models import (
     InstalmentOutageResolution, InstalmentReservation, InstalmentReview,
@@ -34,7 +34,8 @@ def resolve_instalment_outage(*, hold_id, actor, outcome, reason, evidence_refer
     hold = InstalmentReview.objects.select_related("period").get(pk=hold_id)
     account = SchemeAccount.objects.select_for_update().get(pk=hold.period.scheme_account_id)
     if account.agreement_schema_version == 2:
-        raise ValidationError("Independent agreement outage resolution is not yet integrated.")
+        from .plan_policies import require_operational_configuration
+        require_operational_configuration(account.configuration_snapshot)
     if account.status == "CANCELLED":
         raise ValidationError("A cancelled unused agreement cannot receive outage amendments.")
     facts = dict(hold_id=hold.pk, scheme_account_id=account.pk, period_id=hold.period_id,
@@ -72,7 +73,7 @@ def resolve_instalment_outage(*, hold_id, actor, outcome, reason, evidence_refer
     qualified = claims.filter(period=hold.period, state="QUALIFIED").first()
     number = extra = None
     if outcome == "COMPENSATE":
-        if now < end or qualified or claims.filter(state="QUALIFIED").count() >= account.agreed_months:
+        if now < end or qualified or claims.filter(state="QUALIFIED").count() >= required_instalment_count(account):
             raise ValidationError("Compensation requires an ended unpaid outage-affected window and an incomplete payment count.")
         if account.outage_resolutions.filter(period=hold.period, outcome="COMPENSATE").exists():
             raise ValidationError("This affected period has already received compensation.")

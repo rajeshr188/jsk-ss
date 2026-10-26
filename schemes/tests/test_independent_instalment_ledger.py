@@ -189,22 +189,22 @@ class IndependentInstalmentLedgerTests(TestCase):
         with self.assertRaises(ValidationError):
             attribute_razorpay_instalment(event_id=event.pk, body=body + b" ")
 
-    def test_count_only_runtime_and_outage_gates_stay_closed(self):
+    def test_count_only_runtime_gates_stay_closed_and_compensation_preview_is_read_only(self):
         account = self.account()
         for enabled in (False, True):
             with override_settings(CONFIGURED_PLANS_ENABLED=enabled):
                 for action in (account.save, lambda: current_instalment_period(account),
-                               lambda: validate_contribution_allowed(account, Decimal("500")),
-                               lambda: compensation_window(account, 1)):
+                               lambda: validate_contribution_allowed(account, Decimal("500"))):
                     with self.assertRaises(ValidationError):
                         action()
+        self.assertEqual(compensation_window(account, 1).number, account.required_count_snapshot + 4)
         self.assertFalse(Contribution.objects.exists())
 
     def test_owner_review_and_all_outage_resolutions_remain_gated(self):
         account = self.account()
         period = account.instalment_periods.get(number=1)
         for action in ("NOTE", "OUTAGE_HOLD", "ACCEPT_TIMING"):
-            with self.assertRaisesMessage(ValidationError, "owner review is not yet integrated"):
+            with self.assertRaisesMessage(ValidationError, "preparation-only"):
                 record_instalment_review(period_id=period.pk, actor=self.owner, action=action,
                     reason="Synthetic review", evidence_reference="TEST-ONLY",
                     idempotency_key=uuid.uuid4(), expected_review_sequence=0)
@@ -215,7 +215,7 @@ class IndependentInstalmentLedgerTests(TestCase):
             evidence_reference="TEST-ONLY", idempotency_key=uuid.uuid4())
         before = list(account.instalment_periods.values())
         for outcome in ("COMPENSATE", "RESTORED", "QUALIFIED"):
-            with self.assertRaisesMessage(ValidationError, "outage resolution is not yet integrated"):
+            with self.assertRaisesMessage(ValidationError, "preparation-only"):
                 resolve_instalment_outage(hold_id=hold.pk, actor=self.owner, outcome=outcome,
                     reason="Synthetic resolution", evidence_reference="TEST-ONLY",
                     incident_started_at=NOW, service_restored_at=NOW + timedelta(minutes=1),

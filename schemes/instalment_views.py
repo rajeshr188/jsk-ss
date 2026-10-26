@@ -10,7 +10,7 @@ from django.views.decorators.http import require_GET, require_http_methods
 from .instalment_review_forms import InstalmentReviewForm, OutageResolutionForm, OrderRecoveryForm
 from .instalment_order_recovery import recover_instalment_order
 from .instalment_outages import resolve_instalment_outage
-from .instalments import compensation_window
+from .instalments import compensation_window, required_instalment_count
 from .instalment_reviews import record_instalment_review
 from .instalment_selectors import open_outage_holds, owner_instalment_review_periods, unresolved_instalment_captures
 from .models import InstalmentReservation, InstalmentReview
@@ -105,9 +105,16 @@ def resolve_outage(request, hold_id):
             return redirect("schemes:instalment_review_period", period_id=hold.period_id)
     used = account.outage_resolutions.filter(outcome="COMPENSATE").count()
     try:
+        required_count = required_instalment_count(account)
+        ordinary_extensions = account.configuration_snapshot.max_extension_months or 0
+    except ValidationError:
+        required_count = ordinary_extensions = None
+    try:
         proposed = compensation_window(account, used + 1)
     except ValidationError:
         proposed = None
     return render(request, "schemes/instalment_outage_resolution.html", {
         "hold": hold, "account": account, "form": form, "used": used, "proposed": proposed,
+        "required_count": required_count, "ordinary_extensions": ordinary_extensions,
+        "benefit_only": account.agreement_schema_version == 2 and account.eligibility_policy_snapshot == "DURATION",
     })

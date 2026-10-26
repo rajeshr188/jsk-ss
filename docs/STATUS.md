@@ -2,6 +2,36 @@
 
 ## Current milestone
 
+**26 October 2026 - gated independent owner review/outage integration completed locally.**
+Notes, outage holds and acceptance of existing signed timing now reuse the proven
+review service for schema-2 contracts behind unchanged operational readiness gates.
+Acknowledged compensation reads frozen required count, not duration, and appends
+calendar/anniversary windows after only the policy's ordinary replacements. Original
+count, amount, denomination, account dates and financial records remain unchanged.
+The separate three-period cap, future-window rule, reconciliation, acknowledgement,
+append-only evidence, idempotency and agreement-lock serialization are retained.
+
+INR hold closure validates its own principal receipts/corrections rather than requiring
+metal allocation. Benefit-only schedules have no ordinary replacements; compensation
+does not move principal maturity or award a benefit. An extra window outside a frozen
+no-post-duration contribution boundary is refused, leaving explicit review rather
+than inventing payment rights. Owner forms now show independent count/denomination
+and distinguish conditional benefit schedules from principal redemption.
+
+The combined entry/ledger/review, legacy outage and calendar regression run passed
+80 tests (287.759s). The final independent-review and accessibility run passed 19 tests
+(62.422s), including duration-cutoff protection, completed-count refusal, readiness
+with the flag off/on, and concurrent INR cash versus hold resolution. Django checks,
+migration consistency and whitespace checks pass. Tests used unique disposable
+localhost PostgreSQL databases; no global fast-hasher override was added.
+
+No new migration, normal-database change, push, deployment or configured activation.
+Next in order is independent count/anytime/duration-and-count eligibility, then benefit
+qualification/fulfilment/corrections and complete settlement/presentation/privacy
+acceptance, followed by normal CI and exact-image rehearsal. FW-PLAN-003/004 and the
+coherent builder release remain unfinished. Existing production notes, unrelated UI
+edits and nested worktrees remain outside this checkpoint.
+
 **26 October 2026 - independent registration-first applications completed locally (accounts 0009).**
 The separate PlanApplication journey now retains schema-2 confirmation history,
 publication revision, INR/exact-grade denomination and independent duration/count/

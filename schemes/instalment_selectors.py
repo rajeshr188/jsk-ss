@@ -145,10 +145,15 @@ def require_reconciled_outage_payments(account):
         Q(contribution__in=contributions)
         | Q(gateway_order_id__in=contributions.exclude(gateway_order_id="").values("gateway_order_id"))
     ).exclude(status__in=["PROCESSED", "IGNORED"])
+    if account.savings_mode == "INR_CREDIT":
+        from .inr_selectors import get_inr_principal_summary
+        missing_entitlement = get_inr_principal_summary(account).needs_review
+    else:
+        missing_entitlement = contributions.filter(status="PAID", metal_allocation__isnull=True).exists()
     if (summary["integrity_errors"] or summary["paid_unallocated"]
         or claims.exclude(state__in=["QUALIFIED", "REVERSED", "RELEASED"]).exists()
         or contributions.filter(status__in=["PENDING", "PAID_UNALLOCATED"]).exists()
-        or contributions.filter(status="PAID", metal_allocation__isnull=True).exists()
+        or missing_entitlement
         or unresolved_events.exists()):
         raise ValidationError("Reconcile all pending, uncertain, timing, allocation and webhook evidence before closing this hold.")
 

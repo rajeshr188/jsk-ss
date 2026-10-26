@@ -53,7 +53,8 @@ def record_instalment_review(*, period_id, actor, action, reason, evidence_refer
     period = SchemeInstalmentPeriod.objects.get(pk=period_id)
     account = SchemeAccount.objects.select_for_update().get(pk=period.scheme_account_id)
     if account.agreement_schema_version == 2:
-        raise ValidationError("Independent agreement owner review is not yet integrated.")
+        from .plan_policies import require_operational_configuration
+        require_operational_configuration(account.configuration_snapshot)
     if account.status == "CANCELLED":
         raise ValidationError("A cancelled unused agreement cannot acquire new instalment reviews.")
     validated_instalment_periods(account)

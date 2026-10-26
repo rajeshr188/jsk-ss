@@ -129,17 +129,20 @@ def expected_account_windows(account):
 
 def compensation_window(account, number):
     """V1 amendment allowance: three months, SEPARATE from ordinary extensions."""
-    if account.agreement_schema_version == 2:
-        raise ValidationError("Independent agreement outage compensation is not yet integrated.")
     base = expected_account_windows(account)
     if type(number) is not int or not 1 <= number <= 3:
         raise ValidationError("An agreement permits at most three outage-compensation months.")
     index = len(base) + number - 1
     try:
-        return InstalmentWindow(number=index + 1,
+        window = InstalmentWindow(number=index + 1,
             starts_on=period_boundary(account.configuration_snapshot, account.start_date, index),
             ends_before=period_boundary(account.configuration_snapshot, account.start_date, index + 1),
             amount=base[0].amount, extension=True)
+        if (account.agreement_schema_version == 2 and account.eligibility_policy_snapshot == "DURATION"
+                and not account.allow_post_eligibility_contributions_snapshot
+                and window.starts_on >= account.eligible_from):
+            raise ValidationError("The proposed month is outside the agreed contribution duration. Retain the hold for separate review; principal maturity is unchanged.")
+        return window
     except (ValueError, OverflowError):
         raise ValidationError("The compensation exceeds supported calendar dates.") from None
 
@@ -147,10 +150,6 @@ def compensation_window(account, number):
 def effective_account_windows(account):
     """Original schedule plus individually acknowledged, append-only amendments."""
     base = expected_account_windows(account)
-    if account.agreement_schema_version == 2:
-        if account.outage_resolutions.exists():
-            raise ValidationError("Independent agreement outage resolutions require review.")
-        return base
     amendments = list(account.outage_resolutions.filter(outcome="COMPENSATE").select_related(
         "hold", "period", "compensation_period").order_by("compensation_number"))
     for number, amendment in enumerate(amendments, 1):

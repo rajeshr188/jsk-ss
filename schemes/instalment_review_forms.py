@@ -31,7 +31,7 @@ class OutageResolutionForm(forms.Form):
     service_restored_at = forms.DateTimeField(help_text="Actual restoration time, including timezone offset.")
     customer_acknowledged_at = forms.DateTimeField(help_text="Actual acknowledgement time, including timezone offset. Never invent consent.")
     acknowledgement_reference = forms.CharField(max_length=254,
-        help_text="Reference the customer's acceptance of this exact outcome and dates, unchanged count, amount and grade; do not paste private messages or tokens.")
+        help_text="Reference the customer's acceptance of this exact outcome and dates, unchanged count, amount, denomination/grade and principal maturity; do not paste private messages or tokens.")
     evidence_confirmed = forms.BooleanField(label="I verified the incident evidence and the customer's acknowledgement of this proposal.")
     idempotency_key = forms.UUIDField(widget=forms.HiddenInput)
     expected_review_sequence = forms.IntegerField(min_value=1, widget=forms.HiddenInput)

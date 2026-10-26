@@ -1,5 +1,35 @@
 # Testing
 
+## Independent owner review and outage amendments (26 October 2026; no migration)
+
+`test_independent_instalment_reviews` covers COUNT, duration-AND-count and benefit-only
+duration schedules, each in INR/exact-metal and calendar/anniversary variants. The
+12 amendment combinations preserve account snapshots, original periods and financial
+records while appending one acknowledged future period after only the applicable
+ordinary replacements. Tests retain the separate three-period cap, reject duplicate
+affected periods, completed counts, stale proposals, invalid acknowledgement and
+already-started windows. Benefit-only compensation cannot override a disallowed
+post-duration contribution boundary or move principal maturity.
+
+Actual cash/online service tests verify current-rate compensation payments, separate
+INR principal, signed-timing acceptance without double credit, missing/conflicting
+timing and unresolved webhook containment, current-window restoration, principal
+source-drift refusal and atomic rollback of amendment insertion. Concurrent retries
+produce one amendment; a simultaneous INR cash receipt is serialized against hold
+resolution. Owner UI renders required count rather than duration, retains authorization,
+CSRF and no-store checks, and describes zero ordinary replacements for benefit-only
+schedules. Existing form-label/help/error accessibility tests also pass.
+
+The combined independent entry/ledger/review, legacy review/outage and calendar run
+passed **80 tests in 287.759s**. The final focused independent-review and form-accessibility
+run passed **19 tests in 62.422s**, including the new duration cutoff, completed-count,
+release-gate and cash-race cases. Unique disposable localhost PostgreSQL databases
+were destroyed afterward; no global fast-hasher override was added. Django checks,
+migration consistency and whitespace checks pass. Schema-2 review mutations remain
+rejected with the release flag either off or on; only future-path tests mock readiness.
+No normal-database migration, deployment, benefit award or activation occurred. This
+is not full normal CI, eligibility implementation or complete lifecycle acceptance.
+
 ## Independent registration-first applications (accounts 0009, 26 October 2026)
 
 `accounts.test_independent_applications` exercises all five approved families in

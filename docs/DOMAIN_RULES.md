@@ -571,6 +571,20 @@ qualification for that period. Every closure preserves its hold and requires
 reconciled payment/allocation/webhook state; other holds remain effective. The V1
 owner form records externally retained customer acknowledgement evidence, not online
 customer acceptance or email delivery. P3 eligibility and B settlement remain gated.
+For schema-2 agreements, gated owner review/outage integration uses the validated
+frozen required count, not agreed duration. Compensation appends after the original
+required windows plus only the policy's ordinary replacements: three for count-based
+plans, zero for duration-only benefit schedules. The separate three-period outage
+cap, original calendar/anniversary anchor, exact amount and denomination survive.
+INR reconciliation requires matching principal receipts/corrections; a metal allocation
+is neither required nor permitted in their place. Pending/ambiguous provider evidence
+still prevents hold closure. Timing acceptance does not credit principal twice.
+Benefit-only compensation does not move principal maturity or award/restore a benefit;
+its incident and replacement evidence must feed the later benefit workflow. If the
+frozen policy disallows post-duration contributions, an extra window starting at or
+after that cutoff is refused and the hold remains for separate review. No unusable
+month is promised and no payment right is silently extended. Pure schedule preview
+is not mutation authority: operational readiness still blocks schema-2 review writes.
 An optional amount
 step means integer increments from the configured minimum, not rounding user input.
 This boundary remains until B's full-only settlement and the full configured journey are accepted.
@@ -713,7 +727,8 @@ preferences do not become fixed, and no old agreement receives a configuration i
   source, timing, idempotency and reversal evidence; it creates neither INR principal
   nor metal allocation and does not grant redemption or benefit qualification.
   Public/model enrolment, payment entry, owner instalment review and outage resolution
-  remain blocked for schema 2 pending their explicit integration. Tests use synthetic
+  remain blocked for schema 2 pending complete release acceptance. Gated integrations
+  and synthetic regression tests do not activate these workflows. Tests use synthetic
   stored contracts; they are not permission to bypass model/service activation guards.
   The 0037 INR principal services are internal foundations, not activated payment or
   settlement workflows. Existing contribution confirmation, redemption and closure
