@@ -2,6 +2,32 @@
 
 ## Current milestone
 
+**26 October 2026 - independent eligibility progress implemented locally (no migration).**
+All five approved schema-2 families now have a shared current-evidence selector.
+Count-only completes on the final verified and conclusively attributed payment;
+duration-AND-count waits for its independent duration floor and final qualifying
+period end. Anytime requires positive verified principal without inventing a date.
+Benefit-only schedule misses do not move principal maturity or grant a benefit.
+
+The read validates frozen terms, real-source INR/exact-grade principal, qualification
+history and corrections. Outstanding payments, ambiguous provider exposure and outage
+holds prevent an eligible result; exhausted windows preserve principal for review.
+Accepted dispositions and closed accounts are not presented as new spendable rights.
+Dates/statuses are never mutated, and future/historical as-of dates cannot manufacture
+verification. An explicit model progress property exposes this read without removing
+existing payment, effective-status, publication or settlement activation gates.
+Schema-2 agreements are excluded from legacy duration-and-count reminder wording.
+
+Verification results are recorded in TESTING.md. Tests use unique disposable localhost
+PostgreSQL databases; no normal-database migration or production mutation is required.
+
+Next in order: benefit qualification/award/fulfilment and append-only corrections,
+then complete eligibility-to-settlement, customer/owner presentation, reminders and
+privacy integration, full lifecycle acceptance, CI and exact-image rehearsal. The
+builder is not activated or finished; this checkpoint does not authorize settlement.
+No push or deployment. Pre-existing production notes, unrelated UI edits and nested
+worktrees remain outside this checkpoint.
+
 **26 October 2026 - gated independent owner review/outage integration completed locally.**
 Notes, outage holds and acceptance of existing signed timing now reuse the proven
 review service for schema-2 contracts behind unchanged operational readiness gates.

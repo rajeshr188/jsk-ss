@@ -699,6 +699,12 @@ class SchemeAccount(models.Model):
         return self.plan_code_snapshot or self.plan.code
 
     @property
+    def independent_eligibility(self):
+        """Preparation-stage progress only; existing operational gates still apply."""
+        from .agreement_eligibility import get_independent_eligibility
+        return get_independent_eligibility(self) if self.agreement_schema_version == 2 else None
+
+    @property
     def monthly_eligibility(self):
         if self.agreement_schema_version == 2:
             raise ValidationError("Independent agreement eligibility workflows are not activated.")

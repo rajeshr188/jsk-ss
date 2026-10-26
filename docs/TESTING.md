@@ -1,5 +1,29 @@
 # Testing
 
+## Independent eligibility progress (26 October 2026; no migration)
+
+`test_independent_eligibility` exercises all five families in INR/exact-metal variants
+using actual cash/capture services on disposable synthetic contracts. Twelve timing
+subcases distinguish immediate count-only completion from duration-AND-count with
+both calendar and anniversary windows and independent short/long duration floors.
+India-midnight boundaries, zero entitlement, cash corrections, replacements,
+exhaustion, delayed/missing verification, uncertain orders, source/contract drift,
+future evidence, accepted closure and retained terminal history are covered.
+
+Benefit-only misses preserve principal maturity and leave benefit review explicit;
+an outage can still hold financial readiness without changing that maturity. Reads
+are SQL-write-free, reload frozen facts, reject non-current as-of dates and never
+award benefits or activate payment/settlement workflows. Schema-2 agreements are
+excluded from legacy reminder wording while family-specific integration is pending.
+Release gates are tested with the flag both off and on. No normal-database migration,
+production change or global password-hasher override is required.
+
+The combined eligibility/storage, legacy monthly eligibility/reminders, independent
+review/outage, INR settlement and configured full-settlement run passed **125 tests
+in 575.090s**. The final focused run passed **19 tests in 81.311s**, including acknowledged
+compensation requiring a real payment, future-evidence refusal and accepted-closure
+containment. Django system checks and migration-consistency checks passed.
+
 ## Independent owner review and outage amendments (26 October 2026; no migration)
 
 `test_independent_instalment_reviews` covers COUNT, duration-AND-count and benefit-only

@@ -726,6 +726,21 @@ preferences do not become fixed, and no old agreement receives a configuration i
   uses the frozen required count, not duration. Receipt/capture attribution retains
   source, timing, idempotency and reversal evidence; it creates neither INR principal
   nor metal allocation and does not grant redemption or benefit qualification.
+  Independent eligibility progress is a current-time read of the frozen contract,
+  real-source principal and append-only qualification evidence. COUNT completes
+  immediately when its final payment is verified and conclusively attributed;
+  DURATION_AND_COUNT waits for both its duration floor and the final qualifying
+  period end. ANYTIME requires positive verified principal, not an invented date.
+  DURATION with a benefit schedule does not require that count for principal
+  eligibility or postpone its date after a missed benefit instalment. Rule progress,
+  positive principal, financial/outage holds and pending benefit review are separate.
+  Source corrections remove qualification/credit without deleting evidence; exhausted
+  windows lead to review, never principal forfeiture. Future/historical as-of dates
+  cannot manufacture verification rights. Closed/accepted-disposition histories are
+  not fresh spendable entitlements. This read changes no dates, statuses or benefits
+  and does not replace locked settlement proof or operational readiness. Schema-2
+  accounts are excluded from legacy maturity reminders until their family-specific
+  content and lifecycle integration are ready.
   Public/model enrolment, payment entry, owner instalment review and outage resolution
   remain blocked for schema 2 pending complete release acceptance. Gated integrations
   and synthetic regression tests do not activate these workflows. Tests use synthetic

@@ -1664,6 +1664,7 @@ def get_upcoming_monthly_completion_accounts(*, as_of, lead_days):
     """Bound by either possible date floor; current count/holds still need evaluation."""
     dates = [as_of + timedelta(days=days) for days in lead_days]
     return SchemeAccount.objects.filter(
+        agreement_schema_version=1,
         status=SchemeAccount.Status.ACTIVE,
         configuration_snapshot__instalment_policy="MONTHLY_COMPLETION",
     ).filter(Q(instalment_periods__ends_before__in=dates) | Q(eligible_from__in=dates)
@@ -1676,6 +1677,10 @@ def eligibility_reminder_terms(account, *, as_of):
     from .instalment_selectors import get_monthly_eligibility
     from .closure_selectors import accepted_closure
 
+    if account.agreement_schema_version == 2:
+        # Independent progress is readable, but the legacy reminder kind/content
+        # promises a duration-and-count date. Do not send it for a different rule.
+        return None
     if account.status in (SchemeAccount.Status.REDEEMED, SchemeAccount.Status.CANCELLED) or accepted_closure(account):
         return None
     if has_monthly_instalments(account):
