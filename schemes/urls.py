@@ -1,11 +1,12 @@
 from django.urls import path
 
-from . import views, instalment_views, closure_views, settlement_views, manual_views
+from . import views, instalment_views, closure_views, settlement_views, manual_views, benefit_reapplication_views
 from .order_reconciliation import order_reconciliation
 
 app_name = "schemes"
 
 urlpatterns = [
+    path("owner/agreements/<str:scheme_number>/benefit-review/", benefit_reapplication_views.benefit_reapplication_workspace, name="benefit_reapplication"),
     path("owner/exceptions/checkouts/<int:contribution_id>/", order_reconciliation, name="order_reconciliation"),
     path("owner/closures/<uuid:request_id>/settlement/", settlement_views.settlement_workspace, name="configured_settlement"),
     path("owner/closures/", closure_views.closure_queue, name="closure_queue"),

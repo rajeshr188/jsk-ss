@@ -5,6 +5,7 @@
 <h1>Full jewellery settlement</h1>
 <p>{{ closure.scheme_account.scheme_number }} · {{ closure.scheme_account.entitlement_name }} · {{ closure.get_status_display }}</p>
 <p><a href="{% url 'schemes:closure_workspace' closure.scheme_account.scheme_number %}">Closure authorization and history</a> · <a href="{% url 'schemes:configured_settlement' closure.pk %}">Reload current preview</a></p>
+<p><a href="{% url 'schemes:benefit_reapplication' closure.scheme_account.scheme_number %}">Review returned benefit for a replacement invoice</a></p>
 <div class="alert alert-info">Owner-recorded jewellery fulfilment only. No partial redemption, metal-to-cash conversion or principal deduction. A contracted invoice benefit is separate from the full metal quantity. The customer must confirm the exact full quantity and invoice; this screen does not create an invoice or verify physical delivery.</div>
 {% if blocked %}<div class="alert alert-warning" role="alert">{{ blocked }}</div>{% endif %}
 {% if can_review_benefit and closure.status == 'ACCEPTED' %}<section class="card p-3 mb-3"><h2 class="h5">Review invoice benefit evidence</h2><p>Qualification and discount are calculated from the accepted policy. Reviewing saves nothing; submitting settlement rechecks the signed evidence. A new preview requires fresh confirmation.</p><form method="post">{% csrf_token %}<input type="hidden" name="operation" value="preview">{{ invoice_form|crispy }}<button class="btn btn-outline-primary" type="submit">Review full settlement</button></form></section>{% endif %}

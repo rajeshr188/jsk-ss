@@ -267,12 +267,18 @@ class ReapplicationTransactionTests(ReapplicationFixture, TransactionTestCase):
         self.assertEqual(reversal.reapplication_decisions.count(), 1)
 
     def test_migration_reverse_refuses_existing_decisions(self):
+        from importlib import import_module
+        from types import SimpleNamespace
+        from django.apps import apps
         a, _, reversal = self.returned_benefit()
         row = self.decide(self.review_values(a, self.review_preview(a, reversal)))
         leaves = MigrationExecutor(connection).loader.graph.leaf_nodes()
         self.addCleanup(lambda: MigrationExecutor(connection).migrate(leaves))
-        with self.assertRaisesMessage(RuntimeError, "Retain benefit reapplication"):
+        with self.assertRaisesMessage(RuntimeError, "Retain independent draft policies and revisions"):
             MigrationExecutor(connection).migrate([("schemes", "0047_benefit_invoice_fulfilment")])
+        with self.assertRaisesMessage(RuntimeError, "Retain benefit reapplication"):
+            import_module("schemes.migrations.0048_benefit_reapplication_decisions").guard_reverse(
+                apps, SimpleNamespace(connection=connection))
         self.assertTrue(BenefitReapplicationDecision.objects.filter(pk=row.pk).exists())
 
     def test_empty_migration_round_trip_retains_old_invoice_uniqueness(self):

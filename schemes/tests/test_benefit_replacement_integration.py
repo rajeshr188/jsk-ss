@@ -226,11 +226,17 @@ class BenefitReplacementTransactionTests(IntegrationFixture, TransactionTestCase
         self.assertEqual(BenefitInvoiceFulfilment.objects.filter(reapplication_decision=decision).count(), 1)
 
     def test_migration_preserves_original_proof_and_refuses_reapplication_rollback(self):
+        from importlib import import_module
+        from types import SimpleNamespace
+        from django.apps import apps
+        leaves = MigrationExecutor(connection).loader.graph.leaf_nodes()
+        self.addCleanup(lambda: MigrationExecutor(connection).migrate(leaves))
+        # Rehearse 0049's original-proof round trip before creating plan evidence
+        # protected by 0050. Never bypass the later production rollback guard.
+        MigrationExecutor(connection).migrate([("schemes", "0049_benefit_invoice_reapplication")])
         a, r, reversal = self.returned_benefit()
         original = reversal.fulfilment
         proof = original.evidence
-        leaves = MigrationExecutor(connection).loader.graph.leaf_nodes()
-        self.addCleanup(lambda: MigrationExecutor(connection).migrate(leaves))
         executor = MigrationExecutor(connection)
         executor.migrate([("schemes", "0048_benefit_reapplication_decisions")])
         old = executor.loader.project_state([("schemes", "0048_benefit_reapplication_decisions")]).apps
@@ -241,8 +247,14 @@ class BenefitReplacementTransactionTests(IntegrationFixture, TransactionTestCase
         self.assertIsNone(original.previous_id)
         self.approve(a, reversal)
         p = self.replacement_inr(a, r)
-        with self.assertRaisesMessage(RuntimeError, "Retain benefit reapplication"):
+        with self.assertRaisesMessage(RuntimeError, "Retain independent draft policies and revisions"):
             MigrationExecutor(connection).migrate([("schemes", "0048_benefit_reapplication_decisions")])
+        with self.assertRaisesMessage(RuntimeError, "Retain benefit reapplication"):
+            import_module("schemes.migrations.0049_benefit_invoice_reapplication").guard_reverse(
+                apps, SimpleNamespace(connection=connection))
         self.complete(p)
-        with self.assertRaisesMessage(RuntimeError, "Retain benefit reapplication"):
+        with self.assertRaisesMessage(RuntimeError, "Retain independent draft policies and revisions"):
             MigrationExecutor(connection).migrate([("schemes", "0048_benefit_reapplication_decisions")])
+        with self.assertRaisesMessage(RuntimeError, "Retain benefit reapplication"):
+            import_module("schemes.migrations.0049_benefit_invoice_reapplication").guard_reverse(
+                apps, SimpleNamespace(connection=connection))

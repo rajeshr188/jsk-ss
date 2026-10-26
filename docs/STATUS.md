@@ -2,6 +2,26 @@
 
 ## Current milestone
 
+**27 October 2026 - owner returned-benefit review workspace.**
+Both INR and exact-metal settlement screens now link to a private owner review of
+completed benefit returns. Owners preview APPROVE or HOLD, then explicitly confirm
+an owner-bound, short-lived signed decision with a retained reason. Approval needs
+fresh customer authorization; a hold must not claim consent. The existing services
+recheck return, qualification, source and closure history under lock. No balances,
+awards, invoices or payment availability change merely by recording a decision.
+
+The screen retains earlier decisions and distinguishes current approval, hold,
+stale evidence, consumed approval and investigation. Old retries cannot override a
+later hold. A hold after an unconsumed INR proposal blocks handover; recovery uses
+the separate void/full-return workflow and a fresh review. Used approvals require
+the replacement invoice's own full return. Release/readiness gates stay unchanged.
+No migration, normal database change, provider action or deployment is included.
+Validation is recorded in TESTING.md; the existing owner manual includes the steps.
+
+Next: cross-family operational/lifecycle/provider-exception and notification coverage
+review, then query/latency and browser/mobile/keyboard acceptance, normal CI and the
+coherent release rehearsal. The complete builder is not yet activated.
+
 **27 October 2026 - owner INR settlement workspace.**
 Independent INR agreements now have a dedicated owner interface for signed no-write
 split preview, customer-authorized proposal, actual source-specific jewellery/refund

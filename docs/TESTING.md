@@ -1,5 +1,39 @@
 # Testing
 
+## Owner returned-benefit review workspace (27 October 2026)
+
+Seven new HTTP cases exercise the actual review services for INR purchase bonus,
+INR VA and exact-metal VA returns. They cover no-write preview, approval/hold/fresh
+approval, historical idempotent replay without overriding a hold, unchanged principal
+and original award, and later replacement consumption through the existing services.
+A hold after an unconsumed INR proposal blocks handover; evidenced void and fresh
+review restore the valid path. Used approvals disappear from selectable returns.
+
+Owner/account scope, CSRF, private GETs, fresh authorization, token tampering/expiry,
+missing confirmation, stale closure history and both values of the real release flag
+are covered. Source drift remains blocked and now displays Investigation required,
+not an unreviewed/approved status. No financial services or readiness gates were
+replaced in production code; tests simulate operational readiness only for synthetic
+contracts in unique disposable localhost PostgreSQL databases.
+
+The initial seven-case run found the source-drift label issue and a duplicate owner
+username in a test fixture. After correction, both affected cases plus the five
+existing metal-settlement workspace tests passed **7 tests in 55.365s**; the other
+five new HTTP cases had passed the initial run. The user-facing owner manual now
+explains decision statuses, fresh approval, retained history and invoice consumption.
+
+The existing reapplication/replacement-integration and manual regression passed
+**34 tests in 720.373s**, including competing/retried decisions, one-time invoice
+consumption, rollback on failure and actual migration retention/round trips. The
+migration tests now recognize 0050's earlier draft-policy guard and explicitly
+exercise 0048/0049 guards; the original-proof round trip starts at 0049 before the
+protected fixture is created. No production migration or guard was weakened.
+
+Django system checks, migration-drift and whitespace checks pass. No new migration,
+normal database mutation, real email, provider action or production change is part
+of this checkpoint. Functional HTTP checks do not imply browser/mobile/keyboard,
+performance or complete-builder release acceptance.
+
 ## Owner INR settlement workspace (27 October 2026)
 
 `test_owner_inr_settlement_workspace` covers the real signed preview, proposal,

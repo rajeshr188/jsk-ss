@@ -144,3 +144,29 @@ def reapplication_review_status(reversal):
     if latest.evidence["basis"] != return_basis(reversal):
         return "STALE"
     return "APPROVED_REVIEW" if latest.outcome == "APPROVE" else "HELD"
+
+
+def owner_reapplication_workspace(account):
+    """Private retained history and reviewable returns; never spending permission."""
+    from .models import BenefitInvoiceReversal
+    reversals = BenefitInvoiceReversal.objects.filter(fulfilment__award__scheme_account=account).select_related(
+        "fulfilment__award", "fulfilment__metal_settlement", "fulfilment__inr_fulfilment__proposal").order_by("-pk")
+    labels = {"UNREVIEWED": "Not yet reviewed", "APPROVED_REVIEW": "Approved for replacement review",
+        "HELD": "On hold", "STALE": "Needs a fresh review", "CONSUMED": "Used by a replacement invoice"}
+    rows, reviewable = [], []
+    for reversal in reversals:
+        decisions, blocked, status = [], "", "REVIEW_REQUIRED"
+        try:
+            decisions = decision_history(reversal)
+            status = reapplication_review_status(reversal)
+            if status != "CONSUMED":
+                return_basis(reversal)
+                reviewable.append(reversal.pk)
+        except ValidationError as error:
+            blocked = " ".join(error.messages)
+            status = "REVIEW_REQUIRED"
+        f = reversal.fulfilment
+        closure_id = f.inr_fulfilment.proposal.closure_id if f.inr_fulfilment_id else f.metal_settlement.closure_id
+        rows.append(dict(reversal=reversal, decisions=decisions, status=status,
+            status_label=labels.get(status, "Investigation required"), blocked=blocked, closure_id=closure_id))
+    return dict(review_rows=rows, reviewable_returns=reversals.filter(pk__in=reviewable))
