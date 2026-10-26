@@ -2,6 +2,21 @@
 
 ## Current milestone
 
+**27 October 2026 - repeated-return history loading review.**
+Owner benefit review now has measured one- and two-return INR/metal fixtures built
+through real settlement services. Closure event sources, INR return fulfilment
+links and metal reversal links load together using the ORM. Validation, explicit
+fresh reads and mutation locks remain intact; consumed predecessors are still
+checked. A changed authorization in the original settled event must block review
+after a replacement has also been returned.
+
+Two-return query counts fell from 2,194 to 1,732 for INR and 883 to 779 for metal.
+These remain high and are not production performance acceptance. TESTING.md records
+fixture budgets and affected regression results. No schema, financial policy,
+release gate or production setting changes are included. Next complete owner
+mobile/keyboard and delivered-message acceptance, with remaining history-depth
+performance review, normal CI and exact-image rehearsal tracked before activation.
+
 **27 October 2026 - owner query review and lifecycle regression.**
 Local profiling identified repeated full-history validation in returned-benefit
 and INR settlement workspaces. Page builds now reuse their own freshly validated

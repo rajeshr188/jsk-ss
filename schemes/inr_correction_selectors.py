@@ -62,7 +62,9 @@ def validate_inr_resolution(resolution):
     p, event, evidence = resolution.proposal, resolution.event, resolution.evidence
     validate_inr_proposal(p)
     completion = getattr(p, "completion", None)
-    returns = list(resolution.returns.select_related("fulfilment").order_by("fulfilment_id"))
+    returns = list(resolution.returns.select_related(
+        "fulfilment__proposal__scheme_account", "fulfilment__proposal__closure", "fulfilment__receipt",
+    ).order_by("fulfilment_id"))
     fulfilment_ids = set(p.fulfilments.values_list("pk", flat=True))
     try:
         if (evidence["version"] != 1 or proof_digest(evidence) != resolution.evidence_digest

@@ -17,7 +17,7 @@ def disposition_history(account):
     if account.inr_settlements.exists():
         raise ValidationError("Mixed principal history requires investigation.")
     history = list(ConfiguredSettlement.objects.filter(redemption__scheme_account=account)
-        .select_related("closure", "redemption", "correction__event", "correction__reversal").order_by("pk"))
+        .select_related("closure", "redemption__reversal", "correction__event", "correction__reversal").order_by("pk"))
     if len(history) != account.redemptions.count():
         raise ValidationError("Unlinked/legacy redemptions cannot enter independent replacement settlement.")
     return history

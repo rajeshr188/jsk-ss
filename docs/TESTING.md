@@ -1,5 +1,54 @@
 # Testing
 
+## Repeated-return owner history loading (27 October 2026)
+
+`test_owner_history_queries` creates an original full settlement/return, approves
+replacement, completes and fully returns that replacement, then approves review
+again. Both INR purchase bonus and exact-metal VA benefit fixtures use the real
+financial services. The resulting owner GET must retain the consumed predecessor,
+offer only the latest return for review, remain private and issue no writes.
+Changing the original SETTLE event authorization after both returns must fail a
+fresh history validation on the same closure object and leave no reviewable return.
+
+Measurements compare the same fixtures before/after eager loading immutable
+closure sources, INR return fulfilment relationships and metal reversal links:
+
+| Approved owner review | Before queries | After queries | Fixture ceiling |
+| --- | ---: | ---: | ---: |
+| INR, one return | 711 | 627 | 680 |
+| INR, two returns | 2,194 | 1,732 | 1,900 |
+| Metal, one return | 285 | 267 | 300 |
+| Metal, two returns | 883 | 779 | 850 |
+
+Local two-return observations were 1.939/1.678 seconds for INR and 0.726/0.697
+seconds for metal before/after. Single-return timings varied in the opposite
+direction, so this establishes fewer queries, not a reliable latency improvement.
+All figures include Django's test client on disposable localhost PostgreSQL; they
+are not measurements on Linode. The two-return ceilings reject the original
+measured query counts. No cross-request cache, trusted caller proof, removed source
+validation, lock change or history-depth cap was added.
+
+The baseline passed **2 tests in 41.579s**. The initial eager-loading profile plus
+existing one-return/three-decision freshness tests passed **4 tests in 77.375s**.
+Both disposable databases were destroyed. The final budget/historical-drift tests
+passed **2 tests in 49.753s**, including a successful history validation before
+altering original evidence and a failed fresh validation afterward on the same
+closure object. That disposable database was also destroyed.
+
+The affected regression passed **50 tests in 863.027s** across the history profile,
+complete benefit-replacement integration, INR corrections, closure acceptance and
+INR completion-notice cases. It includes repeated original/replacement returns,
+source/evidence tampering, injected rollback, concurrent duplicate/competing
+settlements and returns, legacy closure behavior, notification suppression and
+migration round-trip/retention guards. The final focused run above additionally
+asserts successful history validation immediately before the tamper. Django checks
+passed and `makemigrations --check --dry-run` found no changes. The regression's
+disposable localhost database was destroyed; the ordinary database was not migrated.
+
+This covers two returned dispositions, not arbitrary history depth. Query counts
+remain high. Deeper histories, production latency, browser/mobile/keyboard,
+delivered-message acceptance, normal CI and exact-image rehearsal remain open.
+
 ## Owner workflow query review and combined lifecycle regression (27 October 2026)
 
 `test_owner_workflow_queries` profiles real owner HTTP GETs after real full
