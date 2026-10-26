@@ -1819,6 +1819,46 @@ class Contribution(models.Model):
         return f"{self.scheme_account.scheme_number} — ₹{self.amount} — {self.status}"
 
 
+class InrPaymentCaptureEvidence(models.Model):
+    """Minimal authenticated API observation; not signed provider capture timing."""
+    contribution = models.OneToOneField(Contribution, on_delete=models.PROTECT, related_name="inr_api_capture")
+    payment_id = models.CharField(max_length=120, unique=True)
+    order_id = models.CharField(max_length=120)
+    amount_subunits = models.PositiveBigIntegerField()
+    gateway_mode = models.CharField(max_length=10, default="live")
+    currency = models.CharField(max_length=3, default="INR")
+    status = models.CharField(max_length=20, default="captured")
+    captured = models.BooleanField(default=True)
+    observed_at = models.DateTimeField()
+    source = models.CharField(max_length=20, choices=[("CALLBACK", "Verified callback"), ("OWNER_RECOVERY", "Owner API recovery")])
+    recovery_event = models.ForeignKey("PaymentWebhookEvent", null=True, blank=True, on_delete=models.PROTECT)
+    actor = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT)
+    actor_label = models.CharField(max_length=254)
+    reason = models.TextField()
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(condition=models.Q(amount_subunits__gte=100, gateway_mode="live", currency="INR", status="captured", captured=True), name="inr_api_capture_valid"),
+            models.CheckConstraint(condition=(models.Q(source="CALLBACK", actor__isnull=True, recovery_event__isnull=True, actor_label="system:razorpay-callback")
+                | models.Q(source="OWNER_RECOVERY", actor__isnull=False, recovery_event__isnull=False)), name="inr_api_actor_shape"),
+            models.CheckConstraint(condition=~models.Q(payment_id="") & ~models.Q(order_id="") & ~models.Q(actor_label="") & ~models.Q(reason=""), name="inr_api_evidence_required"),
+        ]
+
+    def clean(self):
+        super().clean()
+        from .inr_selectors import validate_api_capture
+        validate_api_capture(self)
+
+    def save(self, *args, **kwargs):
+        if self.pk and type(self).objects.filter(pk=self.pk).exists():
+            raise ValidationError("API capture evidence is immutable.")
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("API capture evidence must be retained.")
+
+
 class InrPrincipalReceipt(models.Model):
     """Verified purchase-credit principal, never legacy CASH or a metal allocation."""
     scheme_account = models.ForeignKey(SchemeAccount, on_delete=models.PROTECT, related_name="inr_principal_receipts")
@@ -1829,6 +1869,7 @@ class InrPrincipalReceipt(models.Model):
     verified_at = models.DateTimeField()
     cash_receipt = models.OneToOneField("InStoreCashReceipt", null=True, blank=True, on_delete=models.PROTECT)
     webhook_event = models.OneToOneField("PaymentWebhookEvent", null=True, blank=True, on_delete=models.PROTECT)
+    api_capture = models.OneToOneField(InrPaymentCaptureEvidence, null=True, blank=True, on_delete=models.PROTECT)
     recorded_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT)
     actor_label = models.CharField(max_length=254)
     reason = models.TextField()
@@ -1838,12 +1879,15 @@ class InrPrincipalReceipt(models.Model):
     class Meta:
         constraints = [
             models.CheckConstraint(condition=models.Q(amount__gt=0, amount__lte=Decimal("999999999999.99")), name="inr_principal_amount_valid"),
-            models.CheckConstraint(condition=(models.Q(cash_receipt__isnull=False, webhook_event__isnull=True)
-                | models.Q(cash_receipt__isnull=True, webhook_event__isnull=False)), name="inr_principal_one_source"),
+            models.CheckConstraint(condition=(models.Q(cash_receipt__isnull=False, webhook_event__isnull=True, api_capture__isnull=True)
+                | models.Q(cash_receipt__isnull=True, webhook_event__isnull=False, api_capture__isnull=True)
+                | models.Q(cash_receipt__isnull=True, webhook_event__isnull=True, api_capture__isnull=False)), name="inr_principal_one_source"),
             models.CheckConstraint(condition=~models.Q(source_reference="") & ~models.Q(actor_label="") & ~models.Q(reason=""), name="inr_principal_evidence_required"),
             models.CheckConstraint(condition=(models.Q(recorded_by__isnull=False)
-                | models.Q(cash_receipt__isnull=True, webhook_event__isnull=False,
-                           actor_label="system:razorpay-capture")), name="inr_principal_actor_shape"),
+                | models.Q(cash_receipt__isnull=True, webhook_event__isnull=False, api_capture__isnull=True,
+                           actor_label="system:razorpay-capture")
+                | models.Q(cash_receipt__isnull=True, webhook_event__isnull=True, api_capture__isnull=False,
+                           actor_label="system:razorpay-callback")), name="inr_principal_actor_shape"),
         ]
 
     def clean(self):

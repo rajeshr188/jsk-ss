@@ -107,9 +107,7 @@ class PaymentGateway(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def verify_payment(
-        self, *, order_id, payment_id, signature, expected_amount
-    ):
+    def verify_payment(self, *, order_id, payment_id, signature, expected_amount):
         raise NotImplementedError
 
     @abstractmethod
@@ -223,9 +221,7 @@ class RazorpayPaymentGateway(PaymentGateway):
             currency="INR",
         )
 
-    def verify_payment(
-        self, *, order_id, payment_id, signature, expected_amount
-    ):
+    def _valid_callback_signature(self, *, order_id, payment_id, signature):
         if not all(
             isinstance(value, str) and value
             for value in (order_id, payment_id, signature)
@@ -240,7 +236,20 @@ class RazorpayPaymentGateway(PaymentGateway):
             f"{order_id}|{payment_id}".encode("utf-8"),
             hashlib.sha256,
         ).hexdigest()
-        if not hmac.compare_digest(expected_signature, signature):
+        return hmac.compare_digest(expected_signature, signature)
+
+    def verify_captured_payment(self, *, order_id, payment_id, signature, expected_amount):
+        """Return exact authenticated capture facts, never browser-supplied evidence."""
+        if not self._valid_callback_signature(order_id=order_id, payment_id=payment_id, signature=signature):
+            raise PaymentGatewayValidationError("Payment signature verification failed.")
+        inspection = self.inspect_payment(payment_id=payment_id)
+        if (inspection.order_id != order_id or inspection.amount_subunits != _amount_to_subunits(expected_amount)
+                or inspection.currency != "INR" or inspection.status != "captured" or inspection.captured is not True):
+            raise PaymentGatewayValidationError("The provider payment is not the expected captured payment.")
+        return inspection
+
+    def verify_payment(self, *, order_id, payment_id, signature, expected_amount):
+        if not self._valid_callback_signature(order_id=order_id, payment_id=payment_id, signature=signature):
             return False
 
         payment = self._request_json("GET", f"/payments/{payment_id}")

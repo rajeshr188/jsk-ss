@@ -43,7 +43,8 @@ Use the existing FW-PLAN items; do not create further numbered micro-milestones.
   - Verified-source INR integration (0041, 25 October): atomic captured-event principal/instalment hooks with constrained system provenance, owner cash-receipt hooks and full source-correction integration. Duplicate captures cannot create duplicate principal; timing review never discards verified funds. Collection and new-payment eligibility remain gated; callback-only principal and INR API recovery are not enabled.
   - Gated independent payment entry (0042, 25 October): server-date/amount/count/duration checks, optional calendar/anniversary cash ceilings, rate-free INR global payment controls, atomic actual cash receipt/principal/audit and required-monthly online creation/resumption. The contribution frequency retains ONCE_PER_PERIOD rather than pretending it is a calendar month. Existing metal flows remain separate. Optional online creation is explicitly blocked pending durable order-intent/recovery support; callback/API recovery remains pending. This is not collection activation or full policy-family acceptance.
   - Optional online order integration (0043, 26 October): separate immutable pre-I/O request and response/recovery binding, same-attempt resumption, unresolved-attempt containment and owner-authenticated exact identity recovery. No artificial instalments, financial credit, refreshed deadline or automatic refund; recovered orders are reconciliation-only. Runtime readiness stays closed. This is service-level integration, not owner/customer recovery-interface or full collection acceptance.
-  - Still required: callback/API-recovery reconciliation, collection/benefit-schedule acceptance, enrolment request/form/email integration, count/anytime/benefit settlement integration, statements/privacy-disposition integration, owner/customer presentation and acceptance. No owner-facing INR offer is enabled by these foundations.
+  - Callback/API principal integration (0044, 26 October): immutable minimal authenticated capture observations, separate from signed webhook timing. Callback HMAC plus exact Live API capture and owner preview/apply recovery commit source confirmation/principal together. Retries retain the original receipt source; later signed capture can supply monthly timing without double credit. Migration reversal preserves retained API evidence. Runtime gates stay closed; verification is tracked in STATUS.md/TESTING.md.
+  - Still required: collection/benefit-schedule acceptance, enrolment request/form/email integration, count/anytime/benefit settlement integration, statements/privacy-disposition integration, owner/customer presentation and acceptance. No owner-facing INR offer is enabled by these foundations.
 - [ ] Implement count-only and anytime eligibility and the agreed additional amount/schedule combinations, including consistent UI, reminders and full closure.
 - [ ] Implement only defined benefit policies, including qualification, actual fulfilment and append-only corrections/reversal.
 - [ ] Complete verified provider-history disposition needed for closure; ambiguous payments must not be cleared by an owner checkbox.
@@ -88,9 +89,10 @@ attribution now exist independently. Gated owner-enrolment orchestration uses th
 terms/periods atomically. Verified-source INR receipt integration now exists, and new-payment
 validation, actual cash entry and required-monthly online creation are integrated behind
 readiness gates. Optional online durable order creation/exact recovery now has a
-separate obligation-free evidence path (0043). Callback/API-recovery
-reconciliation and public request/presentation integration remain pending, without
-opening publication or removing readiness gates.
+separate obligation-free evidence path (0043). Callback/API-recovery principal now
+has distinct immutable API evidence (0044), not fabricated signed capture timing.
+Complete collection/benefit-schedule acceptance and public request/presentation
+integration without opening publication or removing readiness gates.
 Required regression examples: January 30 short month; final qualifying payment before
 period end (count-only versus both); missed payment with retained versus lost unearned
 benefit; optional monthly ceiling without any debt; invoice below/equal/above full INR

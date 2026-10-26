@@ -2,6 +2,33 @@
 
 ## Current milestone
 
+**26 October 2026 - gated INR callback/API principal integration completed locally (0044).**
+Building on `fa9340d`, callbacks now retain minimal authenticated Live capture
+observations after HMAC verification. Owner recovery retains actor/reason/event
+correlation and requires preview plus a fresh provider inspection on apply. Source
+confirmation, immutable evidence and principal commit atomically; an existing receipt
+retains its original source. API observations cannot qualify monthly timing; a later
+original signed capture may supply that evidence without adding principal again.
+Migration 0044 changes no historical receipt and refuses reversal with retained API
+evidence. Refund proofs retain API identity without rewriting older source proofs.
+Runtime gates remain closed; no normal database migration, push or deployment.
+
+Verification: expanded 23-test focused suite passed (103.439s); final 34-test
+focused/adapter rerun passed (100.303s), including Live-only rejection and actual
+optional/required order entry followed by capture during a pause. The combined
+292-test financial run (932.275s) had 290 passes and two test-harness errors:
+a bound model-default clock in the new settlement fixture, and a historical rollback
+test querying current models before restoring the latest schema after an expected
+guard refusal. Both were corrected without weakening financial guards. The corrected
+settlement test passed in the focused reruns; all four principal migration/concurrency
+tests passed separately (89.865s). Earlier fixture fixes covered cached relations and
+capture/receipt timing. These runs overlap; no clean combined rerun or full normal CI
+is claimed. Django checks, migration consistency and whitespace checks pass.
+Disposable localhost PostgreSQL databases were destroyed. Separate dropdown UI edits
+and nested worktrees remain untouched; this increment is saved as a local checkpoint.
+Next after this increment: complete collection/benefit-schedule acceptance, then
+remaining enrolment/presentation, eligibility/benefit and full-builder release gates.
+
 **26 October 2026 - optional independent online orders integrated locally (0043).**
 Checkpointed the preceding financial work through 0042 as `7be2be1`, excluding the
 separate dropdown UI changes and nested worktrees. Optional schema-2 online payments

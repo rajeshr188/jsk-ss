@@ -393,6 +393,10 @@ class InrPrincipalConcurrencyAndMigrationTests(TransactionTestCase):
             MigrationExecutor(connection).migrate([("schemes", "0036_independent_policy_fields")])
         with self.assertRaisesMessage(RuntimeError, "Cannot reverse 0037"):
             guard(apps, SimpleNamespace(connection=connection))
+        # Empty later migrations (including 0044's nullable API-source field)
+        # may have reversed before the retained-account guard refused. Restore
+        # the leaf schema before using current-model selectors.
+        MigrationExecutor(connection).migrate(leaves)
         self.assertEqual(get_inr_principal_summary(account).principal_recorded, Decimal("1000"))
 
     def test_migration_preserves_legacy_rows_and_does_not_invent_inr_credit(self):

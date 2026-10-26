@@ -42,6 +42,7 @@ def inr_source_evidence(account):
         principal=str(summary.principal_recorded),
         receipts=[dict(id=r.pk, amount=str(r.amount), source=r.source_reference,
             cash=r.cash_receipt_id, webhook=r.webhook_event_id,
+            **({"api_capture": r.api_capture_id} if r.api_capture_id else {}),
             correction=getattr(getattr(r, "correction", None), "pk", None)) for r in receipts],
         payments=[dict(id=p.pk, status=p.status, amount=str(p.amount), order=p.gateway_order_id,
             payment=p.gateway_reference, paid_at=p.paid_at.isoformat() if p.paid_at else None) for p in payments],

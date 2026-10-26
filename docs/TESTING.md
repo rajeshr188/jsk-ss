@@ -1,5 +1,36 @@
 # Testing
 
+## INR callback/API capture evidence (0044, 26 October 2026)
+
+`test_inr_api_payments` exercises the real HMAC/API adapter with synthetic responses:
+exact Live payment/order/amount/currency/captured matching; malformed or uncaptured
+responses; provider failure; callback/webhook ordering; concurrent deliveries;
+owner preview/fresh apply; cross-linked events; verified sources missing principal;
+interrupted confirmation/evidence/principal/schedule writes; immutable/database
+source shapes; evidence drift; source-first refund proof; late-disposition holds;
+runtime rejection with either release flag; and empty migration roundtrip/retained
+evidence reversal refusal. API observation alone must leave monthly timing awaiting;
+original signed timing can qualify it or require review without erasing principal.
+No browser fields, provider creation timestamp or owner checkbox can qualify timing.
+
+Protocol reference: [Razorpay Fetch a Payment](https://razorpay.com/docs/api/payments/fetch-with-id/).
+Only minimal capture identity/state is retained, not the full response containing
+contact or instrument data. Tests use no real provider calls. Fixtures were corrected
+for cached relations, capture/receipt chronology and bound model-default clocks;
+financial timing checks were not relaxed. Actual optional/required order entry and
+capture during a new-payment pause are covered. The 23-test focused suite passed
+(103.439s), followed by the final 34-test focused/adapter rerun (100.303s).
+
+Combined financial regression: 292 tests (932.275s), 290 passes and two test-harness
+errors. The new full-disposition test needed its model-default clock aligned; it
+passed in the focused reruns. The existing principal rollback test needed to restore
+the migration leaf before current-model reads, because an expected earlier refusal
+can follow reversal of empty later migrations. All four principal migration/concurrency
+tests passed after that correction (89.865s). Suites overlap; do not report the combined
+run as clean or add their counts together. No full normal CI or activation acceptance
+is claimed. Django checks, migration consistency and whitespace checks passed.
+All test databases were disposable localhost PostgreSQL and were destroyed.
+
 ## Optional independent online order evidence (0043, 26 October 2026)
 
 `test_optional_orders` exercises actual creation/resumption and exact recovery on

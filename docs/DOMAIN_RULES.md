@@ -624,9 +624,18 @@ preferences do not become fixed, and no old agreement receives a configuration i
   webhook processing remains upstream. A new event for the same payment adds no second
   principal receipt. Late/missing timing may require instalment review without losing
   verified principal. Full cash-entry correction atomically retains source reversal,
-  principal correction and instalment reversal. Callback-only confirmation is not
-  sufficient principal evidence. INR API-recovery stays manual-review-only until its
-  source integration is complete. Normal collection/readiness gates remain closed.
+  principal correction and instalment reversal. A browser callback alone is never
+  sufficient principal evidence. A valid callback HMAC plus authenticated exact Live
+  API capture can create a separate immutable minimal observation and principal
+  atomically (0044). Owner API recovery requires preview, fresh exact inspection,
+  actor/reason and retained event identity. Neither path fabricates a signed webhook
+  or uses API payment creation time to qualify an instalment: monthly timing remains
+  awaiting evidence until an original signed capture supplies it. Later callbacks,
+  recovery or webhooks retain the first valid receipt source without double credit.
+  Closed/disposed agreements and failed/abandoned sources require review, not an
+  automatic credit. API source evidence participates in INR settlement proofs without
+  rewriting older proofs. This is gross captured principal, not refund availability
+  or settlement reconciliation. Normal collection/readiness gates remain closed.
   One immutable INR disposition assigns all recorded principal to an evidenced invoice
   and/or original-source refund legs. Invoice application consumes earliest verified
   uncorrected receipts first (verification time, then receipt ID); remaining amounts

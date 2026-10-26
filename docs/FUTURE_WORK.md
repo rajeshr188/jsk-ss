@@ -74,8 +74,9 @@ Verified-capture and cash/correction principal hooks now exist (0041 system prov
 and gated independent admission/actual cash/required-monthly online entry now exists
 (0042 frequency choice). Optional online durable order/exact identity recovery now
 has a separate gated, obligation-free evidence path (0043); owner recovery-interface
-integration and collection acceptance are still required. Callback/API recovery,
-collection and benefit-schedule acceptance, request/form/email integration, eligibility/benefit
+integration and collection acceptance are still required. Callback/API principal now
+has separate authenticated capture evidence (0044), retaining signed-timing separation.
+Collection and benefit-schedule acceptance, request/form/email integration, eligibility/benefit
 variants, statements/privacy handling and acceptance remain open in MVP_PLAN.md.
 Optional recovery cannot infer provider absence from a failed lookup. Expired attempts
 without a usable request/order identity remain held; no manual checkbox or blind

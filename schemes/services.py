@@ -1832,6 +1832,20 @@ def confirm_razorpay_contribution(
         )
     if not contribution.gateway_order_id or callback_order_id != contribution.gateway_order_id:
         raise ValidationError("The Razorpay order does not match this contribution.")
+    if contribution.scheme_account.savings_mode == SchemeAccount.SavingsMode.INR_CREDIT:
+        from .inr_api_payments import confirm_api_principal
+        from .plan_policies import require_current_payment_workflow
+        require_current_payment_workflow(contribution.scheme_account)
+        if contribution.gateway_mode != GatewayMode.LIVE:
+            raise ValidationError("INR purchase credit requires a Live Razorpay capture.")
+        if contribution.status not in {Contribution.Status.PENDING, Contribution.Status.PAID}:
+            raise ValidationError("This INR contribution requires manual reconciliation.")
+        inspection = gateway.verify_captured_payment(order_id=contribution.gateway_order_id,
+            payment_id=payment_id, signature=signature, expected_amount=contribution.amount)
+        if inspection.payment_id != payment_id:
+            raise ValidationError("The inspected payment does not match the callback.")
+        return confirm_api_principal(contribution_id=contribution.pk, inspection=inspection,
+            observed_at=timezone.now(), signature=signature)
     if contribution.status in SUCCESSFUL_PAYMENT_STATUSES:
         if contribution.gateway_reference != payment_id:
             raise ValidationError("This contribution has already been confirmed.")
@@ -2146,8 +2160,25 @@ def _classify_webhook_recovery(*, event, contribution, inspection):
             "No mode-matched local contribution exists for this Razorpay order.",
         )
     if contribution.scheme_account.savings_mode == SchemeAccount.SavingsMode.INR_CREDIT:
-        return ("MANUAL_REVIEW_REQUIRED",
-            "INR API-recovery principal evidence is not integrated; retain the source for reconciliation.")
+        from .inr_api_payments import validate_inspection
+        from .inr_selectors import validate_inr_contract, validate_principal_receipt
+        from .plan_policies import require_current_payment_workflow
+        try:
+            if event is None or event.contribution_id not in (None, contribution.pk):
+                raise ValidationError("Capture event is linked to a different contribution.")
+            require_current_payment_workflow(contribution.scheme_account)
+            validate_inr_contract(contribution.scheme_account)
+            validate_inspection(contribution, inspection)
+            receipt = getattr(contribution, "inr_principal_receipt", None)
+            if receipt:
+                validate_principal_receipt(receipt)
+            elif (contribution.scheme_account.inr_settlements.exists()
+                  or contribution.scheme_account.status not in {"ACTIVE", "REDEMPTION_ELIGIBLE", "CLOSURE_PENDING"}):
+                raise ValidationError("Late funds require disposition review.")
+        except ValidationError:
+            return ("MANUAL_REVIEW_REQUIRED", "INR contract, runtime or principal evidence requires reconciliation.")
+    if event is None or inspection is None:
+        return ("MANUAL_REVIEW_REQUIRED", "Matching provider evidence is required.")
     expected_amount = int(contribution.amount * 100)
     if (
         inspection.payment_id != event.gateway_reference
@@ -2268,6 +2299,7 @@ def reconcile_razorpay_webhook(
         contribution=contribution,
         inspection=inspection,
     )
+    observed_at = timezone.now()
     snapshot = _payment_inspection_snapshot(inspection)
     attempt_outcome = {
         "ELIGIBLE_FOR_RECOVERY": WebhookProcessingAttempt.Outcome.ELIGIBLE_FOR_RECOVERY,
@@ -2310,7 +2342,12 @@ def reconcile_razorpay_webhook(
             raise ValidationError(
                 "The webhook or contribution changed during recovery; inspect it again."
             )
-        if locked_outcome == "ELIGIBLE_FOR_RECOVERY":
+        if locked_contribution.scheme_account.savings_mode == SchemeAccount.SavingsMode.INR_CREDIT:
+            from .inr_api_payments import confirm_api_principal
+            locked_contribution = confirm_api_principal(contribution_id=locked_contribution.pk,
+                inspection=inspection, observed_at=observed_at, actor=performed_by,
+                event=locked_event, reason=normalized_reason)
+        elif locked_outcome == "ELIGIBLE_FOR_RECOVERY":
             locked_contribution = confirm_contribution(
                 contribution_id=locked_contribution.pk,
                 payment_gateway="razorpay",

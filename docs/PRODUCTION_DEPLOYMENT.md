@@ -7,6 +7,21 @@ explicit Razorpay Test/Live modes, and manually published Scheme Rate build. Dev
 
 ## Production-readiness boundary
 
+### INR API capture evidence (0044; not activated)
+
+`schemes.0044_inr_api_capture_evidence` adds immutable minimal authenticated API
+capture observations and a third exclusive principal source. No historical receipts,
+amounts, dates or signed timing are backfilled. Callback and owner recovery are
+service-level integrations behind unchanged runtime gates; keep configured plans
+disabled. This is not an instruction to deploy or activate INR offers.
+
+Reverse migration refuses retained API observations before changing the schema.
+Use compatible forward recovery; never delete evidence or run older code unable to
+read API-backed principal. In the separately approved exact-image rehearsal, verify
+`check_inr_principal` and the existing financial checks, callback/recovery atomicity,
+signed-timing separation and original-source refund proofs. No provider refund API,
+automatic recovery task or new owner recovery interface is introduced.
+
 ### Optional online request evidence (0043; not activated)
 
 `schemes.0043_optional_payment_order_evidence` adds immutable optional order intents

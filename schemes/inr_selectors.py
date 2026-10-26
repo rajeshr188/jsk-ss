@@ -16,14 +16,46 @@ def validate_inr_contract(account):
     validate_independent_account_terms(account)
 
 
+def validate_api_capture(evidence):
+    from .payments import RAZORPAY_ID_PATTERN
+    c = evidence.contribution
+    validate_inr_contract(c.scheme_account)
+    if (c.payment_channel != "RAZORPAY" or c.payment_gateway != "razorpay" or c.gateway_mode != "live"
+            or c.status != "PAID" or not c.paid_at
+            or evidence.payment_id != c.gateway_reference or evidence.order_id != c.gateway_order_id
+            or not evidence.payment_id.startswith("pay_") or not RAZORPAY_ID_PATTERN.fullmatch(evidence.payment_id)
+            or not evidence.order_id.startswith("order_") or not RAZORPAY_ID_PATTERN.fullmatch(evidence.order_id)
+            or type(evidence.amount_subunits) is not int or evidence.amount_subunits != c.amount * 100
+            or evidence.gateway_mode != "live" or evidence.currency != "INR"
+            or evidence.status != "captured" or evidence.captured is not True
+            or not evidence.observed_at or timezone.is_naive(evidence.observed_at)
+            or evidence.observed_at < c.created_at or evidence.observed_at > timezone.now()
+            or not evidence.reason.strip() or not evidence.actor_label.strip()):
+        raise ValidationError("A matching authenticated live API capture observation is required.")
+    if evidence.source == "CALLBACK":
+        if evidence.actor_id or evidence.recovery_event_id or evidence.actor_label != "system:razorpay-callback":
+            raise ValidationError("Callback evidence must retain system provenance.")
+    elif evidence.source == "OWNER_RECOVERY":
+        e = evidence.recovery_event
+        if (not evidence.actor_id or not e or e.gateway != "razorpay" or e.gateway_mode != "live"
+                or e.event_type != "payment.captured" or e.gateway_reference != evidence.payment_id
+                or e.gateway_order_id != evidence.order_id or e.contribution_id not in (None, c.pk)):
+            raise ValidationError("Owner recovery must retain its matching capture event and actor.")
+    else:
+        raise ValidationError("Unsupported API evidence source.")
+
+
 def validate_principal_receipt(receipt):
     account = receipt.scheme_account
     contribution = receipt.contribution
     validate_inr_contract(account)
-    if receipt.recorded_by_id is None and (
-        receipt.actor_label != "system:razorpay-capture" or receipt.cash_receipt_id or not receipt.webhook_event_id
+    if sum(bool(x) for x in (receipt.cash_receipt_id, receipt.webhook_event_id, receipt.api_capture_id)) != 1:
+        raise ValidationError("Exactly one verified principal source is required.")
+    if receipt.recorded_by_id is None and not (
+        (receipt.webhook_event_id and receipt.actor_label == "system:razorpay-capture")
+        or (receipt.api_capture_id and receipt.actor_label == "system:razorpay-callback")
     ):
-        raise ValidationError("System principal must retain its captured-webhook source and actor label.")
+        raise ValidationError("System principal must retain its verified source and actor label.")
     if (receipt.configuration_id != account.configuration_snapshot_id
             or contribution.scheme_account_id != account.pk
             or receipt.amount != contribution.amount
@@ -54,6 +86,12 @@ def validate_principal_receipt(receipt):
                 or len(event.payload_sha256) != 64
                 or any(char not in "0123456789abcdefABCDEF" for char in event.payload_sha256)):
             raise ValidationError("A processed matching live capture is required; test/mock payments do not create principal.")
+    elif receipt.api_capture_id:
+        evidence = receipt.api_capture
+        validate_api_capture(evidence)
+        if (evidence.contribution_id != contribution.pk or evidence.actor_id != receipt.recorded_by_id
+                or evidence.actor_label != receipt.actor_label):
+            raise ValidationError("Principal must retain its API source provenance.")
     else:
         raise ValidationError("Exactly one verified principal source is required.")
 
@@ -93,7 +131,7 @@ def get_inr_principal_summary(account):
     errors = 0
     receipts = InrPrincipalReceipt.objects.filter(scheme_account=account).select_related(
         "scheme_account__configuration_snapshot", "scheme_account__plan_revision", "configuration",
-        "contribution", "cash_receipt", "webhook_event", "correction__cash_reversal")
+        "contribution", "cash_receipt", "webhook_event", "api_capture", "correction__cash_reversal")
     for receipt in receipts:
         received += receipt.amount
         correction = getattr(receipt, "correction", None)

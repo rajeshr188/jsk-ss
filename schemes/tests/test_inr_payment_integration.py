@@ -187,7 +187,7 @@ class InrPaymentIntegrationTests(TestCase):
         contribution, _, _ = online(self.account())
         outcome, reason = _classify_webhook_recovery(event=None, contribution=contribution, inspection=None)
         self.assertEqual(outcome, "MANUAL_REVIEW_REQUIRED")
-        self.assertIn("not integrated", reason)
+        self.assertIn("reconciliation", reason)
 
     def test_database_rejects_unattributed_cash_and_wrong_system_label(self):
         _, cash = self.cash(self.account())
