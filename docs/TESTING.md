@@ -1,5 +1,46 @@
 # Testing
 
+## Independent INR disposition and benefit integration (26 October 2026; no migration)
+
+`test_independent_inr_settlement` exercises real request/review, source attribution,
+eligibility, retained award, net-invoice proposal, actual jewellery/refund fulfilment,
+completion and linked full-return services on synthetic future agreements. Only
+future readiness and provider I/O are simulated; no production gate is opened.
+
+The five approved families are covered with both INR purchase bonus and VA discount.
+Coverage also includes count/anytime without benefits, early full-principal refunds,
+calendar/anniversary benefit misses without principal forfeiture, existing award reuse,
+mixed cash/live source-first refunds, refund-first ordering, external invoice top-ups,
+insufficient invoice/net mismatch refusal, stale sources, owner/token/expiry checks and
+real gate refusal on proposal/fulfilment/completion/correction. Missing benefit invoice
+evidence prevents closure and fails INR/closure diagnostics. Injected failures after
+actual award/proposal, handover/invoice and return/reversal writes prove atomic rollback.
+Concurrent proposal, handover, completion and full-return retries each retain one lifecycle.
+Voids retain unconsumed rights; no automatic replacement or benefit re-spending is allowed.
+
+The final focused run passed **15 tests in 227.632s**. Earlier runs exposed a synthetic
+online-source fixture that omitted durable optional-order evidence, then a fixture clock
+which read a capture as being in the future. The fixture now uses actual durable order
+and capture services with consistent timestamps; financial validation was not weakened.
+
+The seven-module regression run executed **115 tests in 795.232s**: 110 passed and five
+errored. It loaded the earlier capture fixture before its correction (one error). Four
+later benefit concurrency tests encountered missing tables because the existing INR
+correction reverse-migration test stopped at the intentional 0040 refusal without
+restoring later migrations. That test now restores captured leaf migrations immediately
+and registers cleanup. No application migration or financial rule was changed for this
+test-isolation repair. The subsequent combined run passed **20 tests in 275.350s**:
+all 15 new integration tests, the repaired migration test, and the four affected
+benefit concurrency tests, with the migration test preceding those benefit tests.
+The complete 115-test group was not rerun after these test-only repairs; full CI remains
+pending. The other 110 tests in that group passed, including independent metal and
+the remaining original INR settlement/correction/benefit regressions.
+
+Django system checks, migration-drift checks and whitespace checks pass. Only unique
+disposable localhost PostgreSQL databases are used; the normal local and production
+databases are untouched. Full normal CI and coherent builder release acceptance remain
+pending; this checkpoint does not activate owner/public INR offers.
+
 ## Independent metal settlement integration (26 October 2026; no migration)
 
 `test_independent_metal_settlement` exercises real closure request/review, independent

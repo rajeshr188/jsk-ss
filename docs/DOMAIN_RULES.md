@@ -664,8 +664,18 @@ preferences do not become fixed, and no old agreement receives a configuration i
   cannot remove principal. Complete return requires linked customer/invoice/time evidence
   and reverses consumed benefit with principal atomically, leaving the account contained.
   Prior returned dispositions are not automatically spendable or replacement-ready.
-  Independent INR orchestration, replacement handling and lifecycle acceptance remain
-  required before release; operational gates stay closed. No separate public spending path.
+  The gated independent INR entry separately retains the qualified award/right with
+  the first disposition proposal. Its invoice/refund split uses the invoice after the
+  exact benefit; the proposal reduces no liability and claims no actual handover.
+  Jewellery handover and invoice benefit consumption commit atomically. Refund legs
+  require their own completed-source/customer evidence, and every principal leg must
+  be fulfilled before closure. Complete physical returns link principal and consumed
+  benefit reversals atomically; void retains an unconsumed right. Returned/voided
+  independent dispositions cannot yet be replaced or used to re-spend an award.
+  Existing optional/calendar/no-benefit foundation proofs remain readable and separate.
+  Both INR and closure diagnostics validate the linked benefit lifecycle. Replacement
+  handling and lifecycle acceptance remain required before release; operational gates
+  stay closed. No separate public spending path or automated provider refund is added.
 - **PLAN-007:** Redemption is full-only for every new supported configuration, including
   anytime. The server settles the complete available entitlement at internal precision
   and closes that agreement; customer login/other agreements remain. No reusable wallet.

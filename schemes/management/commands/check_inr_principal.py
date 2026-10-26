@@ -31,6 +31,9 @@ class Command(BaseCommand):
                 refund_pending += balance.refund_pending
                 from schemes.inr_correction_selectors import validate_inr_disposition_state
                 validate_inr_disposition_state(account)
+                from schemes.independent_inr_settlement_selectors import validate_independent_inr_benefit
+                for proposal in account.inr_settlements.all():
+                    validate_independent_inr_benefit(proposal, current=True)
             except ValidationError:
                 settlement_errors += 1
         wrong_denomination = InrPrincipalReceipt.objects.exclude(scheme_account__savings_mode="INR_CREDIT").count()

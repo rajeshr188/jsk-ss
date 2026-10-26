@@ -1,5 +1,6 @@
 """Owner-attested full physical returns, not automatic refunds or partial redemption."""
 from datetime import datetime, UTC
+from uuid import uuid5
 
 from django.core import signing
 from django.core.exceptions import ValidationError
@@ -14,6 +15,7 @@ from .inr_settlements import _locked_closure
 from .models import (InrSettlementProposal, InrSettlementResolution, InrFulfilmentReturn,
     SchemeClosureEvent, SchemeClosureRequest, SchemeAccount)
 from .settlement_selectors import proof_digest
+from .independent_inr_settlement_selectors import require_independent_inr_gate, validate_independent_inr_benefit
 
 SALT = "inr-full-disposition-resolution-v1"
 
@@ -22,10 +24,12 @@ def _locked(proposal_id, actor):
     target = InrSettlementProposal.objects.get(pk=proposal_id)
     account, request, actor = _locked_closure(target.closure_id, actor)
     proposal = InrSettlementProposal.objects.select_for_update().get(pk=proposal_id)
+    require_independent_inr_gate(proposal)
     return account, request, actor, proposal
 
 
 def _evidence(account, request, proposal, kind, returns):
+    validate_independent_inr_benefit(proposal, current=True)
     validate_inr_disposition_state(account)
     sequence = validate_closure_history(request)
     history = validate_inr_history(account)
@@ -98,6 +102,7 @@ def resolve_inr_settlement(*, proposal_id, actor, kind, return_evidence, preview
         _matching(existing, dict(proposal_id=p.pk, kind=kind, evidence_digest=proof_digest(evidence)))
         _matching(existing.event, dict(actor_id=actor.pk, reason=reason, authorization_reference=authorization))
         validate_inr_resolution(existing)
+        validate_independent_inr_benefit(p)
         return existing
     try:
         signing.loads(preview_token, salt=SALT, max_age=600)
@@ -108,7 +113,7 @@ def resolve_inr_settlement(*, proposal_id, actor, kind, return_evidence, preview
     event = SchemeClosureEvent(request=request, sequence=evidence["sequence"] + 1,
         action="REVERSE" if hasattr(p, "completion") else "NOTE", resulting_status="ACCEPTED",
         actor=actor, actor_label=_actor_label(actor), reason=reason, authorization_reference=authorization,
-        idempotency_key=key)
+        idempotency_key=key, created_at=timezone.now())
     event.full_clean()
     event.save()
     resolution = InrSettlementResolution.objects.create(proposal=p, event=event, kind=kind,
@@ -120,6 +125,17 @@ def resolve_inr_settlement(*, proposal_id, actor, kind, return_evidence, preview
     InrSettlementProposal.objects.filter(pk=p.pk).update(retired=True)
     SchemeAccount.objects.filter(pk=account.pk).update(status="CLOSURE_PENDING", updated_at=timezone.now())
     SchemeClosureRequest.objects.filter(pk=request.pk).update(status="ACCEPTED")
+    if "independent" in p.evidence:
+        from .models import BenefitInvoiceFulfilment
+        from .benefit_fulfilments import reverse_benefit_fulfilment
+        benefit = BenefitInvoiceFulfilment.objects.filter(inr_fulfilment__proposal=p).first()
+        if benefit:
+            returned = resolution.returns.get(fulfilment_id=benefit.inr_fulfilment_id)
+            reverse_benefit_fulfilment(account_id=account.pk, fulfilment_id=benefit.pk, actor=actor,
+                reason=reason, idempotency_key=uuid5(key, "benefit-return"), inr_return_id=returned.pk,
+                invoice_correction_reference=returned.invoice_correction_reference,
+                customer_confirmation=returned.customer_confirmation, returned_at=returned.returned_at)
     account.refresh_from_db()
     validate_inr_disposition_state(account)
+    validate_independent_inr_benefit(InrSettlementProposal.objects.get(pk=p.pk), current=True)
     return resolution

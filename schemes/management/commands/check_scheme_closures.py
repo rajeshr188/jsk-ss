@@ -3,7 +3,7 @@ from django.core.exceptions import ValidationError
 from django.core.management.base import BaseCommand, CommandError
 
 from schemes.closure_selectors import closure_requests, closure_payment_review, validate_closure_history
-from schemes.models import SchemeAccount, ConfiguredSettlement, Redemption
+from schemes.models import SchemeAccount, ConfiguredSettlement, InrSettlementProposal, Redemption
 from schemes.settlement_selectors import validate_configured_settlement
 
 
@@ -59,6 +59,12 @@ class Command(BaseCommand):
                 errors += 1
         for account in SchemeAccount.objects.filter(status="CANCELLED").iterator(chunk_size=100):
             if account.closure_requests.filter(status="CANCELLED", events__action="CANCEL").count() != 1:
+                errors += 1
+        from schemes.independent_inr_settlement_selectors import validate_independent_inr_benefit
+        for proposal in InrSettlementProposal.objects.all().iterator(chunk_size=100):
+            try:
+                validate_independent_inr_benefit(proposal, current=True)
+            except ValidationError:
                 errors += 1
         self.stdout.write(f"scheme_closures status={'error' if errors else 'ok'} release={settings.APP_RELEASE} pending={pending} accepted={accepted} withdrawn_or_rejected={terminal} cancelled_unused={cancelled} integrity_errors={errors} settled={settled} configured_intake_enabled={str(settings.CONFIGURED_PLANS_ENABLED).lower()}")
         if errors:

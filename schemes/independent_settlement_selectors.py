@@ -1,4 +1,4 @@
-"""First independent exact-grade closure proof; no activation or INR conversion."""
+"""Shared closure qualification and first exact-grade proof; never activation."""
 import json
 from dataclasses import asdict
 from decimal import Decimal
@@ -17,6 +17,18 @@ from .settlement_selectors import proof_digest
 
 
 def independent_closure_proof(account, closure, benefit_invoice):
+    result = closure_qualification_proof(account, closure)
+    evidence = result["award_evidence"]
+    if evidence:
+        if evidence["kind"] != "VA_DISCOUNT":
+            raise ValidationError("Exact-grade settlement supports only the contracted VA discount, not INR bonus conversion.")
+        result["invoice"] = normalize_invoice(benefit_invoice, evidence)
+    elif benefit_invoice is not None:
+        raise ValidationError("No benefit is qualified for invoice consumption on this closure.")
+    return result
+
+
+def closure_qualification_proof(account, closure):
     """All current evidence must be re-read under the agreement lock on apply."""
     progress = get_closure_eligibility(closure)
     if progress.state not in ("ELIGIBLE", "COLLECTING", "WAITING_DURATION", "WAITING_PERIOD_END", "DISCONTINUATION_REVIEW"):
@@ -25,7 +37,7 @@ def independent_closure_proof(account, closure, benefit_invoice):
     if qualification.state in ("REVIEW", "HISTORY_REVIEW"):
         raise ValidationError("Benefit history requires review; do not discard an earned right.")
     award = SchemeBenefitAward.objects.filter(scheme_account=account).first()
-    evidence = invoice = None
+    evidence = None
     if award:
         require_unchanged_award_sources(award)
         if not qualification.qualification_met or hasattr(award, "invoice_fulfilment"):
@@ -33,29 +45,34 @@ def independent_closure_proof(account, closure, benefit_invoice):
         evidence = award.evidence
     elif qualification.qualification_met:
         evidence = benefit_award_evidence(account, closure=closure)
-    if evidence:
-        if evidence["kind"] != "VA_DISCOUNT":
-            raise ValidationError("Exact-grade settlement supports only the contracted VA discount, not INR bonus conversion.")
-        invoice = normalize_invoice(benefit_invoice, evidence)
-    elif benefit_invoice is not None:
-        raise ValidationError("No benefit is qualified for invoice consumption on this closure.")
     result = dict(version=1, progress=asdict(progress), qualification=asdict(qualification),
         sources=benefit_source_snapshot(account), award_id=award.pk if award else None,
-        award_evidence=evidence, invoice=invoice)
+        award_evidence=evidence, invoice=None)
     return json.loads(json.dumps(result, cls=DjangoJSONEncoder))
 
 
-def normalize_invoice(invoice, award_evidence):
+def normalize_invoice(invoice, award_evidence, *, require_receipt=True):
     fields = {"invoice_before_benefit", "eligible_charges", "invoice_evidence_reference",
               "eligible_charge_reference", "customer_receipt_reference"}
+    if not require_receipt:
+        fields.remove("customer_receipt_reference")
     if not isinstance(invoice, dict) or set(invoice) != fields:
-        raise ValidationError("Supply the complete actual invoice, eligible charges and customer receipt evidence.")
+        message = "Supply the complete invoice and eligible-charge evidence."
+        if require_receipt:
+            message += " Actual customer receipt evidence is also required."
+        raise ValidationError(message)
     award = SimpleNamespace(kind=award_evidence["kind"], percentage=Decimal(award_evidence["percentage"]),
-        cap_inr=Decimal(award_evidence["cap_inr"]), amount=None)
+        cap_inr=Decimal(award_evidence["cap_inr"]),
+        amount=Decimal(award_evidence["amount"]) if award_evidence["amount"] is not None else None)
+    if award.kind != "VA_DISCOUNT" and invoice["eligible_charge_reference"] != "":
+        raise ValidationError("Purchase bonuses do not have eligible-charge evidence.")
     amount = invoice_benefit_amount(award, invoice["invoice_before_benefit"], invoice["eligible_charges"])
     return dict(invoice_before_benefit=format(invoice["invoice_before_benefit"], ".2f"),
-        eligible_charges=format(invoice["eligible_charges"], ".2f"), benefit_amount=str(amount),
-        **{field: _text(invoice[field], 254, field) for field in fields - {"invoice_before_benefit", "eligible_charges"}})
+        eligible_charges=format(invoice["eligible_charges"], ".2f") if invoice["eligible_charges"] is not None else None,
+        benefit_amount=str(amount),
+        **{field: _text(invoice[field], 254, field,
+            required=field != "eligible_charge_reference" or award.kind == "VA_DISCOUNT")
+            for field in fields - {"invoice_before_benefit", "eligible_charges"}})
 
 
 def invoice_inputs(proof):
@@ -63,8 +80,8 @@ def invoice_inputs(proof):
     if proof is None:
         return None
     return dict(invoice_before_benefit=Decimal(proof["invoice_before_benefit"]),
-        eligible_charges=Decimal(proof["eligible_charges"]),
-        **{name: proof[name] for name in ("invoice_evidence_reference", "eligible_charge_reference", "customer_receipt_reference")})
+        eligible_charges=Decimal(proof["eligible_charges"]) if proof["eligible_charges"] is not None else None,
+        **{name: proof[name] for name in ("invoice_evidence_reference", "eligible_charge_reference", "customer_receipt_reference") if name in proof})
 
 
 def validate_independent_settlement_benefit(settlement):

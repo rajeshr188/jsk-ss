@@ -2,6 +2,33 @@
 
 ## Current milestone
 
+**26 October 2026 - gated independent INR final disposition and benefit integration.**
+The first independent INR disposition now uses closure-scoped eligibility and benefit
+qualification across the five approved families. A signed owner preview retains the
+net invoice and original-source refund split. Proposal creation can retain/reuse the
+qualified immutable award, but does not reduce principal liability or claim handover.
+Actual jewellery fulfilment and invoice-benefit consumption commit atomically; each
+manual refund needs its own completed-source/customer receipt evidence. Closure waits
+for every principal leg. Early exit and missed unearned benefits cannot forfeit principal.
+
+Complete physical-return correction links principal and benefit reversals atomically,
+retains original evidence and contains the agreement. Voiding an unfulfilled proposal
+retains the unconsumed right. Neither path authorizes automatic replacement or benefit
+re-spending. Existing optional/calendar/no-benefit foundation proofs remain separate;
+the new independent entry and subsequent mutations require operational readiness.
+INR and closure diagnostics detect missing linked benefit evidence.
+
+Verification is recorded in TESTING.md. This is service integration on disposable
+future contracts, not owner UI, publication or production acceptance. No new migration,
+normal-database mutation, activation, push or deployment is included. Existing unrelated
+production notes and dropdown styling are preserved outside this checkpoint.
+
+Next in order: replacement-disposition handling after void/full return, preserving
+customer authorization, original-source refund capacity and retained benefit rights.
+Then complete statements/privacy, offers/agreements/reminders/owner presentation,
+full lifecycle/provider-exception acceptance, normal CI and exact-image release rehearsal.
+The coherent builder is not finished; all operational/publication gates remain closed.
+
 **26 October 2026 - gated independent metal settlement and benefit integration.**
 The first exact-grade full disposition now evaluates the accepted independent contract
 through a closure-specific read. Public progress still reports closure pending; no
