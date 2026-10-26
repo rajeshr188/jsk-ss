@@ -2,6 +2,33 @@
 
 ## Current milestone
 
+**26 October 2026 - unawarded benefit qualification and calculations implemented locally.**
+Schema-2 progress now evaluates the accepted benefit policy separately from principal
+eligibility. Required schedules must qualify even when principal is duration-only.
+Ordinary replacements preserve benefits only where the contract says so; explicit
+loss-of-unearned-benefit rules inspect original periods and acknowledged compensation.
+Unresolved timing/outages remain review, not automatic customer lateness. Compensation
+requires a real qualifying payment; count completion with an unpaid specifically
+compensating benefit window stays review without demanding an extra contribution.
+
+INR purchase-bonus previews use verified net qualifying source receipts, not metal,
+top-ups or legacy CASH bonuses. VA qualification has no monetary value until evidenced
+eligible invoice charges are supplied. Pure calculations apply explicit percentage/
+INR cap and once-to-paise ROUND_HALF_UP, returning version/rounding metadata for future
+retained records. Invalid types, precision, ranges and invoice bases are rejected.
+Current-offer edits cannot replace the agreement's pinned configuration/revision.
+
+This is a non-mutating qualification/calculation checkpoint, not an earned-benefit
+ledger. It cannot create or erase awards, consume an invoice, refund funds or authorize
+settlement. Accepted/closed histories require lifecycle review. No runtime activation
+or model/publication gate is removed. Verification is recorded in TESTING.md; tests
+use unique disposable localhost PostgreSQL databases, not the normal database.
+
+Next: retained benefit awards, one-time evidenced invoice fulfilment and append-only
+corrections/reversal, then complete settlement/presentation/reminder/privacy integration
+and lifecycle acceptance. The coherent builder release remains unfinished. No migration,
+push or deployment; unrelated production notes, UI edits and worktrees are preserved.
+
 **26 October 2026 - independent eligibility progress implemented locally (no migration).**
 All five approved schema-2 families now have a shared current-evidence selector.
 Count-only completes on the final verified and conclusively attributed payment;

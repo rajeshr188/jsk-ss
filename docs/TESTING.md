@@ -1,5 +1,29 @@
 # Testing
 
+## Purchase-benefit qualification and arithmetic (26 October 2026; no migration)
+
+`test_benefit_qualification` covers the five approved families across INR purchase
+bonus, INR VA discount and exact-metal VA discount (15 matrix cases). Actual verified
+cash/capture fixtures exercise required counts versus duration, preserve-on-completion
+versus disqualify-unearned, calendar/anniversary misses, outage review, genuine paid
+compensation, source corrections, missing timing, pending payments and source drift.
+Completion of the overall count with an unpaid compensating benefit window is held
+for review, never a request for extra payment or an automatic benefit grant.
+
+Pure calculations test caps, half-paise rounding, zero/max bases, low ambient Decimal
+precision, invalid types/non-finite/negative/excess-precision inputs and eligible
+charges exceeding an invoice. No real percentages/caps are set by test examples.
+Read tests retain the accepted configuration despite a changed current offer, issue
+no SQL writes, preserve source history, avoid treating accepted/closed agreements as
+fresh awards and retain operational gates with the flag off/on. These are unawarded
+progress/calculation tests, not evidence that award/fulfilment/reversal is complete.
+
+The combined benefit, independent eligibility/policy, owner-review/outage and legacy
+cash-bonus regression run passed **70 tests in 288.422s**. The final focused run passed
+**15 tests in 56.990s**, including exhausted replacement-window review. Both used unique
+disposable localhost PostgreSQL databases. Django system checks and migration-consistency
+checks passed; no normal-database migration or production change was performed.
+
 ## Independent eligibility progress (26 October 2026; no migration)
 
 `test_independent_eligibility` exercises all five families in INR/exact-metal variants

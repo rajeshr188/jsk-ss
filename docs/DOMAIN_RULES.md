@@ -612,6 +612,26 @@ preferences do not become fixed, and no old agreement receives a configuration i
   Missing payments may change completion or disqualify a specified unearned benefit,
   never erase paid entitlement. Showroom/provider failures require explicit treatment;
   delayed confirmation is not automatically customer lateness.
+  Schema-2 benefit qualification is a current, unawarded projection of the pinned
+  configuration/revision, reconciled principal and required schedule. Normal principal
+  eligibility alone does not satisfy REQUIRED_SCHEDULE. PRESERVE_ON_COMPLETION allows
+  agreed ordinary replacements; DISQUALIFY_UNEARNED checks original required windows,
+  following only explicitly acknowledged outage-compensation links. An unresolved
+  incident produces review before any missed-payment verdict. Extra windows are not
+  free payments. If the count is complete but a specifically compensating benefit
+  window is unpaid, retain review rather than demand an extra payment or invent credit.
+  A missed benefit does not reduce principal or move a duration-only principal date.
+  Purchase-bonus previews use only uncorrected, verified qualifying INR receipts;
+  they never value metal, include invoice top-ups, compound or call legacy CASH bonus
+  logic. VA qualification supplies no monetary amount without eligible invoice-charge
+  evidence. Pure arithmetic caps the explicit percentage calculation in INR and rounds
+  once to paise with ROUND_HALF_UP; calculation version and rounding identifier are
+  returned for future retained award/fulfilment evidence. Inputs reject floats, invalid
+  precision, negatives and non-finite values; eligible charges cannot exceed the invoice.
+  These reads/calculations create no earned award, discount consumption or financial
+  liability. Closed/accepted-disposition histories require retained lifecycle review;
+  a later changed projection must never erase an already recorded benefit. Award,
+  one-time invoice fulfilment and append-only correction remain separate gated work.
 - **PLAN-007:** Redemption is full-only for every new supported configuration, including
   anytime. The server settles the complete available entitlement at internal precision
   and closes that agreement; customer login/other agreements remain. No reusable wallet.
