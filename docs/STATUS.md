@@ -2,6 +2,28 @@
 
 ## Current milestone
 
+**26 October 2026 - gated replacement dispositions with unconsumed rights.**
+The next ordered recovery step permits a linked independent replacement after all
+predecessors have an evidenced void/full return, provided no benefit invoice has ever
+been consumed. This includes principal-only INR/metal returns and an unconsumed INR
+award retained through voids or refund-only returns. Original sources, qualification
+and normal/early basis are retained; passing time does not re-earn a benefit during
+correction. New previews, fresh customer authorization and new invoice references
+are required. Agreements remain contained against contributions throughout recovery.
+
+The chain preserves original proposals, redemptions, returns and any award. Existing
+original-source refund-capacity checks apply cumulatively; receiving refunded money
+back does not reset an online capture's capacity. Diagnostics validate predecessor
+links and retained qualification. Concurrent retries cannot create two successors.
+
+Consumed-and-returned benefits are still deliberately held: their existing one-invoice
+invariant is not removed by this checkpoint. Next is explicit, append-oriented benefit
+reapplication authorization/history and its atomic replacement integration, followed
+by presentation/statements/privacy/reminders and full lifecycle/CI/release acceptance.
+The complete builder is not activated. No new migration, normal-database change,
+push or deployment is included; unrelated production notes/UI edits are preserved.
+Verification and limitations are recorded in TESTING.md and MVP_PLAN.md.
+
 **26 October 2026 - gated independent INR final disposition and benefit integration.**
 The first independent INR disposition now uses closure-scoped eligibility and benefit
 qualification across the five approved families. A signed owner preview retains the

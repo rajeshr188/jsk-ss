@@ -1,4 +1,4 @@
-"""Shared closure qualification and first exact-grade proof; never activation."""
+"""Shared closure qualification and exact-grade proof; never activation."""
 import json
 from dataclasses import asdict
 from decimal import Decimal
@@ -30,6 +30,10 @@ def independent_closure_proof(account, closure, benefit_invoice):
 
 def closure_qualification_proof(account, closure):
     """All current evidence must be re-read under the agreement lock on apply."""
+    from .replacement_settlement_selectors import replacement_qualification_proof
+    replacement = replacement_qualification_proof(account, closure)
+    if replacement is not None:
+        return replacement
     progress = get_closure_eligibility(closure)
     if progress.state not in ("ELIGIBLE", "COLLECTING", "WAITING_DURATION", "WAITING_PERIOD_END", "DISCONTINUATION_REVIEW"):
         raise ValidationError("Resolve principal, payment and outage evidence before full closure.")
@@ -95,6 +99,8 @@ def validate_independent_settlement_benefit(settlement):
     if proof is None:
         return
     try:
+        from .replacement_settlement_selectors import disposition_history, validate_replacement_links
+        validate_replacement_links(disposition_history(settlement.redemption.scheme_account))
         expected = proof["award_evidence"]
         award = SchemeBenefitAward.objects.filter(scheme_account=settlement.redemption.scheme_account).first()
         if expected is None:

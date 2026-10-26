@@ -310,8 +310,9 @@ class IndependentInrSettlementTests(InrClosureFixture, TestCase):
         self.assertTrue(SchemeBenefitAward.objects.filter(scheme_account=a).exists())
         self.assertFalse(BenefitInvoiceFulfilment.objects.exists())
         self.assertEqual(inr_settlement_balance(a).outstanding, Decimal("500"))
-        with self.assertRaises(ValidationError):
-            self.prepare(r, invoice=self.invoice())
+        _, token = self.prepare(r, invoice=self.invoice())
+        with self.assertRaises(ValidationError):  # Prior authorization cannot be recycled.
+            self.propose(self.proposal_values(r, token))
 
     def test_authority_expiry_stale_sources_and_real_gate_fail_closed(self):
         a = self.benefit_account()

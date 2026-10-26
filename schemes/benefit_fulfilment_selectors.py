@@ -111,9 +111,17 @@ def validate_benefit_fulfilment(row, *, current=False):
     if row.inr_fulfilment_id:
         from .inr_settlement_selectors import inr_payment_source_evidence
         p = row.inr_fulfilment.proposal
+        if "independent" in p.evidence:
+            from .inr_correction_selectors import validate_inr_history
+            history = validate_inr_history(account)
+        else:
+            # Preserve the pre-integration proof's single-proposal boundary.
+            history = list(account.inr_settlements.order_by("pk"))
         if (p.retired or hasattr(p, "resolution") or hasattr(row.inr_fulfilment, "physical_return")
                 or p.evidence["sources"] != inr_payment_source_evidence(account)
-                or account.inr_settlements.exclude(pk=p.pk).exists()):
+                or not history or history[-1].pk != p.pk
+                or any(not prior.retired for prior in history[:-1])
+                or ("independent" not in p.evidence and len(history) != 1)):
             raise ValidationError("Reconcile the current full INR disposition before benefit fulfilment.")
         completed = hasattr(p, "completion")
         if completed:

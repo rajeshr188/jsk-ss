@@ -36,14 +36,17 @@ def require_independent_inr_gate(proposal):
 def validate_independent_inr_benefit(proposal, *, current=False):
     """Validate after atomic orchestration, not between construction of linked rows.
 
-    Old foundation proofs remain readable. This is not permission to replace a
-    returned disposition, award a second benefit or authorize payment initiation.
+    Old foundation proofs remain readable. Only the gated replacement service can
+    authorize a successor; this read never grants a second benefit or new payment.
     """
     proof = proposal.evidence.get("independent")
     if proof is None:
         return
     try:
         account = proposal.scheme_account
+        from .replacement_settlement_selectors import disposition_history, validate_replacement_links
+        history = disposition_history(account)
+        validate_replacement_links(history)
         if current and proof["sources"] != benefit_source_snapshot(account):
             raise ValueError
         award = SchemeBenefitAward.objects.filter(scheme_account=account).first()
@@ -64,7 +67,13 @@ def validate_independent_inr_benefit(proposal, *, current=False):
         f = getattr(award, "invoice_fulfilment", None)
         if handover is None:
             if f is not None:
-                raise ValueError
+                # A retired unconsumed proposal may precede the one actual invoice.
+                ids = [p.pk for p in history]
+                if (not proposal.retired or not f.inr_fulfilment_id
+                        or f.inr_fulfilment.proposal_id not in ids
+                        or ids.index(f.inr_fulfilment.proposal_id) <= ids.index(proposal.pk)):
+                    raise ValueError
+                validate_benefit_fulfilment(f)
             return
         if f is None or f.inr_fulfilment_id != handover.pk:
             raise ValueError

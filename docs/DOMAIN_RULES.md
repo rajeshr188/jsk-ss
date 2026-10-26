@@ -671,7 +671,10 @@ preferences do not become fixed, and no old agreement receives a configuration i
   require their own completed-source/customer evidence, and every principal leg must
   be fulfilled before closure. Complete physical returns link principal and consumed
   benefit reversals atomically; void retains an unconsumed right. Returned/voided
-  independent dispositions cannot yet be replaced or used to re-spend an award.
+  independent dispositions with a consumed benefit cannot yet be replaced or used
+  to re-spend that award. A completed void/full return with no consumed benefit may
+  enter the gated replacement path, retaining original sources, qualification and
+  normal/early basis. An unconsumed award may be reused once, not duplicated.
   Existing optional/calendar/no-benefit foundation proofs remain readable and separate.
   Both INR and closure diagnostics validate the linked benefit lifecycle. Replacement
   handling and lifecycle acceptance remain required before release; operational gates
@@ -743,6 +746,13 @@ preferences do not become fixed, and no old agreement receives a configuration i
   predecessor. Only one current disposition is permitted; the retirement flag is a
   checked projection, not financial source evidence. No partial redemption, staged-return
   operation, replacement-credit wallet or provider refund API is introduced.
+  Independent replacement evidence retains the exact resolved predecessor chain.
+  Original sources/reviews must be unchanged; correction does not reopen contributions
+  or re-earn a previously unearned benefit as dates pass. Fresh customer authorization
+  must not recycle a prior settlement/return authorization; invoice references must
+  be new. Principal-only returns and unconsumed INR rights are supported internally.
+  Any consumed benefit invoice, even with a full reversal, requires explicit future
+  reapplication authorization/history; the current one-invoice invariant still holds.
   Customer returns do not reset original online-payment refund capacity. Retain all
   gross provider refunds across generations; a proposed further refund must fit the
   original captured amount after those refunds. Otherwise hold the disposition for

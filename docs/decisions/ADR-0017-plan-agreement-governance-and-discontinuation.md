@@ -366,6 +366,23 @@ liabilities and cannot be closed by an owner assurance alone.
 Migration reversal is refused once correction/replacement evidence exists. Runtime
 enrolment, payment, statements, privacy disposition and UI acceptance remain separate gates.
 
+**Independent replacement checkpoint (26 October 2026; no migration):** a correction
+generation retains the original disposition's normal/early basis and benefit decision,
+not a newly elapsed eligibility date. This corrects one final settlement; it does not
+restart the agreement or earn a benefit during a closure hold. Verify unchanged source,
+schedule and review evidence, complete predecessor returns/voids, and fresh owner-bound
+preview/customer authorization/new invoice references. Bind each successor to the full
+resolved predecessor chain; preserve source-first refund caps across generations.
+Principal-only INR/metal returns and INR awards that have never been consumed are now
+supported internally behind the unchanged readiness gate. An unconsumed award survives
+void/refund-only returns unchanged and can fund its one actual jewellery invoice.
+
+A consumed-and-returned invoice remains held. Its full reversal does not itself approve
+another application, reset its amount/cap, or erase the award. Separate append-oriented
+reapplication authorization/history and atomic integration are the next dependency;
+do not remove the one-invoice constraint just to pass a replacement. No public workflow
+or production acceptance is supplied by this recovery checkpoint.
+
 The owner may create a validated configuration or reuse an existing approved one,
 then use its immutable version in one or more offered plans. A reusable configuration
 is not a live pointer that can rewrite every plan/agreement using it. Editing means a

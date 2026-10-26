@@ -73,6 +73,9 @@ def settle_configured_agreement(*, request_id, actor, preview_token, invoice_ref
         raise ValidationError("Agreement, payment or review evidence changed. Reload and reconfirm before settling.")
     quantity = Decimal(evidence["quantity"])
     independent = evidence.get("independent")
+    if independent is not None:
+        from .replacement_settlement_selectors import require_fresh_replacement_references
+        require_fresh_replacement_references(account, authorization, invoice)
     award = None
     if independent and independent["award_evidence"]:
         from .benefit_awards import _retain_closure_award

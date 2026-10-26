@@ -102,8 +102,8 @@ def validate_inr_history(account):
         return proposals
     if any("independent" in p.evidence for p in proposals):
         from .inr_settlement_selectors import inr_payment_source_evidence
-        if len(proposals) != 1:
-            raise ValidationError("Independent replacement history is not supported; retain and review the original disposition.")
+        from .replacement_settlement_selectors import validate_replacement_links
+        validate_replacement_links(proposals)
         sources = inr_payment_source_evidence(account)
     else:
         sources = inr_source_evidence(account)

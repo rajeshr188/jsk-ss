@@ -1,5 +1,43 @@
 # Testing
 
+## Independent replacement dispositions (26 October 2026; no migration)
+
+`test_replacement_settlements` exercises actual closure, proposal, handover, refund,
+return and replacement services on disposable future contracts. Readiness/provider
+I/O alone are simulated; original-source validation, eligibility snapshots, customer
+authority and financial mutations remain real. The final focused run, including the
+selector-module rename, passed **14 tests in 127.541s**. Django system checks,
+migration-drift checks and whitespace checks also pass.
+
+The broader six-module regression run passed **101 tests in 675.304s** across
+replacement, independent INR/metal settlement, original INR settlement/correction
+and benefit fulfilment tests. That run started before the final malformed-root
+guard/test and selector rename; the final focused 14-test run verifies those changes.
+This is affected regression coverage, not the full normal CI suite.
+
+Coverage includes multiple INR void generations retaining one unconsumed bonus/VA
+award, refund-only returns before jewellery handover, principal-only returns before
+and after completion, and repeated exact-grade metal full returns/replacements.
+Fresh authorization/invoice references, signed-token expiry, ownership and real gates
+are enforced. Original normal/early qualification is retained across later dates;
+late/new sources, malformed root evidence or changed predecessor links are held.
+Provider refund capacity remains cumulative even after refunded money is received
+back; a full jewellery-only replacement cannot create another principal receipt.
+Injected replacement-insert failure rolls back without damaging the retired original
+or award. Concurrent retries and distinct competing requests yield one successor.
+Consumed/reversed benefits remain held in both denominations; no reapplication is
+implemented or implied by these tests. Diagnostics check the retained chains.
+
+The initial run accidentally discovered an imported collection test class, running
+20 tests (19 passed). One replacement fixture tried a second payment on a plan that
+forbids contributions after anytime eligibility. The fixture now explicitly selects
+the allowed variant; no production restriction was relaxed. Importing the collection
+module instead of its TestCase class keeps focused discovery scoped correctly.
+
+All verification uses unique disposable localhost PostgreSQL databases. No normal
+local/production migration or financial mutation is performed. Operational/publication
+gates stay closed; full normal CI and coherent release acceptance remain pending.
+
 ## Independent INR disposition and benefit integration (26 October 2026; no migration)
 
 `test_independent_inr_settlement` exercises real request/review, source attribution,

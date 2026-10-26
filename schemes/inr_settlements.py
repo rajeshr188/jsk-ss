@@ -43,8 +43,8 @@ def _proposal_evidence(account, request, invoice_payable, *, independent=False, 
         raise ValidationError("Retain the customer's closure authorization.")
     from .inr_correction_selectors import validate_inr_history, require_original_refund_capacity
     history = validate_inr_history(account)
-    if history and (independent or any("independent" in p.evidence for p in history)):
-        raise ValidationError("Independent replacement dispositions require separate review; do not re-spend returned benefits.")
+    if history and not independent and any("independent" in p.evidence for p in history):
+        raise ValidationError("Use the gated independent replacement preview; do not bypass its retained evidence.")
     if any(not p.retired for p in history):
         raise ValidationError("A full disposition already exists; inspect its pending fulfilment instead.")
     proof = independent_inr_proof(account, request, invoice_payable, benefit_invoice) if independent else None
@@ -130,6 +130,9 @@ def propose_inr_settlement(*, request_id, actor, preview_token, invoice_referenc
         benefit_invoice=invoice_inputs(independent["invoice"]) if independent is not None else None)
     if current != evidence:
         raise ValidationError("Financial or closure evidence changed; reload the INR preview.")
+    if independent is not None:
+        from .replacement_settlement_selectors import require_fresh_replacement_references
+        require_fresh_replacement_references(account, authorization, reference)
     if InrSettlementProposal.objects.filter(scheme_account=account, retired=False).exists():
         raise ValidationError("Only one full INR disposition is permitted; corrections require review.")
     if independent and independent["award_evidence"]:
