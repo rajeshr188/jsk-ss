@@ -1,0 +1,17 @@
+{% extends '_base.html' %}
+{% block title %}Recover payment order | Jai Sri Krishna Jewellery{% endblock %}
+{% block content %}
+<div class="page-header"><div><p class="page-eyebrow">Provider reconciliation</p><h1>Recover payment order</h1><p>{{ contribution.scheme_account.scheme_number }}</p></div></div>
+<p>Use the order found in the provider investigation. The server verifies its original request identity, amount, currency and creation time. Recovery retains the original deadline and rate. It does not reopen checkout or confirm payment.</p>
+{% if applied %}<div class="alert alert-success" role="status">Provider order identity recovered. Review provider payment evidence or the expired checkout before allowing a replacement contribution.</div>
+{% else %}
+{% if inspected %}<div class="alert alert-info" role="status">The provider order matches the original request. Confirm within ten minutes. Applying performs a fresh provider inspection.</div>{% endif %}
+<form method="post" class="card card-body" novalidate>{% csrf_token %}{{ form.review_token }}
+{{ form.non_field_errors }}
+{% for field in form.visible_fields %}{% if field.name != 'action' and field.name != 'confirmed' %}<div class="mb-3"><label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}</div>{% endif %}{% endfor %}
+{{ form.action.errors }}
+{% if inspected %}<div class="form-check mb-3">{{ form.confirmed }} <label for="{{ form.confirmed.id_for_label }}">{{ form.confirmed.label }}</label>{{ form.confirmed.errors }}</div>{% endif %}
+<div class="d-flex gap-2"><button class="btn btn-outline-dark" name="action" value="INSPECT">Inspect provider order</button>{% if inspected %}<button class="btn btn-jsk" name="action" value="APPLY">Recover order identity</button>{% endif %}</div></form>
+{% endif %}
+<p class="mt-3"><a href="{% url 'schemes:owner_payment_detail' contribution.pk %}">Return to payment record</a></p>
+{% endblock %}

@@ -30,6 +30,11 @@ The earlier four conversion phases remain complete; this is their approved refin
 
 ## Expired Checkout operations (FW-PAY-008, local candidate)
 
+- [x] Add durable checkout submission/order identity and cross-tab coordination for
+  existing monthly/flexible production agreements, with signed stale-form protection.
+- [x] Retain uncertain create responses and audited exact owner identity recovery;
+  preserve original financial terms and never renew recovered checkout.
+- [ ] Complete new prevention/migration regression and combined release acceptance.
 - [x] Shared expired-attempt queue/count projection and privacy-safe alert counts.
 - [x] Owner exact-payment inspect/confirm with bounded signed review and fresh provider check.
 - [x] Expiry-aware command with exact selection, bounded inspection and backlog/error alerts.

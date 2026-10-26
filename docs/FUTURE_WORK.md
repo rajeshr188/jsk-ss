@@ -321,6 +321,13 @@ outcome by itself. Source: [official HTMX documentation](https://htmx.org/docs/)
   bounded inspection with combined aggregate heartbeat delivery. The timer is
   inspection-only; owner apply still uses the existing audited financial service.
 
+  The 26 October recurrence also requires checkout prevention in this same isolated
+  release: durable submission aliases, signed displayed-history context, one unresolved
+  online attempt per agreement, committed order intent before provider I/O, safe
+  uncertainty holds, and owner/provider-backed identity recovery. Local implementation
+  is present; combined regression, image, rollout and monitoring acceptance remain
+  pending. Recovery alone does not prevent a fresh duplicate checkout.
+
   - [x] All-mode expired-attempt visibility and pagination/count parity, including
     missing provider identity and records beyond the inspection batch.
   - [x] Owner/CSRF/method guards, reason, owner/order/state-bound review and fresh

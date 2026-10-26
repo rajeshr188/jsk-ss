@@ -23,7 +23,7 @@ from schemes.selectors import (
     get_cash_balance, get_expired_pending_checkouts, get_financial_exception_counts,
     get_owner_exception_keys, get_owner_exception_queue,
 )
-from schemes.services import confirm_razorpay_contribution, initiate_razorpay_contribution, reconcile_abandoned_razorpay_contribution
+from schemes.services import confirm_razorpay_contribution, enroll_customer, initiate_contribution, initiate_razorpay_contribution, reconcile_abandoned_razorpay_contribution
 from schemes.tests.test_razorpay import FakeRazorpayGateway, RAZORPAY_SETTINGS, make_account
 
 
@@ -36,11 +36,18 @@ class ExpiredCheckoutTests(TestCase):
         self.gateway = FakeRazorpayGateway()
 
     def payment(self, *, expired=True, mode="test", order=True):
-        c = initiate_razorpay_contribution(scheme_account=self.account, amount=Decimal("5000"), gateway=self.gateway)
+        # Independent historical pending fixtures now need independent agreements;
+        # creation itself is covered by the checkout idempotency suite.
+        account = self.account
+        if Contribution.objects.filter(scheme_account=account, status="PENDING").exists():
+            account = enroll_customer(customer=self.customer, plan=self.account.plan,
+                savings_mode="CASH", start_date=timezone.localdate())
+        c = initiate_contribution(scheme_account=account, amount=Decimal("5000"),
+            payment_gateway="razorpay", gateway_mode=mode)
         Contribution.objects.filter(pk=c.pk).update(
             created_at=timezone.now() - timedelta(hours=2),
             checkout_expires_at=timezone.now() + timedelta(minutes=-10 if expired else 10),
-            gateway_mode=mode, gateway_order_id=c.gateway_order_id if order else None,
+            gateway_mode=mode, gateway_order_id=f"order_test_{c.pk}" if order else None,
         )
         c.refresh_from_db()
         return c

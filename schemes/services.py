@@ -1231,6 +1231,8 @@ def confirm_contribution(
 @transaction.atomic
 def fail_contribution(*, contribution_id, gateway_reference=None):
     contribution = Contribution.objects.select_for_update().get(pk=contribution_id)
+    if contribution.payment_gateway == "razorpay":
+        raise ValidationError("Razorpay attempts require provider reconciliation and cannot be marked failed locally.")
     if contribution.status in SUCCESSFUL_PAYMENT_STATUSES:
         raise ValidationError("A paid contribution cannot be marked as failed.")
     contribution.status = Contribution.Status.FAILED
@@ -1508,94 +1510,12 @@ def _apply_contribution_entitlement(contribution):
 
 
 def initiate_razorpay_contribution(
-    *, scheme_account, amount, contribution_date=None, gateway=None
+    *, scheme_account, amount, contribution_date=None, gateway=None, submission_key=None, expected_latest_id=None
 ):
-    gateway = gateway or get_payment_gateway()
-    if gateway.name != "razorpay":
-        raise ImproperlyConfigured("The Razorpay payment gateway is not configured.")
-    if getattr(gateway, "mode", None) not in GatewayMode.values:
-        raise ImproperlyConfigured("The Razorpay payment mode is not configured.")
-
-    ensure_payment_initiation_allowed(metal_grade=scheme_account.metal_grade)
-
-    normalized_amount, period = validate_contribution_allowed(
-        scheme_account, amount, contribution_date
-    )
-    contribution = Contribution.objects.filter(
-        scheme_account=scheme_account,
-        contribution_period=period,
-        frequency_rule_snapshot=SchemePlan.FrequencyRule.ONCE_PER_MONTH,
-        status=Contribution.Status.PENDING,
-        payment_gateway=gateway.name,
-    ).first()
-    if contribution is not None and contribution.amount != normalized_amount:
-        raise ValidationError(
-            "A Razorpay payment is already pending for this contribution month."
-        )
-    if contribution is not None and contribution.gateway_mode != gateway.mode:
-        raise ValidationError(
-            "A Razorpay payment from a different provider mode is already pending "
-            "for this contribution month. Reconcile it before starting another payment."
-        )
-    if contribution is None:
-        try:
-            contribution = initiate_contribution(
-                scheme_account=scheme_account,
-                amount=normalized_amount,
-                payment_gateway=gateway.name,
-                gateway_mode=gateway.mode,
-                contribution_date=contribution_date,
-            )
-        except IntegrityError:
-            contribution = Contribution.objects.get(
-                scheme_account=scheme_account,
-                contribution_period=period,
-                frequency_rule_snapshot=SchemePlan.FrequencyRule.ONCE_PER_MONTH,
-                status=Contribution.Status.PENDING,
-                payment_gateway=gateway.name,
-            )
-            if contribution.amount != normalized_amount:
-                raise ValidationError(
-                    "A Razorpay payment is already pending for this contribution month."
-                ) from None
-            if contribution.gateway_mode != gateway.mode:
-                raise ValidationError(
-                    "A Razorpay payment from a different provider mode is already "
-                    "pending for this contribution month. Reconcile it before "
-                    "starting another payment."
-                ) from None
-
-    order_error = None
-    with transaction.atomic():
-        contribution = (
-            Contribution.objects.select_for_update()
-            .select_related("scheme_account")
-            .get(pk=contribution.pk)
-        )
-        ensure_payment_initiation_allowed(
-            metal_grade=contribution.scheme_account.metal_grade,
-            lock=True,
-        )
-        if not contribution.scheme_rate_id:
-            _lock_current_scheme_rate(contribution)
-            contribution.full_clean()
-            contribution.save(update_fields=["scheme_rate", "rate_locked_at"])
-        if contribution.gateway_order_id:
-            return contribution
-        try:
-            order = gateway.create_order(contribution)
-        except PaymentGatewayError as error:
-            contribution.status = Contribution.Status.FAILED
-            contribution.full_clean()
-            contribution.save(update_fields=["status"])
-            order_error = error
-        else:
-            contribution.gateway_order_id = order.order_id
-            contribution.full_clean()
-            contribution.save(update_fields=["gateway_order_id"])
-    if order_error is not None:
-        raise order_error
-    return contribution
+    from .checkout_services import initiate_checkout
+    return initiate_checkout(scheme_account=scheme_account, amount=amount,
+        contribution_date=contribution_date, gateway=gateway or get_payment_gateway(),
+        submission_key=submission_key, expected_latest_id=expected_latest_id)
 
 
 def confirm_razorpay_contribution(

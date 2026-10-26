@@ -797,6 +797,11 @@ class Contribution(models.Model):
                 condition=models.Q(amount__gt=Decimal("0")),
                 name="contribution_amount_positive",
             ),
+            models.UniqueConstraint(
+                fields=["scheme_account"],
+                condition=models.Q(payment_gateway="razorpay", status__in=["PENDING", "PAID_UNALLOCATED"]),
+                name="one_unresolved_razorpay_per_account",
+            ),
             models.CheckConstraint(
                 condition=models.Q(contribution_period__day=1),
                 name="contribution_period_first_day",
@@ -922,6 +927,14 @@ class Contribution(models.Model):
         return self.get_payment_channel_display()
 
     def save(self, *args, **kwargs):
+        if self.pk and self.payment_gateway == "razorpay" and RazorpayOrderRequest.objects.filter(contribution_id=self.pk).exists():
+            frozen_fields = ("scheme_account_id", "amount", "contribution_period", "frequency_rule_snapshot",
+                "payment_gateway", "gateway_mode", "scheme_rate_id", "rate_locked_at", "checkout_expires_at")
+            original = type(self).objects.filter(pk=self.pk).values(*frozen_fields, "gateway_order_id").get()
+            if any(original[field] != getattr(self, field) for field in frozen_fields):
+                raise ValidationError("Retained checkout terms and rate locks are immutable.")
+            if original["gateway_order_id"] and original["gateway_order_id"] != self.gateway_order_id:
+                raise ValidationError("A retained provider order identity is immutable.")
         if self._state.adding:
             if self.payment_gateway == "razorpay":
                 self.payment_channel = PaymentChannel.RAZORPAY
@@ -933,6 +946,70 @@ class Contribution(models.Model):
 
     def __str__(self):
         return f"{self.scheme_account.scheme_number} — ₹{self.amount} — {self.status}"
+
+
+class RazorpayCheckoutSubmission(models.Model):
+    """A retained browser submission, including aliases from concurrent tabs."""
+
+    key = models.UUIDField(unique=True, editable=False)
+    contribution = models.ForeignKey(Contribution, on_delete=models.PROTECT, related_name="checkout_submissions")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def save(self, *args, **kwargs):
+        if self.pk and type(self).objects.filter(pk=self.pk).exists():
+            raise ValidationError("Checkout submission evidence is immutable.")
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Checkout submission evidence cannot be deleted.")
+
+
+class RazorpayOrderRequest(models.Model):
+    """Commits before the single provider create-order call; uncertainty stays held."""
+
+    contribution = models.OneToOneField(Contribution, on_delete=models.PROTECT, related_name="checkout_order_request")
+    token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    amount_subunits = models.PositiveBigIntegerField()
+    gateway_mode = models.CharField(max_length=10, choices=GatewayMode.choices)
+    scheme_rate = models.ForeignKey("SchemeRate", on_delete=models.PROTECT, null=True, blank=True)
+    checkout_expires_at = models.DateTimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(condition=models.Q(amount_subunits__gt=0), name="checkout_request_amount_positive"),
+            models.CheckConstraint(condition=models.Q(gateway_mode__in=["test", "live"]), name="checkout_request_mode_valid"),
+        ]
+
+    @property
+    def receipt(self):
+        return f"jsk_{self.token.hex}"
+
+    def save(self, *args, **kwargs):
+        if self.pk and type(self).objects.filter(pk=self.pk).exists():
+            raise ValidationError("Order request evidence is immutable.")
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Order request evidence cannot be deleted.")
+
+
+class RazorpayOrderRecovery(models.Model):
+    request = models.OneToOneField(RazorpayOrderRequest, on_delete=models.PROTECT, related_name="recovery")
+    gateway_order_id = models.CharField(max_length=120, unique=True)
+    provider_created_at = models.DateTimeField()
+    recovered_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    reason = models.TextField()
+    evidence_reference = models.CharField(max_length=254)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def save(self, *args, **kwargs):
+        if self.pk and type(self).objects.filter(pk=self.pk).exists():
+            raise ValidationError("Order recovery evidence is immutable.")
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Order recovery evidence cannot be deleted.")
 
 
 class InStoreCashReceipt(models.Model):

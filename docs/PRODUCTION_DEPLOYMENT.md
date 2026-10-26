@@ -2188,6 +2188,35 @@ setting the variable back to `False` and recreating `web` again.
 
 ### Expired Checkout operations (FW-PAY-008 candidate)
 
+The combined 26 October prevention/recovery release adds migration
+`schemes.0021_checkout_idempotency`. It creates retained submission/request/recovery
+evidence and a partial uniqueness constraint covering unresolved Razorpay attempts
+per agreement, including flexible plans and cross-mode/month attempts. It performs
+no historical backfill. Preflight must find no agreement with multiple PENDING or
+PAID_UNALLOCATED Razorpay rows; reconcile such rows through existing verified
+workflows before migration. Never delete or arbitrarily fail rows to pass preflight.
+
+Rehearse the exact release image against PostgreSQL 18.6 with synthetic historical
+data and compare all source payments, allocations, rates and liabilities through the
+upgrade. Exercise duplicate/stale form submission, simultaneous tabs, lost create
+response, signed owner identity recovery, ordinary/late captures and unchanged rate
+locks. Old browser forms without signed context fail safely and require a fresh
+review from the customer's plan. Do not create a real payment as a release probe.
+
+Retained checkout evidence refuses migration reversal. Preserve the additive schema
+and history on application rollback. The old application does not honor durable
+request holds, so keep new-payment initiation paused during rollback and until a
+corrected version is verified; callbacks/webhooks must remain available. Do not
+restore the database or discard request/audit evidence to resume the old flow.
+
+For an uncertain create response without a local order ID, use the private payment
+record's Recover provider order identity action. Obtain the candidate from the
+provider investigation; inspect it, review and confirm. A fresh provider read must
+match the original receipt/token/contribution/amount/currency/time. This binds only
+identity and keeps checkout closed. Then use verified capture recovery or inspected
+untouched-order reconciliation as appropriate. An unknown/no-order outcome remains
+held for provider investigation; no local override asserts that money was not sent.
+
 The queue and `check_financial_exceptions` now include `expired_checkouts` for all
 modes as soon as a stored deadline expires. Normal unexpired checkouts are excluded.
 The private payment detail and exception entry link to owner review. GET is read-only;
@@ -2212,7 +2241,7 @@ It fails if any scoped expired backlog remains, even beyond the provider batch o
 outside the configured mode. Errors are redacted and never close a failing candidate.
 
 For activation, release the isolated application image through normal CI/image gates
-first; no migration is introduced. Install `deploy/check-expired-checkouts.sh` and
+first; the monitoring component itself adds no further migration. Install `deploy/check-expired-checkouts.sh` and
 `deploy/systemd/jsk-checkout-reconciliation.{service,timer}` from that reviewed release
 into their documented `/opt/jsk/app/deploy/` and `/etc/systemd/system/` locations.
 The service uses `/usr/bin/docker exec`, a private runtime Docker configuration and

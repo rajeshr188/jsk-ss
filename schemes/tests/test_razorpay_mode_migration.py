@@ -20,7 +20,9 @@ class RazorpayModeMigrationTests(TransactionTestCase):
         self.old_apps = executor.loader.project_state(targets).apps
 
     def tearDown(self):
-        MigrationExecutor(connection).migrate([self.restore_to, self.accounts_target])
+        # Later transactional tests must see every app's current schema.
+        executor = MigrationExecutor(connection)
+        executor.migrate(executor.loader.graph.leaf_nodes())
         super().tearDown()
 
     def test_existing_razorpay_records_are_truthfully_backfilled_as_test_mode(self):

@@ -14,6 +14,7 @@
   <div class="alert alert-info" role="status"><strong>Payment confirmation is pending.</strong> Refresh to check the recorded status. If your bank account was debited, do not pay again while confirmation is pending.</div>
   {% endif %}
   <div class="d-grid gap-2 mt-3">
+    {% if checkout_can_resume %}<a class="btn btn-jsk" href="{% url 'schemes:razorpay_checkout' contribution.pk %}">Continue payment</a>{% endif %}
     {% if contribution.status == 'PENDING' or contribution.status == 'PAID_UNALLOCATED' %}<a class="btn btn-jsk" href="{% url 'schemes:payment_status' contribution.pk %}" hx-get="{% url 'schemes:payment_status' contribution.pk %}" hx-target="#payment-status-panel" hx-swap="outerHTML" hx-sync="#payment-status-panel:replace" hx-indicator="#status-loading">Refresh payment status</a>{% endif %}
     {% if contribution.status == 'PAID' or contribution.status == 'PAID_UNALLOCATED' %}<a class="btn btn-outline-dark" href="{% url 'schemes:contribution_receipt' contribution.pk %}">View receipt</a>{% endif %}
     <a class="btn btn-outline-dark" href="{% url 'schemes:my_scheme_detail' contribution.scheme_account.scheme_number %}">View my plan</a>

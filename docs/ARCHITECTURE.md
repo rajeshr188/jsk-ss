@@ -217,6 +217,17 @@ server-rendered payment-status route reads only customer-owned contribution stat
 is non-cacheable and has no provider call or financial write on GET. Browser outcome
 uncertainty goes there; it cannot classify a payment as failed or credited.
 
+Checkout coordination lives in `checkout_services.py`, with read-only continuation
+in `checkout_selectors.py`. `RazorpayCheckoutSubmission` retains browser submission
+aliases; signed form context binds each submission to the agreement/mode and payment
+history shown when the form was opened. `RazorpayOrderRequest` commits original
+amount/mode/rate/deadline and a unique request token before provider I/O. Account
+locking and a partial database uniqueness constraint prevent overlapping unresolved
+Razorpay contributions, including flexible agreements. No provider create is retried
+after uncertainty. `RazorpayOrderRecovery` retains owner/provider identity evidence
+without crediting money or reopening checkout. Capture and allocation continue through
+the existing financial services. These coordination records are not a balance ledger.
+
 ### Activation continuation and recovery
 
 Phase 4 keeps password setup and sign-in separate. `activated_plan_url` selects only

@@ -2,6 +2,43 @@
 
 ## Current milestone
 
+**26 October 2026 - checkout duplicate prevention and uncertainty recovery (local candidate).**
+The isolated production-based hotfix now retains signed browser submission/history
+context and durable submission aliases, with one unresolved online contribution per
+agreement enforced by account locking and the database. Flexible agreements retain
+sequential successful contributions. Original order intent commits before provider
+I/O; lost/malformed responses or interrupted binding remain held, never blindly
+retried or locally failed. Original terms and rate locks are retained. The customer
+can continue an active checkout; expired/uncertain/recovered requests remain status
+and reconciliation workflows. Owner identity recovery requires signed review plus
+fresh authenticated exact receipt/token/order matching and creates no entitlement.
+Migration 0021 refuses overlapping history and reversal with retained evidence.
+
+The initial 19 new tests passed (36.833s), followed by 113 combined checkout,
+Razorpay, expired-checkout, operations and presentation tests (137.073s, normal
+hashing), on disposable localhost PostgreSQL databases that were destroyed. The
+113-case run predates the additional signed stale-form and final immutable-term
+guards. The initial full 589-test run reported four assertion failures (three were
+subtests of invalid-form HTTP status) and three migration-isolation errors. The
+invalid online POST now returns 400; existing historical migration teardowns restore
+every app's current schema. A cash continuation fixture was covered by the corrected
+agreement-aware selector. The expanded 133-test rerun had one fixture assertion after
+its simulated expiry clock was restored; the clock check was corrected. The final
+35-test checkout/migration/isolation rerun passed (48.881s, normal hashing), with
+system/migration-consistency checks clean. No financial guard was weakened.
+
+A local runtime image passed a synthetic PostgreSQL 18.6 dump/restore/0020-to-0021
+upgrade rehearsal with identical historical financial/identity digest. Restored
+owner/customer/fragment/permission and onboarding journeys passed. Real HMAC/API
+adapters with mocked responses exercised signed forms, duplicate/stale replay,
+one allocation, lost create response, owner identity preview/fresh apply, closed
+recovered checkout and inspected unpaid closure. No real provider call was made;
+the isolated source/restore databases contain only fixtures. Hosted CI and final
+published-image/production acceptance remain pending. The existing Better Stack heartbeat and
+inspection/recovery candidate remain part of this focused release. Main development
+and its uncommitted builder/UI work remain separate. No production deployment,
+database migration, new payment, refund or external alert was performed for this work.
+
 **24 October 2026 — expired Checkout operations hotfix (local candidate).**
 Expired pending Razorpay attempts now participate in the owner Today/exception queue,
 category pagination and aggregate financial alerts across all provider modes. The

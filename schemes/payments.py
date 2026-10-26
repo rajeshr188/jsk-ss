@@ -78,6 +78,18 @@ class PaymentOrderInspection:
 
 
 @dataclass(frozen=True)
+class PaymentOrderIdentity:
+    order_id: str
+    receipt: str
+    contribution_id: str
+    request_token: str
+    amount_subunits: int
+    currency: str
+    status: str
+    created_at: int
+
+
+@dataclass(frozen=True)
 class PaymentInspection:
     payment_id: str
     order_id: str
@@ -174,29 +186,53 @@ class RazorpayPaymentGateway(PaymentGateway):
             raise PaymentGatewayValidationError(
                 "Razorpay requires a minimum payment amount of ₹1.00."
             )
+        request = getattr(contribution, "checkout_order_request", None)
+        receipt = request.receipt if request else f"contribution_{contribution.pk}"
+        notes = {"contribution_id": str(contribution.pk)}
+        if request:
+            notes["request_token"] = str(request.token)
         payload = self._request_json(
             "POST",
             "/orders",
             payload={
                 "amount": amount_subunits,
                 "currency": "INR",
-                "receipt": f"contribution_{contribution.pk}",
-                "notes": {"contribution_id": str(contribution.pk)},
+                "receipt": receipt,
+                "notes": notes,
             },
         )
         order_id = payload.get("id")
         if (
             not isinstance(order_id, str)
             or not order_id.startswith("order_")
+            or type(payload.get("amount")) is not int
             or payload.get("amount") != amount_subunits
             or payload.get("currency") != "INR"
         ):
             raise PaymentGatewayError("Razorpay returned an invalid order response.")
+        if request and (payload.get("receipt") != receipt or not isinstance(payload.get("notes"), dict)
+                or any(payload["notes"].get(k) != v for k, v in notes.items())):
+            raise PaymentGatewayError("Razorpay returned mismatched order request evidence.")
         return PaymentOrder(
             order_id=order_id,
             amount_subunits=amount_subunits,
             currency="INR",
         )
+
+    def inspect_order_identity(self, *, order_id):
+        if (not isinstance(order_id, str) or not order_id.startswith("order_")
+                or len(order_id) > 120 or not RAZORPAY_ID_PATTERN.fullmatch(order_id)):
+            raise PaymentGatewayValidationError("The Razorpay order ID is invalid.")
+        order = self._request_json("GET", f"/orders/{order_id}")
+        notes = order.get("notes")
+        if (order.get("id") != order_id or not isinstance(notes, dict)
+                or type(order.get("amount")) is not int or type(order.get("created_at")) is not int
+                or not isinstance(order.get("receipt"), str)):
+            raise PaymentGatewayError("Razorpay returned invalid order identity evidence.")
+        return PaymentOrderIdentity(order_id=order_id, receipt=order["receipt"],
+            contribution_id=notes.get("contribution_id"), request_token=notes.get("request_token"),
+            amount_subunits=order["amount"], currency=order.get("currency"),
+            status=order.get("status"), created_at=order["created_at"])
 
     def verify_payment(
         self, *, order_id, payment_id, signature, expected_amount

@@ -1,5 +1,16 @@
-// Keep location and keyboard context clear without intercepting form submissions.
+// Keep location/keyboard context clear and give payment submission feedback.
 document.addEventListener("DOMContentLoaded", () => {
+  document.querySelectorAll("form[data-payment-submission]").forEach(form => {
+    form.addEventListener("submit", event => {
+      if (form.dataset.submitting === "true") { event.preventDefault(); return; }
+      form.dataset.submitting = "true";
+      const button = form.querySelector("button[type='submit']");
+      button.dataset.originalText = button.textContent;
+      button.disabled = true;
+      button.textContent = "Opening secure payment…";
+      form.setAttribute("aria-busy", "true");
+    });
+  });
   document.querySelectorAll(".workspace-nav-link, .customer-navigation a").forEach(link => {
     if (new URL(link.href).pathname === location.pathname) link.setAttribute("aria-current", "page");
   });
@@ -11,4 +22,13 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!invalid) target.setAttribute("tabindex", "-1");
     target.focus();
   }
+});
+window.addEventListener("pageshow", () => {
+  document.querySelectorAll("form[data-payment-submission]").forEach(form => {
+    delete form.dataset.submitting;
+    form.removeAttribute("aria-busy");
+    const button = form.querySelector("button[type='submit']");
+    button.disabled = false;
+    if (button.dataset.originalText) button.textContent = button.dataset.originalText;
+  });
 });
