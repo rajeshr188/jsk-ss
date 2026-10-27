@@ -1,5 +1,61 @@
 # Testing
 
+## Owner responsive and keyboard review (27 October 2026)
+
+A temporary harness generated actual Django HTTP responses using real synthetic
+settlement/return services in unique disposable localhost PostgreSQL databases.
+Only release-readiness gates were simulated in the fixture; no normal database,
+provider credentials or production flags were changed. Email used the in-memory
+backend. The database was destroyed after export; a loopback static server exposed
+read-only HTML for browser inspection, with no financial POST handler.
+
+Chrome inspection covered independent policy preparation, INR proposal/partly
+fulfilled/completed/returned screens, INR/metal returned-benefit review and decision
+preview/error states, and customer/owner INR completion messages. At 320x844 and
+390x844 the sampled document widths matched their available content width (305/375px
+for app pages with a scrollbar, 320/390px for messages). Visible form controls had
+labels and all sampled `aria-describedby` references resolved. Desktop checks used
+1440x1000. These are sampled rendering checks, not a full accessibility audit.
+
+Keyboard checks observed error autofocus on missing customer authorization,
+Tab progression to the preview button with a visible focus ring, builder name to
+accumulation order, and mobile-menu open/close using Enter/Escape with focus restored
+to Menu. No final financial submission was made through the browser.
+
+The review found a fresh partly fulfilled INR form still offering the completed
+jewellery handover as its selected action. Fresh choices now contain only pending
+portions, matching the outstanding list. A bound submitted completed portion is
+labelled as retry-only so exact idempotent replays remain possible; all financial
+checks still run in the service. Unknown/foreign portions remain invalid. Display
+labels replace internal route codes, and confirmation follows the other proposal,
+fulfilment and correction-action fields. Final affected-page checks at all three widths found no
+horizontal overflow, duplicate IDs or unlabelled visible controls.
+
+The captured customer/owner completion messages distinguish INR 500 paid principal,
+INR 360 applied to jewellery and INR 140 refunded, separately from benefit/top-up.
+They state that the notice records fulfilment and does not initiate a refund.
+Browser rendering of captured HTML/plain text is not delivered-inbox acceptance.
+
+Local inspection artifacts are under `.uv-cache/owner-review-20261027/`, including
+`layout-evidence.json`, `inr-refund-mobile.jpg`, `builder-desktop.jpg` and
+`completion-email-mobile.jpg`. They contain synthetic fixtures only and are not
+published assets. The working-tree preview also included the pre-existing
+account-menu styling edits; those unrelated edits are excluded from this checkpoint.
+
+The exact-metal confirmation was additionally inspected at 390px and 1440px:
+all six decimals remain explicit, the invoice benefit stays separate from grams,
+and keyboard progression reaches customer authorization after the invoice field.
+
+All 12 tests in `test_owner_inr_settlement_workspace` and
+`test_owner_workflow_queries` passed (255.903s), including the five-family
+settlement/return loop and pending-only choices with exact retries. Django checks
+passed and `makemigrations --check --dry-run` found no changes. The final temporary
+response-export test passed (29.907s). Both disposable databases were destroyed;
+the loopback server was stopped, browser viewport restored and review tab closed.
+Stakeholder acceptance, real Android/TWA and assistive-technology checks, delivered
+messages, deeper-history performance, normal CI and exact-image rehearsal remain
+open. No configured family is activated by this review.
+
 ## Repeated-return owner history loading (27 October 2026)
 
 `test_owner_history_queries` creates an original full settlement/return, approves

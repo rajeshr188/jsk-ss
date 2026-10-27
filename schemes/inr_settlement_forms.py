@@ -2,7 +2,7 @@ import uuid
 
 from django import forms
 
-from .inr_workspace_selectors import fulfilment_legs
+from .inr_workspace_selectors import fulfilment_legs, pending_fulfilment_legs
 
 
 class InrPreviewForm(forms.Form):
@@ -46,6 +46,7 @@ class InrActionForm(forms.Form):
 
 
 class InrProposalForm(InrActionForm):
+    field_order = ("preview_token", "idempotency_key", "invoice_reference", "authorization_reference", "reason", "confirmed")
     preview_token = forms.CharField(widget=forms.HiddenInput)
     invoice_reference = forms.CharField(required=False, max_length=120)
     authorization_reference = forms.CharField(max_length=254, label="Customer authorization for the complete split")
@@ -53,11 +54,14 @@ class InrProposalForm(InrActionForm):
 
 
 class InrFulfilmentForm(InrActionForm):
+    field_order = ("idempotency_key", "leg", "external_reference", "customer_receipt_reference",
+        "fulfilled_at", "top_up_reference", "reason", "confirmed")
     leg = forms.ChoiceField(label="Complete portion actually fulfilled")
     external_reference = forms.CharField(max_length=120,
         help_text="Jewellery: the agreed invoice reference. Refund: the completed original-source transaction reference.")
     customer_receipt_reference = forms.CharField(max_length=254)
-    fulfilled_at = forms.DateTimeField(help_text="Actual date/time with timezone, e.g. 2026-10-27T10:00:00+05:30.")
+    fulfilled_at = forms.DateTimeField(label="Actual delivery or refund date and time",
+        help_text="Actual date/time with timezone, e.g. 2026-10-27T10:00:00+05:30.")
     top_up_reference = forms.CharField(required=False, max_length=120,
         help_text="Required only for jewellery with a separately paid invoice top-up.")
     confirmed = forms.BooleanField(label="This complete delivery or refund has actually occurred and the customer receipt is retained.")
@@ -65,12 +69,21 @@ class InrFulfilmentForm(InrActionForm):
     def __init__(self, *args, proposal, **kwargs):
         super().__init__(*args, **kwargs)
         self.legs = fulfilment_legs(proposal) if proposal else {}
-        self.fields["leg"].choices = [(key, f"{row['kind']} — INR {row['amount']} — {row['method']}"
-            + (f" — principal receipt {row['receipt_id']}" if row['receipt_id'] else "")) for key, row in self.legs.items()]
+        pending = pending_fulfilment_legs(proposal) if proposal else {}
+        choices = dict(pending)
+        # A completed leg is retained only for a submitted browser retry. The
+        # service still checks idempotency and source evidence under lock.
+        submitted = self.data.get(self.add_prefix("leg")) if self.is_bound else None
+        if submitted in self.legs and submitted not in choices:
+            choices[submitted] = self.legs[submitted]
+        self.fields["leg"].choices = [(key, f"{row['kind_label']} — INR {row['amount']} — {row['method_label']}"
+            + (f" — principal receipt {row['receipt_id']}" if row['receipt_id'] else "")
+            + (" (already recorded; retry only)" if key not in pending else "")) for key, row in choices.items()]
 
 
 class InrCorrectionForm(InrActionForm):
-    kind = forms.ChoiceField(choices=(("VOID", "Void an entirely unfulfilled proposal"),
+    field_order = ("idempotency_key", "kind", "authorization_reference", "preview_token", "reason", "confirmed")
+    kind = forms.ChoiceField(label="Correction action", choices=(("VOID", "Void an entirely unfulfilled proposal"),
         ("FULL_RETURN", "All actually fulfilled portions have been returned in full")))
     authorization_reference = forms.CharField(max_length=254)
     preview_token = forms.CharField(required=False, widget=forms.HiddenInput)

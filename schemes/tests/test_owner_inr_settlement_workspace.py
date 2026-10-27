@@ -137,6 +137,41 @@ class OwnerInrSettlementWorkspaceTests(InrClosureFixture, TestCase):
                 self.assertEqual(self.propose_http(closure, response).status_code, 200)
         self.assertFalse(InrSettlementProposal.objects.exists())
 
+    def test_fresh_form_offers_only_pending_portions_without_breaking_exact_retries(self):
+        account, closure, proposal = self.prepared_bonus()
+        refund_key = f"REFUND:{proposal.evidence['refunds'][0]['receipt']}"
+        page = self.client.get(self.url(closure))
+        self.assertEqual(set(dict(page.context['fulfilment_form'].fields['leg'].choices)),
+            {'JEWELLERY', refund_key})
+        for name in ('proposal_form', 'fulfilment_form', 'correction_form'):
+            self.assertEqual(list(page.context[name].fields)[-1], 'confirmed')
+        key = uuid.uuid4()
+        with future_award_readiness():
+            self.assertEqual(self.fulfil_http(closure, proposal, idempotency_key=key).status_code, 302)
+            page = self.client.get(self.url(closure))
+            choices = dict(page.context['fulfilment_form'].fields['leg'].choices)
+            self.assertEqual(set(choices), {refund_key})
+            self.assertIn('Principal refund', choices[refund_key])
+            self.assertIn('Original cash payment returned', choices[refund_key])
+            self.assertNotIn('CASH_RETURN', choices[refund_key])
+            self.assertEqual(inr_settlement_balance(account).outstanding, Decimal('140'))
+            self.assertEqual(self.fulfil_http(closure, proposal, idempotency_key=key).status_code, 302)
+            # A fresh/altered submission cannot pay an already completed portion.
+            rejected = self.fulfil_http(closure, proposal)
+            self.assertEqual(rejected.status_code, 200)
+            self.assertTrue(rejected.context['fulfilment_form'].errors)
+            self.assertContains(rejected, 'already recorded; retry only')
+            self.assertEqual(proposal.fulfilments.count(), 1)
+            self.assertEqual(self.fulfil_http(closure, proposal, leg=refund_key,
+                external_reference='REF-' + uuid.uuid4().hex).status_code, 302)
+        page = self.client.get(self.url(closure))
+        self.assertFalse(list(page.context['fulfilment_form'].fields['leg'].choices))
+        self.assertFalse(page.context['remaining'])
+        self.assertNotContains(page, 'Record completed fulfilment</button>')
+        self.assertContains(page, 'All principal portions have been fulfilled')
+        self.assertEqual(inr_settlement_balance(account).outstanding, Decimal('0'))
+        self.assertFalse(InrSettlementCompletion.objects.filter(proposal=proposal).exists())
+
     def test_early_without_benefit_pure_refund_equal_invoice_and_external_top_up(self):
         for invoice in ("0.00", "500.00", "600.00"):
             a = self.benefit_account(monthly=False, eligibility_policy="CALENDAR", duration_months=1)

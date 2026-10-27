@@ -2,6 +2,21 @@
 
 ## Current milestone
 
+**27 October 2026 - sampled owner mobile/keyboard and message review.**
+Read-only browser snapshots of real synthetic Django responses were reviewed at
+320px/390px and desktop width. The review found that a fresh INR fulfilment form
+still selected an already completed jewellery portion while a refund remained.
+Fresh forms now offer only outstanding portions; submitted retries retain their
+original identity and still pass the service's locked idempotency/source checks.
+Routes and history use readable labels, and confirmation follows the evidence.
+
+Sampled labels, help/error references, error focus, mobile-menu Escape/focus return
+and narrow-screen fit were checked. Captured completion-email wording was reviewed
+locally; no message was sent. TESTING.md records coverage and remaining limits.
+This is not stakeholder sign-off, inbox/device acceptance or production activation.
+Next reconcile the remaining release checklist, including delivered messages,
+history-depth performance, normal CI and exact-image rehearsal. Gates remain closed.
+
 **27 October 2026 - repeated-return history loading review.**
 Owner benefit review now has measured one- and two-return INR/metal fixtures built
 through real settlement services. Closure event sources, INR return fulfilment
