@@ -477,13 +477,18 @@ The earlier four conversion phases remain complete; this is their approved refin
   inspect both roles at desktop/mobile sizes. Update architecture/domain/status/testing
   and deployment guidance. No production deployment, environment change or data change.
 
-## Expired Checkout operations (FW-PAY-008, local candidate)
+## Expired Checkout operations (FW-PAY-008, deployed 26 October 2026)
 
+- [x] Add durable checkout submission/order identity and cross-tab coordination for
+  existing monthly/flexible production agreements, with signed stale-form protection.
+- [x] Retain uncertain create responses and audited exact owner identity recovery;
+  preserve original financial terms and never renew recovered checkout.
+- [x] Complete new prevention/migration regression and combined release acceptance.
 - [x] Shared expired-attempt queue/count projection and privacy-safe alert counts.
 - [x] Owner exact-payment inspect/confirm with bounded signed review and fresh provider check.
 - [x] Expiry-aware command with exact selection, bounded inspection and backlog/error alerts.
 - [x] Five-minute systemd inspection and combined heartbeat wrapper, without financial writes.
-- [ ] Complete isolated release regression/CI/image verification, monitoring account setup,
+- [x] Complete isolated release regression/CI/image verification, existing Better Stack heartbeat verification/configuration,
   delivered failure/missed-run/recovery acceptance and approved production activation.
 
 ## Remaining audit work (22 October 2026)

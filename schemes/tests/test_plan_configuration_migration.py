@@ -5,6 +5,8 @@ from django.db import connection
 from django.db.migrations.executor import MigrationExecutor
 from django.test import TransactionTestCase
 
+from .migration_helpers import applied_migration_apps
+
 
 def historical_calendar_evidence(configuration):
     """Freeze the 0023 evidence format; historical models cannot use today's schema API."""
@@ -25,11 +27,10 @@ class ConfigurationMigrationTests(TransactionTestCase):
     def test_existing_plan_and_agreement_are_not_configured_or_rewritten(self):
         executor = MigrationExecutor(connection)
         latest = executor.loader.graph.leaf_nodes()
-        other = [target for target in latest if target[0] != "schemes"]
-        before_target = [*other, ("schemes", "0021_plan_agreement_governance")]
+        before_target = [("schemes", "0021_plan_agreement_governance")]
         try:
             executor.migrate(before_target)
-            old = executor.loader.project_state(before_target).apps
+            old = applied_migration_apps()
             User = old.get_model("accounts", "CustomUser")
             Customer = old.get_model("schemes", "Customer")
             Plan = old.get_model("schemes", "SchemePlan")
@@ -45,20 +46,20 @@ class ConfigurationMigrationTests(TransactionTestCase):
                 amount_rule_snapshot="VARIABLE", frequency_rule_snapshot="FLEXIBLE", minimum_amount_snapshot=Decimal("75"))
             before_plan = Plan.objects.filter(pk=plan.pk).values().get()
             before_account = Account.objects.filter(pk=account.pk).values().get()
-            target = [*other, ("schemes", "0022_plan_configuration_foundation")]
+            target = [("schemes", "0022_plan_configuration_foundation")]
             executor = MigrationExecutor(connection)
             executor.migrate(target)
-            new = executor.loader.project_state(target).apps
+            new = applied_migration_apps()
             after_plan = new.get_model("schemes", "SchemePlan").objects.filter(pk=plan.pk).values().get()
             self.assertEqual({key: after_plan[key] for key in before_plan}, before_plan)
             self.assertIsNone(after_plan["configuration_id"])
             self.assertEqual(new.get_model("schemes", "SchemeAccount").objects.filter(pk=account.pk).values().get(), before_account)
             self.assertEqual(new.get_model("schemes", "SchemePlanConfiguration").objects.count(), 0)
             # The next additive migration must not reinterpret that legacy preference.
-            next_target = [*other, ("schemes", "0023_configured_agreement_terms")]
+            next_target = [("schemes", "0023_configured_agreement_terms")]
             executor = MigrationExecutor(connection)
             executor.migrate(next_target)
-            upgraded = executor.loader.project_state(next_target).apps
+            upgraded = applied_migration_apps()
             after_account = upgraded.get_model("schemes", "SchemeAccount").objects.filter(pk=account.pk).values().get()
             self.assertEqual({key: after_account[key] for key in before_account}, before_account)
             self.assertIsNone(after_account["configuration_snapshot_id"])
@@ -73,10 +74,10 @@ class ConfigurationMigrationTests(TransactionTestCase):
             from schemes.plan_configuration import configuration_evidence
             old_evidence = historical_calendar_evidence(configuration)
             config_before = upgraded.get_model("schemes", "SchemePlanConfiguration").objects.filter(pk=configuration.pk).values().get()
-            schedule_target = [*other, ("schemes", "0024_monthly_completion_schedule")]
+            schedule_target = [("schemes", "0024_monthly_completion_schedule")]
             executor = MigrationExecutor(connection)
             executor.migrate(schedule_target)
-            scheduled = executor.loader.project_state(schedule_target).apps
+            scheduled = applied_migration_apps()
             config_after = scheduled.get_model("schemes", "SchemePlanConfiguration").objects.filter(pk=configuration.pk).values().get()
             self.assertEqual({key: config_after[key] for key in config_before}, config_before)
             for field in ("period_basis", "grace_days", "catch_up_policy", "max_extension_months"):
@@ -90,55 +91,55 @@ class ConfigurationMigrationTests(TransactionTestCase):
                 frequency_rule_snapshot="FLEXIBLE", payment_gateway="mock", payment_channel="MOCK", status="PENDING",
             )
             payment_before = scheduled.get_model("schemes", "Contribution").objects.filter(pk=payment.pk).values().get()
-            ledger_target = [*other, ("schemes", "0025_instalment_payment_ledger")]
+            ledger_target = [("schemes", "0025_instalment_payment_ledger")]
             executor = MigrationExecutor(connection)
             executor.migrate(ledger_target)
-            ledger = executor.loader.project_state(ledger_target).apps
+            ledger = applied_migration_apps()
             self.assertEqual(ledger.get_model("schemes", "Contribution").objects.filter(pk=payment.pk).values().get(), payment_before)
             self.assertEqual(ledger.get_model("schemes", "SchemeAccount").objects.filter(pk=account.pk).values().get(), after_account)
             self.assertEqual(ledger.get_model("schemes", "InstalmentReservation").objects.count(), 0)
             self.assertEqual(ledger.get_model("schemes", "InstalmentPaymentDecision").objects.count(), 0)
-            integration_target = [*other, ("schemes", "0026_instalment_payment_integration")]
+            integration_target = [("schemes", "0026_instalment_payment_integration")]
             executor = MigrationExecutor(connection)
             executor.migrate(integration_target)
-            integrated = executor.loader.project_state(integration_target).apps
+            integrated = applied_migration_apps()
             self.assertEqual(integrated.get_model("schemes", "Contribution").objects.filter(pk=payment.pk).values().get(), payment_before)
             self.assertEqual(integrated.get_model("schemes", "SchemeAccount").objects.filter(pk=account.pk).values().get(), after_account)
             self.assertEqual(integrated.get_model("schemes", "InstalmentReservation").objects.count(), 0)
             self.assertEqual(integrated.get_model("schemes", "InstalmentPaymentDecision").objects.count(), 0)
-            review_target = [*other, ("schemes", "0027_instalment_owner_reviews")]
+            review_target = [("schemes", "0027_instalment_owner_reviews")]
             executor = MigrationExecutor(connection)
             executor.migrate(review_target)
-            reviewed = executor.loader.project_state(review_target).apps
+            reviewed = applied_migration_apps()
             self.assertEqual(reviewed.get_model("schemes", "Contribution").objects.filter(pk=payment.pk).values().get(), payment_before)
             self.assertEqual(reviewed.get_model("schemes", "SchemeAccount").objects.filter(pk=account.pk).values().get(), after_account)
             self.assertEqual(reviewed.get_model("schemes", "InstalmentReview").objects.count(), 0)
-            outage_target = [*other, ("schemes", "0028_instalment_outage_resolutions")]
+            outage_target = [("schemes", "0028_instalment_outage_resolutions")]
             executor = MigrationExecutor(connection)
             executor.migrate(outage_target)
-            amended = executor.loader.project_state(outage_target).apps
+            amended = applied_migration_apps()
             self.assertEqual(amended.get_model("schemes", "Contribution").objects.filter(pk=payment.pk).values().get(), payment_before)
             self.assertEqual(amended.get_model("schemes", "SchemeAccount").objects.filter(pk=account.pk).values().get(), after_account)
             self.assertEqual(amended.get_model("schemes", "InstalmentOutageResolution").objects.count(), 0)
             self.assertEqual(amended.get_model("schemes", "SchemeInstalmentPeriod").objects.count(), 0)
             self.assertEqual(historical_calendar_evidence(amended.get_model("schemes", "SchemePlanConfiguration").objects.get(pk=configuration.pk)), old_evidence)
-            recovery_target = [*other, ("schemes", "0029_instalment_order_recovery")]
+            recovery_target = [("schemes", "0029_instalment_order_recovery")]
             executor = MigrationExecutor(connection)
             executor.migrate(recovery_target)
-            recovered = executor.loader.project_state(recovery_target).apps
+            recovered = applied_migration_apps()
             self.assertEqual(recovered.get_model("schemes", "Contribution").objects.filter(pk=payment.pk).values().get(), payment_before)
             self.assertEqual(recovered.get_model("schemes", "SchemeAccount").objects.filter(pk=account.pk).values().get(), after_account)
             self.assertEqual(recovered.get_model("schemes", "InstalmentOrderRecovery").objects.count(), 0)
-            publication_before_target = [*other, ("schemes", "0033_configured_full_settlement")]
+            publication_before_target = [("schemes", "0033_configured_full_settlement")]
             executor = MigrationExecutor(connection)
             executor.migrate(publication_before_target)
-            before_apps = executor.loader.project_state(publication_before_target).apps
+            before_apps = applied_migration_apps()
             original_plan = before_apps.get_model("schemes", "SchemePlan").objects.values().get(pk=plan.pk)
             original_account = before_apps.get_model("schemes", "SchemeAccount").objects.values().get(pk=account.pk)
-            publication_target = [*other, ("schemes", "0034_configured_plan_publication")]
+            publication_target = [("schemes", "0034_configured_plan_publication")]
             executor = MigrationExecutor(connection)
             executor.migrate(publication_target)
-            published_apps = executor.loader.project_state(publication_target).apps
+            published_apps = applied_migration_apps()
             migrated_plan = published_apps.get_model("schemes", "SchemePlan").objects.values().get(pk=plan.pk)
             self.assertIsNone(migrated_plan["publication_revision_id"])
             self.assertEqual({key: migrated_plan[key] for key in original_plan}, original_plan)

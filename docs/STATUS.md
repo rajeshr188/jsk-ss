@@ -2,6 +2,22 @@
 
 ## Current milestone
 
+**27 October 2026 - consolidated builder candidate integration (validation in progress).**
+The isolated `integration/builder-release-validation` worktree combines builder
+`261424c` with the prepared checkout-prevention integration from deployed `main`
+`d0e5dd1`. It retains legacy durable checkout identity/recovery alongside configured
+reservations, optional-order investigation and refund review. Migration 0055 joins
+the two migration leaves without data operations. No production change or configured
+activation is included; the original worktree's unrelated edits remain untouched.
+
+Django system and migration-drift checks passed. The serial 1,435-case consolidated
+suite is in progress on a unique disposable localhost PostgreSQL database. A further
+deployed-schema migration regression compares original financial/checkout columns
+after upgrading the complete graph. Normal CI and exact-image recovery/latency
+acceptance are still pending. The older UI rehearsal script is not builder upgrade
+evidence: its legacy target and current-model fixture seeding need reconciliation
+with the deployed schema before it can be used for this release.
+
 **27 October 2026 - refund workspace browser review.**
 Synthetic responses from the real owner HTTP/service workflows were reviewed in
 local Chrome. The comparison tables hid important answers behind horizontal
@@ -593,6 +609,73 @@ lifecycle acceptance. Existing settlement entry points still reject benefit-bear
 contracts. No owner UI, normal-database migration, activation, push or deployment is
 included; the coherent builder release remains unfinished. Unrelated production notes
 and UI edits are preserved outside this checkpoint.
+**26 October 2026 - checkout prevention/recovery and monitoring deployed and verified.**
+PR #76 merged as `d0e5dd1897debb054d99647d6ea16575d08b1a48`. Protected-main
+CI run `40283793237` passed all 591 tests, deployment/static/migration gates and
+the published-digest critical-vulnerability scan. Production now runs
+`ghcr.io/rajeshr188/jsk-savings@sha256:00caf93dfa3933cc662f39745c4a3bd823768b523a73163d71bb60c474e0ec6d`.
+That exact image repeated the synthetic PostgreSQL 18.6 dump/restore/upgrade,
+duplicate/stale-submission, HMAC capture and owner-recovery rehearsal before cutover.
+
+The owner approved 25 October 2026 at 13:37:12 IST as the recovery checkpoint.
+This was Linode's reported `updated` timestamp, not an independently verified latest
+WAL timestamp; managed daily backup/continuous PITR availability was inspected.
+No production restore was performed. Any future restore must reconcile every
+financial event after the chosen checkpoint; application rollback retains the schema.
+
+An audited global initiation pause found zero unresolved Razorpay contributions.
+The reviewed migration plan contained only `schemes.0021_checkout_idempotency`,
+which applied successfully. Nine financial-source projections and separate cash/
+exact-grade liabilities matched before migration, after migration and after image
+replacement. Live/readiness returned the new release. Integrity commands passed,
+and read-only transactions rendered seven real customer/owner GET pages with provider
+calls forbidden. Original payment controls were restored exactly through the audited
+service; all three metal grades reopened. The signed payment form renders correctly,
+and no checkout evidence, payment or entitlement was created by acceptance.
+
+The root-owned Better Stack configuration was verified without disclosing its URL.
+The five-minute inspection-only systemd service/timer passed verification and a real
+successful run; Better Stack showed Up. A controlled missing-container failure
+exercised the real wrapper, raised incident `1038686832`, and delivered both failure
+and recovery emails to the existing business inbox. With only the new timer stopped,
+the five-minute period plus six-minute grace raised missed-heartbeat incident
+`1038693817`; the missed-run and recovery emails also arrived in that inbox. A real
+successful inspection restored health at 13:14 IST. The next natural scheduled run
+succeeded at 13:19:33-13:19:40 IST; the timer remains enabled/active and the temporary
+automatic-resume safeguard was stopped. The old
+application image remains present; no database reversal or historical edit occurred.
+Local builder/UI development remains separate.
+
+**Isolated builder integration (local only).**
+Branch `integration/checkout-prevention-builder` combines builder checkpoint
+`372580e4fe39664d82dd9b4a9caa4b4162d47fcf` with production release `d0e5dd1`.
+The empty 0047 merge migration joins the independent 0021/0046 histories. Legacy
+agreements use durable signed checkout identity; configured optional/monthly flows
+retain their existing reservation services, with a guard against using the legacy
+service for configured agreements. Provider identity validation now supports each
+retained request family through one strict adapter. Historical migration tests
+restore all current schema leaves, and invalid-payment fixtures are isolated so
+they respect the one-unresolved-checkout constraint.
+
+Validation used unique disposable localhost PostgreSQL databases. The full
+1,226-test snapshot run completed in 2221.301s with four failed assertions and six
+errors. Checkout compatibility corrections preserve configured monthly status
+actions and accepted-closure errors; invalid pending fixtures are independent.
+Historical migration checks now use matching historical models/applied migration
+state and restore the current schema after rollback refusal, avoiding a cascading
+missing-column error in concurrent INR crediting.
+
+The combined 231-case payment run passed 230 cases; its remaining historical closure
+test passed after correction (43.288s, normal hashing). The final six schema and
+concurrency cases passed together (190.256s, normal hashing), as did the earlier five
+correction cases, invalid-mode fixture and two configured-boundary cases. JavaScript,
+Django checks and migration consistency pass. The full suite was not repeated after
+these corrections. Two account-menu style subtest failures remain in the unchanged
+builder snapshot; their corresponding UI edit is uncommitted in the active worktree
+and is deliberately preserved there. No wholly green builder release is claimed.
+The local merge is not activation approval; configuration gates remain closed.
+The active builder/UI worktree and its uncommitted edits are preserved. This
+integration branch remains local and must not be published as a production release.
 
 **26 October 2026 - gated retained benefit awards implemented locally (0046).**
 The next ordered benefit dependency now retains one immutable award per agreement:
@@ -1386,10 +1469,10 @@ using temporary files, without installation. Synthetic desktop and 390px mobile
 layout/form order were inspected with database access forbidden; no overflow was
 found and the viewport/preview were closed afterward. No schema change, production
 deployment, new timer activation or external notification is claimed.
-The owner chose dashboard plus monitoring-webhook alerts. No existing webhook was
-found on the production host; Healthchecks.io with a five-minute period, six-minute
-monitoring grace and email notification is recommended. Account/check setup and a
-controlled delivered-alert/missing-heartbeat/recovery test remain release gates.
+The owner chose dashboard plus monitoring-webhook alerts. Later investigation
+confirmed the existing Better Stack heartbeat. Its five-minute period, six-minute
+grace and business email delivery passed reported-failure, missed-run and recovery
+acceptance on 26 October, as recorded above; no Healthchecks.io setup is required.
 
 **24 October 2026 — expired Razorpay checkout incident resolved (production).**
 Owner-authorized reconciliation of contribution 20 on JSK-52C44D66 used the deployed

@@ -1232,7 +1232,9 @@ for the inventory/measurement stages of `FW-PROD-007`.
    Start with 5 events in 5 minutes and tune only from measured traffic. Include the
    release, status, method, and path in the incident; do not include headers or bodies.
 5. Create a heartbeat named `JSK financial exceptions`, expected every 5 minutes
-   with a 2-minute grace period, and assign the production escalation policy. Store
+   with a 6-minute grace period for the bounded combined checkout inspection below,
+   and assign the production escalation policy (or verify email recipients when
+   the account's Free plan notifies the whole team). Store
    its secret URL separately from the application environment:
 
    ```bash
@@ -2797,7 +2799,62 @@ setting the variable back to `False` and recreating `web` again.
   owner enabled the weekly schedule with an audit reason. Its exact closing and
   reopening boundary worked as expected; the schedule remains enabled in production.
 
-### Expired Checkout operations (FW-PAY-008 candidate)
+### Expired Checkout operations (FW-PAY-008, deployed 26 October 2026)
+
+Accepted in production on 26 October 2026 as merged release
+`d0e5dd1897debb054d99647d6ea16575d08b1a48`, from protected-main CI
+`40283793237` and immutable image
+`ghcr.io/rajeshr188/jsk-savings@sha256:00caf93dfa3933cc662f39745c4a3bd823768b523a73163d71bb60c474e0ec6d`.
+The exact published image passed synthetic PostgreSQL 18.6 restore/upgrade and
+payment/recovery acceptance. The owner accepted the checkpoint 25 October 2026,
+13:37:12 IST, which came from Linode cluster `updated` metadata; an exact latest
+backed-up WAL timestamp was not independently established. No production restore
+was performed. A restore would require reconciliation of all subsequent financial
+events, rather than discarding received payments or the later incident repair.
+
+The audited initiation pause, zero unresolved attempts, exact single-migration plan,
+unchanged financial-source hashes/separate liabilities and health gates passed.
+Seven customer/owner pages rendered within database read-only transactions with
+provider calls forbidden; original controls were restored exactly and all grades
+reopened. The previous release/image remains the rollback pair. New request evidence
+and the additive schema must survive any application rollback.
+
+The root-owned heartbeat configuration and systemd units were verified. Real healthy
+inspection, controlled reported-failure incident `1038686832`, missed-heartbeat
+incident `1038693817`, and both recoveries were observed; failure/missed-run and
+recovery emails arrived in the existing business inbox. The five-minute timer is
+enabled/active after testing, with the temporary resume safeguard stopped. Inspection
+never applied financial reconciliation or created a payment. See STATUS.md for the
+validation evidence; the operational rules below remain authoritative.
+
+The combined 26 October prevention/recovery release adds migration
+`schemes.0021_checkout_idempotency`. It creates retained submission/request/recovery
+evidence and a partial uniqueness constraint covering unresolved Razorpay attempts
+per agreement, including flexible plans and cross-mode/month attempts. It performs
+no historical backfill. Preflight must find no agreement with multiple PENDING or
+PAID_UNALLOCATED Razorpay rows; reconcile such rows through existing verified
+workflows before migration. Never delete or arbitrarily fail rows to pass preflight.
+
+Rehearse the exact release image against PostgreSQL 18.6 with synthetic historical
+data and compare all source payments, allocations, rates and liabilities through the
+upgrade. Exercise duplicate/stale form submission, simultaneous tabs, lost create
+response, signed owner identity recovery, ordinary/late captures and unchanged rate
+locks. Old browser forms without signed context fail safely and require a fresh
+review from the customer's plan. Do not create a real payment as a release probe.
+
+Retained checkout evidence refuses migration reversal. Preserve the additive schema
+and history on application rollback. The old application does not honor durable
+request holds, so keep new-payment initiation paused during rollback and until a
+corrected version is verified; callbacks/webhooks must remain available. Do not
+restore the database or discard request/audit evidence to resume the old flow.
+
+For an uncertain create response without a local order ID, use the private payment
+record's Recover provider order identity action. Obtain the candidate from the
+provider investigation; inspect it, review and confirm. A fresh provider read must
+match the original receipt/token/contribution/amount/currency/time. This binds only
+identity and keeps checkout closed. Then use verified capture recovery or inspected
+untouched-order reconciliation as appropriate. An unknown/no-order outcome remains
+held for provider investigation; no local override asserts that money was not sent.
 
 The queue and `check_financial_exceptions` now include `expired_checkouts` for all
 modes as soon as a stored deadline expires. Normal unexpired checkouts are excluded.
@@ -2823,7 +2880,7 @@ It fails if any scoped expired backlog remains, even beyond the provider batch o
 outside the configured mode. Errors are redacted and never close a failing candidate.
 
 For activation, release the isolated application image through normal CI/image gates
-first; no migration is introduced. Install `deploy/check-expired-checkouts.sh` and
+first; the monitoring component itself adds no further migration. Install `deploy/check-expired-checkouts.sh` and
 `deploy/systemd/jsk-checkout-reconciliation.{service,timer}` from that reviewed release
 into their documented `/opt/jsk/app/deploy/` and `/etc/systemd/system/` locations.
 The service uses `/usr/bin/docker exec`, a private runtime Docker configuration and
@@ -2834,9 +2891,19 @@ financial heartbeat timer disabled when sharing this destination, so another job
 cannot mask an inspection failure.
 
 Configure a dedicated heartbeat with a five-minute period and six-minute monitoring
-grace. The owner selected dashboard plus external monitoring; Healthchecks.io is the
-recommended initial service. Enable email notification and optionally recurring
-unresolved reminders. Store only `FINANCIAL_EXCEPTIONS_HEARTBEAT_URL` in
+grace for this bounded inspection job. Use the existing Better Stack account and
+verify/reuse or add its `JSK financial exceptions` heartbeat, following the canonical
+Better Stack monitoring section above. No additional monitoring account is needed.
+On 24 October 2026, this heartbeat was created in the verified JSK account/team
+`t585600` as heartbeat `516408`; its saved five-minute/six-minute settings and email
+notification were read back. It remains Pending until the first real job ping.
+Its URL is configured in the root-only production file below; no URL belongs in
+release evidence, repository files or command output. No timer was enabled and no
+notification-delivery or missed-run/recovery exercise is yet claimed.
+Verify its escalation recipients and email notification. These incidents go to the
+owner/operator and concern expired provider checkouts; they are distinct from
+customer reminders about agreed unpaid contributions. Store only
+`FINANCIAL_EXCEPTIONS_HEARTBEAT_URL` in
 `/opt/jsk/secrets/observability.env`, owned by root with mode 0600; systemd reads the
 file before dropping privileges. Never commit or display its secret URL. The service
 requires it by default and exits with `delivery=unconfigured` if absent. The wrapper
@@ -2855,8 +2922,7 @@ retain all reconciliation audits and financial records. Never restore an old dat
 as an application rollback. The on-site owner still resolves held cases; this job is
 inspection and notification, not automatic refunds or entitlement overrides.
 
-Sources: [Healthchecks failure signals](https://healthchecks.io/docs/signaling_failures/),
-[notification configuration](https://healthchecks.io/docs/configuring_notifications/).
+Source: [Better Stack heartbeat and explicit failure monitoring](https://betterstack.com/docs/uptime/cron-and-heartbeat-monitor/).
 
 ### Abandoned Razorpay order deployment and operation (`FW-PAY-002`)
 

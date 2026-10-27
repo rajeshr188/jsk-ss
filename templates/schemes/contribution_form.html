@@ -37,13 +37,19 @@
     {{ scheme_account.entitlement_name }} contributions are temporarily unavailable because the current Scheme Rate has not been published.
   </div>
   {% else %}
-  <form method="post" class="card form-card" novalidate>
+  {% if pending_contribution %}
+  {% if form.non_field_errors %}<div class="alert alert-warning" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+  <div class="alert alert-info" role="status">An earlier checkout is awaiting completion or provider reconciliation. Open its recorded status before starting another contribution.</div>
+  <a class="btn btn-jsk w-100" href="{% url 'schemes:payment_status' pending_contribution.pk %}">View existing payment</a>
+  {% else %}
+  <form method="post" class="card form-card" novalidate data-payment-submission>
     {% csrf_token %}
     {{ form|crispy }}
     <button class="btn btn-jsk w-100" type="submit">
       {% if mock_payment_enabled %}Complete mock payment{% elif razorpay_mode == 'live' %}Continue to secure payment{% else %}Continue to Razorpay test checkout{% endif %}
     </button>
   </form>
+  {% endif %}
   {% endif %}
   {% endif %}
 </div></div>

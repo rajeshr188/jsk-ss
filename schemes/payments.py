@@ -184,10 +184,13 @@ class RazorpayPaymentGateway(PaymentGateway):
             raise PaymentGatewayValidationError(
                 "Razorpay requires a minimum payment amount of ₹1.00."
             )
-        receipt = f"contribution_{contribution.pk}"
+        request = getattr(contribution, "checkout_order_request", None)
+        receipt = request.receipt if request else f"contribution_{contribution.pk}"
         notes = {"contribution_id": str(contribution.pk)}
         from .instalments import has_monthly_instalments
-        if getattr(contribution, "scheme_account", None) is not None and has_monthly_instalments(contribution.scheme_account):
+        if request:
+            notes["request_token"] = str(request.token)
+        elif getattr(contribution, "scheme_account", None) is not None and has_monthly_instalments(contribution.scheme_account):
             from .instalment_selectors import durable_order_request
             intent = durable_order_request(contribution)
             receipt = f"inst_{intent.request_token.hex}"
@@ -211,10 +214,14 @@ class RazorpayPaymentGateway(PaymentGateway):
         if (
             not isinstance(order_id, str)
             or not order_id.startswith("order_")
+            or type(payload.get("amount")) is not int
             or payload.get("amount") != amount_subunits
             or payload.get("currency") != "INR"
         ):
             raise PaymentGatewayError("Razorpay returned an invalid order response.")
+        if request and (payload.get("receipt") != receipt or not isinstance(payload.get("notes"), dict)
+                or any(payload["notes"].get(k) != v for k, v in notes.items())):
+            raise PaymentGatewayError("Razorpay returned mismatched order request evidence.")
         return PaymentOrder(
             order_id=order_id,
             amount_subunits=amount_subunits,
@@ -330,7 +337,8 @@ class RazorpayPaymentGateway(PaymentGateway):
             raise PaymentGatewayValidationError("The Razorpay order ID is invalid.")
         order = self._request_json("GET", f"/orders/{order_id}")
         notes = order.get("notes")
-        request_note = "optional_request" if str(order.get("receipt", "")).startswith("opt_") else "instalment_request"
+        receipt = str(order.get("receipt", ""))
+        request_note = "request_token" if receipt.startswith("jsk_") else "optional_request" if receipt.startswith("opt_") else "instalment_request"
         if (order.get("id") != order_id or order.get("entity") != "order"
             or type(order.get("amount")) is not int or order["amount"] < 100
             or order.get("currency") != "INR" or not isinstance(order.get("status"), str)
