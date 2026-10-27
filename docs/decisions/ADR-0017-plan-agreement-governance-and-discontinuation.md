@@ -259,6 +259,40 @@ above is now approved. INR external approvals, usable refund routes and tested a
 fulfilment evidence remain prerequisites before that family can publish.
 Acceptance of this design is not that external evidence.
 
+**Business confirmation and operational refund decision (27 October 2026):**
+The owner subsequently confirmed that the offered terms, accounting treatment and
+payment-provider arrangements support operating this product. After reviewing the
+original-method requirement, the owner explicitly selected manual Razorpay dashboard
+refunds to the original payment method, without an automated refund API. Cash-origin
+contributions retain the evidenced physical-cash return procedure. This supersedes
+the earlier pending business confirmation and the proposed blanket cash-return route.
+It records the owner's confirmation; it does not claim an independent legal or
+accounting assessment or a completed provider/device/inbox rehearsal.
+
+The agreed operator procedure is:
+1. Use the accepted full-settlement proposal and its source-linked refund portions;
+   do not change the original payment method or redistribute principal by hand.
+2. For cash-origin portions, return physical cash and retain the dated receipt and
+   customer acknowledgement. For Razorpay-origin portions, identify the original
+   payment in the dashboard and initiate the exact approved unused-principal refund.
+3. Retain the contribution/payment identity, amount, refund or cash receipt reference,
+   actual fulfilment date, responsible owner and customer receipt evidence. Refund
+   initiation or a pending provider status is not completed fulfilment. Record actual
+   fulfilment only when completion and customer receipt are evidenced.
+4. Keep unresolved portions and their liability visible. If the original route is
+   unavailable, hold the settlement and resolve with the provider; no physical-cash
+   substitution is authorized for Razorpay-origin payments. Do not mark a promised
+   future refund as paid or close the agreement while any portion remains outstanding.
+5. Close once all principal portions are fulfilled and reconciled. Benefits remain
+   separate invoice benefits; no benefit cashout, replacement-credit voucher or
+   general partial redemption is introduced.
+
+This matches Razorpay's [same-payment-method refund requirement](https://razorpay.com/terms/)
+and [manual dashboard refund workflow](https://razorpay.com/docs/payments/refunds/normal/).
+The existing source-specific services/forms enforce this boundary. Operational
+acceptance and the remaining release evidence in MVP_PLAN.md are still required
+before publication; the business confirmation alone does not open a runtime gate.
+
 **Implementation checkpoint:** `schemes.plan_policies.PlanPolicy` is an immutable,
 typed schema-v1 compatibility contract with strict validation and a separate
 operational-blocker check. Migration 0036 introduces persisted policy schema 2 with

@@ -2,6 +2,11 @@
 
 ## Current-candidate visual acceptance preparation - 27 October 2026
 
+The subsequent approved-refund manual update passed all 10 existing
+`schemes.tests.test_plan_manual` HTTP/privacy/markup tests in **0.110s**, with clean
+Django system checks. No financial services, provider calls or customer mail were
+involved; this does not constitute the owner fulfilment rehearsal.
+
 Source `6038277` plus the subsequent stylesheet correction was reviewed using 16
 real rendered owner/customer responses and two locally captured completion emails.
 The isolated synthetic export test passed in **32.436s**, destroyed its database,
@@ -89,9 +94,19 @@ and separate earlier passes do not replace the pending consolidated CI result:
 | Frozen terms, date/count wording and notification revalidation | `test_independent_presentation`, request/application HTTP email tests, `test_event_reminder_revalidation`, `test_inr_completion_reminders` |
 
 Provider responses and future readiness are simulated only in test fixtures. Real
-owner/device/assistive-technology and inbox acceptance remain separate. The owner
-confirmed INR business/legal/accounting/provider evidence and usable refund-route
-approval are **still pending**; publication and combined activation remain blocked.
+owner/device/assistive-technology and inbox acceptance remain separate. On 27 October
+the owner subsequently confirmed product terms/accounting/provider suitability and
+approved cash-origin cash returns plus original-method manual Razorpay dashboard
+refunds (ADR-0017). This is a business decision, not a new test pass. Operational
+fulfilment acceptance, publication and combined activation remain outstanding.
+
+For the INR owner acceptance session, use isolated synthetic source records to review:
+cash-return evidence; original-payment dashboard refund evidence; a pending refund
+that leaves liability outstanding; an unavailable route that retains a hold; and a
+mixed invoice/refund settlement that closes only after every portion is fulfilled.
+Record the exact candidate, reviewer, result and retained evidence references. Do not
+initiate a real payment/refund or email a real customer merely to manufacture test
+evidence. Keep the settlement procedure distinct from provider-exception resolution.
 
 The diagnostic continuation completed **703 tests in 5090.036s**, with nine failure
 events and three errors across 11 unique tests (the Account-button test has two

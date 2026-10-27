@@ -2,6 +2,24 @@
 
 ## Current milestone
 
+**27 October 2026 - INR business confirmation and refund-route approval.**
+The owner now confirms that the offered terms, accounting treatment and provider
+arrangements support the INR purchase-credit product. The subsequent explicit
+refund decision is cash return for cash-origin contributions and manual Razorpay
+dashboard refunds to the original payment method for Razorpay-origin contributions.
+No automated refund API or blanket online-to-cash substitution is authorized.
+ADR-0017 records the procedure and evidence boundary. This supersedes the earlier
+pending business-confirmation status below; it is owner-supplied confirmation, not
+an independent legal/accounting audit or a completed operational rehearsal.
+Current code already implements source-specific fulfilment evidence and full-only
+closure, so this decision needs no financial-code change. Actual owner/device/inbox
+acceptance, clean exact-head CI, recovery-digest approval and coherent activation
+remain outstanding. Production and configured-plan gates remain unchanged.
+The authenticated owner reference manual now includes the approved source-by-source
+refund procedure, required receipt evidence and pending/unavailable-route handling.
+Its existing 10 HTTP/privacy/markup tests passed in 0.110s; Django checks passed.
+This is documentation verification, not operational fulfilment acceptance.
+
 **27 October 2026 - current-candidate visual acceptance preparation.**
 The `6038277` candidate rendered 16 real owner/customer pages and two captured
 completion emails from an isolated synthetic test database (one export test,
@@ -13,7 +31,7 @@ validation text; the stylesheet follow-up corrects these. Both themes now pass
 the sampled solid-background text checks, with 3px button focus outlines.
 This is engineering preparation, not owner/device/screen-reader/inbox approval.
 Current-head CI is still required after the styling follow-up. Production and
-configured-plan gates remain unchanged; external INR approval remains pending.
+configured-plan gates remain unchanged; see the later approval record above.
 
 **27 October 2026 - ordered builder-release goal in progress.**
 Work continues in the isolated `integration/builder-release-validation` worktree,
@@ -43,7 +61,8 @@ concurrency and migration regression passed in **1253.741s**; normal CI remains
 running. Remaining order: current-head CI, owner/device/inbox acceptance,
 approved recovery digest, documented INR publication
 and usable refund-route evidence, then coherent activation and approved rollout.
-The owner confirmed the external INR evidence is still pending; no gate has been opened.
+The earlier pending business confirmation is superseded by the approval record above;
+operational evidence remains required and no gate has been opened.
 
 **27 October 2026 - consolidated migration-test follow-up.**
 Seven focused migration cases now pass across independent agreement storage,
