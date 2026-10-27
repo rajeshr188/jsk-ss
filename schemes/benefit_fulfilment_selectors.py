@@ -92,7 +92,7 @@ def require_unchanged_award_sources(award):
         require_optional_order_integrity(account)
 
 
-def validate_benefit_fulfilment(row, *, current=False):
+def validate_benefit_fulfilment(row, *, current=False, _history_read=None):
     award = row.award
     validate_benefit_award(award)
     amount = invoice_benefit_amount(award, row.invoice_before_benefit, row.eligible_charges)
@@ -108,7 +108,7 @@ def validate_benefit_fulfilment(row, *, current=False):
             or row.evidence != benefit_fulfilment_evidence(row) or row.evidence_digest != proof_digest(row.evidence)):
         raise ValidationError("Benefit fulfilment amount, invoice or retained evidence differs.")
     from .benefit_application_selectors import validate_application_link
-    validate_application_link(row, current=current)
+    validate_application_link(row, current=current, _history_read=None if current else _history_read)
     if not current:
         return
     # The caller may hold the award from before its principal handover completed.
@@ -160,9 +160,9 @@ def validate_benefit_fulfilment(row, *, current=False):
         raise ValidationError("The invoice reference is already linked to another principal disposition.")
 
 
-def validate_benefit_reversal(row, *, current=False):
+def validate_benefit_reversal(row, *, current=False, _history_read=None):
     f = row.fulfilment
-    validate_benefit_fulfilment(f)
+    validate_benefit_fulfilment(f, _history_read=None if current else _history_read)
     if bool(row.inr_return_id) == bool(row.metal_reversal_id) or row.amount != f.benefit_amount:
         raise ValidationError("Reverse only the complete consumed benefit against one full principal return.")
     if row.inr_return_id:

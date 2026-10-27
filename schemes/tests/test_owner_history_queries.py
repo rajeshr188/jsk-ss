@@ -21,13 +21,13 @@ class OwnerHistoryQueryTests(IntegrationFixture, TestCase):
     # on retained financial history.
     query_budgets = {
         "INR_PURCHASE_BONUS_one_return": 680,
-        "INR_PURCHASE_BONUS_two_returns": 1900,
+        "INR_PURCHASE_BONUS_two_returns": 1100,
         "VA_DISCOUNT_one_return": 300,
-        "VA_DISCOUNT_two_returns": 850,
-        "INR_PURCHASE_BONUS_three_returns": 3900,
-        "INR_PURCHASE_BONUS_four_returns": 7000,
-        "VA_DISCOUNT_three_returns": 1800,
-        "VA_DISCOUNT_four_returns": 3300,
+        "VA_DISCOUNT_two_returns": 540,
+        "INR_PURCHASE_BONUS_three_returns": 1550,
+        "INR_PURCHASE_BONUS_four_returns": 2050,
+        "VA_DISCOUNT_three_returns": 780,
+        "VA_DISCOUNT_four_returns": 1050,
     }
 
     def measure(self, account, stage):

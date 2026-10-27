@@ -11,6 +11,11 @@ from schemes.tests.test_benefit_replacement_integration import IntegrationFixtur
 from schemes.inr_workspace_selectors import inr_owner_workspace
 from schemes.inr_settlement_selectors import inr_settlement_balance
 from schemes.models import Contribution
+from schemes.benefit_reapplication_selectors import (
+    _OwnerHistoryRead, decision_history, owner_reapplication_workspace,
+    reapplication_review_status,
+)
+from schemes.benefit_application_selectors import validate_bound_review
 
 
 @override_settings(IN_STORE_CASH_CONTRIBUTIONS_ENABLED=True, PAYMENT_INITIATION_KILL_SWITCH=False)
@@ -70,3 +75,31 @@ class OwnerWorkflowQueryTests(IntegrationFixture, TestCase):
         response = self.client.get(url)
         self.assertContains(response, "Investigation required")
         self.assertFalse(response.context["reviewable_returns"].exists())
+
+    def test_workspace_decision_reads_do_not_survive_a_new_invocation(self):
+        account, closure, reversal = self.returned_benefit()
+        decision = self.approve(account, reversal)
+        first = owner_reapplication_workspace(account)
+        self.assertEqual(first['review_rows'][0]['status'], 'APPROVED_REVIEW')
+        # Simulate retained-decision damage only in the disposable test database.
+        reversal.reapplication_decisions.filter(pk=decision.pk).update(
+            authorization_reference='Changed retained customer consent')
+        later = owner_reapplication_workspace(account)  # Same account instance.
+        self.assertEqual(later['review_rows'][0]['status'], 'REVIEW_REQUIRED')
+        self.assertFalse(later['reviewable_returns'].exists())
+        with self.assertRaises(ValidationError):
+            reapplication_review_status(reversal)
+
+    def test_current_binding_ignores_historical_read_reuse_after_a_hold(self):
+        account, closure, reversal = self.returned_benefit()
+        self.approve(account, reversal)
+        proposal = self.replacement_inr(account, closure)
+        history_read = _OwnerHistoryRead(account)
+        old_rows = decision_history(reversal, _history_read=history_read)
+        self.assertEqual(old_rows[-1].outcome, 'APPROVE')
+        validate_bound_review(proposal, current=True)
+        self.decide(self.review_values(account, self.review_preview(account, reversal, 'HOLD')))
+        # Even accidentally supplying this old read must not authorize spending.
+        with self.assertRaises(ValidationError):
+            validate_bound_review(proposal, current=True, _history_read=history_read)
+        self.assertFalse(proposal.fulfilments.exists())

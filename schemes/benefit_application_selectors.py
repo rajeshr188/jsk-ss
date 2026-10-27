@@ -21,7 +21,7 @@ def current_reapplication(award):
     return decision_reference(rows[-1])
 
 
-def validate_bound_review(disposition, *, current=False):
+def validate_bound_review(disposition, *, current=False, _history_read=None):
     """Proposal binding survives returns; only current approval permits new use."""
     from .benefit_reapplication_selectors import decision_history
     proof = disposition.evidence.get("independent", {}).get("reapplication")
@@ -29,7 +29,7 @@ def validate_bound_review(disposition, *, current=False):
         raise ValidationError("Retain the explicit reapplication approval in this disposition.")
     try:
         decision = BenefitReapplicationDecision.objects.get(pk=proof["decision"])
-        rows = decision_history(decision.reversal)
+        rows = decision_history(decision.reversal, _history_read=None if current else _history_read)
         basis = decision.evidence["basis"]
         account_id = disposition.scheme_account_id if hasattr(disposition, "scheme_account_id") else disposition.redemption.scheme_account_id
         if (decision.outcome != "APPROVE" or proof != decision_reference(decision)
@@ -44,7 +44,7 @@ def validate_bound_review(disposition, *, current=False):
     return decision
 
 
-def validate_application_link(row, *, current=False):
+def validate_application_link(row, *, current=False, _history_read=None):
     """Historical checks recurse only into earlier returned invoices, never successors."""
     prior = row.award.invoice_fulfilments.order_by("pk")
     if row.pk:
@@ -59,7 +59,7 @@ def validate_application_link(row, *, current=False):
     previous = row.previous
     reversal = getattr(previous, "reversal", None)
     disposition = row.inr_fulfilment.proposal if row.inr_fulfilment_id else row.metal_settlement
-    decision = validate_bound_review(disposition, current=current)
+    decision = validate_bound_review(disposition, current=current, _history_read=_history_read)
     if (previous.award_id != row.award_id or reversal is None
             or decision.reversal_id != reversal.pk or row.reapplication_decision_id != decision.pk
             or row.fulfilled_at < decision.recorded_at

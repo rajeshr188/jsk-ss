@@ -1,5 +1,53 @@
 # Testing
 
+## Invocation-local owner history validation (27 October 2026)
+
+The owner returned-benefit workspace now builds a private agreement/database-scoped
+read object. A decision history is retained only after every row and its predecessor
+return basis validate successfully. Recursive reads of that same history within this
+workspace reuse those validated rows; circular traversal and foreign agreements fail.
+The object is created inside the workspace and is never returned or stored on models,
+in a session, in global state or in a cross-request cache. Errors are not memoized.
+
+Award, invoice, original source, principal, closure and current-state checks remain.
+Standalone selectors and mutation services keep fresh default validation. In addition,
+`current=True` binding/fulfilment/reversal checks explicitly discard any supplied
+historical read object. The optimization is presentation evidence, never authority
+to approve, fulfil, return or close an agreement. Existing transaction/lock boundaries,
+immutable proof serialization, amounts, gates and migrations are unchanged.
+
+The four-generation real-service profile still verifies write-free private GETs,
+complete predecessor rows, latest-only review selection and failure after tampering
+with original SETTLE consent. New regressions reuse the same Python account after
+retained-decision damage and require a fresh workspace to show investigation; a
+current binding supplied an old read after a superseding HOLD must still fail and
+create no fulfilment. Existing source-drift, approval/hold, signed preview, concurrency
+and migration-retention regressions are included in the affected run.
+
+| Owner review depth | INR before | INR after | Metal before | Metal after |
+| --- | ---: | ---: | ---: | ---: |
+| One full return | 627 | 627 | 267 | 267 |
+| Two full returns | 1,732 | 990 | 779 | 474 |
+| Three full returns | 3,573 | 1,393 | 1,643 | 703 |
+| Four full returns | 6,278 | 1,840 | 2,931 | 958 |
+
+Fourth-return observed local page time was 2.407s INR / 1.385s metal, versus the
+previous 7.662s / 2.773s. Timing includes the Django test client and concurrent local
+test load; query counts are the more reliable comparison. Regression ceilings now
+reject the earlier repeated-traversal counts at depths two through four. No history
+cap, serialized-proof change or weaker source check was introduced. These still-high
+counts require representative exact-image latency review, not an inferred SLA.
+
+The initial profile plus existing one-return/source-drift cases passed **4 tests
+in 248.050s**. The final tightened four-generation profile passed **2 tests in
+186.577s**, reproducing every query count above and rejecting original-consent
+tampering. Both unique disposable localhost PostgreSQL databases were destroyed.
+The broader affected run passed **35 tests in 1213.854s** across
+`test_owner_workflow_queries`, `test_owner_benefit_reapplication`,
+`test_benefit_reapplications` and `test_benefit_replacement_integration`.
+Its unique disposable localhost PostgreSQL database was destroyed. Django system
+checks reported no issues and `makemigrations --check --dry-run` found no changes.
+
 ## Builder-v1 release acceptance map (27 October 2026)
 
 The current remaining-work list is in MVP_PLAN.md under "Remaining release
@@ -16,7 +64,7 @@ are operationally enabled. The earlier dated sections record their actual runs.
 | Eligibility and benefits | `test_independent_eligibility`, `test_benefit_qualification`, `test_benefit_awards`, `test_benefit_fulfilments` | Candidate matrix results for no/count/date/both requirements, benefit-only misses and unchanged earned rights |
 | Full settlement, unused cancellation and corrections | `test_independent_inr_settlement`, `test_independent_metal_settlement`, `test_closure_acceptance`, `test_inr_corrections`, `test_replacement_settlements`, `test_benefit_reapplications`, `test_benefit_replacement_integration` | Combined operational acceptance; real-source financial integrity and complete legacy regression, not just happy-path fixtures |
 | Statements, privacy and notices | `test_settlement_documents`, `test_independent_presentation`, `test_inr_completion_reminders`, `test_event_reminder_revalidation` | Delivered inbox and real Android/TWA review; no principal/benefit/gram conflation or notice before actual completion |
-| Owner experience and read cost | Owner workspace suites, `test_owner_workflow_queries`, `test_owner_history_queries` | Resolve measured repeated-history read growth; physical-device/accessibility acceptance remains separate from local Chrome snapshots |
+| Owner experience and read cost | Owner workspace suites, `test_owner_workflow_queries`, `test_owner_history_queries`; invocation-local validation reduces repeated-history reads | Measure representative exact-image latency; physical-device/accessibility acceptance remains separate from local Chrome snapshots |
 
 Unqualified module names above are under `schemes.tests`. The release candidate must
 pass the repository's normal `.github/workflows/ci.yml`: frozen dependencies,

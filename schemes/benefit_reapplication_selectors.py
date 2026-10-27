@@ -9,9 +9,39 @@ from .replacement_settlement_selectors import (disposition_history, history_entr
 from .settlement_selectors import proof_digest
 
 
-def return_basis(reversal, *, closure_sequence=None, disposition_count=None, current=True):
+class _OwnerHistoryRead:
+    """Validated historical decisions for one read-only workspace invocation.
+
+    Never returned to callers or used by mutation services. Current source/state
+    checks still run; only repeated traversal of the same decision prefix is reused.
+    """
+    def __init__(self, account):
+        self.account_id = account.pk
+        self.database = account._state.db
+        self.completed = {}
+        self.visiting = set()
+
+    def decisions(self, reversal):
+        if (reversal._state.db != self.database
+                or reversal.fulfilment.award.scheme_account_id != self.account_id):
+            raise ValidationError("Benefit review history belongs to another agreement.")
+        key = reversal.pk
+        if key in self.visiting:
+            raise ValidationError("Benefit review history contains a circular predecessor.")
+        if key not in self.completed:
+            self.visiting.add(key)
+            try:
+                rows = _decision_history(reversal, history_read=self)
+                self.completed[key] = rows
+            finally:
+                self.visiting.remove(key)
+        return self.completed[key]
+
+
+def return_basis(reversal, *, closure_sequence=None, disposition_count=None, current=True,
+                 _history_read=None):
     """Require complete original principal/benefit return, not a balance inference."""
-    validate_benefit_reversal(reversal)
+    validate_benefit_reversal(reversal, _history_read=_history_read)
     f, award = reversal.fulfilment, reversal.fulfilment.award
     account = award.scheme_account
     account.refresh_from_db()
@@ -75,7 +105,7 @@ def return_basis(reversal, *, closure_sequence=None, disposition_count=None, cur
         returned_at=reversal.returned_at.isoformat(), reversal_recorded_at=reversal.recorded_at.isoformat())
 
 
-def validate_reapplication_decision(row):
+def validate_reapplication_decision(row, *, _history_read=None):
     try:
         e = row.evidence
         previous = row.previous
@@ -93,18 +123,25 @@ def validate_reapplication_decision(row):
                 or not row.reversal.recorded_at <= row.recorded_at <= timezone.now()
                 or (previous and row.recorded_at < previous.recorded_at)
                 or e["basis"] != return_basis(row.reversal, closure_sequence=e["basis"]["closure_sequence"],
-                    disposition_count=len(e["basis"]["dispositions"]), current=False)):
+                    disposition_count=len(e["basis"]["dispositions"]), current=False,
+                    _history_read=_history_read)):
             raise ValueError
     except (KeyError, TypeError, AttributeError, ValueError):
         raise ValidationError("Retained benefit reapplication decision requires investigation; do not rewrite it.") from None
 
 
-def decision_history(reversal):
+def decision_history(reversal, *, _history_read=None):
+    if _history_read is not None:
+        return _history_read.decisions(reversal)
+    return _decision_history(reversal)
+
+
+def _decision_history(reversal, *, history_read=None):
     rows = list(reversal.reapplication_decisions.select_related("previous").order_by("sequence"))
     for number, row in enumerate(rows, 1):
         if row.sequence != number or row.previous_id != (rows[number - 2].pk if number > 1 else None):
             raise ValidationError("Benefit reapplication history is incomplete or forked.")
-        validate_reapplication_decision(row)
+        validate_reapplication_decision(row, _history_read=history_read)
     return rows
 
 
@@ -129,7 +166,7 @@ def decision_evidence(reversal, outcome, authorization_reference):
         outcome=outcome, authorization_reference=authorization_reference)
 
 
-def _status_from_validated_history(reversal, rows):
+def _status_from_validated_history(reversal, rows, *, history_read=None):
     """Reuse this invocation's validated rows; return any current basis we read."""
     if not rows:
         return "UNREVIEWED", None
@@ -137,10 +174,10 @@ def _status_from_validated_history(reversal, rows):
     consumed = BenefitInvoiceFulfilment.objects.filter(reapplication_decision__reversal=reversal).first()
     if consumed:
         from .benefit_fulfilment_selectors import validate_benefit_fulfilment
-        validate_benefit_fulfilment(consumed)
+        validate_benefit_fulfilment(consumed, _history_read=history_read)
         return "CONSUMED", None
     latest = rows[-1]
-    basis = return_basis(reversal)
+    basis = return_basis(reversal, _history_read=history_read)
     if latest.evidence["basis"] != basis:
         return "STALE", basis
     return ("APPROVED_REVIEW" if latest.outcome == "APPROVE" else "HELD"), basis
@@ -159,14 +196,15 @@ def owner_reapplication_workspace(account):
     labels = {"UNREVIEWED": "Not yet reviewed", "APPROVED_REVIEW": "Approved for replacement review",
         "HELD": "On hold", "STALE": "Needs a fresh review", "CONSUMED": "Used by a replacement invoice"}
     rows, reviewable = [], []
+    history_read = _OwnerHistoryRead(account)
     for reversal in reversals:
         decisions, blocked, status = [], "", "REVIEW_REQUIRED"
         try:
-            decisions = decision_history(reversal)
-            status, basis = _status_from_validated_history(reversal, decisions)
+            decisions = decision_history(reversal, _history_read=history_read)
+            status, basis = _status_from_validated_history(reversal, decisions, history_read=history_read)
             if status != "CONSUMED":
                 if basis is None:
-                    return_basis(reversal)
+                    return_basis(reversal, _history_read=history_read)
                 reviewable.append(reversal.pk)
         except ValidationError as error:
             blocked = " ".join(error.messages)

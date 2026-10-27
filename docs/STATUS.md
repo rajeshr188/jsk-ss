@@ -2,6 +2,30 @@
 
 ## Current milestone
 
+**27 October 2026 - owner history traversal reused within one read.**
+The returned-benefit workspace now shares successfully validated decision histories
+within that invocation, scoped to its agreement and database. Earlier decisions
+and complete principal/benefit returns still validate; circular/foreign traversal
+fails. The read object never leaves the workspace and is not retained on models,
+sessions or global state. Each new page starts fresh. Mutation services keep their
+independent validation, and current binding/fulfilment/reversal checks explicitly
+discard any supplied historical read object.
+
+Four-return INR queries fell from 6,278 to 1,840 while original-authorization
+tampering still blocks review. TESTING.md records the full profile and regression
+evidence, including fresh consent-drift detection and rejection of an old approval
+after a superseding hold. This is a local read-cost improvement, not production
+latency or complete release acceptance. No schema, policy, lock, financial amount,
+provider operation or activation gate changed.
+
+Verification passed: the final two deep-history profile tests, 35 broader affected
+regressions, Django system checks and migration-drift checks. Disposable localhost
+PostgreSQL test databases were destroyed; ordinary and production data were untouched.
+
+Next complete operator acceptance for uncertain-order recovery and provider
+exceptions, then consolidated candidate CI and exact-image rehearsal, including
+representative latency. Device/inbox and INR publication approval remain open.
+
 **27 October 2026 - consolidated builder release checklist and deeper-history review.**
 MVP_PLAN.md now distinguishes completed local implementation (INR primitives,
 independent eligibility and defined benefit lifecycles) from outstanding release
