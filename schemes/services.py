@@ -2190,6 +2190,8 @@ def _classify_webhook_recovery(*, event, contribution, inspection):
             "MANUAL_REVIEW_REQUIRED",
             "No mode-matched local contribution exists for this Razorpay order.",
         )
+    if event is None or event.contribution_id not in (None, contribution.pk):
+        return ("MANUAL_REVIEW_REQUIRED", "Capture event is linked to a different contribution.")
     if contribution.scheme_account.savings_mode == SchemeAccount.SavingsMode.INR_CREDIT:
         from .inr_api_payments import validate_inspection
         from .inr_selectors import validate_inr_contract, validate_principal_receipt
@@ -2253,6 +2255,7 @@ def reconcile_razorpay_webhook(
     performed_by,
     reason,
 ):
+    performed_by = get_user_model().objects.filter(pk=getattr(performed_by, "pk", None)).first()
     _validate_owner(performed_by)
     normalized_reason = reason.strip()
     if not normalized_reason:
@@ -2312,7 +2315,7 @@ def reconcile_razorpay_webhook(
             actor=performed_by,
             reason=normalized_reason,
             error_code="PROVIDER_INSPECTION_FAILED",
-            detail=str(error),
+            detail="Provider payment inspection failed; retain the case for investigation.",
         )
         raise
 
@@ -2364,6 +2367,8 @@ def reconcile_razorpay_webhook(
             .select_related("scheme_account")
             .get(pk=contribution.pk)
         )
+        performed_by = get_user_model().objects.filter(pk=performed_by.pk).first()
+        _validate_owner(performed_by)
         locked_outcome, locked_detail = _classify_webhook_recovery(
             event=locked_event,
             contribution=locked_contribution,

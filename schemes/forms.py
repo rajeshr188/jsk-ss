@@ -919,6 +919,9 @@ class AuditReasonForm(forms.Form):
 
 
 class WebhookRecoveryForm(forms.Form):
+    review_token = forms.CharField(required=False, max_length=8192, widget=forms.HiddenInput)
+    confirmed = forms.BooleanField(required=False,
+        label="I reviewed the exact payment, order, amount and local agreement shown above.")
     class Action:
         INSPECT = "INSPECT"
         APPLY = "APPLY"

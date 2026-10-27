@@ -35,22 +35,46 @@
   </div>
 </div>
 
+<section class="card card-body mb-4" aria-labelledby="provider-comparison-heading">
+  <h2 class="h4" id="provider-comparison-heading">Latest provider comparison</h2>
+  {% if latest %}
+  <p>{{ latest.get_outcome_display }} · {{ latest.created_at|date:'d M Y, g:i A' }} · {{ latest.actor_label }}</p>
+  <p>This is retained evidence from the latest attempt, not a live query. Apply checks the provider again. Only the reviewing owner can confirm a safe comparison within ten minutes; a newer attempt replaces that review.</p>
+  <div class="table-responsive"><table class="table">
+    <thead><tr><th scope="col">Check</th><th scope="col">Local / event</th><th scope="col">Provider observation</th></tr></thead>
+    <tbody>
+      <tr><th scope="row">Payment ID</th><td class="text-break">{{ event.gateway_reference|default:'Unavailable' }}</td><td class="text-break">{{ comparison.payment_id|default:'Unavailable' }}</td></tr>
+      <tr><th scope="row">Order ID</th><td class="text-break">{{ event.gateway_order_id|default:'Unavailable' }}</td><td class="text-break">{{ comparison.order_id|default:'Unavailable' }}</td></tr>
+      <tr><th scope="row">Amount</th><td>{% if compared_contribution %}₹{{ compared_contribution.amount|floatformat:2 }}{% else %}Unmatched{% endif %}</td><td>{% if comparison.amount != None %}₹{{ comparison.amount|floatformat:2 }}{% else %}Unavailable{% endif %}</td></tr>
+      <tr><th scope="row">Currency</th><td>INR</td><td>{{ comparison.currency|default:'Unavailable' }}</td></tr>
+      <tr><th scope="row">Captured</th><td>Must be captured</td><td>{{ comparison.status|default:'Unavailable' }} · {{ comparison.captured|yesno:'Yes,No,Unavailable' }}</td></tr>
+    </tbody>
+  </table></div>
+  {% if compared_contribution %}<p>Contribution #{{ compared_contribution.pk }} · {{ compared_contribution.scheme_account.scheme_number }} · {{ compared_contribution.get_status_display }}.</p>{% endif %}
+  {% else %}<p>No inspection is retained yet. Check provider to compare the exact payment with local records.</p>{% endif %}
+  {% if compared_contribution.scheme_account.savings_mode == 'INR_CREDIT' %}<p>Verified INR recovery records purchase-credit principal only. It creates no grams, confirms no refund and does not by itself qualify a monthly instalment: signed timing evidence may still be required.</p>{% endif %}
+</section>
+
 <form method="post" class="card form-card mb-4" novalidate>
   <div class="card-body p-4">
     {% csrf_token %}
+    {{ form.review_token }}{{ form.review_token.errors }}
     {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
     <label class="form-label" for="{{ form.reason.id_for_label }}">{{ form.reason.label }}</label>
     {{ form.reason }}
     {% if form.reason.errors %}<div class="invalid-feedback d-block">{{ form.reason.errors }}</div>{% endif %}
-    <div class="form-text mb-3">{{ form.reason.help_text }}</div>
+    <div class="form-text mb-3" id="{{ form.reason.auto_id }}_helptext">{{ form.reason.help_text }}</div>
     {% if form.action.errors %}<div class="alert alert-danger">{{ form.action.errors }}</div>{% endif %}
+    <div class="mb-3">{{ form.confirmed }} {{ form.confirmed.label_tag }}{{ form.confirmed.errors }}</div>
     <div class="d-flex flex-wrap gap-2">
       <button class="btn btn-outline-dark" type="submit" name="action" value="INSPECT">Check provider</button>
       <button class="btn btn-danger" type="submit" name="action" value="APPLY"{% if not can_apply_recovery %} disabled aria-disabled="true"{% endif %}>Apply verified recovery</button>
     </div>
-    {% if not can_apply_recovery %}<p class="form-text mb-0 mt-2">Run Check provider and review a safe result before Apply is enabled.</p>{% endif %}
+    {% if not can_apply_recovery %}<p class="form-text mb-0 mt-2">Run Check provider and review a fresh safe result using your own owner login before Apply is enabled. A blocked case cannot be cleared here.</p>{% endif %}
   </div>
 </form>
+
+<div class="alert alert-info"><strong>Refund or late-payment investigation:</strong> this screen issues no refund and has no manual-clear action. Keep unresolved captures visible. An INR settlement refund against already-recorded principal is a separate workflow with source-specific completion evidence. <a href="{% url 'schemes:plan_manual' %}#capture-refund-review">Read the owner procedure</a>.</div>
 
 <div class="card form-card">
   <div class="card-body p-4">

@@ -22,6 +22,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST, require_http_methods
 from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.vary import vary_on_cookie
 
 from accounts.models import CustomUser
 from accounts.services import issue_customer_invitation, send_customer_invitation
@@ -460,8 +461,12 @@ def exception_queue(request):
     })
 
 
+@never_cache
+@vary_on_cookie
 @owner_required
+@require_http_methods(["GET", "POST"])
 def webhook_recovery(request, event_id):
+    from .webhook_recovery_selectors import webhook_review_context, require_webhook_review
     event = get_object_or_404(
         PaymentWebhookEvent.objects.select_related(
             "contribution",
@@ -476,14 +481,20 @@ def webhook_recovery(request, event_id):
     if request.method == "POST" and form.is_valid():
         apply = form.cleaned_data["action"] == WebhookRecoveryForm.Action.APPLY
         try:
+            if apply:
+                require_webhook_review(event, request.user, form.cleaned_data["review_token"])
+                if not form.cleaned_data["confirmed"]:
+                    raise ValidationError("Review the provider comparison and confirm before applying recovery.")
             result = reconcile_razorpay_webhook(
                 webhook_event_id=event.pk,
                 apply=apply,
                 performed_by=request.user,
                 reason=form.cleaned_data["reason"],
             )
-        except (ImproperlyConfigured, PaymentGatewayError, ValidationError) as error:
-            form.add_error(None, str(error))
+        except ValidationError as error:
+            form.add_error(None, " ".join(error.messages))
+        except (ImproperlyConfigured, PaymentGatewayError):
+            form.add_error(None, "Provider comparison is unavailable. No entitlement was applied; check again or retain the case for investigation.")
         else:
             if result.applied and result.outcome == "ELIGIBLE_FOR_RECOVERY":
                 messages.success(
@@ -515,19 +526,16 @@ def webhook_recovery(request, event_id):
                     "reconciliation/refund runbook.",
                 )
             return redirect("schemes:webhook_recovery", event_id=event.pk)
+    review = webhook_review_context(event, request.user)
+    if not form.is_bound:
+        form.initial["review_token"] = review["review_token"]
     return render(
         request,
         "schemes/webhook_recovery.html",
         {
             "event": event,
             "form": form,
-            "can_apply_recovery": event.processing_attempts.filter(
-                source=WebhookProcessingAttempt.Source.OWNER_RECOVERY,
-                outcome__in=[
-                    WebhookProcessingAttempt.Outcome.ELIGIBLE_FOR_RECOVERY,
-                    WebhookProcessingAttempt.Outcome.ALREADY_PROCESSED,
-                ],
-            ).exists(),
+            **review,
         },
     )
 

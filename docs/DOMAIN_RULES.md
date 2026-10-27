@@ -755,6 +755,10 @@ preferences do not become fixed, and no old agreement receives a configuration i
   sufficient principal evidence. A valid callback HMAC plus authenticated exact Live
   API capture can create a separate immutable minimal observation and principal
   atomically (0044). Owner API recovery requires preview, fresh exact inspection,
+  a fresh owner/event/attempt-bound web confirmation and unchanged local payment facts.
+  The web review expires after ten minutes; a newer attempt replaces the old review.
+  Apply still independently checks the provider and revalidates under financial locks.
+  Persisted owner authority is rechecked before I/O and before credit. Preserve
   actor/reason and retained event identity. Neither path fabricates a signed webhook
   or uses API payment creation time to qualify an instalment: monthly timing remains
   awaiting evidence until an original signed capture supplies it. Later callbacks,

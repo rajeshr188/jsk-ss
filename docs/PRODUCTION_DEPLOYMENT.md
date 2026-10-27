@@ -7,6 +7,37 @@ explicit Razorpay Test/Live modes, and manually published Scheme Rate build. Dev
 
 ## Production-readiness boundary
 
+### Captured-payment comparison and refund handoff (27 October 2026; local acceptance)
+
+From **Exception queue → Review recovery**, use **Check provider** and compare the
+latest retained payment/order IDs, INR amount, currency and captured state with the
+local contribution. GET performs no provider call. Confirm and Apply with the same
+owner login within ten minutes. The signed form binds that owner, event, latest
+attempt and local payment facts. Newer failed/mismatched attempts, changed facts or
+expired reviews require another check. Apply independently fetches provider state
+and validates under existing financial locks; preview is never spending authority.
+Owner authority is reloaded before I/O and before credit. Cross-linked event records
+are held for INR and metal. New provider-error attempts retain a safe explanation,
+not a raw provider error payload.
+
+| Observed case | Operator action and acceptance evidence |
+| --- | --- |
+| Exact captured payment, matching pending contribution | Check, confirm and apply. Verify one principal receipt OR exact-grade allocation and one confirmed contribution. INR API confirmation alone does not qualify monthly timing; retain the original signed capture evidence. |
+| Repeat delivery or retry of the same credited payment | Inspect again if needed. Original source/entitlement remains singular; never create a second contribution or invoice benefit. |
+| Different captured payment on a credited order; abandoned/failed/unknown/mismatched source; late funds after disposition | Keep the event unresolved. Investigate exact payment and existing entitlement. Do not relabel the source, reopen the agreement or conceal the exception in ordinary settlement. |
+| No local entitlement and an approved payment-error refund | Use the existing authorized manual provider-dashboard process. Retain payment/order/refund IDs, exact amount, approver, timestamps and final completion evidence in the incident record. Submitted is not completed. The app has no verified payment-error refund clearance; retain the local exception until an approved audited resolution exists. |
+| Recorded INR purchase credit and agreed final settlement | Use the separate customer-authorized full INR disposition. Fulfil each original-source refund leg only after actual completion with required references/customer receipt evidence. Remaining legs stay liabilities and prevent closure; no bonus cashout or cash substitution for online sources. |
+
+An exception note or refund screenshot cannot clear a financial hold. No refund API,
+generic refund-status editor, manual-clear action or new fallback route is introduced.
+Exact-grade metal is not converted into an INR refund. Missing signed capture events
+require provider retry/support investigation, not a hand-created webhook. Validate
+these cases on synthetic/isolated provider fixtures, never manufactured Live errors.
+
+Payment-error refund clearance remains a release decision/implementation gap,
+separate from supported INR settlement fulfilment. Candidate operator/device
+acceptance, normal CI and exact-image rehearsal are still required.
+
 ### Optional order investigation workspace (27 October 2026; not activated)
 
 The owner exception queue now exposes durable optional-contribution requests without
@@ -3547,10 +3578,13 @@ financial record.
 - **Payment-error refunds:** the approved manual path is limited to captured duplicate
   or otherwise erroneous payments that created **no** local contribution entitlement.
   Verify this from the payment ID, order, amount, webhook ledger, contribution, and
-  allocation before an authorized owner initiates the refund in Razorpay Dashboard.
+  allocation or INR principal receipt before an authorized owner initiates the refund in Razorpay Dashboard.
   Record the refund ID, amount, reason, approver, timestamps, and final status in the
-  incident record. If an entitlement exists, do not refund through the Dashboard:
-  disable affected activity and escalate until an audited compensating workflow exists.
+  incident record. If entitlement exists, do not treat it as a no-entitlement payment
+  error: contain affected activity and use only an approved audited disposition or
+  correction workflow. Configured INR full settlement has source-specific actual
+  fulfilment records; its release gates and customer authorization still apply.
+  It does not clear unrelated provider errors.
 - **Disputes:** monitor Razorpay Dashboard and its configured notification address,
   review each item before its response deadline, preserve the agreement, payment,
   acknowledgement, statement, Scheme Rate lock, allocation, and showroom evidence,

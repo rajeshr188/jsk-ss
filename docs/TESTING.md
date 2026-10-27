@@ -1,5 +1,39 @@
 # Testing
 
+## Captured-payment owner confirmation (27 October 2026)
+
+`test_capture_recovery_workspace` passed **7 tests in 22.176s** on a unique
+disposable localhost PostgreSQL database, destroyed afterward. Real recovery and
+principal/allocation services are exercised with synthetic contracts and simulated
+provider I/O/readiness. GET is write-free/private, CSRF/access/method checks hold,
+and the comparison exposes only retained provider fields and local payment facts.
+
+The web Apply step requires an explicit checkbox and a signed review bound to the
+owner, event, latest attempt and local contribution facts. The original inspection
+expires after ten minutes even after page reload. Missing/tampered, cross-owner,
+cross-event, expired and changed-state reviews cannot call the provider or credit.
+A newer mismatch/provider failure invalidates a prior safe review. Raw new provider
+errors are suppressed from the page and attempt detail. Apply still fetches current
+provider evidence; fresh uncaptured results retain the exception with no principal.
+
+Optional and required INR recovery produces one API-backed principal source without
+grams or invented qualifying timing. A repeated old web submission cannot double
+credit. Metal recovery retains its original rate lock. Persisted owner revocation
+before/during I/O and cross-linked metal events fail closed. Existing service-level
+idempotency remains independent of the stricter web confirmation.
+
+The broader affected run passed **55 tests in 135.068s**: the new workspace,
+`test_razorpay.RazorpayWebhookRecoveryTests`, `test_inr_api_payments.InrApiPaymentsTests`,
+`test_instalment_capture_boundaries` (including the capture race), the owner INR
+original-source refund form case and `test_plan_manual`. Django checks reported no
+issues; `makemigrations --check --dry-run` found no changes. The unique disposable
+localhost PostgreSQL database was destroyed. Normal hashing/logging were retained;
+ordinary application/production data and actual provider accounts were untouched.
+
+Physical-device/operator acceptance and
+verified payment-error refund clearance remain separate release gaps; the existing
+manual INR disposition is not a general provider-exception clear operation.
+
 ## Owner optional-order investigation (27 October 2026)
 
 The optional-order exception entry and private recovery screen use the existing

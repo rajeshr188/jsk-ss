@@ -2,6 +2,30 @@
 
 ## Current milestone
 
+**27 October 2026 - captured-payment comparison and explicit confirmation.**
+The owner recovery page now shows the latest retained provider/local comparison.
+Apply requires a signed owner/event/attempt-bound review, unchanged payment facts,
+an explicit confirmation and an inspection no older than ten minutes. A newer
+unsafe attempt invalidates the earlier web review. GET is private/non-cacheable and
+performs no provider call or writes; Apply still independently fetches provider state
+and revalidates through the existing financial service and locks.
+
+The service reloads persisted owner authority before I/O and credit, refuses
+cross-linked metal events as well as INR events, and retains safe provider-error
+descriptions. All 55 affected regressions passed, including the seven new workspace
+cases, legacy/INR recovery, late/duplicate/concurrent captures and source-specific
+INR refund presentation. Django and migration-drift checks passed; unique disposable
+localhost databases were destroyed. TESTING.md records the evidence and limits.
+No migration, refund API, financial-clear action or
+activation change is introduced.
+
+The manual/runbook now separate exact capture recovery, duplicate/late-payment
+investigation, no-entitlement payment-error refunds and full INR settlement refunds.
+External payment-error refund completion still has no verified local clearance
+workflow; it remains an explicit release gap, not something an owner note resolves.
+Next address that bounded resolution contract, then candidate operator/device
+acceptance, consolidated CI and exact-image rehearsal. Production remains unchanged.
+
 **27 October 2026 - owner optional-order identity investigation.**
 The exception queue now exposes durable optional-contribution requests without a
 provider binding, before expiry and after a local FAILED status. An owner-only,
