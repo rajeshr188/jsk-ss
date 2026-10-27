@@ -618,6 +618,40 @@ agreement closure or replacement contribution. Local pending-attempt and reserva
 states still need explicit evidence-backed lifecycle handling. Do not reuse the
 "untouched order" abandonment rule for an order that captured and was refunded.
 
+**Implemented lifecycle boundary (0054, local only):**
+
+Exact resolved capture identity includes its retained payload SHA-256 as well as
+Live mode, payment, order and compatible local contribution link. Original event
+states remain intact. A changed payload retains investigation even for the same
+payment. Observations or payment resolutions alone never release a pending order.
+
+A separate immutable `RefundedPaymentOrderClosure` records owner review, fresh
+all-attempt inspection, minimal provider/source snapshots and exact resolution
+references. Both inspections require an unchanged `paid` order, INR amount paid equal
+to the local amount, zero due, and collection count equal to the order's attempt count.
+The bounded v1 check refuses more than 100 attempts; it does not infer completeness
+from a partial page. Each listed payment must match the exact order/amount and be
+failed or fully refunded. Every refunded payment needs a validated retained full
+refund resolution; all attempts must lack historical entitlement, and the refunded
+total must match the order's paid amount. Unsupported or contradictory cases stay held.
+
+Apply requires an owner-bound signed ten-minute review, explicit confirmation and
+an audit reason. Network reads occur outside transactions; persisted authority,
+unchanged sources, unresolved events and resolutions are rechecked under the account
+lock. The original contribution becomes/remains ABANDONED, retaining IDs, rate and
+expiry. A monthly RESERVED/RELEASED_REVIEW claim receives a distinct RELEASED decision
+linked to the order proof. Existing qualified replacement claims are unaffected.
+This record is retirement of a collection attempt, not customer agreement closure.
+No principal, metal, benefit or qualifying instalment is created. Retained resolution
+and order references enter new settlement/benefit proofs without rewriting older ones.
+
+Razorpay documents that a paid order accepts no further payment requests and remains
+paid after refund: [order entity and states](https://razorpay.com/docs/api/orders/fetch-with-id/).
+The [order payments endpoint](https://razorpay.com/docs/api/orders/fetch-payments/)
+supplies the attempt collection. The stricter matching, bounded completeness and
+no-entitlement requirements here are application design choices. Provider processing
+still does not independently prove the customer's bank credit.
+
 **Execution order and acceptance:**
 
 1. Add strictly validated read-only provider inspection and immutable, uniquely

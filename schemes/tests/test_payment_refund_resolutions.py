@@ -40,7 +40,7 @@ class RefundResolutionTests(ApiHelpers, TransactionTestCase):
         return resolve_payment_error_refund(**(dict(review_token=token, confirmed=True, performed_by=self.owner,
             reason="Provider reports the manually initiated full refund processed", gateway=self.gateway(c)) | changes))
 
-    def test_fresh_resolution_is_idempotent_and_no_agreement_hold_or_finances_change(self):
+    def test_resolution_is_idempotent_and_only_exact_event_hold_changes(self):
         for monthly in (False, True):
             c, e, observation, token, _, _, _ = self.review(monthly)
             before = Contribution.objects.filter(pk=c.pk).values().get()
@@ -53,7 +53,7 @@ class RefundResolutionTests(ApiHelpers, TransactionTestCase):
             self.assertEqual(Contribution.objects.filter(pk=c.pk).values().get(), before)
             e.refresh_from_db()
             self.assertEqual(e.status, "RECEIVED")
-            self.assertEqual(closure_payment_review(c.scheme_account)["unresolved_webhooks"], 1)
+            self.assertEqual(closure_payment_review(c.scheme_account)["unresolved_webhooks"], 0)
             self.assertEqual(closure_payment_review(c.scheme_account)["pending_payments"], 1)
         self.assertEqual(PaymentErrorRefundResolution.objects.count(), 2)
         self.assertFalse(InrPrincipalReceipt.objects.exists())
@@ -151,6 +151,7 @@ class RefundResolutionTests(ApiHelpers, TransactionTestCase):
         self.confirm(c, capture_gateway)
         self.assertEqual(InrPrincipalReceipt.objects.filter(contribution=c).count(), 1)
         self.assertEqual(InrPrincipalReceipt.objects.get(contribution=c).source_reference, f"pay_{c.pk}")
+        self.assertEqual(closure_payment_review(c.scheme_account)["unresolved_webhooks"], 0)
 
     def test_concurrent_capture_and_resolution_can_never_both_succeed(self):
         c, _, _, token, capture_gateway, _, _ = self.review()

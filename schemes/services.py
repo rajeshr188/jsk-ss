@@ -2101,6 +2101,10 @@ def process_razorpay_webhook(*, gateway_mode, event_id, body, payload):
                 "PAYMENT_DETAILS_MISMATCH",
                 "Razorpay webhook payment details do not match the local contribution.",
             )
+        from .payment_refund_selectors import is_resolved_capture_event
+        if is_resolved_capture_event(event):
+            raise _WebhookReviewRequired("REFUNDED_PAYMENT_REPLAY",
+                "This exact captured-payment evidence has a retained full-refund resolution; no credit or new reservation is created.")
         if contribution.status == Contribution.Status.ABANDONED:
             raise _WebhookReviewRequired(
                 "LATE_CAPTURE_ABANDONED",
@@ -2129,6 +2133,10 @@ def process_razorpay_webhook(*, gateway_mode, event_id, body, payload):
         with transaction.atomic():
             if event.contribution_id:
                 SchemeAccount.objects.select_for_update().get(pk=event.contribution.scheme_account_id)
+            from .payment_refund_selectors import is_resolved_capture_event
+            if error.code == "LATE_CAPTURE_ABANDONED" and is_resolved_capture_event(event):
+                error = _WebhookReviewRequired("REFUNDED_PAYMENT_REPLAY",
+                    "The exact payment already has retained refund resolution; preserve its history without re-crediting.")
             event.status = PaymentWebhookEvent.Status.REVIEW_REQUIRED
             event.failure_code = error.code
             event.error = error.detail[:1000]

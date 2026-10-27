@@ -7,6 +7,8 @@ from allauth.socialaccount.models import SocialAccount, SocialToken
 from django.db.models import Count, Q, OuterRef, Subquery
 from django.utils import timezone
 
+from schemes.payment_refund_selectors import unresolved_payment_events
+
 from .models import (
     CustomerAccountDeletionRequest,
     CustomerInvitation,
@@ -165,10 +167,7 @@ def customer_account_deletion_disposition(deletion_request):
             ).exclude(gateway_reference="").values("gateway_reference"),
         )
     )
-    unresolved = webhooks.exclude(status__in=[
-        PaymentWebhookEvent.Status.PROCESSED,
-        PaymentWebhookEvent.Status.IGNORED,
-    ]).count()
+    unresolved = unresolved_payment_events(webhooks).count()
     if unresolved:
         flags.append(f"Linked or identifier-matched webhook events need review: {unresolved}.")
     if enrolments.filter(

@@ -7,6 +7,8 @@ from django.core.exceptions import ValidationError
 from django.db.models import Q
 from django.utils import timezone
 
+from schemes.payment_refund_selectors import unresolved_payment_events
+
 from .models import ConfiguredSettlement, InstalmentReservation, PaymentWebhookEvent
 
 
@@ -39,10 +41,13 @@ def full_settlement_evidence(account, closure, *, benefit_invoice=None):
     payments = list(account.contributions.select_related("scheme_rate", "metal_allocation", "cash_receipt", "cash_reversal").order_by("pk"))
     orders = [p.gateway_order_id for p in payments if p.gateway_order_id]
     events = PaymentWebhookEvent.objects.filter(Q(contribution__in=payments) | Q(gateway_order_id__in=orders)).order_by("pk")
-    if events.exclude(status__in=["PROCESSED", "IGNORED"]).exists():
+    if unresolved_payment_events(events).exists():
         raise ValidationError("Reconcile all linked provider events before full settlement.")
     facts = []
+    from .payment_refund_selectors import is_refunded_order_retired
     for payment in payments:
+        if payment.status == "ABANDONED" and is_refunded_order_retired(payment):
+            continue  # Zero entitlement; retained separately in refunded_orders proof.
         # Local FAILED/ABANDONED/expiry is not provider cancellation. V1 deliberately
         # keeps these histories held; no owner checkbox can assert zero exposure.
         cash = payment.payment_channel == "IN_STORE_CASH" and payment.payment_gateway == "in_store_cash" and not payment.gateway_mode
@@ -89,7 +94,9 @@ def full_settlement_evidence(account, closure, *, benefit_invoice=None):
     quantity = get_metal_balance(account)
     if quantity <= 0:
         raise ValidationError("A positive recorded entitlement is required; zero balance is not a settlement.")
+    from .payment_refund_selectors import refund_disposition_evidence
     evidence = dict(version=1, account=account.pk, closure=str(closure.pk), sequence=sequence,
+        **refund_disposition_evidence(account),
         configuration=account.configuration_snapshot_id, grade=account.metal_grade_id,
         quantity=format(quantity, ".6f"), basis="NORMAL" if normal else "EARLY", as_of=str(today),
         payments=facts, redemptions=[dict(id=r.pk, reversal=r.reversal.pk) for r in redemptions],
@@ -102,6 +109,9 @@ def full_settlement_evidence(account, closure, *, benefit_invoice=None):
 def validate_configured_settlement(settlement):
     """Validate retained source links, not a fresh permission to settle again."""
     r, event, evidence = settlement.redemption, settlement.event, settlement.evidence
+    from .payment_refund_selectors import validate_retained_refund_disposition
+    if isinstance(evidence, dict):
+        validate_retained_refund_disposition(evidence, r.scheme_account)
     try:
         if not isinstance(evidence, dict) or type(evidence.get("sequence")) is not int:
             raise ValueError

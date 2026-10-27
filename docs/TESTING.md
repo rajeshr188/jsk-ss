@@ -1,5 +1,47 @@
 # Testing
 
+## Refunded-order lifecycle and common hold interpretation (27 October 2026)
+
+The focused lifecycle/provider run passed **11 tests in 104.278s** on a unique
+disposable localhost PostgreSQL database, destroyed afterward. Real services and
+adapter parsers use synthetic provider replies; no real provider request is made.
+The earlier nine resolution regressions also passed in 60.796s with the updated
+expectation: exact event hold resolved, pending order still held. The first lifecycle
+run had one test-only result-object indexing error, corrected before the passing run.
+
+Coverage includes complete stable order/attempt evidence, malformed or non-terminal
+provider states, owner-bound fresh reviews, expiry, revocation, contradictory evidence
+during inspection, idempotency and concurrent retirement. Both INR and exact-metal,
+optional and monthly paths preserve financial sources while allowing a legitimate
+replacement only after explicit retirement. Refunding an abandoned late capture
+preserves an already-qualified replacement; exact replay does not reopen its released
+reservation, while a new payment does. PostgreSQL refuses proof update/delete and
+0054 reversal with retained evidence. Existing resolution migration tests exercise
+empty 0054 reversal/forward application as part of their preservation rehearsal.
+
+An additional **18 tests passed in 50.492s**: corruption/wrong-event-link refusal,
+`test_audit_exceptions`, `test_optional_order_workspace`, and the three account-deletion
+disposition tests for identifier-matched webhooks, blank identifiers and pending orders.
+The unique disposable localhost database was destroyed afterward.
+
+The broader run passed **76 tests in 669.563s**: the then-nine-case retirement suite,
+`test_payment_refund_resolutions`, `test_instalment_capture_boundaries`,
+`test_independent_payment_entry`, `test_independent_inr_settlement` and
+`test_independent_metal_settlement`. The expanded retirement suite subsequently
+passed **12 tests in 107.760s**, including wrong-link and corrupted-projection refusal
+and the final separation of service mutations from selector reads. Disposable local
+PostgreSQL databases were destroyed. Django and migration-drift checks passed.
+
+After strengthening retained monthly release-source/sequence validation, the three
+affected replacement, abandoned-late-capture and concurrent-retirement cases passed
+again in **37.698s** on a unique disposable localhost database, destroyed afterward.
+
+Shared predicates are tested in ordinary queries and nested correlated Exists queries.
+Order, payload, payment, mode, event type and invalid proof remain distinct. New INR
+and metal settlement evidence records retirement separately from credited principal.
+This is local integration evidence, not candidate CI, owner-screen acceptance, provider
+bank-credit verification, production performance or activation approval.
+
 ## Exact-payment refund resolution and replay guard (27 October 2026)
 
 The focused `test_payment_refund_resolutions` run passed **9 tests in 65.332s**

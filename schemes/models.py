@@ -1389,6 +1389,7 @@ class InstalmentPaymentDecision(models.Model):
     cash_reversal = models.ForeignKey("InStoreCashContributionReversal", on_delete=models.PROTECT, null=True, blank=True)
     reconciliation_audit = models.ForeignKey("AuditEvent", on_delete=models.PROTECT, null=True, blank=True)
     owner_review = models.OneToOneField("InstalmentReview", on_delete=models.PROTECT, null=True, blank=True, related_name="qualification_decision")
+    refund_order_closure = models.OneToOneField("RefundedPaymentOrderClosure", on_delete=models.PROTECT, null=True, blank=True, related_name="release_decision")
 
     class Meta:
         ordering = ["reservation_id", "sequence"]
@@ -1400,7 +1401,7 @@ class InstalmentPaymentDecision(models.Model):
             models.UniqueConstraint(fields=["reservation", "cash_reversal"], name="inst_decision_reversal_unique"),
             models.UniqueConstraint(fields=["reservation", "reconciliation_audit"], name="inst_decision_release_unique"),
             models.CheckConstraint(condition=models.Q(sequence__gt=0) & ~models.Q(reason_code="") & ~models.Q(actor_label=""), name="inst_decision_evidence_required"),
-            models.CheckConstraint(condition=((models.Q(owner_review__isnull=True) & (
+            models.CheckConstraint(condition=(models.Q(refund_order_closure__isnull=True) & ((models.Q(owner_review__isnull=True) & (
                 models.Q(state="RESERVED", sequence=1, webhook_event__isnull=True, cash_receipt__isnull=True, cash_reversal__isnull=True, reconciliation_audit__isnull=True)
                 | models.Q(state="RESERVED", sequence__gt=1, reason_code__in=["PROVIDER_ORDER_RECORDED", "PROVIDER_ORDER_RECOVERED"], webhook_event__isnull=True, cash_receipt__isnull=True, cash_reversal__isnull=True, reconciliation_audit__isnull=True)
                 | models.Q(state="ORDERING", webhook_event__isnull=True, cash_receipt__isnull=True, cash_reversal__isnull=True, reconciliation_audit__isnull=True)
@@ -1413,7 +1414,9 @@ class InstalmentPaymentDecision(models.Model):
                 | models.Q(state="RELEASED_REVIEW", reconciliation_audit__isnull=True, cash_reversal__isnull=True, cash_receipt__isnull=True, webhook_event__isnull=False)
             )) | models.Q(state="QUALIFIED", reason_code="OWNER_VERIFIED_TIMING", owner_review__isnull=False,
                 webhook_event__isnull=True, cash_receipt__isnull=True, cash_reversal__isnull=True,
-                reconciliation_audit__isnull=True)), name="inst_decision_source_valid"),
+                reconciliation_audit__isnull=True))) | models.Q(state="RELEASED", reason_code="FULL_REFUND_ORDER_RECONCILED",
+                refund_order_closure__isnull=False, owner_review__isnull=True, webhook_event__isnull=True,
+                cash_receipt__isnull=True, cash_reversal__isnull=True, reconciliation_audit__isnull=True), name="inst_decision_source_valid"),
             models.CheckConstraint(condition=(
                 ~models.Q(state="QUALIFIED")
                 | models.Q(earliest_at__isnull=False, latest_at__isnull=False, latest_at__gte=models.F("earliest_at"))
@@ -2605,6 +2608,39 @@ class PaymentErrorRefundResolution(models.Model):
 
     def delete(self, *args, **kwargs):
         raise ValidationError("Payment refund resolutions must be retained.")
+
+
+class RefundedPaymentOrderClosure(models.Model):
+    """Retired provider attempt, not a customer agreement or financial settlement."""
+    contribution = models.OneToOneField(Contribution, on_delete=models.PROTECT, related_name="refunded_order_closure")
+    evidence = models.JSONField()
+    evidence_sha256 = models.CharField(max_length=64)
+    actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    actor_label = models.CharField(max_length=254)
+    reason = models.TextField()
+    reviewed_at = models.DateTimeField()
+    closed_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(condition=~models.Q(actor_label="") & ~models.Q(reason="")
+                & ~models.Q(evidence_sha256=""), name="refunded_order_evidence_required"),
+            models.CheckConstraint(condition=models.Q(closed_at__gte=models.F("reviewed_at")), name="refunded_order_review_before_apply"),
+        ]
+
+    def clean(self):
+        super().clean()
+        from .refunded_orders import validate_refunded_order_closure
+        validate_refunded_order_closure(self, creating=self._state.adding)
+
+    def save(self, *args, **kwargs):
+        if self.pk and type(self).objects.filter(pk=self.pk).exists():
+            raise ValidationError("Refunded-order closure evidence is immutable.")
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Refunded-order closure evidence must be retained.")
 
 
 class WebhookProcessingAttempt(models.Model):

@@ -11,6 +11,8 @@ from django.core.exceptions import ValidationError
 from django.db.models import Q
 from django.utils import timezone
 
+from schemes.payment_refund_selectors import unresolved_payment_events
+
 from .agreement_contracts import validate_independent_account_terms
 from .instalments import AGREEMENT_TIMEZONE, validate_real_instalment_channel
 from .models import InstalmentReservation, PaymentWebhookEvent, SchemeAccount
@@ -197,12 +199,14 @@ def _evaluate_independent_eligibility(account, *, as_of=None, closure=None):
         payments = list(account.contributions.select_related("scheme_rate", "metal_allocation", "cash_receipt", "cash_reversal").order_by("pk"))
         sources = account.contributions.all()
         orders = sources.exclude(gateway_order_id="").filter(gateway_order_id__isnull=False)
-        if PaymentWebhookEvent.objects.filter(Q(contribution__in=sources) | Q(
-                gateway_order_id__in=orders.values("gateway_order_id"))).exclude(status__in=["PROCESSED", "IGNORED"]).exists():
+        if unresolved_payment_events(PaymentWebhookEvent.objects.filter(Q(contribution__in=sources) | Q(
+                gateway_order_id__in=orders.values("gateway_order_id")))).exists():
             review = True
         # Local failure/abandonment is not provider cancellation. Never present it
         # as settled exposure, even if a separate qualified count is complete.
-        if any(c.status in ("FAILED", "ABANDONED", "PAID_UNALLOCATED") for c in payments):
+        from .payment_refund_selectors import is_refunded_order_retired
+        if any(c.status in ("FAILED", "ABANDONED", "PAID_UNALLOCATED")
+                and not (c.status == "ABANDONED" and is_refunded_order_retired(c)) for c in payments):
             review = True
         pending |= any(c.status == "PENDING" for c in payments)
         if policy.obligation == "OPTIONAL":

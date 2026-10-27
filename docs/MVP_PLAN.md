@@ -93,11 +93,11 @@ and its dependencies are resolved.
 | Area | Evidence already present | Required next evidence / owner |
 | --- | --- | --- |
 | Family lifecycle and legacy safety | Collection matrix; independent eligibility, INR/metal settlement, corrections, replacement and concurrency suites; selected combined runs in TESTING.md | Engineering: consolidated normal CI on the exact release commit, with each approved family mapped to its journeys. Existing tests from different commits do not substitute for one passing candidate. |
-| Owner operations and provider exceptions | Gated owner settlement/review screens; optional-order identity recovery form; captured-payment comparison with fresh owner-bound confirmation; documented capture/refund handoff; bounded payment-error refund resolution design in ADR-0017 (27 October); unresolved payments block closure | Engineering + showroom owner: implement and test the designed read-only refund verification, immutable resolution, shared hold interpretation and replay/concurrency protection before exposing owner clearance; then accept candidate uncertain/late/duplicate capture and refund procedures. Full INR settlement fulfilment does not clear a separate provider exception; manual notes cannot replace verified disposition. |
+| Owner operations and provider exceptions | Gated owner settlement/review screens; optional-order identity recovery form; captured-payment comparison with fresh owner-bound confirmation; documented capture/refund handoff; bounded payment-error refund resolution design in ADR-0017 (27 October); unresolved payments block closure | Engineering + showroom owner: integrate the private owner comparison/confirmation screen with the locally implemented inspection, resolution and all-attempt retirement services; then accept candidate uncertain/late/duplicate capture and refund procedures. Full INR settlement fulfilment does not clear a separate provider exception; manual notes cannot replace verified disposition. |
 | Performance | One- through four-return profiles; invocation-local historical validation reduces fourth-return reads from 6,278 to 1,840 INR queries and 2,931 to 958 metal queries, with tampered-original checks retained | Engineering: measure candidate latency on representative data during exact-image rehearsal; still-high local counts are not production acceptance. Preserve complete evidence checks. No history deletion/cap or cached spending authority as a shortcut. |
 | Device, accessibility and messages | Sampled local Chrome layouts/keyboard checks and captured INR completion email | Owner/tester: Android/TWA and keyboard/assistive-technology journey; real inbox delivery for request, approval, eligibility and full completion. Record exact candidate and result; no synthetic fixture may be sent to a real customer. |
 | INR publication and fulfilment | Approved product direction and source-specific manual evidence model | Business owner: required business/legal/accounting/provider approval and usable original-source refund procedure. No automated refund API is required for v1; an owner checkbox cannot verify a bank credit or authorize an unsupported fallback. |
-| Migration and recovery | Per-migration preservation/refusal tests through schemes 0051 and accounts 0009 | Engineering: exact-image synthetic upgrade from the actual deployed schema, legacy financial comparison, forward-recovery and applicable rollback-refusal rehearsal. Retained new evidence must never be deleted to force a downgrade. |
+| Migration and recovery | Per-migration preservation/refusal tests through schemes 0054 and accounts 0009 | Engineering: exact-image synthetic upgrade from the actual deployed schema, legacy financial comparison, forward-recovery and applicable rollback-refusal rehearsal. Retained new evidence must never be deleted to force a downgrade. |
 | Activation implementation | Global default-off flag, schema/family checks and model/service publication barriers remain closed | Engineering: review a coherent activation change only after the preceding evidence; update readiness descriptions/tests without bypassing contract validation. Merely setting CONFIGURED_PLANS_ENABLED=True is insufficient. |
 | Production rollout | Existing digest-pinned GHCR deployment procedure | Owner + engineering: approve exact digest, current recovery point, compatible recovery image and one coherent activation. No build on the serving host. |
 
@@ -109,13 +109,19 @@ resolution and clears no hold; observations are not permission to credit or sett
 The internal payment-resolution prerequisite is also local (0053): owner/evidence-bound
 fresh confirmation, independent reinspection, immutable exact-payment resolution,
 idempotency and a credit replay guard. It preserves event and contribution states and
-does not yet release any order/instalment/closure hold. A payment refund does not prove
+does not itself change order or reservation status. A payment refund does not prove
 that every attempt on the order has been accounted for.
 
-Immediate engineering order: continue the bounded payment-error refund resolution
-sequence in ADR-0017 with shared hold predicates and explicit attempt/reservation
-transitions, including consistent diagnostics and closure evidence, before exposing
-owner actions;
+The shared interpretation and explicit lifecycle prerequisite is now local (0054):
+exact resolved capture predicates, separate fresh all-attempt order retirement,
+append-only monthly release and additive settlement/benefit proof. Resolving a payment
+alone leaves its pending order and reservation in place. No financial credit, benefit
+or agreement closure is inferred; contradictory capture retains review. Owner UI and
+production acceptance remain pending.
+
+Immediate engineering order: add the private owner review/confirmation workflow for
+the bounded services in ADR-0017, including clear distinction between payment resolution
+and separate order retirement;
 complete remaining operator acceptance, then
 run consolidated candidate CI and exact-image rehearsal, including representative
 latency. Revisit read amplification if those measurements are unacceptable.

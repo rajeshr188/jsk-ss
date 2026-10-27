@@ -768,7 +768,7 @@ preferences do not become fixed, and no old agreement receives a configuration i
   rewriting older proofs. This is gross captured principal, not refund availability
   or settlement reconciliation. Normal collection/readiness gates remain closed.
   Payment-error refund resolution is a separate boundary in ADR-0017
-  (27 October 2026), not an implemented clearance action. Local inspection foundation
+  (27 October 2026), still unavailable as an owner screen. Local inspection foundation
   (0052) retains typed Live provider observations, historical entitlement checks and
   immutable owner/binding evidence. It changes no holds or financial state; partial,
   pending, failed, inconsistent and incomplete refunds cannot qualify as full refunds.
@@ -780,8 +780,25 @@ preferences do not become fixed, and no old agreement receives a configuration i
   inspection to immutable evidence and prevents subsequent credit of that payment.
   A delayed webhook is retained for review; other legitimate payments retain their
   original credit. This does not release a pending attempt, qualify an instalment or
-  settle an agreement. Existing unresolved-payment holds remain in force until shared
-  hold predicates and explicit lifecycle/closure integration are tested together.
+  settle an agreement. Shared hold predicates now omit only validated exact Live
+  captured-payment evidence (same payment, order, payload hash and compatible link).
+  Changed payloads, other payments/modes/types and invalid proof remain held. Original
+  webhook statuses/processing attempts are retained, not rewritten as processed.
+  Migration 0054 separately retains all-attempt refunded-order retirement evidence.
+  Owner-bound review and fresh GET-only reinspection must show a stable paid order,
+  complete attempt count, only failed/full-refunded payments, and exact full-refund
+  resolutions with no historical entitlement for every refunded payment. Created,
+  authorized, incompletely listed or inconsistent attempts cannot release an order.
+  Under the agreement lock, a never-credited pending/failed/abandoned contribution is
+  explicitly retired as ABANDONED; its monthly reservation receives an append-only
+  RELEASED decision referencing this distinct proof. This is not untouched-order
+  reconciliation, payment qualification, a new deadline/rate, or agreement closure.
+  Existing replacement claims and real principal remain unchanged. Exact capture
+  replay cannot reopen the released claim; contradictory capture creates review again.
+  Settlement/benefit evidence adds refund references only when present, preserving old
+  proof formats and hashes; zero entitlement still cannot become a settlement or an
+  unused-agreement cancellation merely because an order was retired. Owner UI,
+  operator acceptance and configured-plan release gates remain pending.
   One immutable INR disposition assigns all recorded principal to an evidenced invoice
   and/or original-source refund legs. Invoice application consumes earliest verified
   uncorrected receipts first (verification time, then receipt ID); remaining amounts

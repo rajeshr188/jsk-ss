@@ -5,6 +5,8 @@ from django.core.exceptions import ValidationError
 from django.db.models import Q
 from django.utils import timezone
 
+from schemes.payment_refund_selectors import unresolved_payment_events
+
 from .agreement_contracts import validate_independent_account_terms
 from .instalments import AGREEMENT_TIMEZONE, period_boundary
 from .models import PaymentWebhookEvent, OptionalPaymentOrderRequest, Contribution
@@ -61,7 +63,8 @@ def require_optional_order_integrity(account, *, exclude_contribution_id=None):
         binding.full_clean()
         if c.status == "FAILED":
             raise ValidationError("A failed optional order still needs provider reconciliation.")
-        if c.status == "ABANDONED" and not c.audit_events.filter(action="PAYMENT_ORDER_RECONCILIATION",
+        from .payment_refund_selectors import is_refunded_order_retired
+        if c.status == "ABANDONED" and not is_refunded_order_retired(c) and not c.audit_events.filter(action="PAYMENT_ORDER_RECONCILIATION",
                 details__applied=True, details__outcome="ELIGIBLE_FOR_ABANDONMENT",
                 details__gateway_order_id=c.gateway_order_id).exists():
             raise ValidationError("An abandoned optional order needs its retained provider reconciliation evidence.")
@@ -139,7 +142,8 @@ def validate_independent_payment_window(account, *, contribution_date=None,
     unresolved = PaymentWebhookEvent.objects.filter(gateway="razorpay", gateway_mode="live",
         event_type="payment.captured").filter(Q(contribution__in=sources) | Q(
             gateway_order_id__in=sources.exclude(gateway_order_id="").values("gateway_order_id"))
-        ).exclude(status__in=["PROCESSED", "IGNORED"])
+        )
+    unresolved = unresolved_payment_events(unresolved)
     if sources.filter(status="PAID_UNALLOCATED").exists() or unresolved.exists():
         raise ValidationError("Reconcile unresolved payment or allocation evidence before another contribution.")
     if terms.savings_mode != "INR_CREDIT" and sources.filter(status="PAID", metal_allocation__isnull=True).exists():

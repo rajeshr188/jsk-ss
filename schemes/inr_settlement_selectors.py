@@ -6,6 +6,8 @@ from django.core.exceptions import ValidationError
 from django.db.models import Q
 from django.utils import timezone
 
+from schemes.payment_refund_selectors import unresolved_payment_events
+
 from .inr_principal import calculate_inr_final_settlement
 from .inr_selectors import get_inr_principal_summary, validate_inr_contract
 from .models import InrSettlementProposal, PaymentWebhookEvent
@@ -38,17 +40,22 @@ def inr_payment_source_evidence(account):
     if summary.needs_review or account.redemptions.exists():
         raise ValidationError("Reconcile principal and legacy settlement history first.")
     payments = list(account.contributions.order_by("pk"))
+    from .payment_refund_selectors import is_refunded_order_retired
     for payment in payments:
+        if payment.status == "ABANDONED" and is_refunded_order_retired(payment):
+            continue
         cash = payment.payment_channel == "IN_STORE_CASH" and payment.payment_gateway == "in_store_cash" and not payment.gateway_mode
         live = payment.payment_channel == "RAZORPAY" and payment.payment_gateway == "razorpay" and payment.gateway_mode == "live"
         if not (cash or live) or payment.status not in (("PAID", "REVERSED") if cash else ("PAID",)):
             raise ValidationError("Pending, unallocated, failed, abandoned or practice payments require disposition before settlement.")
     orders = [p.gateway_order_id for p in payments if p.gateway_order_id]
     events = PaymentWebhookEvent.objects.filter(Q(contribution__in=payments) | Q(gateway_order_id__in=orders)).order_by("pk")
-    if events.exclude(status__in=["PROCESSED", "IGNORED"]).exists():
+    if unresolved_payment_events(events).exists():
         raise ValidationError("Unresolved provider events prevent INR settlement.")
     receipts = account.inr_principal_receipts.select_related("correction").order_by("verified_at", "pk")
+    from .payment_refund_selectors import refund_disposition_evidence
     return dict(version=1, account=account.pk, configuration=config.pk, revision=account.plan_revision_id,
+        **refund_disposition_evidence(account),
         principal=str(summary.principal_recorded),
         receipts=[dict(id=r.pk, amount=str(r.amount), source=r.source_reference,
             cash=r.cash_receipt_id, webhook=r.webhook_event_id,
@@ -82,6 +89,8 @@ def validate_inr_proposal(proposal):
     try:
         split = calculate_inr_final_settlement(principal=proposal.principal, invoice_payable=proposal.invoice_payable)
         sources = evidence["sources"]
+        from .payment_refund_selectors import validate_retained_refund_disposition
+        validate_retained_refund_disposition(sources, proposal.scheme_account)
         receipts = sources["receipts"]
         net = sum((Decimal(r["amount"]) for r in receipts if r["correction"] is None), Decimal(0))
         if (evidence["version"] != 1 or proof_digest(evidence) != proposal.evidence_digest

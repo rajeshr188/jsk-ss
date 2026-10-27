@@ -2,6 +2,8 @@
 from django.core.exceptions import ValidationError
 from django.db.models import Q
 
+from schemes.payment_refund_selectors import unresolved_payment_events
+
 from .models import SchemeClosureRequest, PaymentWebhookEvent
 
 
@@ -33,7 +35,8 @@ def closure_payment_review(account):
     orders = payments.exclude(gateway_order_id="").filter(gateway_order_id__isnull=False)
     events = PaymentWebhookEvent.objects.filter(
         Q(contribution__in=payments) | Q(gateway_order_id__in=orders.values("gateway_order_id"))
-    ).exclude(status__in=["PROCESSED", "IGNORED"])
+    )
+    events = unresolved_payment_events(events)
     missing_entitlement = (Q(status="PAID", inr_principal_receipt__isnull=True)
         if account.savings_mode == "INR_CREDIT" else Q(status="PAID", metal_allocation__isnull=True))
     return {

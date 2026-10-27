@@ -2,6 +2,33 @@
 
 ## Current milestone
 
+**27 October 2026 - refund hold interpretation and explicit order retirement.**
+Shared predicates now distinguish exact resolved capture evidence from unresolved or
+contradictory events across collection, eligibility, exception checks, closure and
+privacy review. Original webhook history is preserved. Payment resolution alone leaves
+a pending contribution/reservation held; it never grants money, metal or qualification.
+
+Migration 0054 adds immutable all-attempt order-retirement evidence and a protected
+monthly release source. The separate internal service requires owner-bound review,
+explicit confirmation and fresh read-only provider inspection outside database locks.
+Only a stable paid order with every attempt terminal, all paid funds fully refunded,
+validated exact-payment resolutions and no historical entitlement may be retired.
+Account-locked application preserves order/rate/deadline evidence and appends RELEASED
+for the original reservation without disturbing a replacement's credit or qualification.
+An exact capture replay cannot reopen that reservation; contradictory captures still hold.
+
+Settlement and benefit proofs retain additive refund references; older proofs without
+these records keep their shape. Financial diagnostics report malformed disposition
+proof. No refund API, owner clearance screen, automatic agreement closure or release
+activation is introduced. The next implementation is the private owner comparison and
+confirmation workflow for payment resolution and separate order retirement, followed
+by candidate operator acceptance and the remaining release-evidence checklist.
+Verification: 76 broader regressions passed, plus the expanded 12-case provider/
+lifecycle suite, 18 diagnostics/privacy/corruption cases and three final release-source
+checks. Django and migration-drift checks passed. Unique disposable localhost databases
+were destroyed; TESTING.md records overlapping run scope and timings.
+Production and the ordinary local application database remain untouched.
+
 **27 October 2026 - exact-payment refund resolution and credit replay guard.**
 Migration 0053 adds immutable, uniquely scoped payment-error refund resolutions that
 link the owner's reviewed observation to a fresh authenticated inspection. The internal

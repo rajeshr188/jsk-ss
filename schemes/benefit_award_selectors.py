@@ -78,6 +78,8 @@ def benefit_source_snapshot(account):
             "customer_acknowledged_at", "created_at"),
         webhooks=_rows(events, "pk", "status", "event_type", "gateway_mode", "gateway_order_id",
             "gateway_reference", "payload_sha256", "processed_at"))
+    from .payment_refund_selectors import refund_disposition_evidence
+    evidence.update(refund_disposition_evidence(account))
     return json.loads(json.dumps(evidence, cls=DjangoJSONEncoder))
 
 
@@ -93,6 +95,9 @@ def validate_benefit_award(award):
     terms = validate_independent_account_terms(account)
     policy = terms.policy
     e = award.evidence
+    from .payment_refund_selectors import validate_retained_refund_disposition
+    if isinstance(e, dict):
+        validate_retained_refund_disposition(e, account)
     try:
         if "closure" in e:
             from .models import SchemeClosureRequest

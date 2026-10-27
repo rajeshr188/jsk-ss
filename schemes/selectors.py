@@ -198,10 +198,11 @@ class FinancialExceptionCounts:
     mismatched_webhooks: int
     expired_checkouts: int = 0
     unresolved_optional_orders: int = 0
+    refund_disposition_errors: int = 0
 
     @property
     def total(self):
-        return self.paid_unallocated + self.failed_webhooks + self.expired_checkouts + self.unresolved_optional_orders
+        return self.paid_unallocated + self.failed_webhooks + self.expired_checkouts + self.unresolved_optional_orders + self.refund_disposition_errors
 
 
 @dataclass(frozen=True)
@@ -576,12 +577,13 @@ def get_expired_pending_checkouts(*, at=None):
 
 
 def get_owner_exception_keys(*, oldest_first=False, category="all"):
+    from .payment_refund_selectors import exclude_resolved_capture_events
     from .independent_payment_selectors import unbound_optional_order_contributions
     allocations = Contribution.objects.filter(status=Contribution.Status.PAID_UNALLOCATED).order_by().annotate(
         queue_kind=Value("allocation"),
         queue_date=Coalesce("allocation_attempted_at", "paid_at", "created_at"),
     ).values("pk", "queue_kind", "queue_date")
-    webhooks = PaymentWebhookEvent.objects.filter(status__in=["FAILED", "REVIEW_REQUIRED"]).order_by().annotate(
+    webhooks = exclude_resolved_capture_events(PaymentWebhookEvent.objects.filter(status__in=["FAILED", "REVIEW_REQUIRED"])).order_by().annotate(
         queue_kind=Value("webhook"), queue_date=Coalesce("processed_at", "received_at"),
     ).values("pk", "queue_kind", "queue_date")
     optional_orders = unbound_optional_order_contributions().order_by().annotate(
@@ -1112,6 +1114,8 @@ def get_owner_exception_queue(*, keys=None):
         "contribution__scheme_account",
         "contribution__scheme_account__customer",
     )
+    from .payment_refund_selectors import exclude_resolved_capture_events
+    failed_webhooks = exclude_resolved_capture_events(failed_webhooks)
     if keys is not None:
         failed_webhooks = failed_webhooks.filter(pk__in=[key["pk"] for key in keys if key["queue_kind"] == "webhook"])
     for event in failed_webhooks:
@@ -1168,12 +1172,13 @@ def get_owner_exception_queue(*, keys=None):
 
 def get_financial_exception_counts():
     from .independent_payment_selectors import unbound_optional_order_contributions
-    webhook_counts = PaymentWebhookEvent.objects.filter(
+    from .payment_refund_selectors import exclude_resolved_capture_events, refund_disposition_integrity_errors
+    webhook_counts = exclude_resolved_capture_events(PaymentWebhookEvent.objects.filter(
         status__in=[
             PaymentWebhookEvent.Status.FAILED,
             PaymentWebhookEvent.Status.REVIEW_REQUIRED,
         ]
-    ).aggregate(
+    )).aggregate(
         failed=Count("pk"),
         mismatched=Count(
             "pk",
@@ -1191,6 +1196,7 @@ def get_financial_exception_counts():
         mismatched_webhooks=webhook_counts["mismatched"],
         expired_checkouts=get_expired_pending_checkouts().exclude(pk__in=unbound_optional_order_contributions()).count(),
         unresolved_optional_orders=unbound_optional_order_contributions().count(),
+        refund_disposition_errors=refund_disposition_integrity_errors(),
     )
 
 

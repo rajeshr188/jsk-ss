@@ -6,6 +6,8 @@ from django.core.exceptions import ValidationError
 from django.db.models import Exists, OuterRef, Q
 from django.utils import timezone
 
+from schemes.payment_refund_selectors import unresolved_payment_events
+
 from .instalments import AGREEMENT_TIMEZONE, effective_account_windows, validate_real_instalment_channel, window_for_instant
 from .models import Contribution, InstalmentOrderRecovery, InstalmentOutageResolution, InstalmentPaymentDecision, InstalmentReservation, InstalmentReview, PaymentWebhookEvent, SchemeInstalmentPeriod
 
@@ -115,11 +117,12 @@ def unresolved_instalment_captures(*, account_id=None, period_id=None):
     if period_id is not None:
         contributions = contributions.filter(instalment_reservation__period_id=period_id)
     orders = contributions.exclude(gateway_order_id="").filter(gateway_order_id__isnull=False)
-    return PaymentWebhookEvent.objects.filter(gateway="razorpay", gateway_mode="live",
+    events = PaymentWebhookEvent.objects.filter(gateway="razorpay", gateway_mode="live",
         event_type="payment.captured").filter(
             Q(contribution_id__in=contributions.values("pk"))
             | Q(gateway_order_id__in=orders.values("gateway_order_id"))
-        ).exclude(status__in=["PROCESSED", "IGNORED"])
+        )
+    return unresolved_payment_events(events)
 
 
 def require_no_capture_exception(account):
@@ -144,7 +147,8 @@ def require_reconciled_outage_payments(account):
     unresolved_events = PaymentWebhookEvent.objects.filter(
         Q(contribution__in=contributions)
         | Q(gateway_order_id__in=contributions.exclude(gateway_order_id="").values("gateway_order_id"))
-    ).exclude(status__in=["PROCESSED", "IGNORED"])
+    )
+    unresolved_events = unresolved_payment_events(unresolved_events)
     if account.savings_mode == "INR_CREDIT":
         from .inr_selectors import get_inr_principal_summary
         missing_entitlement = get_inr_principal_summary(account).needs_review
@@ -293,6 +297,17 @@ def instalment_payment_ledger_summary(*, account_id=None):
             errors += 1
         reversed_seen = False
         for decision in decisions:
+            if decision.refund_order_closure_id:
+                from .refunded_orders import validate_refunded_order_closure
+                try:
+                    decision.full_clean()
+                    validate_refunded_order_closure(decision.refund_order_closure)
+                    if decision.refund_order_closure.contribution_id != contribution.pk:
+                        raise ValidationError("Refunded-order release belongs to another contribution.")
+                except ValidationError:
+                    errors += 1
+            elif decision.reason_code == "FULL_REFUND_ORDER_RECONCILED":
+                errors += 1
             if decision.reason_code == "PROVIDER_ORDER_RECOVERED" and not hasattr(decision, "order_recovery"):
                 errors += 1
             if reversed_seen:
