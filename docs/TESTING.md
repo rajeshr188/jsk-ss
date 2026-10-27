@@ -1,5 +1,73 @@
 # Testing
 
+## Builder-v1 release acceptance map (27 October 2026)
+
+The current remaining-work list is in MVP_PLAN.md under "Remaining release
+evidence". The map below identifies executable coverage; it does not claim that
+all suites passed together on the current HEAD or that patched synthetic contracts
+are operationally enabled. The earlier dated sections record their actual runs.
+
+| Acceptance boundary | Primary executable coverage | Remaining evidence |
+| --- | --- | --- |
+| Compatibility, frozen terms and preparation | `test_plan_policies`, `test_independent_policy_fields`, `test_independent_agreement_terms`, `test_independent_configuration_editor`, `test_independent_plan_drafts` | Owner approval of actual candidate offer/disclosure presentation; real gates still reject activation |
+| Enrolment and both application journeys | `test_independent_enrolment`, `test_independent_requests`, `accounts.test_independent_applications` | Complete candidate journey with frozen amount/count/duration/grade or INR terms and actual delivered messages |
+| Collection, periods and outage handling | `test_collection_matrix`, `test_independent_payment_entry`, `test_independent_instalment_ledger`, `test_independent_instalment_reviews` | Candidate operator runbook for ordinary, delayed, missed, duplicate, ambiguous and corrected payments; no synthetic Live charges |
+| Provider source and recovery | `test_inr_payment_integration`, `test_inr_api_payments`; legacy webhook/recovery/reconciliation suites in full CI | Usable exact-identity recovery and original-source refund procedure; unknown provider state must remain held |
+| Eligibility and benefits | `test_independent_eligibility`, `test_benefit_qualification`, `test_benefit_awards`, `test_benefit_fulfilments` | Candidate matrix results for no/count/date/both requirements, benefit-only misses and unchanged earned rights |
+| Full settlement, unused cancellation and corrections | `test_independent_inr_settlement`, `test_independent_metal_settlement`, `test_closure_acceptance`, `test_inr_corrections`, `test_replacement_settlements`, `test_benefit_reapplications`, `test_benefit_replacement_integration` | Combined operational acceptance; real-source financial integrity and complete legacy regression, not just happy-path fixtures |
+| Statements, privacy and notices | `test_settlement_documents`, `test_independent_presentation`, `test_inr_completion_reminders`, `test_event_reminder_revalidation` | Delivered inbox and real Android/TWA review; no principal/benefit/gram conflation or notice before actual completion |
+| Owner experience and read cost | Owner workspace suites, `test_owner_workflow_queries`, `test_owner_history_queries` | Resolve measured repeated-history read growth; physical-device/accessibility acceptance remains separate from local Chrome snapshots |
+
+Unqualified module names above are under `schemes.tests`. The release candidate must
+pass the repository's normal `.github/workflows/ci.yml`: frozen dependencies,
+migrations, migration-drift check, Django checks, the full discovered test suite,
+deployment checks, static collection and image security checks. Selected local runs
+do not replace those jobs. Keep normal hashing/logging; exercise transaction and
+migration tests on a disposable PostgreSQL database, never the application database.
+
+Exact-image rehearsal must then start from the actual deployed schema and compare
+legacy contract/financial baselines before and after the accumulated migration
+chain. Test refusal of unsafe downgrades with retained new evidence and compatible
+forward recovery. Record commit, image digest, PostgreSQL version, migration plan,
+results and remaining exceptions. Existing per-migration tests and older release
+rehearsals do not approve the current builder image. No normal database, production
+flag, provider state or public offer is changed by this acceptance map.
+
+## Four-generation owner history regression (27 October 2026)
+
+`test_owner_history_queries` now retains four actual full settlement/return
+generations for INR purchase bonus and exact-metal VA, using real services and
+fresh owner/customer authority for each replacement. At each depth the private
+owner GET must perform no writes, retain every earlier review, and offer only the
+latest full return. After the fourth return, changing original SETTLE authorization
+must fail fresh history validation and leave no return available for approval.
+
+An initial two-test run passed functionally (158.060s), but the accumulated Django
+query log truncated the fourth INR sample. Its apparent 3,068 queries is invalid
+and must not be used as performance evidence. The measurement now calls
+`reset_queries()` immediately before capture and fails if a page fills the bounded
+log. This changes only test instrumentation, not application caching or validation.
+
+Corrected INR query counts at depths one through four are 627, 1,732, 3,573 and
+6,278; corresponding fixture ceilings are 680, 1,900, 3,900 and 7,000. The fourth
+page took 7.662 seconds locally (test client, localhost PostgreSQL). This is a
+performance blocker, not permission to deploy. Metal query counts are 267, 779,
+1,643 and 2,931 against ceilings of 300, 850, 1,800 and 3,300. The fourth metal
+page took 2.773 seconds locally. These timings are observations, not Linode SLAs.
+
+The corrected run passed **2 tests in 168.407s**, including all eight measured
+pages and original-evidence drift rejection after both fourth-generation returns.
+No capture reached the query-log limit. Django checks passed and
+`makemigrations --check --dry-run` found no changes. Normal hashing/logging were
+retained; both runs used unique disposable localhost PostgreSQL databases, destroyed
+afterward. No ordinary database, runtime validation or release gate changed.
+The fixture ceilings are regression alarms, not acceptable production query budgets,
+latency SLAs or a limit on how much financial history may be retained. The source
+of repeated work includes review-decision validation re-entering the prior
+return/fulfilment and disposition/closure validators. The next optimization must
+preserve every historical proof and fresh mutable-state check; no cross-request
+authorization cache, discarded predecessor or financial mutation shortcut is allowed.
+
 ## Owner responsive and keyboard review (27 October 2026)
 
 A temporary harness generated actual Django HTTP responses using real synthetic

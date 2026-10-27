@@ -2,6 +2,31 @@
 
 ## Current milestone
 
+**27 October 2026 - consolidated builder release checklist and deeper-history review.**
+MVP_PLAN.md now distinguishes completed local implementation (INR primitives,
+independent eligibility and defined benefit lifecycles) from outstanding release
+acceptance. TESTING.md maps 31 existing executable modules to the remaining
+boundaries. Earlier incremental notes are historical sequencing, not instructions
+to reimplement those completed paths. Readiness flags and family/schema barriers
+remain closed; their older NOT_IMPLEMENTED names are not the current progress list.
+
+The owner history regression now follows four real full settlement/return generations
+for INR purchase bonus and metal VA. Every generation must retain its predecessors,
+offer only the latest returned invoice for review and render without writes; original
+authorization tampering must still block the fourth-generation review. The deeper
+profile exposed cumulative query-log truncation; measurements now reset the bounded
+log and reject incomplete captures. Fourth-generation GETs make 6,278 INR / 2,931
+metal queries; performance acceptance remains blocked. Both corrected regression
+tests passed (168.407s), including original-evidence tampering checks. Django and
+migration-drift checks pass. Disposable test databases were destroyed; TESTING.md
+records the measurements and invalid initial sample explicitly.
+
+Next reduce the measured repeated-history validation/read growth without removing
+source checks or caching spending authority. Then resolve operator recovery/exception
+acceptance, candidate CI and exact-image rehearsal. Device/inbox and INR publication
+approvals remain explicit separate evidence. No runtime financial logic, migration,
+production configuration or activation was changed by this checkpoint.
+
 **27 October 2026 - sampled owner mobile/keyboard and message review.**
 Read-only browser snapshots of real synthetic Django responses were reviewed at
 320px/390px and desktop width. The review found that a fresh INR fulfilment form

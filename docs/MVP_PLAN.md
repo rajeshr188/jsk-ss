@@ -26,13 +26,19 @@ Use the existing FW-PLAN items; do not create further numbered micro-milestones.
 
 ### Single completion checklist
 
+Status reconciled on 27 October 2026: a checked **implementation** item below means
+local code and affected synthetic-service tests exist. It does not mean normal CI,
+operational acceptance, publication or activation has passed. The release evidence
+table below is the current remaining-work list; dated increment notes retain their
+historical meaning and are not fresh instructions to reimplement completed work.
+
 - [x] Approve one coherent owner-builder v1 activation with incremental gated development.
 - [x] Draft a concrete compatibility matrix, timing defaults, INR settlement and benefit vocabulary for owner review in ADR-0017 (24 October; proposal, not contract approval).
 - [x] Owner approved the detailed matrix/timing, INR settlement approach and benefit types in ADR-0017, including one manual final settlement with unused-principal refund, no partial redemption and no replacement credit. External publication approvals and usable refund-route evidence remain required.
 - [x] Implement typed compatibility validation and fail-closed operational support checks without altering existing persisted configuration evidence. This is the contract foundation, not new financial-workflow completion.
 - [x] Persist independent duration/count/benefit fields under policy schema 2 (0036), preserving schema-1 evidence, append-only version semantics and preparation-only runtime gates. Legacy editor stays schema 1; schema-2 inspection is read-only. Verification is recorded in STATUS.md/TESTING.md.
 - [x] Scope-review/checkpoint accumulated local work before widening financial implementation (`84115be`, 24 October). Separate dropdown styling and nested worktrees remain outside the checkpoint. This is a local WIP checkpoint, not exhaustive code review, clean CI or release acceptance.
-- [ ] Implement separate INR entitlement/full-settlement primitives under the approved manual-fulfilment contract, without enabling public INR offers prematurely.
+- [x] Implement separate INR entitlement/full-settlement primitives under the approved manual-fulfilment contract, without enabling public INR offers prematurely. Local implementation through 0051 is present; operational/release acceptance remains open below.
   - Local principal foundation (0037): distinct `INR_CREDIT` denomination, immutable source-linked receipts, full evidenced cash-entry corrections, separate principal reads and fail-closed diagnostics. Pure invoice/refund/top-up arithmetic is covered; it does not fulfil or close anything.
   - Local manual disposition foundation (0038): one immutable full-principal proposal, source-specific manual refund legs, jewellery handover/top-up evidence, remaining liability and completion-linked closure. Supports optional/calendar/no-benefit synthetic INR contracts only; actual fulfilment is owner-attested evidence, not an API-verified refund. No public workflow is enabled.
   - Local correction foundation (0039): void an entirely unfulfilled proposal, or record all fulfilled portions returned in full atomically. Retain original proposals/fulfilments/completions; restore only principal, keep the agreement contained and require fresh customer authorization/signed preview for a replacement full disposition. Partial/staged returns are not enabled. Verification is tracked in STATUS.md/TESTING.md.
@@ -69,8 +75,8 @@ Use the existing FW-PLAN items; do not create further numbered micro-milestones.
   - Owner query review (27 October; no migration): real returned-settlement/reapplication GET profiling identified duplicate full-history checks. Read-only workspaces now reuse freshly validated data within that invocation; public status/balance selectors and locked mutations still revalidate independently. A subsequent one-/two-return profile loads closure sources, INR return fulfilment links and metal reversal links together without removing validation. Consumed historical authorization drift still blocks review. Fixture query budgets and combined lifecycle/provider regression evidence are tracked in TESTING.md. Query counts remain high, and deeper histories/production latency remain unaccepted.
   - Sampled owner browser/message review (27 October; no migration): synthetic read-only responses cover the builder, INR disposition stages and returned-benefit review at narrow and desktop widths. Fixes remove already-fulfilled portions from fresh INR choices, retain safe submitted retries, show readable routes and move confirmation after evidence. Captured INR completion emails preserve the principal/benefit/refund distinctions. TESTING.md records observed keyboard/layout checks; stakeholder, actual inbox and physical-device acceptance remain separate.
   - Still required: complete owner operational-screen acceptance, consolidated lifecycle/provider-exception and notification acceptance, remaining query/latency and device acceptance, normal CI and coherent release rehearsal. No public INR offer is enabled by these foundations.
-- [ ] Implement count-only and anytime eligibility and the agreed additional amount/schedule combinations, including consistent UI, reminders and full closure.
-- [ ] Implement only defined benefit policies, including qualification, actual fulfilment and append-only corrections/reversal.
+- [x] Implement count-only and anytime eligibility and the agreed additional amount/schedule combinations, including consistent UI, reminders and full closure. Local gated paths and family tests exist; no automatic maturity forecast for count-only/anytime.
+- [x] Implement only defined benefit policies, including qualification, actual fulfilment and append-only corrections/reversal. Local retained awards, actual invoice application, full returns and customer-authorized replacement review are present; no benefit cashout or partial redemption.
 - [ ] Complete verified provider-history disposition needed for closure; ambiguous payments must not be cleared by an owner checkbox.
 - [ ] Verify every approved matrix row through enrolment, online/cash payment, missed/late/duplicate payment, correction, normal/early full settlement, unused cancellation and reversal. Test concurrent/idempotent paths and preserved legacy history.
 - [ ] Update generated agreements, public disclosures and owner manual; complete owner/mobile/keyboard acceptance and clean normal CI.
@@ -82,7 +88,36 @@ Arbitrary grace/catch-up choices are not automatically included; enumerate any r
 variants in the accepted matrix first. No production date is promised before that scope
 and its dependencies are resolved.
 
-### Next implementation boundary after contract approval
+### Remaining release evidence — reconciled 27 October 2026
+
+| Area | Evidence already present | Required next evidence / owner |
+| --- | --- | --- |
+| Family lifecycle and legacy safety | Collection matrix; independent eligibility, INR/metal settlement, corrections, replacement and concurrency suites; selected combined runs in TESTING.md | Engineering: consolidated normal CI on the exact release commit, with each approved family mapped to its journeys. Existing tests from different commits do not substitute for one passing candidate. |
+| Owner operations and provider exceptions | Gated owner settlement/review screens; optional-order and authenticated API recovery services; unresolved payments block closure | Engineering + showroom owner: rehearse usable operator procedures for uncertain creation, late/duplicate captures and refunds. Service-only recovery is not an accepted owner procedure; do not infer that an ordinary closure form clears it. |
+| Performance | One- through four-return profiles; fourth INR review makes 6,278 queries, so performance acceptance remains blocked | Engineering: bound repeated validation/read growth, preserve complete original evidence checks, and measure the candidate on representative data. No history deletion/cap or cached spending authority as a shortcut. |
+| Device, accessibility and messages | Sampled local Chrome layouts/keyboard checks and captured INR completion email | Owner/tester: Android/TWA and keyboard/assistive-technology journey; real inbox delivery for request, approval, eligibility and full completion. Record exact candidate and result; no synthetic fixture may be sent to a real customer. |
+| INR publication and fulfilment | Approved product direction and source-specific manual evidence model | Business owner: required business/legal/accounting/provider approval and usable original-source refund procedure. No automated refund API is required for v1; an owner checkbox cannot verify a bank credit or authorize an unsupported fallback. |
+| Migration and recovery | Per-migration preservation/refusal tests through schemes 0051 and accounts 0009 | Engineering: exact-image synthetic upgrade from the actual deployed schema, legacy financial comparison, forward-recovery and applicable rollback-refusal rehearsal. Retained new evidence must never be deleted to force a downgrade. |
+| Activation implementation | Global default-off flag, schema/family checks and model/service publication barriers remain closed | Engineering: review a coherent activation change only after the preceding evidence; update readiness descriptions/tests without bypassing contract validation. Merely setting CONFIGURED_PLANS_ENABLED=True is insufficient. |
+| Production rollout | Existing digest-pinned GHCR deployment procedure | Owner + engineering: approve exact digest, current recovery point, compatible recovery image and one coherent activation. No build on the serving host. |
+
+Immediate engineering order: reduce the measured history-depth read growth, resolve the
+remaining operator acceptance gaps, then run consolidated candidate CI and exact-image
+rehearsal. Device/inbox and business approvals can proceed alongside engineering;
+they remain explicit pending evidence, not assumed approvals. Use this table and
+TESTING.md rather than adding more numbered milestones.
+
+Some retained readiness identifiers in `plan_policies.py` still end in
+`NOT_IMPLEMENTED`. They are conservative activation barriers from the foundation
+phase, not an up-to-date inventory of missing code. Do not remove them merely
+because a local service test passes; the activation review must reconcile every
+barrier with the complete accepted workflow.
+
+### Historical implementation boundary after contract approval
+
+The following narrative records the earlier sequencing. INR disposition,
+replacement, presentation and reminders subsequently progressed as recorded above;
+use the release evidence table for current next actions.
 
 The approved detailed matrix is in ADR-0017 under "Builder-v1 compatibility contract".
 Keep the release gate disabled; approved disposition does not supply INR publication
