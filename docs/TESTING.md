@@ -1,5 +1,21 @@
 # Testing
 
+## Color-mode selector - 27 October 2026
+
+Reviewed locally rendered public homepage, owner policy editor and customer sample
+cards/forms/alerts/table in Chrome, with desktop and a 390px requested mobile viewport
+(375px content width with scrollbar; no horizontal page overflow on the customer
+sample). Dark selection persisted across reload and navigation. Keyboard activation
+of Light updated the selected accessible state and restored light surfaces. Navigation
+uses 44px controls; the system choice is the default and requires no login.
+
+An isolated Node VM check passed system/manual selection, live OS preference changes,
+cross-tab storage events, invalid saved values and denied storage reads/writes. Django
+`check` and `git diff --check` passed. No framework/dependency/migration was introduced.
+The preview used synthetic rendered data, no database or outgoing email. This is
+not a complete accessibility audit or physical Android/TWA acceptance; print has
+explicit light CSS overrides but a physical print rehearsal was not performed.
+
 ## Consolidated builder / deployed checkout integration - 27 October 2026
 
 Candidate preparation is isolated on `integration/builder-release-validation` from

@@ -2,6 +2,18 @@
 
 ## Current milestone
 
+**27 October 2026 - light, dark and system appearance modes.**
+Public, customer and owner navigation now includes a Bootstrap color-mode selector.
+The device-local choice is applied before styles load, follows OS changes in System
+mode, synchronizes between tabs and tolerates unavailable browser storage. Custom
+showroom surfaces, forms, alerts, tables and workspace navigation have dark palettes;
+print overrides retain light document colors. No financial behavior or gate changed.
+Desktop/mobile synthetic browser review, persistence/keyboard checks, isolated
+JavaScript behavior checks and Django system checks passed (details in TESTING.md).
+Physical Android/TWA acceptance remains part of release review. The work remains in
+the isolated release-validation worktree; the original worktree's edits are untouched.
+Next: finish consolidated regression/CI and resolve remaining failures before release.
+
 **27 October 2026 - configured-history image restore rehearsal passed.**
 The candidate image built from `6f6e5f6` preserved all retained schemes rows/columns
 and separate liabilities through an isolated PostgreSQL 16 dump/restore. The fixture

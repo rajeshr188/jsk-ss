@@ -6,6 +6,7 @@
   <meta charset="utf-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
   <meta name="viewport" content="width=device-width,minimum-scale=1,initial-scale=1,viewport-fit=cover">
+  <script src="{% static 'js/color-mode.js' %}"></script>
   <title>{% block title %}Jai Sri Krishna Jewellery{% endblock title %}</title>
   <meta name="description" content="{% block meta_description %}Jai Sri Krishna Jewellery gold and silver jewellery purchase plans in Vellore, Tamil Nadu.{% endblock %}">
   <meta name="author" content="">
@@ -26,6 +27,7 @@
     integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
 
   <link rel="stylesheet" href="{% static 'css/base.css' %}">
+  <link rel="stylesheet" href="{% static 'css/color-mode.css' %}">
   {% endblock %}
 </head>
 
@@ -41,6 +43,7 @@
         <span class="brand-mark" aria-hidden="true">JSK</span>
         <span class="brand-name">Jai Sri Krishna Jewellery</span>
       </a>
+      {% include 'includes/color_mode.html' with theme_position='ms-auto me-2 order-lg-3' %}
       <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
         aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
         <span class="navbar-toggler-icon"></span>
