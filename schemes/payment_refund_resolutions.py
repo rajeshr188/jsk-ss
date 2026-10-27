@@ -63,7 +63,7 @@ def payment_refund_review_token(*, observation_id, performed_by):
         evidence=observation.evidence_sha256), salt=REVIEW_SALT)
 
 
-def resolve_payment_error_refund(*, review_token, confirmed, performed_by, reason, gateway=None):
+def resolve_payment_error_refund(*, review_token, confirmed, performed_by, reason, gateway=None, expected_event_id=None):
     actor = _owner(performed_by)
     if confirmed is not True or not isinstance(reason, str) or not reason.strip():
         raise ValidationError("Explicitly confirm the reviewed refund and supply an audit reason.")
@@ -77,6 +77,8 @@ def resolve_payment_error_refund(*, review_token, confirmed, performed_by, reaso
         review = PaymentRefundObservation.objects.get(pk=reviewed["observation"], actor=actor)
     except (PaymentRefundObservation.DoesNotExist, ValueError, TypeError):
         raise ValidationError("The retained refund review is unavailable.") from None
+    if expected_event_id is not None and review.webhook_event_id != expected_event_id:
+        raise ValidationError("The refund review belongs to a different event. Inspect this payment separately.")
     if review.evidence_sha256 != reviewed["evidence"]:
         raise ValidationError("The retained refund review has changed.")
     existing = PaymentErrorRefundResolution.objects.filter(gateway_mode="live", payment_id=review.payment_id).first()

@@ -125,7 +125,7 @@ def refunded_order_review_token(*, contribution_id, performed_by, gateway=None):
         reviewed_at=timezone.now().isoformat()), salt=SALT, compress=True)
 
 
-def retire_refunded_order(*, review_token, confirmed, performed_by, reason, gateway=None):
+def retire_refunded_order(*, review_token, confirmed, performed_by, reason, gateway=None, expected_contribution_id=None):
     actor = _owner(performed_by)
     if confirmed is not True or not isinstance(reason, str) or not reason.strip():
         raise ValidationError("Confirm the all-attempt order review and enter an audit reason.")
@@ -138,6 +138,8 @@ def retire_refunded_order(*, review_token, confirmed, performed_by, reason, gate
             raise ValueError
     except (signing.BadSignature, TypeError, ValueError):
         raise ValidationError("The order review is invalid or expired; inspect again.") from None
+    if expected_contribution_id is not None and review["contribution"] != expected_contribution_id:
+        raise ValidationError("The order review belongs to a different contribution. Inspect this order separately.")
     c = Contribution.objects.get(pk=review["contribution"])
     existing = RefundedPaymentOrderClosure.objects.filter(contribution=c).first()
     if existing:

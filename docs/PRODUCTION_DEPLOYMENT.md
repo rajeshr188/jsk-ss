@@ -25,7 +25,7 @@ not a raw provider error payload.
 | Exact captured payment, matching pending contribution | Check, confirm and apply. Verify one principal receipt OR exact-grade allocation and one confirmed contribution. INR API confirmation alone does not qualify monthly timing; retain the original signed capture evidence. |
 | Repeat delivery or retry of the same credited payment | Inspect again if needed. Original source/entitlement remains singular; never create a second contribution or invoice benefit. |
 | Different captured payment on a credited order; abandoned/failed/unknown/mismatched source; late funds after disposition | Keep the event unresolved. Investigate exact payment and existing entitlement. Do not relabel the source, reopen the agreement or conceal the exception in ordinary settlement. |
-| No local entitlement and an approved payment-error refund | Use the existing authorized manual provider-dashboard process. Retain payment/order/refund IDs, exact amount, approver, timestamps and final completion evidence in the incident record. Submitted is not completed. The app has no verified payment-error refund clearance; retain the local exception until an approved audited resolution exists. |
+| No local entitlement and an approved payment-error refund | Use the existing authorized manual provider-dashboard process. Retain payment/order/refund IDs, exact amount, approver, timestamps and final completion evidence in the incident record. Submitted is not completed. On the reviewed candidate, open the separate manual payment-refund review, inspect and confirm the exact fully refunded never-credited payment. Confirming resolution does not release an order: use the separate all-attempt order review and confirmation if retirement is needed. Other or contradictory events remain held. |
 | Recorded INR purchase credit and agreed final settlement | Use the separate customer-authorized full INR disposition. Fulfil each original-source refund leg only after actual completion with required references/customer receipt evidence. Remaining legs stay liabilities and prevent closure; no bonus cashout or cash substitution for online sources. |
 
 An exception note or refund screenshot cannot clear a financial hold. No refund API,
@@ -34,9 +34,14 @@ Exact-grade metal is not converted into an INR refund. Missing signed capture ev
 require provider retry/support investigation, not a hand-created webhook. Validate
 these cases on synthetic/isolated provider fixtures, never manufactured Live errors.
 
-Payment-error refund clearance remains a release decision/implementation gap,
-separate from supported INR settlement fulfilment. Candidate operator/device
-acceptance, normal CI and exact-image rehearsal are still required.
+The private refund screens and bounded services are locally implemented, separate
+from INR settlement fulfilment; this does not assert production deployment. Payment
+resolution and order retirement are separately confirmed, owner/route-bound reviews
+with a ten-minute lifetime and independent provider reinspection. GET only reads
+retained evidence. Use Refund review history after an item leaves the queue; preserve
+original webhook and source records. Provider processed status is not independent
+proof of customer bank credit. Candidate operator/device acceptance, normal CI and
+exact-image rehearsal are still required.
 
 ### Optional order investigation workspace (27 October 2026; not activated)
 

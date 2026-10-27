@@ -74,6 +74,7 @@
   </div>
 </form>
 
+{% if event.gateway_mode == 'live' %}<p><a class="btn btn-outline-dark" href="{% url 'schemes:payment_refund_review' event.pk %}">Review a manual payment refund</a></p>{% endif %}
 <div class="alert alert-info"><strong>Refund or late-payment investigation:</strong> this screen issues no refund and has no manual-clear action. Keep unresolved captures visible. An INR settlement refund against already-recorded principal is a separate workflow with source-specific completion evidence. <a href="{% url 'schemes:plan_manual' %}#capture-refund-review">Read the owner procedure</a>.</div>
 
 <div class="card form-card">

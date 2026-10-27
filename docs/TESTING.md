@@ -1,5 +1,43 @@
 # Testing
 
+## Private owner refund comparison and confirmation (27 October 2026)
+
+The new `test_payment_refund_workspace` exercises real services and templates through
+owner HTTP requests, with synthetic adapter responses on disposable localhost
+PostgreSQL. Both INR/metal and monthly/optional cases require separate payment and
+order confirmations. Coverage includes no-write/no-network GET, private access,
+CSRF/method enforcement, missing confirmation, actor/route binding, tampered/stale
+reviews, changed/partial refund evidence, credited-principal refusal, masked provider
+errors, retained history and idempotent resolution/retirement. No new migration.
+
+Passing verification: **15 tests in 115.979s** (`test_payment_refund_workspace`
+and `test_payment_refund_resolutions`), plus **33 tests in 132.499s**
+(`test_refunded_order_retirement`, `test_capture_recovery_workspace`,
+`test_optional_order_workspace`, `test_audit_exceptions`). Each unique disposable
+localhost database was destroyed. Django checks and `makemigrations --check --dry-run`
+passed; staged whitespace checks passed. The first UI run found an unclear
+already-credited message, corrected before the passing run. An intermediate combined
+command included a nonexistent test-module name; the clean 15-test command above
+replaces that failed invocation. No real provider or SMTP call was made.
+
+Pending operator acceptance on the exact candidate (isolated synthetic evidence only):
+
+1. From a captured-payment investigation, inspect the manual refund. Compare exact
+   IDs, amount, processed refund totals and historical entitlement; the pending order
+   and monthly reservation must remain unchanged after payment resolution alone.
+2. Inspect all order attempts and confirm retirement separately. Verify retained
+   ABANDONED/release evidence, unchanged balances and no new qualifying instalment.
+3. Review partial/non-terminal, mismatched, expired and already-credited cases.
+   They must retain their holds with a clear explanation and no override.
+4. Reopen the resolved case from history; distinguish original webhook status from
+   the current exact-event resolution. Other or contradictory captures remain held.
+5. Check the comparison, error messages and confirmation with keyboard and a narrow
+   Android/TWA viewport. The actual refund is an external authorized operation;
+   provider processed evidence is not independent proof of customer bank receipt.
+
+This step does not claim real-provider, stakeholder, physical-device, inbox or
+production acceptance. The ordinary local application database was not migrated.
+
 ## Refunded-order lifecycle and common hold interpretation (27 October 2026)
 
 The focused lifecycle/provider run passed **11 tests in 104.278s** on a unique

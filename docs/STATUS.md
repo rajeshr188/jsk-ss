@@ -2,6 +2,24 @@
 
 ## Current milestone
 
+**27 October 2026 - private owner payment-refund and order-retirement review.**
+The exception workspace now links to an owner-only payment refund comparison and a
+separate all-attempt order review. Owners inspect, compare and explicitly confirm
+fresh evidence; signed reviews bind the owner and exact route. Apply independently
+rechecks provider facts through the existing financial services. GET performs no
+provider I/O or mutation. Payment resolution alone does not release an order;
+retirement alone creates no entitlement, qualification or agreement closure.
+
+Retained review history stays accessible after an exception leaves the queue.
+Credited payments, partial/contradictory refunds and incomplete/non-terminal order
+attempts have no override. The Bootstrap forms explain these boundaries and mask
+provider errors. The owner manual and release/runbook documentation now describe
+both confirmations. No new migration, refund API, configured-plan activation or
+production change is included. Existing unrelated working-tree changes are preserved.
+Verification details are recorded in TESTING.md. Next: candidate operator/device
+acceptance, consolidated normal CI and exact-image recovery/latency rehearsal under
+the remaining release-evidence checklist; INR publication approvals remain separate.
+
 **27 October 2026 - refund hold interpretation and explicit order retirement.**
 Shared predicates now distinguish exact resolved capture evidence from unresolved or
 contradictory events across collection, eligibility, exception checks, closure and

@@ -768,7 +768,7 @@ preferences do not become fixed, and no old agreement receives a configuration i
   rewriting older proofs. This is gross captured principal, not refund availability
   or settlement reconciliation. Normal collection/readiness gates remain closed.
   Payment-error refund resolution is a separate boundary in ADR-0017
-  (27 October 2026), still unavailable as an owner screen. Local inspection foundation
+  (27 October 2026), now exposed through a private owner review screen. Local inspection foundation
   (0052) retains typed Live provider observations, historical entitlement checks and
   immutable owner/binding evidence. It changes no holds or financial state; partial,
   pending, failed, inconsistent and incomplete refunds cannot qualify as full refunds.
@@ -797,8 +797,13 @@ preferences do not become fixed, and no old agreement receives a configuration i
   replay cannot reopen the released claim; contradictory capture creates review again.
   Settlement/benefit evidence adds refund references only when present, preserving old
   proof formats and hashes; zero entitlement still cannot become a settlement or an
-  unused-agreement cancellation merely because an order was retired. Owner UI,
-  operator acceptance and configured-plan release gates remain pending.
+  unused-agreement cancellation merely because an order was retired. The private UI
+  separates payment inspection/resolution from all-attempt order inspection/retirement.
+  GET reads retained evidence only; explicit CSRF-protected POST performs inspection
+  or confirmation. Signed reviews are owner-, route- and time-bound; Apply independently
+  checks fresh provider facts. Original events and retained history remain accessible
+  after resolution. Provider error payloads are not displayed. Operator acceptance
+  and configured-plan release gates remain pending.
   One immutable INR disposition assigns all recorded principal to an evidenced invoice
   and/or original-source refund legs. Invoice application consumes earliest verified
   uncorrected receipts first (verification time, then receipt ID); remaining amounts

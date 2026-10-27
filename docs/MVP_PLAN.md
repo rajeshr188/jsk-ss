@@ -93,7 +93,7 @@ and its dependencies are resolved.
 | Area | Evidence already present | Required next evidence / owner |
 | --- | --- | --- |
 | Family lifecycle and legacy safety | Collection matrix; independent eligibility, INR/metal settlement, corrections, replacement and concurrency suites; selected combined runs in TESTING.md | Engineering: consolidated normal CI on the exact release commit, with each approved family mapped to its journeys. Existing tests from different commits do not substitute for one passing candidate. |
-| Owner operations and provider exceptions | Gated owner settlement/review screens; optional-order identity recovery form; captured-payment comparison with fresh owner-bound confirmation; documented capture/refund handoff; bounded payment-error refund resolution design in ADR-0017 (27 October); unresolved payments block closure | Engineering + showroom owner: integrate the private owner comparison/confirmation screen with the locally implemented inspection, resolution and all-attempt retirement services; then accept candidate uncertain/late/duplicate capture and refund procedures. Full INR settlement fulfilment does not clear a separate provider exception; manual notes cannot replace verified disposition. |
+| Owner operations and provider exceptions | Gated owner settlement/review screens; optional-order identity recovery form; captured-payment comparison with fresh owner-bound confirmation; documented capture/refund handoff; bounded payment-error refund resolution design in ADR-0017 (27 October); unresolved payments block closure; private owner inspection/resolution, all-attempt retirement and retained-history screens with HTTP/service tests | Engineering + showroom owner: accept the candidate uncertain/late/duplicate capture and refund procedures. Full INR settlement fulfilment does not clear a separate provider exception; manual notes cannot replace verified disposition. |
 | Performance | One- through four-return profiles; invocation-local historical validation reduces fourth-return reads from 6,278 to 1,840 INR queries and 2,931 to 958 metal queries, with tampered-original checks retained | Engineering: measure candidate latency on representative data during exact-image rehearsal; still-high local counts are not production acceptance. Preserve complete evidence checks. No history deletion/cap or cached spending authority as a shortcut. |
 | Device, accessibility and messages | Sampled local Chrome layouts/keyboard checks and captured INR completion email | Owner/tester: Android/TWA and keyboard/assistive-technology journey; real inbox delivery for request, approval, eligibility and full completion. Record exact candidate and result; no synthetic fixture may be sent to a real customer. |
 | INR publication and fulfilment | Approved product direction and source-specific manual evidence model | Business owner: required business/legal/accounting/provider approval and usable original-source refund procedure. No automated refund API is required for v1; an owner checkbox cannot verify a bank credit or authorize an unsupported fallback. |
@@ -116,13 +116,17 @@ The shared interpretation and explicit lifecycle prerequisite is now local (0054
 exact resolved capture predicates, separate fresh all-attempt order retirement,
 append-only monthly release and additive settlement/benefit proof. Resolving a payment
 alone leaves its pending order and reservation in place. No financial credit, benefit
-or agreement closure is inferred; contradictory capture retains review. Owner UI and
-production acceptance remain pending.
+or agreement closure is inferred; contradictory capture retains review.
 
-Immediate engineering order: add the private owner review/confirmation workflow for
-the bounded services in ADR-0017, including clear distinction between payment resolution
-and separate order retirement;
-complete remaining operator acceptance, then
+The private owner UI is now local: retained payment inspection, exact-payment resolution,
+separate all-attempt order comparison/retirement and persistent review history. GET
+performs no provider I/O or writes. Explicit confirmed POST binds the owner, route and
+fresh evidence; Apply rechecks independently. Credited principal has no clearance path.
+Operator/device and production acceptance remain pending.
+
+Immediate engineering order: complete remaining operator acceptance of the private
+owner workflows, including the distinction between exact-payment resolution and
+separate all-attempt order retirement, then
 run consolidated candidate CI and exact-image rehearsal, including representative
 latency. Revisit read amplification if those measurements are unacceptable.
 Device/inbox and business approvals can proceed alongside engineering;
