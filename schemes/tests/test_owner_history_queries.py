@@ -20,14 +20,14 @@ class OwnerHistoryQueryTests(IntegrationFixture, TestCase):
     # counts remain a release concern, not an accepted latency target or a cap
     # on retained financial history.
     query_budgets = {
-        "INR_PURCHASE_BONUS_one_return": 680,
-        "INR_PURCHASE_BONUS_two_returns": 1100,
-        "VA_DISCOUNT_one_return": 300,
-        "VA_DISCOUNT_two_returns": 540,
-        "INR_PURCHASE_BONUS_three_returns": 1550,
-        "INR_PURCHASE_BONUS_four_returns": 2050,
-        "VA_DISCOUNT_three_returns": 780,
-        "VA_DISCOUNT_four_returns": 1050,
+        "INR_PURCHASE_BONUS_one_return": 650,
+        "INR_PURCHASE_BONUS_two_returns": 850,
+        "VA_DISCOUNT_one_return": 280,
+        "VA_DISCOUNT_two_returns": 450,
+        "INR_PURCHASE_BONUS_three_returns": 1000,
+        "INR_PURCHASE_BONUS_four_returns": 1200,
+        "VA_DISCOUNT_three_returns": 620,
+        "VA_DISCOUNT_four_returns": 780,
     }
 
     def measure(self, account, stage):

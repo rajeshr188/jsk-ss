@@ -13,7 +13,7 @@ from schemes.inr_settlement_selectors import inr_settlement_balance
 from schemes.models import Contribution
 from schemes.benefit_reapplication_selectors import (
     _OwnerHistoryRead, decision_history, owner_reapplication_workspace,
-    reapplication_review_status,
+    reapplication_review_status, return_basis,
 )
 from schemes.benefit_application_selectors import validate_bound_review
 
@@ -103,3 +103,21 @@ class OwnerWorkflowQueryTests(IntegrationFixture, TestCase):
         with self.assertRaises(ValidationError):
             validate_bound_review(proposal, current=True, _history_read=history_read)
         self.assertFalse(proposal.fulfilments.exists())
+
+    def test_current_return_basis_reloads_closure_and_disposition_after_historical_read(self):
+        account, closure, reversal = self.returned_benefit()
+        decision = self.approve(account, reversal)
+        history_read = _OwnerHistoryRead(account)
+        decision_history(reversal, _history_read=history_read)
+        self.note(closure)
+        basis = return_basis(reversal, current=True, _history_read=history_read)
+        self.assertGreater(basis['closure_sequence'], decision.evidence['basis']['closure_sequence'])
+        self.assertEqual(owner_reapplication_workspace(account)['review_rows'][0]['status'], 'STALE')
+        # Simulate damaged historical principal proof in this disposable database.
+        # Neither a retained read object nor the same account instance can hide it.
+        account.inr_settlements.update(evidence_digest='damaged-retained-proof')
+        with self.assertRaises(ValidationError):
+            return_basis(reversal, current=True, _history_read=history_read)
+        later = owner_reapplication_workspace(account)
+        self.assertEqual(later['review_rows'][0]['status'], 'REVIEW_REQUIRED')
+        self.assertFalse(later['reviewable_returns'].exists())

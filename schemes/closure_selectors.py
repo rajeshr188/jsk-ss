@@ -53,8 +53,9 @@ def validate_closure_history(request):
     # Load immutable event-source links together. Keep the state-machine and
     # source validators below unchanged, including detection of missing links.
     events = list(request.events.select_related(
-        "settlement__redemption", "settlement_correction__reversal",
+        "settlement__redemption__scheme_account", "settlement__closure", "settlement_correction__reversal",
         "inr_completion__proposal__scheme_account", "inr_resolution__proposal__scheme_account",
+        "inr_completion__proposal__closure", "inr_resolution__proposal__closure",
     ).order_by("sequence"))
     state = None
     current_settlement = None

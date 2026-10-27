@@ -2,6 +2,28 @@
 
 ## Current milestone
 
+**27 October 2026 - ordered builder-release goal in progress.**
+Work continues in the isolated `integration/builder-release-validation` worktree,
+draft PR #77. The 703-case diagnostic continuation finished: 692 unique tests passed;
+the 11 affected tests produced nine failure events and three errors, all covered by
+the already-corrected migration fixtures/guards and Account-button regression.
+This split run is not a passing full-suite result. Normal CI remains required.
+
+The exact `fcc5cd7` image passed the configured-history PostgreSQL 16 restore and
+retained-evidence downgrade-refusal drill. Read-only SSH then verified production
+release `d0e5dd1` and PostgreSQL **18.6**; 30 warmed SELECT 1 samples measured median
+0.422 ms / p95 1.292 ms from the serving container. No production settings, records
+or services changed. CI now targets PostgreSQL 18.6, and a same-version isolated
+rehearsal is underway. The latency probe is a point sample, not an application SLA.
+
+Owner history reads are being refined to reuse successfully validated historical
+closure/disposition traversal within one read-only invocation. Current-source checks,
+fresh mutation authority and complete retained-history checks remain in place.
+Focused safety/performance tests are running. Remaining order: current-head CI and
+image/recovery evidence, owner/device/inbox acceptance, documented INR publication
+and usable refund-route evidence, then coherent activation and approved rollout.
+The owner confirmed the external INR evidence is still pending; no gate has been opened.
+
 **27 October 2026 - consolidated migration-test follow-up.**
 Seven focused migration cases now pass across independent agreement storage,
 enrolment requests, INR principal and benefit reapplication. Older tests expected
@@ -12,7 +34,7 @@ historical fixtures only at the relevant schema, and restore the complete graph
 before invoking current financial services. Original benefit proof is preserved.
 No production guard, migration or financial service was weakened or changed.
 
-The 703-case continuation started before these corrections and remains in progress;
+The 703-case continuation started before these corrections and has now completed;
 its failures and the older remote CI are not a passing current-candidate result.
 The next checkpoint is updated draft PR #77 with fresh CI, followed by the remaining
 performance, operator/device/inbox, recovery-image and INR publication evidence in

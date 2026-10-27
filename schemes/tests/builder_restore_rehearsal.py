@@ -11,7 +11,8 @@ import os
 from pathlib import Path
 from io import StringIO
 import sys
-from time import perf_counter
+from statistics import median
+from time import perf_counter, sleep
 from unittest import TestCase
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "django_project.settings")
@@ -147,7 +148,8 @@ def verify(manifest):
     print("retained_history_restore=PASS", json.dumps(manifest["balances"], sort_keys=True), flush=True)
 
 
-def profile(manifest):
+def profile(manifest, *, latency_ms=0, samples=1):
+    """Synthetic latency sensitivity, not a managed-database load test or SLA."""
     from accounts.models import CustomUser
     from schemes.models import SchemeAccount
     client = Client()
@@ -157,17 +159,24 @@ def profile(manifest):
         def readonly(execute, sql, params, many, context):
             if sql.lstrip().split()[0].upper() in {"INSERT", "UPDATE", "DELETE"}:
                 raise AssertionError("Read-only owner page attempted a mutation")
+            if latency_ms:
+                sleep(latency_ms / 1000)
             return execute(sql, params, many, context)
-        reset_queries()
-        started = perf_counter()
-        with connection.execute_wrapper(readonly), CaptureQueriesContext(connection) as queries:
-            response = client.get(reverse("schemes:benefit_reapplication", args=[account.scheme_number]))
-        if response.status_code != 200 or "private" not in response.headers.get("Cache-Control", ""):
-            raise AssertionError("Expected private owner review response")
-        if len(connection.queries_log) >= connection.queries_limit:
-            raise AssertionError("Incomplete query capture")
-        print(f"image_history_profile mode={account.savings_mode} returns=2 queries={len(queries)} "
-              f"seconds={perf_counter()-started:.3f}", flush=True)
+        timings, counts = [], []
+        for _ in range(samples):
+            reset_queries()
+            started = perf_counter()
+            with connection.execute_wrapper(readonly), CaptureQueriesContext(connection) as queries:
+                response = client.get(reverse("schemes:benefit_reapplication", args=[account.scheme_number]))
+            timings.append(round(perf_counter() - started, 3))
+            counts.append(len(queries))
+            if response.status_code != 200 or "private" not in response.headers.get("Cache-Control", ""):
+                raise AssertionError("Expected private owner review response")
+            if len(connection.queries_log) >= connection.queries_limit:
+                raise AssertionError("Incomplete query capture")
+        print("image_history_profile " + json.dumps(dict(mode=account.savings_mode,
+            returns=2, injected_per_query_ms=latency_ms, queries=counts,
+            seconds=timings, median_seconds=median(timings))), flush=True)
     if snapshot() != manifest["rows"]:
         raise AssertionError("Owner GET changed retained financial history")
 
@@ -207,8 +216,8 @@ def reverse_refusal(manifest):
 
 if __name__ == "__main__":
     phase, manifest_file = sys.argv[1:]
-    if phase not in {"seed", "verify", "reverse"}:
-        raise ValueError("Expected seed, verify or reverse")
+    if phase not in {"seed", "verify", "reverse", "latency"}:
+        raise ValueError("Expected seed, verify, reverse or latency")
     require_isolation(phase)
     with override_settings(IN_STORE_CASH_CONTRIBUTIONS_ENABLED=True,
             PAYMENT_INITIATION_KILL_SWITCH=False, PAYMENT_GATEWAY="razorpay",
@@ -224,5 +233,10 @@ if __name__ == "__main__":
             if phase == "verify":
                 verify(manifest)
                 profile(manifest)
+            elif phase == "latency":
+                if snapshot() != manifest["rows"]:
+                    raise AssertionError("Unexpected synthetic fixture state")
+                for latency in (0, 1.5, 10):
+                    profile(manifest, latency_ms=latency, samples=3)
             else:
                 reverse_refusal(manifest)

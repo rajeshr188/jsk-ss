@@ -1,5 +1,31 @@
 # Testing
 
+## Ordered release validation - 27 October 2026
+
+The diagnostic continuation completed **703 tests in 5090.036s**, with nine failure
+events and three errors across 11 unique tests (the Account-button test has two
+failing subcases). The remaining 692 tests passed. Every affected case corresponds
+to the migration fixtures/guard expectations or Account-button fixes documented
+below and already covered by focused passing reruns. This does not replace a clean
+current-head full-suite result; draft PR #77 remains under normal CI.
+
+Exact source `fcc5cd7113fc633a27a455e53c4b76b84586177a` built locally as image
+`sha256:6c8faf0801294292b9a608fb566c180859f492b10dc7be2e894f60cda61e2b85`.
+The committed synthetic harness passed seed, PostgreSQL 16 dump/restore, complete
+schemes-row hashes/counts, separate liabilities, diagnostics and retained-history
+downgrade refusals. Outstanding principal stayed INR 500.00 and GOLD_22K_916
+0.050000 g. Returned awards correctly remained under review. Two-return owner GETs
+used 654 INR queries / 2.362s and 339 metal queries / 0.377s in that local run.
+Image collection included the new color-mode assets. This is a local image, not a
+published GHCR release or deployment acceptance.
+
+Read-only production verification found release `d0e5dd1897debb054d99647d6ea16575d08b1a48`
+on PostgreSQL **18.6**. Thirty warmed `SELECT 1` calls from its running web container
+measured median **0.422 ms**, p95 **1.292 ms**. These queries changed no business data,
+settings or services; this point-in-time round-trip sample excludes application query
+cost and is not a load test. CI was aligned from PostgreSQL 16 to 18.6. Final recovery
+evidence must use this production major version; the earlier 16 drill alone is insufficient.
+
 ## Consolidated migration-test follow-up - 27 October 2026
 
 Targeted deployed-checkout upgrade plus independent-storage tests initially returned
@@ -68,8 +94,8 @@ three passed; the settlement test's final runtime balance lookup errored because
 refused downgrade had already removed later empty tables. After restoring the full
 graph before that runtime selector, its focused rerun passed (**1 test, 33.139s**).
 The earlier historical-state guard and unchanged-proposal assertions were retained.
-A continuation over the remaining **703 cases** is in progress; these separate
-results are not a passing full-suite result.
+A continuation over the remaining **703 cases** completed as detailed above; these
+separate results are not a passing full-suite result.
 All use fresh randomly named localhost test databases. The additional
 `test_builder_checkout_merge_migration` regression upgrades the deployed checkout
 schema and compares original financial and retained checkout fields, legacy contract

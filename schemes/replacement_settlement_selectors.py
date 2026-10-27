@@ -13,11 +13,12 @@ def disposition_history(account):
     if account.savings_mode == "INR_CREDIT":
         if account.redemptions.exists():
             raise ValidationError("Mixed principal history requires investigation.")
-        return list(account.inr_settlements.select_related("closure", "resolution__event").order_by("pk"))
+        return list(account.inr_settlements.select_related("scheme_account", "closure", "resolution__event").order_by("pk"))
     if account.inr_settlements.exists():
         raise ValidationError("Mixed principal history requires investigation.")
     history = list(ConfiguredSettlement.objects.filter(redemption__scheme_account=account)
-        .select_related("closure", "redemption__reversal", "correction__event", "correction__reversal").order_by("pk"))
+        .select_related("closure", "event", "redemption__scheme_account", "redemption__reversal",
+            "correction__event", "correction__reversal").order_by("pk"))
     if len(history) != account.redemptions.count():
         raise ValidationError("Unlinked/legacy redemptions cannot enter independent replacement settlement.")
     return history

@@ -13,13 +13,43 @@ class _OwnerHistoryRead:
     """Validated historical decisions for one read-only workspace invocation.
 
     Never returned to callers or used by mutation services. Current source/state
-    checks still run; only repeated traversal of the same decision prefix is reused.
+    checks still run; repeated historical closure/disposition/decision traversal is
+    reused only after successful validation. This object never grants authority.
     """
     def __init__(self, account):
         self.account_id = account.pk
         self.database = account._state.db
         self.completed = {}
         self.visiting = set()
+        self.closures = {}
+        self.disposition_rows = None
+
+    def require_account(self, account):
+        if account.pk != self.account_id or account._state.db != self.database:
+            raise ValidationError("Benefit review history belongs to another agreement.")
+
+    def closure_sequence(self, closure):
+        self.require_account(closure.scheme_account)
+        if closure._state.db != self.database:
+            raise ValidationError("Benefit review history belongs to another database.")
+        if closure.pk not in self.closures:
+            self.closures[closure.pk] = validate_closure_history(closure)
+        return self.closures[closure.pk]
+
+    def dispositions(self, account):
+        self.require_account(account)
+        if self.disposition_rows is None:
+            rows = disposition_history(account)
+            validate_replacement_links(rows)
+            if account.savings_mode == "INR_CREDIT":
+                from .inr_correction_selectors import validate_inr_history
+                validate_inr_history(account)
+            else:
+                from .settlement_selectors import validate_configured_settlement
+                for row in rows:
+                    validate_configured_settlement(row)
+            self.disposition_rows = rows
+        return self.disposition_rows
 
     def decisions(self, reversal):
         if (reversal._state.db != self.database
@@ -42,11 +72,17 @@ def return_basis(reversal, *, closure_sequence=None, disposition_count=None, cur
                  _history_read=None):
     """Require complete original principal/benefit return, not a balance inference."""
     validate_benefit_reversal(reversal, _history_read=_history_read)
+    if current:
+        # Historical return checks can share this render's earlier traversal,
+        # but its current disposition, closure and source checks must be fresh.
+        _history_read = None
     f, award = reversal.fulfilment, reversal.fulfilment.award
     account = award.scheme_account
     account.refresh_from_db()
-    history = disposition_history(account)
-    validate_replacement_links(history)
+    history = (_history_read.dispositions(account) if _history_read is not None
+        else disposition_history(account))
+    if _history_read is None:
+        validate_replacement_links(history)
     if disposition_count is not None:
         if type(disposition_count) is not int or not 1 <= disposition_count <= len(history):
             raise ValidationError("The retained disposition prefix is invalid.")
@@ -59,7 +95,8 @@ def return_basis(reversal, *, closure_sequence=None, disposition_count=None, cur
     if not history or any("independent" not in row.evidence for row in history):
         raise ValidationError("Reapplication review requires a retained independent full disposition.")
     closure = history[0].closure
-    sequence = validate_closure_history(closure)
+    sequence = (_history_read.closure_sequence(closure) if _history_read is not None
+        else validate_closure_history(closure))
     if current and (account.status != "CLOSURE_PENDING" or closure.status != "ACCEPTED"):
         raise ValidationError("Retain the accepted closure and block contributions during return review.")
     root = history[0].evidence["independent"]
@@ -68,13 +105,15 @@ def return_basis(reversal, *, closure_sequence=None, disposition_count=None, cur
         raise ValidationError("Retain the originally qualified award; correction cannot earn a new benefit.")
     if account.savings_mode == "INR_CREDIT":
         from .inr_correction_selectors import validate_inr_history
-        validate_inr_history(account)
+        if _history_read is None:
+            validate_inr_history(account)
         if not f.inr_fulfilment_id or f.inr_fulfilment.proposal_id not in [p.pk for p in history]:
             raise ValidationError("Review the latest fully returned invoice, not an unrelated predecessor.")
     else:
         from .settlement_selectors import validate_configured_settlement
-        for row in history:
-            validate_configured_settlement(row)
+        if _history_read is None:
+            for row in history:
+                validate_configured_settlement(row)
         if f.metal_settlement_id not in [p.pk for p in history]:
             raise ValidationError("Review the latest fully returned exact-grade invoice.")
     entries = [history_entry(row) for row in history]

@@ -64,6 +64,7 @@ def validate_inr_resolution(resolution):
     completion = getattr(p, "completion", None)
     returns = list(resolution.returns.select_related(
         "fulfilment__proposal__scheme_account", "fulfilment__proposal__closure", "fulfilment__receipt",
+        "resolution__event", "resolution__proposal__scheme_account", "resolution__proposal__closure",
     ).order_by("fulfilment_id"))
     fulfilment_ids = set(p.fulfilments.values_list("pk", flat=True))
     try:
@@ -99,7 +100,8 @@ def validate_inr_resolution(resolution):
 
 def validate_inr_history(account):
     """Validate a single retained generation chain, including every retired proposal."""
-    proposals = list(account.inr_settlements.select_related("closure", "completion__event", "resolution__event").order_by("pk"))
+    proposals = list(account.inr_settlements.select_related(
+        "scheme_account", "closure", "completion__event", "resolution__event").order_by("pk"))
     if not proposals:
         return proposals
     if any("independent" in p.evidence for p in proposals):

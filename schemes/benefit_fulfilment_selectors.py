@@ -188,7 +188,10 @@ def validate_benefit_reversal(row, *, current=False, _history_read=None):
     # Keep the immutable invoice/return evidence intact while reading current state.
     closure.refresh_from_db()
     account.refresh_from_db()
-    validate_closure_history(closure)
+    if not current and _history_read is not None:
+        _history_read.closure_sequence(closure)
+    else:
+        validate_closure_history(closure)
     if ((current and (account.status != "CLOSURE_PENDING" or closure.status != "ACCEPTED"))
             or not row.invoice_correction_reference.strip() or not row.customer_confirmation.strip()
             or row.returned_at is None or timezone.is_naive(row.returned_at)
