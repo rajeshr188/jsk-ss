@@ -1,5 +1,43 @@
 # Testing
 
+## Current-candidate visual acceptance preparation - 27 October 2026
+
+Source `6038277` plus the subsequent stylesheet correction was reviewed using 16
+real rendered owner/customer responses and two locally captured completion emails.
+The isolated synthetic export test passed in **32.436s**, destroyed its database,
+used the in-memory email backend and made no customer/provider transmissions.
+Screens include the independent builder, INR proposal/partial fulfilment/completion/
+return, INR and metal benefit review/error/preview, metal settlement/confirmation,
+customer dashboard and partial/completed INR statements. Static review copies have
+no working application POST endpoint; browser inspection is not a financial mutation
+journey or owner authorization. Synthetic email destinations are fixture values.
+
+Chrome checks at **320, 390 and 1280 CSS pixels** found no page-level horizontal
+overflow across all 18 documents. Application screens each have one main heading;
+sampled controls have associated labels, and both authorization-error responses
+connect the invalid field to its help/error text. Light/dark selection persists
+across these pages. Customer statements distinguish pending refund principal from
+fulfilled jewellery and separate the non-refundable benefit. Captured completion
+emails state that the recorded handover/refund is showroom evidence, not an API
+refund or proof of inbox delivery.
+
+The review caught Bootstrap overriding the generic keyboard outline and dark
+outline-button contrast of **3.55:1** (primary) / **3.41:1** (secondary), plus a
+secondary badge at **1.90:1**. Light-mode Bootstrap RGB link defaults and validation
+text also fell below 4.5:1 on the cream surfaces. The correction gives buttons a
+specific **3px** keyboard outline, preserves a light outline on the dark header,
+aligns link/button colors with the showroom palette, and supplies contrasting dark
+secondary-badge and light validation colors. Repeated rendered-text sampling across
+the 16 application pages found no below-threshold solid-background text samples in
+either theme. Keyboard focus was rechecked on the review action in both modes.
+Django system checks and the existing three-header presentation test passed.
+
+This sampling is not an automated WCAG audit: gradients, every hover/disabled state,
+screen-reader behavior, actual Android/TWA rendering and real email clients are not
+certified. Owner acceptance of the financial procedures, physical-device and actual
+inbox evidence remain pending. Current-head CI must include the style follow-up;
+earlier running CI is not represented as validation of these later changes.
+
 ## Ordered release validation - 27 October 2026
 
 Candidate code **232284fa1514619ca515cac054d6a778a369e282** built as local image

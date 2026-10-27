@@ -2,6 +2,19 @@
 
 ## Current milestone
 
+**27 October 2026 - current-candidate visual acceptance preparation.**
+The `6038277` candidate rendered 16 real owner/customer pages and two captured
+completion emails from an isolated synthetic test database (one export test,
+32.436s; database destroyed, no external mail). Chrome review at 320, 390 and
+1280 pixels found no page-level horizontal overflow. Labels and sampled error
+associations passed. Review found missing Bootstrap button keyboard outlines and
+contrast gaps in theme buttons, secondary status badges, light-mode links and
+validation text; the stylesheet follow-up corrects these. Both themes now pass
+the sampled solid-background text checks, with 3px button focus outlines.
+This is engineering preparation, not owner/device/screen-reader/inbox approval.
+Current-head CI is still required after the styling follow-up. Production and
+configured-plan gates remain unchanged; external INR approval remains pending.
+
 **27 October 2026 - ordered builder-release goal in progress.**
 Work continues in the isolated `integration/builder-release-validation` worktree,
 draft PR #77. The 703-case diagnostic continuation finished: 692 unique tests passed;
@@ -13,10 +26,10 @@ The exact `fcc5cd7` image passed the configured-history PostgreSQL 16 restore an
 retained-evidence downgrade-refusal drill. Read-only SSH then verified production
 release `d0e5dd1` and PostgreSQL **18.6**; 30 warmed SELECT 1 samples measured median
 0.422 ms / p95 1.292 ms from the serving container. No production settings, records
-or services changed. CI now targets PostgreSQL 18.6, and a same-version isolated
-rehearsal is underway. The latency probe is a point sample, not an application SLA.
+or services changed. CI now targets PostgreSQL 18.6, and the same-version isolated
+rehearsal passed as recorded below. The latency probe is a point sample, not an application SLA.
 
-Owner history reads are being refined to reuse successfully validated historical
+Owner history reads now reuse successfully validated historical
 closure/disposition traversal within one read-only invocation. Current-source checks,
 fresh mutation authority and complete retained-history checks remain in place.
 The exact `232284f` image passed PostgreSQL 18.6 configured-history restore, retained

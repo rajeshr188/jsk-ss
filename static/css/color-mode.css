@@ -47,6 +47,7 @@
     --bs-link-color-rgb: 239, 189, 130;
     --bs-link-hover-color: var(--jsk-primary-hover);
     --bs-link-hover-color-rgb: 255, 224, 184;
+    --bs-form-invalid-color: #ea868f;
   }
   [data-bs-theme="dark"] .btn-jsk {
     color: #26190e;
@@ -56,6 +57,32 @@
   [data-bs-theme="dark"] .btn-jsk:is(:hover, :focus, :active) { background: #f6d6a0; border-color: #f6d6a0; }
   [data-bs-theme="dark"] .btn-outline-dark { color: var(--jsk-ink); border-color: var(--jsk-muted); }
   [data-bs-theme="dark"] .btn-outline-dark:is(:hover, :focus) { background: #49372b; }
+  [data-bs-theme="dark"] .btn-outline-primary {
+    --bs-btn-color: var(--jsk-primary);
+    --bs-btn-border-color: var(--jsk-primary);
+    --bs-btn-hover-color: #26190e;
+    --bs-btn-hover-bg: var(--jsk-primary);
+    --bs-btn-hover-border-color: var(--jsk-primary);
+    --bs-btn-active-color: #26190e;
+    --bs-btn-active-bg: var(--jsk-primary);
+    --bs-btn-active-border-color: var(--jsk-primary);
+    --bs-btn-disabled-color: var(--jsk-muted);
+    --bs-btn-disabled-border-color: var(--jsk-muted);
+  }
+  [data-bs-theme="dark"] .btn-outline-secondary {
+    --bs-btn-color: var(--jsk-muted);
+    --bs-btn-border-color: var(--jsk-muted);
+    --bs-btn-hover-color: #26190e;
+    --bs-btn-hover-bg: var(--jsk-muted);
+    --bs-btn-hover-border-color: var(--jsk-muted);
+    --bs-btn-active-color: #26190e;
+    --bs-btn-active-bg: var(--jsk-muted);
+    --bs-btn-active-border-color: var(--jsk-muted);
+    --bs-btn-disabled-color: var(--jsk-muted);
+    --bs-btn-disabled-border-color: var(--jsk-muted);
+  }
+  /* The dark palette uses a pale secondary background, including status badges. */
+  [data-bs-theme="dark"] .text-bg-secondary { color: #26190e !important; }
   [data-bs-theme="dark"] :is(.form-control, .form-select) { color: var(--jsk-ink); background-color: var(--jsk-surface); border-color: #9c8771; }
   [data-bs-theme="dark"] .form-control::placeholder { color: var(--jsk-muted); opacity: 1; }
   [data-bs-theme="dark"] .form-control:disabled { background-color: var(--bs-secondary-bg); }

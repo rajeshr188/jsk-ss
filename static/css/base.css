@@ -18,7 +18,10 @@
   --bs-body-color: var(--jsk-ink);
   --bs-body-bg: var(--jsk-canvas);
   --bs-link-color: var(--jsk-primary);
+  --bs-link-color-rgb: 113, 58, 32;
   --bs-link-hover-color: var(--jsk-primary-hover);
+  --bs-link-hover-color-rgb: 85, 42, 23;
+  --bs-form-invalid-color: #b02a37;
   --bs-secondary-color: var(--jsk-muted);
   --bs-secondary-rgb: 111, 98, 91;
   --bs-border-color: var(--jsk-border);
@@ -98,9 +101,15 @@ main {
   transform: translateY(0);
 }
 
-:focus-visible {
-  outline: 3px solid rgba(201, 154, 61, 0.65);
+:focus-visible,
+.btn:focus-visible {
+  /* Match Bootstrap's button specificity so it cannot erase keyboard focus. */
+  outline: 3px solid var(--jsk-gold-deep);
   outline-offset: 3px;
+}
+
+.site-navbar :focus-visible {
+  outline-color: #edc683;
 }
 
 .site-navbar {
@@ -325,6 +334,19 @@ main {
   background-color: var(--jsk-primary);
   border-color: var(--jsk-primary);
   box-shadow: 0 0.25rem 0.7rem rgba(113, 58, 32, 0.18);
+}
+
+.btn-outline-primary {
+  --bs-btn-color: var(--jsk-primary);
+  --bs-btn-border-color: var(--jsk-primary);
+  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-bg: var(--jsk-primary);
+  --bs-btn-hover-border-color: var(--jsk-primary);
+  --bs-btn-active-color: #fff;
+  --bs-btn-active-bg: var(--jsk-primary);
+  --bs-btn-active-border-color: var(--jsk-primary);
+  --bs-btn-disabled-color: var(--jsk-primary);
+  --bs-btn-disabled-border-color: var(--jsk-primary);
 }
 
 .btn-jsk:hover,
