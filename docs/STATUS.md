@@ -14,6 +14,11 @@ Physical Android/TWA acceptance remains part of release review. The work remains
 the isolated release-validation worktree; the original worktree's edits are untouched.
 Next: finish consolidated regression/CI and resolve remaining failures before release.
 
+The validation follow-up also carried the already-requested solid Account button
+into this isolated candidate: its presentation test was present but the template
+still used an outline button. The existing three-header test now passes locally.
+The original worktree's pending Account styling edits remain untouched.
+
 **27 October 2026 - configured-history image restore rehearsal passed.**
 The candidate image built from `6f6e5f6` preserved all retained schemes rows/columns
 and separate liabilities through an isolated PostgreSQL 16 dump/restore. The fixture

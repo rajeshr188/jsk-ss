@@ -16,6 +16,12 @@ The preview used synthetic rendered data, no database or outgoing email. This is
 not a complete accessibility audit or physical Android/TWA acceptance; print has
 explicit light CSS overrides but a physical print rehearsal was not performed.
 
+Follow-up: `pages.tests.AccountMenuPresentationTests` passed (one test, three header
+subcases) after restoring the solid Account button to the integration candidate.
+Use development static storage for this source-only test. An initial invocation
+with production manifest storage correctly refused the uncollected new JS asset;
+production packaging must run `collectstatic` as usual.
+
 ## Consolidated builder / deployed checkout integration - 27 October 2026
 
 Candidate preparation is isolated on `integration/builder-release-validation` from
