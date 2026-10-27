@@ -74,12 +74,69 @@ all new-history downgrade guards. It is not a managed-cluster restore drill, a
 production-size latency measurement, a compatible rollback-image approval or full
 configured-family release acceptance. Those remaining evidence items stay open.
 
-This is not exact-image acceptance. `rehearse_workflow_release.py` is the older UI
+This bounded drill does not complete release acceptance. `rehearse_workflow_release.py` is the older UI
 rehearsal: its old migration targets and current-model fixture creation must be
 reconciled with the actual deployed schema before using it for builder upgrade proof.
 Normal CI, remaining image-based recovery/latency evidence and the operator/device/business
 acceptances in MVP_PLAN.md remain open. Production and normal local application data
 are not targets of these runs.
+
+### Configured-history dump/restore and retained-evidence refusal
+
+The next image was built from committed application source `6f6e5f6` with the normal
+Dockerfile: `jsk-builder-validation:6f6e5f6`, immutable local image ID
+`sha256:20a6b730b71702a769d005af5de2971d8c589c3d746c5864bba6f3a7ea918768`.
+`schemes/tests/builder_restore_rehearsal.py` and the existing synthetic fixture helpers
+were mounted read-only at `/app/schemes/tests`; application modules came from the image.
+Tests are excluded from production images. This is not a published GHCR digest.
+
+The harness requires `SYNTHETIC_BUILDER_DRILL=1`, loopback PostgreSQL, locmem email,
+`CONFIGURED_PLANS_ENABLED=False`, and exact disposable database names:
+`jsk_builder_configured_source` for `seed`, `jsk_builder_configured_restore` otherwise.
+Use a dedicated PostgreSQL 16 container with `--network none`, no published ports,
+and application containers sharing only its loopback network. Supply only synthetic
+settings; the helpers simulate unreleased readiness and provider replies, not contract
+validation or financial calculations. Do not point the harness at an existing database.
+
+Reproduction sequence: run `python -m schemes.tests.builder_restore_rehearsal seed
+/rehearsal/configured_manifest.json` against the fresh source; `pg_dump --format=custom`
+and `pg_restore --exit-on-error` into the separate fresh target; run the same module
+with `verify`, then `reverse`, against target. The manifest directory is the only
+writable host mount. Remove only that identified disposable database container and
+its volume after recording results. The manifest contains synthetic row hashes/counts
+and separate liabilities, not production data. Harness SHA-256 for this run:
+`306fb0fd217b674eec0fc043d73ac8a311c9df9ae25974454815fbea5f1d220c`.
+
+Observed results:
+- Six configured agreements, six contributions, two original awards, four benefit
+  invoices/full reversals, four reapplication decisions, two completed/returned INR
+  proposals and two metal settlements/reversals survived. Four exact refund
+  resolutions, eight observations and four order retirements survived, including
+  optional order bindings and monthly release decisions.
+- Every schemes model's ordered rows/all columns matched its source SHA-256 and
+  count. Liabilities remained **INR 500.00** and **GOLD_22K_916 0.050000 g**; the four
+  retired never-credited orders retained zero entitlement.
+- Principal, reapplication, closure, financial and grade diagnostics passed. The
+  award command intentionally reported `review_required=2`: a fully returned invoice
+  never automatically reopens benefit spending. Both complete application histories
+  and latest reversals validated independently; review states were two `CONSUMED`
+  and two `APPROVED_REVIEW`, with zero invalid/stale records. This expected hold is
+  explicitly asserted, not described as a clean award diagnostic.
+- Whole-graph downgrade toward 0053 refused at 0054's retained refunded-order guard.
+  Reapplying the latest graph preserved the full snapshot and liabilities. Direct
+  historical-state checks also exercised the 0047/0048/0049/0050/0052/0053 refusals.
+- Authenticated private owner GETs after two full returns made **654 queries in
+  4.234s (INR)** and **339 in 0.473s (metal)**. SQL mutation checks and unchanged
+  financial snapshots passed. These single local samples are not a production-size,
+  managed-database RTT or concurrent-load benchmark; performance acceptance remains
+  open. Their fixture/environment differs from the earlier four-return profiles.
+
+The dedicated database container, both databases, dump and anonymous volume were
+removed after the successful drill. An earlier harness assertion expected the award
+diagnostic to be green; it was corrected to verify the intentional returned-award hold.
+No financial application behavior was changed. Normal CI on the consolidated
+candidate, all-family/operator/device acceptance and compatible deployment recovery
+remain required; this does not authorize activation or destructive downgrade.
 
 ## Refund workspace browser review (27 October 2026)
 

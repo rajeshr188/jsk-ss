@@ -2,6 +2,25 @@
 
 ## Current milestone
 
+**27 October 2026 - configured-history image restore rehearsal passed.**
+The candidate image built from `6f6e5f6` preserved all retained schemes rows/columns
+and separate liabilities through an isolated PostgreSQL 16 dump/restore. The fixture
+contains original/replacement INR bonus and metal VA invoices, complete returns,
+customer-authorized reapplication decisions, and four refunded-order retirements
+covering both denominations and optional/monthly collection. Outstanding principal
+remained INR 500.00 and GOLD_22K_916 0.050000 g; retired orders granted no entitlement.
+Returned awards correctly remain review-required, with two consumed reviews and two
+approved-but-unconsumed reviews. Financial, closure, grade and principal checks passed.
+
+Migration 0054 refused downgrade; forward graph recovery preserved the complete
+snapshot. Six earlier benefit/policy/refund guards also refused retained evidence.
+The repeatable synthetic-only harness is `schemes/tests/builder_restore_rehearsal.py`.
+Two-return owner GETs measured 654 queries/4.234s for INR and 339/0.473s for metal in
+this local image run. This is not production-scale/managed-DB latency acceptance.
+The isolated database container/volume were removed. Full regression/normal CI on
+PR #77 remain running; operator/device/inbox, compatible recovery-image and INR
+publication approvals remain open. No production or release gate changed.
+
 **27 October 2026 - consolidated builder candidate integration (validation in progress).**
 The isolated `integration/builder-release-validation` worktree combines builder
 `261424c` with the prepared checkout-prevention integration from deployed `main`
