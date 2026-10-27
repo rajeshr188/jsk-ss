@@ -1,5 +1,33 @@
 # Testing
 
+## Exact-payment refund resolution and replay guard (27 October 2026)
+
+The focused `test_payment_refund_resolutions` run passed **9 tests in 65.332s**
+on a unique disposable localhost PostgreSQL database, destroyed afterward.
+Real confirmation/principal services and the new resolution service are exercised
+with synthetic agreements, simulated provider responses and readiness only patched
+for fixtures. No actual provider operation or ordinary application data is involved.
+
+Coverage includes owner-bound signed review, explicit confirmation, ten-minute age,
+newer inspections, changed refund identity, partial/unavailable fresh results,
+owner revocation and capture during network inspection. A concurrent callback and
+resolution cannot both win. Resolution retries retain one row; an additional refunded
+payment leaves a legitimate first receipt unchanged. Subsequent callback, direct
+confirmation and signed webhook cannot create principal from the resolved payment.
+Signed delivery remains in review, preserving the retained event and payment state.
+
+Database update/delete protection and 0053 reversal refusal preserve resolution
+evidence. Contribution status, pending counts and closure holds remain unchanged;
+these tests do not claim operational agreement/order clearance. Shared predicates,
+attempt/reservation transitions and owner UI must still be integrated together.
+Django checks and migration-drift checks passed.
+
+The broader run passed **80 tests in 331.447s**: both new refund modules,
+`test_razorpay.RazorpayServiceTests`, `test_razorpay.RazorpayWebhookRecoveryTests`,
+`test_inr_api_payments.InrApiPaymentsTests` and `test_instalment_capture_boundaries`.
+The unique disposable localhost PostgreSQL database was destroyed afterward.
+This is affected regression evidence, not normal CI or a production/provider rehearsal.
+
 ## Payment-error refund observation foundation (27 October 2026)
 
 The combined run passed **57 tests in 198.088s** on a unique disposable localhost

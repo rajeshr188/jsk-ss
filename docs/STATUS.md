@@ -2,6 +2,29 @@
 
 ## Current milestone
 
+**27 October 2026 - exact-payment refund resolution and credit replay guard.**
+Migration 0053 adds immutable, uniquely scoped payment-error refund resolutions that
+link the owner's reviewed observation to a fresh authenticated inspection. The internal
+service requires explicit confirmation, an owner/evidence-bound signed review no older
+than ten minutes, unchanged provider/local facts and no historical entitlement. It
+rechecks persisted authority and source facts under the agreement lock; repeated
+application returns the same retained resolution. Database update/delete and unsafe
+migration reversal are refused.
+
+Contribution confirmation and new INR principal creation refuse credit from the
+resolved payment. A delayed signed capture stays in review; a legitimate different
+payment on the same order keeps its principal. The focused nine-case run passed,
+including capture/resolution concurrency and migration preservation. The broader
+80-case observation/resolution/Razorpay/API-principal/capture run passed in 331.447s.
+Django and migration-drift checks passed. Unique disposable localhost databases were
+destroyed; TESTING.md records scope. No real provider request was made.
+
+This is an internal payment-resolution prerequisite, not agreement/order clearance.
+Shared hold predicates, explicit attempt/reservation transitions and the owner screen
+remain pending and must ship together. Existing holds/statuses are intentionally
+unchanged; a refunded payment alone does not prove every order attempt is settled.
+Production and configured-plan activation remain unchanged.
+
 **27 October 2026 - payment-error refund inspection foundation.**
 The Live adapter now reads an exact payment, bounded complete refund pagination and
 a second payment snapshot. Strict type/identity/currency/amount checks and processed

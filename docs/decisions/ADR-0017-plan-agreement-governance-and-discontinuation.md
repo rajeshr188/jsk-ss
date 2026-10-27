@@ -545,11 +545,14 @@ P3 eligibility or full settlement. Configured publication/enrolment remains disa
 
 #### Payment-error refund resolution design — 27 October 2026
 
-Design for the bounded implementation; **resolution is not implemented or activated**.
+Design for the bounded implementation; **operator clearance is not activated**.
 The read-only inspection/immutable observation prerequisite is now local (0052),
-including strict provider validation and owner/binding rechecks. No resolution record,
-hold clearance or operator action is available yet. The integration sequence below
-remains required; an observation alone supplies no financial authority.
+including strict provider validation and owner/binding rechecks. The internal atomic
+exact-payment resolution service and credit replay guard are local (0053). Shared hold
+interpretation, order/reservation transitions and operator actions remain pending.
+Resolution does not itself prove that every attempt on an order is settled or release
+the agreement. The integration sequence below remains required; an observation alone
+supplies no financial authority.
 This extends the containment boundary above without changing the approved manual
 refund execution or full-only agreement settlement policy.
 

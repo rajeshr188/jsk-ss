@@ -773,10 +773,15 @@ preferences do not become fixed, and no old agreement receives a configuration i
   immutable owner/binding evidence. It changes no holds or financial state; partial,
   pending, failed, inconsistent and incomplete refunds cannot qualify as full refunds.
   A manually refunded, never-credited exact payment needs authenticated full-refund
-  evidence, append-only
-  scoped resolution and replay/race protection before its hold may be resolved.
+  evidence, append-only scoped resolution and replay/race protection before its hold
+  may be resolved.
   Owner notes, zero current balance or a refund on another payment do not suffice.
-  Existing unresolved-payment holds remain in force until that integration is tested.
+  The internal exact-payment resolution service (0053) now binds a fresh owner-confirmed
+  inspection to immutable evidence and prevents subsequent credit of that payment.
+  A delayed webhook is retained for review; other legitimate payments retain their
+  original credit. This does not release a pending attempt, qualify an instalment or
+  settle an agreement. Existing unresolved-payment holds remain in force until shared
+  hold predicates and explicit lifecycle/closure integration are tested together.
   One immutable INR disposition assigns all recorded principal to an evidenced invoice
   and/or original-source refund legs. Invoice application consumes earliest verified
   uncorrected receipts first (verification time, then receipt ID); remaining amounts

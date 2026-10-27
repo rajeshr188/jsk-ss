@@ -106,9 +106,16 @@ inspection, complete bounded pagination, minimal immutable observations, persist
 owner/binding rechecks and historical entitlement detection. This creates no
 resolution and clears no hold; observations are not permission to credit or settle.
 
+The internal payment-resolution prerequisite is also local (0053): owner/evidence-bound
+fresh confirmation, independent reinspection, immutable exact-payment resolution,
+idempotency and a credit replay guard. It preserves event and contribution states and
+does not yet release any order/instalment/closure hold. A payment refund does not prove
+that every attempt on the order has been accounted for.
+
 Immediate engineering order: continue the bounded payment-error refund resolution
-sequence in ADR-0017 with the atomic resolution service, shared hold predicates,
-replay protection and attempt/reservation transitions before exposing owner actions;
+sequence in ADR-0017 with shared hold predicates and explicit attempt/reservation
+transitions, including consistent diagnostics and closure evidence, before exposing
+owner actions;
 complete remaining operator acceptance, then
 run consolidated candidate CI and exact-image rehearsal, including representative
 latency. Revisit read amplification if those measurements are unacceptable.

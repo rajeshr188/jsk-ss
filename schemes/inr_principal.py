@@ -36,6 +36,9 @@ def _locked_source(contribution_id, actor):
 
 
 def _require_new_principal(account, source):
+    if source.payment_gateway == "razorpay":
+        from .payment_refund_resolutions import require_payment_not_refund_resolved
+        require_payment_not_refund_resolved(gateway_mode=source.gateway_mode, payment_id=source.gateway_reference)
     if source.status != "PAID":
         raise ValidationError("Record principal only after verified payment, not pending or reversed payment.")
     if account.inr_settlements.exists():

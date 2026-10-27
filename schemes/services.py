@@ -1349,6 +1349,10 @@ def confirm_contribution(
     from .plan_policies import require_current_payment_workflow
     require_current_payment_workflow(contribution.scheme_account)
 
+    if payment_gateway == "razorpay":
+        from .payment_refund_resolutions import require_payment_not_refund_resolved
+        require_payment_not_refund_resolved(gateway_mode=contribution.gateway_mode, payment_id=gateway_reference)
+
     if contribution.status in SUCCESSFUL_PAYMENT_STATUSES:
         if (
             contribution.payment_gateway == payment_gateway

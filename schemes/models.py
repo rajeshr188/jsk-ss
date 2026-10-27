@@ -2569,6 +2569,44 @@ class PaymentRefundObservation(models.Model):
         raise ValidationError("Refund inspection evidence must be retained.")
 
 
+class PaymentErrorRefundResolution(models.Model):
+    """Full refund of a never-credited payment; not agreement/order settlement."""
+    reviewed_observation = models.OneToOneField(PaymentRefundObservation, on_delete=models.PROTECT, related_name="reviewed_resolution")
+    applied_observation = models.OneToOneField(PaymentRefundObservation, on_delete=models.PROTECT, related_name="applied_resolution")
+    contribution = models.ForeignKey(Contribution, on_delete=models.PROTECT, related_name="payment_refund_resolutions")
+    webhook_event = models.ForeignKey(PaymentWebhookEvent, on_delete=models.PROTECT, related_name="payment_refund_resolutions")
+    gateway_mode = models.CharField(max_length=10, default="live")
+    payment_id = models.CharField(max_length=120)
+    order_id = models.CharField(max_length=120)
+    actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    actor_label = models.CharField(max_length=254)
+    reason = models.TextField()
+    resolved_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["gateway_mode", "payment_id"], name="refund_resolution_payment_unique"),
+            models.CheckConstraint(condition=models.Q(gateway_mode="live"), name="refund_resolution_live_only"),
+            models.CheckConstraint(condition=(~models.Q(payment_id="") & ~models.Q(order_id="")
+                & ~models.Q(actor_label="") & ~models.Q(reason="")), name="refund_resolution_evidence"),
+            models.CheckConstraint(condition=~models.Q(reviewed_observation=models.F("applied_observation")), name="refund_resolution_fresh_read"),
+        ]
+
+    def clean(self):
+        super().clean()
+        from .payment_refund_resolutions import validate_resolution
+        validate_resolution(self)
+
+    def save(self, *args, **kwargs):
+        if self.pk and type(self).objects.filter(pk=self.pk).exists():
+            raise ValidationError("Payment refund resolutions are immutable.")
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Payment refund resolutions must be retained.")
+
+
 class WebhookProcessingAttempt(models.Model):
     class Source(models.TextChoices):
         PROVIDER_DELIVERY = "PROVIDER_DELIVERY", "Provider delivery"
