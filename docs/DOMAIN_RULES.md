@@ -767,6 +767,12 @@ preferences do not become fixed, and no old agreement receives a configuration i
   automatic credit. API source evidence participates in INR settlement proofs without
   rewriting older proofs. This is gross captured principal, not refund availability
   or settlement reconciliation. Normal collection/readiness gates remain closed.
+  Payment-error refund resolution is a separate planned boundary in ADR-0017
+  (27 October 2026), not an implemented clearance action. A manually refunded,
+  never-credited exact payment needs authenticated full-refund evidence, append-only
+  scoped resolution and replay/race protection before its hold may be resolved.
+  Owner notes, zero current balance or a refund on another payment do not suffice.
+  Existing unresolved-payment holds remain in force until that integration is tested.
   One immutable INR disposition assigns all recorded principal to an evidenced invoice
   and/or original-source refund legs. Invoice application consumes earliest verified
   uncorrected receipts first (verification time, then receipt ID); remaining amounts

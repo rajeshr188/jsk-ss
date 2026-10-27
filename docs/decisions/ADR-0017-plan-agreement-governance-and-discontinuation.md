@@ -543,6 +543,98 @@ event PROCESSED/IGNORED by database edit to make the agreement payable again.
 This completes the local containment boundary, not business/visual/release acceptance,
 P3 eligibility or full settlement. Configured publication/enrolment remains disabled.
 
+#### Payment-error refund resolution design — 27 October 2026
+
+Design for the next bounded implementation; **not implemented or activated**.
+This extends the containment boundary above without changing the approved manual
+refund execution or full-only agreement settlement policy.
+
+The supported case is an exact Live Razorpay payment that was captured in error,
+never supplied local metal/INR entitlement, and has subsequently been fully refunded
+through the original provider route. The owner executes that refund in the provider
+dashboard. The app will only read provider evidence and record a scoped resolution.
+It must not initiate a refund, accept an owner-entered refund status, or expose a
+generic "clear exception" action. This is not the already-implemented INR final
+disposition: that workflow discharges recorded principal using source-specific
+manual fulfilment evidence and cannot clear an unrelated provider exception.
+
+**Required evidence and exclusions:**
+
+- Bind merchant context, Live mode, exact payment/order and linked local attempt.
+  Recover an uncertain order identity first. Amount/customer resemblance is not
+  identity proof; unmatched or cross-linked payments stay in investigation.
+- Use authenticated read-only payment/refund inspection. Require the payment's full
+  refund state and refunded amount to agree with a complete, deduplicated collection
+  of processed refunds linked to that payment and currency, totalling its full amount
+  in integer paise. Reject partial, pending, failed, malformed, inconsistent or
+  incomplete evidence. Pagination/timeouts/inspection limits must fail closed, not
+  interpret a partial list as complete. Never use float or coerce booleans to money.
+- Prove absence of entitlement from this **payment**, including historical metal
+  allocation, INR principal, API capture and corrected/settled source links. A zero
+  balance, FAILED/ABANDONED status or a later reversal is insufficient. A legitimate
+  first payment on the same order retains its credit and qualification when an
+  additional uncredited payment is refunded.
+- Already-credited payments, partial refunds, disputes/chargebacks and unsupported
+  refund routes remain separate correction/incident work. Do not manufacture a
+  source reversal or refund capacity to bring them into this boundary.
+- Provider `processed` is evidence of provider refund processing, not independent
+  proof of the customer's bank statement. Present that distinction, retain support
+  references and escalate a reported non-receipt; do not promise a bank-credit date.
+
+**Recording and race safety:**
+
+Retain minimal immutable provider observations and a separate append-only resolution
+with actor, reason, time, payment/order/mode identity, refund IDs/amounts and a binding
+to the exact reviewed local evidence. Preserve original events and processing
+attempts; never rewrite an event to PROCESSED/IGNORED merely to reduce a counter.
+Do not retain raw provider payloads, credentials or unnecessary bank/customer data.
+
+Use the existing owner preview/confirmation pattern with a ten-minute maximum review
+age. Recheck persisted owner authority, independently inspect again on apply outside
+database locks, then lock/revalidate the agreement and affected source/event evidence
+before recording. Repeated application is idempotent. Concurrent callback/webhook/API
+recovery must either establish entitlement first (refusing this resolution) or observe
+the resolution and refuse new credit from the refunded payment. No database lock is
+held across provider I/O. Contradictory later evidence creates a new review hold;
+there is no editable resolution or override that restores spending authority.
+
+Introduce one shared interpretation of **resolved exact payment evidence**, used by
+exception queues/checks, monthly and optional payment admission, eligibility/timing
+review, closure/settlement proofs and applicable privacy containment. Keep existing
+scope differences: a resolution cannot suppress another payment on the same order,
+another mode, unrelated event types or structural errors. Exact historical capture
+redelivery must not create entitlement; new or contradictory evidence stays visible.
+All confirmation entry points need this protection before any hold-clear action ships.
+
+Resolution alone grants no instalment qualification, rate/deadline extension, benefit,
+agreement closure or replacement contribution. Local pending-attempt and reservation
+states still need explicit evidence-backed lifecycle handling. Do not reuse the
+"untouched order" abandonment rule for an order that captured and was refunded.
+
+**Execution order and acceptance:**
+
+1. Add strictly validated read-only provider inspection and immutable, uniquely
+   scoped observation/resolution storage, preserving migrations and historical data.
+2. Implement the atomic owner service and common evidence predicates together with
+   callback/webhook/API replay protection and explicit attempt/reservation handling.
+   Keep operator actions unavailable until those integrations pass together.
+3. Add the private owner review/confirmation screen, diagnostics and runbook; then
+   exercise full-refund resolution of an uncredited duplicate and abandoned capture.
+4. Test wrong mode/order/payment/currency/amount, partial/pending/failed refunds,
+   incomplete pagination, stale/revoked-owner confirmations, credited-but-reversed
+   sources, concurrent credit/resolution, replay, independent payments on the same
+   order, remaining unrelated holds and migration preservation. Verify every approved
+   family retains unchanged principal/grams/benefits and historical audit evidence.
+
+This sequence belongs to the existing owner-operations release row in MVP_PLAN.md;
+it is not a new product family or approval to activate configured plans.
+
+Provider field references, checked 27 October 2026:
+[payment entity](https://razorpay.com/docs/api/payments/entity/),
+[refund entity](https://razorpay.com/docs/api/refunds/entity/) and
+[refunds for a payment](https://razorpay.com/docs/api/refunds/fetch-multiple-refund-payment/).
+The stricter clearance and concurrency rules above are application design choices.
+
 #### Lost-order identity recovery — 23 October 2026
 
 Before sending a new configured monthly order, commit a random request UUID with

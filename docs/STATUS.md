@@ -2,6 +2,31 @@
 
 ## Current milestone
 
+**27 October 2026 - payment-error refund resolution design and progress checkpoint.**
+ADR-0017 now defines the next bounded workflow: manually refund an exact erroneous,
+never-credited Live payment through the provider, then independently verify its full
+refund and retain an append-only, payment-scoped resolution. This is read-only provider
+verification, not automated refund execution or the existing INR final disposition.
+The design requires shared hold interpretation, replay/concurrency protection and
+explicit attempt/reservation handling before any owner clearance action is exposed.
+It is documented design, not runtime implementation or production acceptance.
+
+The principal builder foundations, independent policy/versioned agreement terms,
+collection, eligibility, full-only closure, INR disposition/corrections, defined
+benefit lifecycle and owner/customer presentation have local implementations.
+Recent work completed optional-order identity recovery, fresh captured-payment review
+and invocation-local history-read reuse. Previous test evidence remains scoped to
+the commits/runs recorded in TESTING.md; this documentation checkpoint adds no new
+runtime test claim.
+
+Remaining in order: implement/test the bounded refund-resolution integration;
+consolidate approved-family candidate CI and operator acceptance; complete device,
+accessibility/inbox and INR business/provider evidence; rehearse exact-image upgrade,
+recovery and representative performance; review coherent activation and approve a
+digest-pinned rollout. Parallel acceptance is permitted, but none is presumed done.
+MVP_PLAN.md's remaining-release-evidence table is the current checklist.
+Configured-plan gates and production remain unchanged.
+
 **27 October 2026 - captured-payment comparison and explicit confirmation.**
 The owner recovery page now shows the latest retained provider/local comparison.
 Apply requires a signed owner/event/attempt-bound review, unchanged payment facts,
