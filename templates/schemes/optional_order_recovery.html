@@ -1,0 +1,26 @@
+{% extends '_base.html' %}
+{% block title %}Investigate optional payment order | Jai Sri Krishna Jewellery{% endblock %}
+{% block content %}
+<p><a href="{% url 'schemes:exception_queue' %}">Back to exception queue</a></p>
+<h1>Investigate optional payment order</h1>
+<p>{{ contribution.scheme_account.scheme_number }} · Contribution #{{ contribution.pk }} · ₹{{ contribution.amount }}.</p>
+<p>Original checkout deadline: {{ intent.checkout_expires_at }}. Contribution status: {{ contribution.get_status_display }}.</p>
+<div class="alert alert-warning" role="alert">Recovery only links an exactly matched order for reconciliation. It does not confirm payment, credit INR or metal, extend checkout, refund money or cancel the order at Razorpay. Recovered checkout cannot resume.</div>
+<p>Find the original receipt reference <code class="text-break">opt_{{ intent.request_token.hex }}</code> in the Live merchant dashboard or through support. This reference is not a login credential.</p>
+{% if binding %}
+<h2 class="h4">Retained order identity</h2>
+<dl><dt>Order</dt><dd class="text-break">{{ binding.gateway_order_id }}</dd><dt>Observed</dt><dd>{{ binding.observed_at }}</dd><dt>Source</dt><dd>{% if binding.recovered %}Owner recovery{% else %}Original order response{% endif %}</dd></dl>
+{% if binding.recovered %}<p class="text-break">{{ binding.actor_label }} · {{ binding.evidence_reference }} · {{ binding.reason }}</p>{% endif %}
+<p>Continue with authenticated provider reconciliation. A captured payment requires the existing payment recovery workflow; do not create a replacement payment or infer a refund from this record.</p>
+{% if contribution.status == 'PENDING' and contribution.razorpay_checkout_expired %}<p><a class="btn btn-outline-primary" href="{% url 'schemes:order_reconciliation' contribution.pk %}">Review expired checkout</a></p>{% endif %}
+<p><a href="{% url 'schemes:exception_queue' %}?category=webhook">Review provider exceptions</a></p>
+{% endif %}
+{% if not binding or form.is_bound %}
+<p>No match, an empty search, a mismatch or a provider error leaves the request unresolved. Do not submit a new order or manually clear the contribution. Escalate to provider support if the original order cannot be identified.</p>
+<form method="post" class="card card-body mb-4">
+{% csrf_token %}{{ form.non_field_errors }}
+{% for field in form %}{% if field.is_hidden %}{{ field }}{{ field.errors }}{% else %}<div class="mb-3">{{ field.label_tag }}{{ field }}{{ field.errors }}{% if field.help_text %}<div class="form-text" id="{{ field.auto_id }}_helptext">{{ field.help_text }}</div>{% endif %}</div>{% endif %}{% endfor %}
+<button class="btn btn-primary" type="submit">Verify and record order identity</button>
+</form>
+{% endif %}
+{% endblock %}

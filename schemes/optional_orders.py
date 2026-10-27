@@ -5,6 +5,7 @@ Recovery binds an authenticated identity for reconciliation, never renewed check
 """
 import uuid
 
+from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
@@ -89,6 +90,8 @@ def recover_optional_order(*, contribution_id, order_id, actor, reason, evidence
                            idempotency_key, gateway=None):
     from .services import _validate_owner, _actor_label
     from .instalment_payments import _provider_instant
+    # Recheck persisted authority before provider I/O, and again before binding.
+    actor = get_user_model().objects.filter(pk=getattr(actor, "pk", None)).first()
     _validate_owner(actor)
     if any(not isinstance(value, str) or not value.strip() or len(value.strip()) > limit
            for value, limit in ((order_id, 120), (reason, 2000), (evidence_reference, 254))):
@@ -128,6 +131,8 @@ def recover_optional_order(*, contribution_id, order_id, actor, reason, evidence
         raise ValidationError("Authenticated provider identity does not match the original optional request.")
     with transaction.atomic():
         _, locked = _locked(contribution_id)
+        actor = get_user_model().objects.filter(pk=actor.pk).first()
+        _validate_owner(actor)
         existing = replay()
         if existing:
             return existing

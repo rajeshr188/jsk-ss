@@ -16,7 +16,8 @@ class Command(BaseCommand):
             f"paid_unallocated={counts.paid_unallocated} "
             f"failed_webhooks={counts.failed_webhooks} "
             f"mismatched_webhooks={counts.mismatched_webhooks} "
-            f"expired_checkouts={counts.expired_checkouts}"
+            f"expired_checkouts={counts.expired_checkouts} "
+            f"unresolved_optional_orders={counts.unresolved_optional_orders}"
         )
         self.stdout.write(summary)
         if counts.total:

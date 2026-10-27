@@ -1,5 +1,41 @@
 # Testing
 
+## Owner optional-order investigation (27 October 2026)
+
+The optional-order exception entry and private recovery screen use the existing
+durable request and authenticated identity service. No order is created by recovery,
+no expiry/rate is renewed, and no principal or metal is credited. GET performs no
+provider call or mutation. An unresolved request remains visible before expiry and
+after a local FAILED status; queue and diagnostic totals avoid counting it twice
+when it also expires. Original monthly-instalment recovery remains separate.
+
+`test_optional_order_workspace` exercises owner/customer/staff access, CSRF,
+no-store/Cookie variation, read-only GET, form help associations, exact retries,
+both denominations, provider mismatch/unavailability, suppressed raw error payloads,
+cross-request misuse, changed retry data and persisted owner revocation before or
+during I/O. Successful identity recovery links to existing expired-checkout/provider
+exception handling without granting payment or settlement authority. Tests use
+synthetic contracts, simulated readiness and provider I/O; no real funds or messages.
+
+The initial workspace/service run passed **23 tests in 95.678s**. The broader
+**65-test run (213.076s)** passed 64 tests, including updated counts, existing
+expired-checkout reconciliation, financial diagnostics, queue pagination and the
+private owner manual. Its one failure was an outdated rollback expectation:
+0050 correctly refuses reversal of the current-schema fixture before 0043 runs.
+The corrected test asserts that newer refusal, independently invokes 0043's
+retained-order guard, and checks request/binding evidence is unchanged. No production
+migration or guard was altered. The targeted transactional rerun passed **3 tests
+in 36.486s**, including concurrent creation, durable-transaction refusal and both
+rollback guards with retained evidence comparison. Django checks found no issues;
+`makemigrations --check --dry-run` found no changes. Each run used a unique disposable
+localhost PostgreSQL database which was destroyed afterward. Normal hashing/logging
+were retained; ordinary application and production data were untouched. This records
+64 passing broader cases plus the corrected targeted rerun, not a new full-CI claim.
+
+Remaining acceptance: actual candidate/mobile/keyboard review of the new screen,
+usable late/duplicate capture and original-source refund procedures, consolidated
+CI and exact-image rehearsal. This is local interface coverage, not activation.
+
 ## Invocation-local owner history validation (27 October 2026)
 
 The owner returned-benefit workspace now builds a private agreement/database-scoped

@@ -958,6 +958,11 @@ preferences do not become fixed, and no old agreement receives a configuration i
   matching request UUID/receipt, contribution, exact INR amount and creation time.
   Recovery records immutable actor/reason/evidence, retains the old deadline/rate,
   creates no principal or metal and is reconciliation-only, never resumed checkout.
+  The owner exception queue exposes unbound optional requests before expiry and
+  even after a local FAILED status. Its recovery form accepts only a candidate order
+  and investigation references; the service verifies identity and rechecks persisted
+  owner authority after provider I/O. GET performs no provider request. Unresolved
+  identities count as financial exceptions without duplicate expired-checkout alerts.
   Only existing provider-backed untouched-order abandonment can permit replacement;
   later captured funds remain in the exception workflow. Pauses/expiry during order I/O
   retain the returned identity but refuse checkout. No automatic retry, cancellation,

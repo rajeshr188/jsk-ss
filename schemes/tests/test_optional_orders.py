@@ -329,9 +329,21 @@ class OptionalOrderTransactionTests(TransactionTestCase):
         self.assertFalse(Contribution.objects.exists())
 
     def test_migration_reverse_refuses_retained_order_evidence(self):
+        from importlib import import_module
+        from types import SimpleNamespace
+        from django.apps import apps
         leaves = MigrationExecutor(connection).loader.graph.leaf_nodes()
         self.addCleanup(lambda: MigrationExecutor(connection).migrate(leaves))
         a, g = self.account(), self.gateway()
         initiate_razorpay_contribution(scheme_account=a, amount=Decimal("500"), gateway=g)
-        with self.assertRaisesMessage(RuntimeError, "Cannot reverse 0043"):
+        before = (list(OptionalPaymentOrderRequest.objects.values()),
+                  list(OptionalPaymentOrderBinding.objects.values()))
+        # 0050 protects this current-schema fixture before reversal reaches 0043.
+        # Verify both refusal boundaries without disabling either production guard.
+        with self.assertRaisesMessage(RuntimeError, "Retain independent draft policies and revisions"):
             MigrationExecutor(connection).migrate([("schemes", "0042_contribution_independent_frequency")])
+        with self.assertRaisesMessage(RuntimeError, "Cannot reverse 0043"):
+            import_module("schemes.migrations.0043_optional_payment_order_evidence").preserve_optional_orders(
+                apps, SimpleNamespace(connection=connection))
+        self.assertEqual((list(OptionalPaymentOrderRequest.objects.values()),
+                          list(OptionalPaymentOrderBinding.objects.values())), before)

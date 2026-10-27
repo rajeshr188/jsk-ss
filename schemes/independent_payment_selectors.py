@@ -10,6 +10,12 @@ from .instalments import AGREEMENT_TIMEZONE, period_boundary
 from .models import PaymentWebhookEvent, OptionalPaymentOrderRequest, Contribution
 
 
+def unbound_optional_order_contributions():
+    """Durable requests needing identity investigation, even before checkout expiry."""
+    return Contribution.objects.filter(optional_order_request__isnull=False,
+        optional_order_request__binding__isnull=True)
+
+
 def optional_order_summary():
     result = dict(requests=0, unbound_requests=0, recovered_orders=0, pending_without_request=0, integrity_errors=0)
     sources = Contribution.objects.filter(scheme_account__agreement_schema_version=2,

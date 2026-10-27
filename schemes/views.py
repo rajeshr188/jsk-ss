@@ -450,7 +450,7 @@ def reminder_delivery_log(request):
 @require_GET
 def exception_queue(request):
     category = request.GET.get("category", "all")
-    if category not in {"all", "allocation", "webhook", "checkout"}:
+    if category not in {"all", "allocation", "webhook", "checkout", "optional_order"}:
         category = "all"
     oldest = request.GET.get("order") == "oldest"
     page = Paginator(get_owner_exception_keys(category=category, oldest_first=oldest), 25).get_page(request.GET.get("page"))

@@ -2,10 +2,12 @@ from django.urls import path
 
 from . import views, instalment_views, closure_views, settlement_views, manual_views, benefit_reapplication_views
 from .order_reconciliation import order_reconciliation
+from .optional_order_views import optional_order_recovery
 
 app_name = "schemes"
 
 urlpatterns = [
+    path("owner/exceptions/optional-orders/<int:contribution_id>/", optional_order_recovery, name="optional_order_recovery"),
     path("owner/agreements/<str:scheme_number>/benefit-review/", benefit_reapplication_views.benefit_reapplication_workspace, name="benefit_reapplication"),
     path("owner/exceptions/checkouts/<int:contribution_id>/", order_reconciliation, name="order_reconciliation"),
     path("owner/closures/<uuid:request_id>/settlement/", settlement_views.settlement_workspace, name="configured_settlement"),

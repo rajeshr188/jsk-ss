@@ -2,6 +2,30 @@
 
 ## Current milestone
 
+**27 October 2026 - owner optional-order identity investigation.**
+The exception queue now exposes durable optional-contribution requests without a
+provider binding, before expiry and after a local FAILED status. An owner-only,
+CSRF-protected, non-cacheable form invokes the existing exact Live identity recovery
+service. GET performs no provider I/O or writes. Recovery preserves the original
+amount/rate/deadline, creates no principal/metal and cannot resume checkout.
+Persisted owner authority is rechecked before provider lookup and before binding;
+exact retries retain one binding. Provider failures are displayed without raw payloads.
+
+Headline and diagnostic counts now include unresolved optional requests without
+double-counting expired attempts. The owner manual and production guide describe
+the investigation, reconciliation handoff and support escalation when no exact
+identity exists. No schema, activation or production configuration changed.
+Verification: 64 broader cases passed; one stale rollback-test expectation was
+corrected to check both the newer draft-policy guard and the original order-evidence
+guard without weakening either. All three targeted transactional tests then passed,
+as did Django and migration-drift checks. TESTING.md records exact runs and limits.
+Unique disposable localhost databases were destroyed; production was untouched.
+
+Next complete candidate operator acceptance for late/duplicate captures and refunds,
+then consolidated CI and exact-image rehearsal with representative latency. This
+closes the local optional-identity interface gap, not the full provider-exception,
+device/inbox or INR publication acceptance boundary.
+
 **27 October 2026 - owner history traversal reused within one read.**
 The returned-benefit workspace now shares successfully validated decision histories
 within that invocation, scoped to its agreement and database. Earlier decisions

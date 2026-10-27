@@ -197,10 +197,11 @@ class FinancialExceptionCounts:
     failed_webhooks: int
     mismatched_webhooks: int
     expired_checkouts: int = 0
+    unresolved_optional_orders: int = 0
 
     @property
     def total(self):
-        return self.paid_unallocated + self.failed_webhooks + self.expired_checkouts
+        return self.paid_unallocated + self.failed_webhooks + self.expired_checkouts + self.unresolved_optional_orders
 
 
 @dataclass(frozen=True)
@@ -575,6 +576,7 @@ def get_expired_pending_checkouts(*, at=None):
 
 
 def get_owner_exception_keys(*, oldest_first=False, category="all"):
+    from .independent_payment_selectors import unbound_optional_order_contributions
     allocations = Contribution.objects.filter(status=Contribution.Status.PAID_UNALLOCATED).order_by().annotate(
         queue_kind=Value("allocation"),
         queue_date=Coalesce("allocation_attempted_at", "paid_at", "created_at"),
@@ -582,19 +584,17 @@ def get_owner_exception_keys(*, oldest_first=False, category="all"):
     webhooks = PaymentWebhookEvent.objects.filter(status__in=["FAILED", "REVIEW_REQUIRED"]).order_by().annotate(
         queue_kind=Value("webhook"), queue_date=Coalesce("processed_at", "received_at"),
     ).values("pk", "queue_kind", "queue_date")
-    checkouts = get_expired_pending_checkouts().order_by().annotate(
+    optional_orders = unbound_optional_order_contributions().order_by().annotate(
+        queue_kind=Value("optional_order"), queue_date=F("optional_order_request__created_at"),
+    ).values("pk", "queue_kind", "queue_date")
+    checkouts = get_expired_pending_checkouts().exclude(pk__in=unbound_optional_order_contributions()).order_by().annotate(
         queue_kind=Value("checkout"), queue_date=F("checkout_expires_at"),
     ).values("pk", "queue_kind", "queue_date")
-    if category == "allocation":
-        webhooks = webhooks.none()
-        checkouts = checkouts.none()
-    elif category == "webhook":
-        allocations = allocations.none()
-        checkouts = checkouts.none()
-    elif category == "checkout":
-        allocations = allocations.none()
-        webhooks = webhooks.none()
-    return allocations.union(webhooks, checkouts, all=True).order_by(
+    groups = {"allocation": allocations, "webhook": webhooks,
+        "checkout": checkouts, "optional_order": optional_orders}
+    selected = groups.get(category)
+    combined = selected if selected is not None else allocations.union(webhooks, checkouts, optional_orders, all=True)
+    return combined.order_by(
         "queue_date" if oldest_first else "-queue_date", "queue_kind", "pk"
     )
 
@@ -1078,6 +1078,7 @@ def get_owner_audit_events():
 
 
 def get_owner_exception_queue(*, keys=None):
+    from .independent_payment_selectors import unbound_optional_order_contributions
     items = []
     unallocated = Contribution.objects.filter(
         status=Contribution.Status.PAID_UNALLOCATED
@@ -1135,7 +1136,18 @@ def get_owner_exception_queue(*, keys=None):
                 queue_kind="webhook",
             )
         )
-    checkouts = get_expired_pending_checkouts().select_related("scheme_account", "scheme_account__customer")
+    optional_orders = unbound_optional_order_contributions().select_related(
+        "scheme_account__customer", "optional_order_request")
+    if keys is not None:
+        optional_orders = optional_orders.filter(pk__in=[key["pk"] for key in keys if key["queue_kind"] == "optional_order"])
+    for contribution in optional_orders:
+        items.append(OwnerExceptionItem(
+            category="Optional order identity unresolved",
+            detected_at=contribution.optional_order_request.created_at,
+            detail="An original order request has no retained provider identity. Investigate that request before any replacement payment; elapsed time does not prove non-payment.",
+            contribution=contribution, queue_kind="optional_order",
+        ))
+    checkouts = get_expired_pending_checkouts().exclude(pk__in=unbound_optional_order_contributions()).select_related("scheme_account", "scheme_account__customer")
     if keys is not None:
         checkouts = checkouts.filter(pk__in=[key["pk"] for key in keys if key["queue_kind"] == "checkout"])
     for contribution in checkouts:
@@ -1155,6 +1167,7 @@ def get_owner_exception_queue(*, keys=None):
 
 
 def get_financial_exception_counts():
+    from .independent_payment_selectors import unbound_optional_order_contributions
     webhook_counts = PaymentWebhookEvent.objects.filter(
         status__in=[
             PaymentWebhookEvent.Status.FAILED,
@@ -1176,7 +1189,8 @@ def get_financial_exception_counts():
         ).count(),
         failed_webhooks=webhook_counts["failed"],
         mismatched_webhooks=webhook_counts["mismatched"],
-        expired_checkouts=get_expired_pending_checkouts().count(),
+        expired_checkouts=get_expired_pending_checkouts().exclude(pk__in=unbound_optional_order_contributions()).count(),
+        unresolved_optional_orders=unbound_optional_order_contributions().count(),
     )
 
 

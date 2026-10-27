@@ -7,6 +7,32 @@ explicit Razorpay Test/Live modes, and manually published Scheme Rate build. Dev
 
 ## Production-readiness boundary
 
+### Optional order investigation workspace (27 October 2026; not activated)
+
+The owner exception queue now exposes durable optional-contribution requests without
+a provider binding, including unexpired or locally failed attempts. The diagnostic
+`check_financial_exceptions` reports `unresolved_optional_orders` and counts these
+separately from expired checkouts, avoiding duplicate alerts for the same request.
+Required-monthly recovery remains in the instalment period workspace.
+
+Use **Unresolved order identity → Investigate order identity**. Locate the original
+`opt_…` receipt in the correct Live merchant account/support, enter its candidate
+order ID and investigation references, and submit for authenticated identity matching.
+GET does not contact Razorpay. Only an active persisted owner can bind an exact match;
+the service rechecks authority after provider I/O. Successful retries do not duplicate
+evidence. Original deadlines, rate locks and financial entitlements are unchanged.
+
+Recovery is reconciliation-only. Follow the expired-checkout workflow for a fresh
+provider-backed untouched-order decision, or the existing capture exception/recovery
+workflow when funds exist. No exact identity, an empty search or unavailable provider
+means keep the case unresolved and escalate; do not clear rows or retry creation.
+This workspace cannot cancel a provider order, renew checkout, issue a refund or
+record principal/metal. No migration or activation change accompanies it.
+
+Candidate acceptance still requires the complete uncertain/late/duplicate capture
+and refund procedure, physical-device/inbox review, normal CI and exact-image
+rehearsal. This closes the local optional-identity interface gap only.
+
 ### INR API capture evidence (0044; not activated)
 
 `schemes.0044_inr_api_capture_evidence` adds immutable minimal authenticated API
