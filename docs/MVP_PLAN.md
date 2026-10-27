@@ -101,8 +101,15 @@ and its dependencies are resolved.
 | Activation implementation | Global default-off flag, schema/family checks and model/service publication barriers remain closed | Engineering: review a coherent activation change only after the preceding evidence; update readiness descriptions/tests without bypassing contract validation. Merely setting CONFIGURED_PLANS_ENABLED=True is insufficient. |
 | Production rollout | Existing digest-pinned GHCR deployment procedure | Owner + engineering: approve exact digest, current recovery point, compatible recovery image and one coherent activation. No build on the serving host. |
 
-Immediate engineering order: implement the bounded payment-error refund resolution
-sequence in ADR-0017, complete remaining operator acceptance, then
+The first refund-resolution prerequisite is local (0052): strict read-only Live
+inspection, complete bounded pagination, minimal immutable observations, persisted
+owner/binding rechecks and historical entitlement detection. This creates no
+resolution and clears no hold; observations are not permission to credit or settle.
+
+Immediate engineering order: continue the bounded payment-error refund resolution
+sequence in ADR-0017 with the atomic resolution service, shared hold predicates,
+replay protection and attempt/reservation transitions before exposing owner actions;
+complete remaining operator acceptance, then
 run consolidated candidate CI and exact-image rehearsal, including representative
 latency. Revisit read amplification if those measurements are unacceptable.
 Device/inbox and business approvals can proceed alongside engineering;

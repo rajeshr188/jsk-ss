@@ -767,9 +767,13 @@ preferences do not become fixed, and no old agreement receives a configuration i
   automatic credit. API source evidence participates in INR settlement proofs without
   rewriting older proofs. This is gross captured principal, not refund availability
   or settlement reconciliation. Normal collection/readiness gates remain closed.
-  Payment-error refund resolution is a separate planned boundary in ADR-0017
-  (27 October 2026), not an implemented clearance action. A manually refunded,
-  never-credited exact payment needs authenticated full-refund evidence, append-only
+  Payment-error refund resolution is a separate boundary in ADR-0017
+  (27 October 2026), not an implemented clearance action. Local inspection foundation
+  (0052) retains typed Live provider observations, historical entitlement checks and
+  immutable owner/binding evidence. It changes no holds or financial state; partial,
+  pending, failed, inconsistent and incomplete refunds cannot qualify as full refunds.
+  A manually refunded, never-credited exact payment needs authenticated full-refund
+  evidence, append-only
   scoped resolution and replay/race protection before its hold may be resolved.
   Owner notes, zero current balance or a refund on another payment do not suffice.
   Existing unresolved-payment holds remain in force until that integration is tested.

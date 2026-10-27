@@ -381,6 +381,11 @@ class RazorpayPaymentGateway(PaymentGateway):
             captured=captured,
         )
 
+    def inspect_payment_refunds(self, *, payment_id):
+        """Read-only evidence; never initiates a refund or clears a local hold."""
+        from .payment_refund_evidence import inspect_payment_refunds
+        return inspect_payment_refunds(gateway=self, payment_id=payment_id)
+
     def _request_json(self, method, path, payload=None):
         encoded_payload = None
         headers = {"Accept": "application/json"}

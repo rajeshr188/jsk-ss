@@ -2526,6 +2526,49 @@ class PaymentWebhookEvent(models.Model):
         return f"{self.gateway} — {self.event_type} — {self.status}"
 
 
+class PaymentRefundObservation(models.Model):
+    """Authenticated inspection only. This record NEVER resolves a payment hold."""
+    contribution = models.ForeignKey(Contribution, on_delete=models.PROTECT, related_name="refund_observations")
+    webhook_event = models.ForeignKey(PaymentWebhookEvent, on_delete=models.PROTECT, related_name="refund_observations")
+    gateway_mode = models.CharField(max_length=10, default="live")
+    payment_id = models.CharField(max_length=120)
+    order_id = models.CharField(max_length=120)
+    amount_subunits = models.PositiveBigIntegerField()
+    currency = models.CharField(max_length=3, default="INR")
+    provider_snapshot = models.JSONField()
+    local_snapshot = models.JSONField()
+    evidence_sha256 = models.CharField(max_length=64)
+    fully_refunded = models.BooleanField()
+    no_entitlement = models.BooleanField()
+    actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    actor_label = models.CharField(max_length=254)
+    reason = models.TextField()
+    observed_at = models.DateTimeField()
+
+    class Meta:
+        ordering = ["-observed_at", "-pk"]
+        constraints = [
+            models.CheckConstraint(condition=models.Q(gateway_mode="live", currency="INR", amount_subunits__gte=100), name="refund_obs_payment_shape"),
+            models.CheckConstraint(condition=(~models.Q(payment_id="") & ~models.Q(order_id="")
+                & ~models.Q(actor_label="") & ~models.Q(reason="") & ~models.Q(evidence_sha256="")), name="refund_obs_evidence_required"),
+        ]
+        indexes = [models.Index(fields=["gateway_mode", "payment_id", "observed_at"], name="refund_obs_payment_time_idx")]
+
+    def clean(self):
+        super().clean()
+        from .payment_refund_observations import validate_observation
+        validate_observation(self)
+
+    def save(self, *args, **kwargs):
+        if self.pk and type(self).objects.filter(pk=self.pk).exists():
+            raise ValidationError("Refund observations are immutable; inspect again.")
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Refund inspection evidence must be retained.")
+
+
 class WebhookProcessingAttempt(models.Model):
     class Source(models.TextChoices):
         PROVIDER_DELIVERY = "PROVIDER_DELIVERY", "Provider delivery"

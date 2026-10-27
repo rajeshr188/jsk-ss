@@ -2,6 +2,31 @@
 
 ## Current milestone
 
+**27 October 2026 - payment-error refund inspection foundation.**
+The Live adapter now reads an exact payment, bounded complete refund pagination and
+a second payment snapshot. Strict type/identity/currency/amount checks and processed
+refund totals reject inconsistent evidence. Partial/pending/failed refunds never
+qualify as fully refunded. Retained evidence excludes raw payloads and bank/contact
+details; provider completion is not represented as independent bank-credit proof.
+
+An internal owner service rechecks persisted authority and exact local bindings
+before and after provider I/O, which must run outside a transaction. It records
+minimal immutable observations and historical entitlement presence without changing
+any payment, allocation, instalment or hold. Migration 0052 adds observation storage,
+database update/delete protection and a reverse guard when evidence exists.
+No public/owner action or hold-clear operation is exposed by this prerequisite.
+
+Verification: 57 combined observation/adapter/API-principal/capture-boundary tests
+passed in 198.088s on a unique disposable localhost PostgreSQL database, destroyed
+afterward. Django and migration-drift checks passed; TESTING.md records scope and
+the corrected initial fixture failure. No real provider request was made.
+
+Next implement the atomic resolution record/service, shared hold interpretation,
+callback/webhook/API replay protection and explicit attempt/reservation transitions
+together; only then expose the owner confirmation workflow. The remaining candidate
+CI, device/inbox, business/provider, performance/recovery and coherent activation
+evidence remains tracked in MVP_PLAN.md. Production and activation gates are unchanged.
+
 **27 October 2026 - payment-error refund resolution design and progress checkpoint.**
 ADR-0017 now defines the next bounded workflow: manually refund an exact erroneous,
 never-credited Live payment through the provider, then independently verify its full

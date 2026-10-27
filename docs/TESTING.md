@@ -1,5 +1,36 @@
 # Testing
 
+## Payment-error refund observation foundation (27 October 2026)
+
+The combined run passed **57 tests in 198.088s** on a unique disposable localhost
+PostgreSQL database, destroyed afterward: `test_payment_refund_observations`
+(16 cases), `test_razorpay.RazorpayGatewayTests`,
+`test_inr_api_payments.InrApiPaymentsTests` and
+`test_instalment_capture_boundaries`. Normal hashing/logging were retained. Real
+adapter parsers and financial services ran against synthetic records with simulated
+provider responses; no provider account or ordinary local/production data was touched.
+
+Provider coverage includes GET-only exact identity, complete bounded pagination,
+duplicate IDs, type/currency/amount validation, stable pre/post payment state,
+partial/pending/failed refunds, timeout, response minimization and malformed stored
+snapshots. Service cases cover persisted owner access/revocation, cross-linked events,
+changed facts or capture during network inspection, both monthly/optional INR sources,
+metal allocation/grade preservation and a separate duplicate payment on a credited
+order. Provider calls are refused inside an existing database transaction.
+
+Observations leave payment status, event history, principal/grams and hold counters
+unchanged. ORM and database update/delete attempts are refused. Empty 0052 reversal
+and reapplication preserve existing contribution rows; reversal with observations
+refuses evidence loss. Repeated inspections append observations, not financial credit.
+The first 14-case run had one fixture error (wrong payment identity rejected earlier
+than the intended wrong-order validation); the corrected and expanded run above passed.
+
+Django checks passed and `makemigrations --check --dry-run` found no drift. This is
+inspection/storage evidence only. Atomic resolution, consistent hold interpretation,
+late replay protection, lifecycle transitions and owner confirmation remain to be
+implemented/tested together before any hold-clear action. Normal release CI,
+exact-image rehearsal and physical owner/device/provider acceptance are still pending.
+
 ## Captured-payment owner confirmation (27 October 2026)
 
 `test_capture_recovery_workspace` passed **7 tests in 22.176s** on a unique
