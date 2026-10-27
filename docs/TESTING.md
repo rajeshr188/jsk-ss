@@ -1,5 +1,49 @@
 # Testing
 
+## Refund workspace browser review (27 October 2026)
+
+The `bf16ca6` screens were exported through real owner HTTP/service calls using
+synthetic provider replies and a unique disposable localhost PostgreSQL database.
+The database was destroyed before browser review. A loopback static server served
+only the exported HTML/assets; it had no financial POST handler. Synthetic form
+review/CSRF tokens were replaced by an inert marker. No provider or SMTP call,
+ordinary local database migration, production access or real customer action occurred.
+
+Local Chrome covered ten states: no inspection, payment ready, missing confirmation,
+partial refund, already-credited payment, resolved payment, order ready, order blocked,
+order retired and retained history. The first review found important answers hidden
+behind a horizontally scrolling comparison table. Payment checks and each order
+attempt now use Bootstrap definition lists; nested order-list gutters were removed.
+
+At 320x844, 390x844 and 1440x1000, sampled document widths matched the available
+305/375/1425px widths (scrollbar excluded). All ten states had labelled visible
+controls and resolved ARIA descriptions. Final order comparisons had no internal
+horizontal overflow at any width; payment answers remain visible without scrolling
+sideways. No duplicate application IDs were found; occasional injected
+`PING_CONTENT_PUSH_NOTIFICATION` IDs were outside the application markup.
+
+Keyboard checks observed Audit reason -> confirmation checkbox -> Inspect -> Confirm,
+with a visible final-button focus ring. The missing-confirmation response focuses
+its invalid checkbox with a resolved error description; an inconsistent-order response
+focuses the explanatory alert. Partial refunds and already-credited payments disable
+resolution, and an incomplete order disables retirement. These are synthetic browser
+observations, not a showroom-owner sign-off or full assistive-technology audit.
+
+Seven tests passed in **63.336s** (the six-case owner refund workspace suite plus the
+temporary response-export journey); Django checks and migration-drift checks passed.
+After the final gutter adjustment the response-export journey passed again
+(**1 test in 9.665s**); the disposable database was destroyed. The loopback server
+was stopped, viewport reset and review tab closed.
+Local artifacts are in `.uv-cache/refund-review/`, including `layout-evidence.json`
+and `payment-mobile.png`. They are synthetic, ignored review artifacts, not published
+assets. As in the earlier owner review, existing account-menu/CSS working-tree edits
+were visible but excluded from this checkpoint. No extra dependency or migration.
+
+The next engineering step is consolidated normal CI on the candidate, then exact-image
+upgrade/recovery and latency rehearsal. Physical Android/TWA, assistive-technology,
+showroom-owner, actual inbox and INR publication approvals remain pending. No family
+or production gate is activated by this review.
+
 ## Private owner refund comparison and confirmation (27 October 2026)
 
 The new `test_payment_refund_workspace` exercises real services and templates through

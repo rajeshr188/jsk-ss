@@ -2,6 +2,17 @@
 
 ## Current milestone
 
+**27 October 2026 - refund workspace browser review.**
+Synthetic responses from the real owner HTTP/service workflows were reviewed in
+local Chrome. The comparison tables hid important answers behind horizontal
+scrolling on narrow screens; payment checks and each order attempt now use stacked
+Bootstrap definition lists. No financial service, permission or release gate changed.
+Keyboard error focus and the separation of payment resolution from order retirement
+were checked. TESTING.md records the final viewport/test evidence and its limits.
+Showroom-owner, physical Android/TWA and assistive-technology acceptance remain open;
+the next engineering step is consolidated candidate CI and exact-image rehearsal.
+Production and the ordinary local database were not changed.
+
 **27 October 2026 - private owner payment-refund and order-retirement review.**
 The exception workspace now links to an owner-only payment refund comparison and a
 separate all-attempt order review. Owners inspect, compare and explicitly confirm

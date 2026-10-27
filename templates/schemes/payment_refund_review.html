@@ -22,14 +22,15 @@
 <section class="card card-body mb-4" aria-labelledby="refund-comparison"><h2 class="h4" id="refund-comparison">Latest retained provider inspection</h2>
 {% if comparison %}
 <p>{{ observation.observed_at|date:'d M Y, g:i A' }} · {{ observation.actor_label }}. This is retained evidence, not a live query.</p>
-<div class="table-responsive"><table class="table"><caption>Provider payment and local entitlement checks</caption><tbody>
-<tr><th scope="row">Payment / order</th><td class="text-break">{{ comparison.payment_id }}<br>{{ comparison.order_id }}</td></tr>
-<tr><th scope="row">Payment amount</th><td>₹{{ comparison.amount|floatformat:2 }} {{ comparison.currency }}</td></tr>
-<tr><th scope="row">Provider state</th><td>{{ comparison.status }} · captured: {{ comparison.captured|yesno:'Yes,No' }}</td></tr>
-<tr><th scope="row">Refunded amount</th><td>₹{{ comparison.refunded|floatformat:2 }} · {{ comparison.refund_status|default:'No refund reported' }}</td></tr>
-<tr><th scope="row">Complete processed refund</th><td>{{ observation.fully_refunded|yesno:'Yes,No' }}</td></tr>
-<tr><th scope="row">No historical local entitlement from this payment</th><td>{{ observation.no_entitlement|yesno:'Yes,No' }}</td></tr>
-</tbody></table></div>
+<h3 class="h5">Provider payment and local entitlement checks</h3>
+<dl class="row">
+<dt class="col-sm-6">Payment / order</dt><dd class="col-sm-6 text-break">{{ comparison.payment_id }}<br>{{ comparison.order_id }}</dd>
+<dt class="col-sm-6">Payment amount</dt><dd class="col-sm-6">&#8377;{{ comparison.amount|floatformat:2 }} {{ comparison.currency }}</dd>
+<dt class="col-sm-6">Provider state</dt><dd class="col-sm-6">{{ comparison.status }} &middot; captured: {{ comparison.captured|yesno:'Yes,No' }}</dd>
+<dt class="col-sm-6">Refunded amount</dt><dd class="col-sm-6">&#8377;{{ comparison.refunded|floatformat:2 }} &middot; {{ comparison.refund_status|default:'No refund reported' }}</dd>
+<dt class="col-sm-6">Complete processed refund</dt><dd class="col-sm-6">{{ observation.fully_refunded|yesno:'Yes,No' }}</dd>
+<dt class="col-sm-6">No historical local entitlement from this payment</dt><dd class="col-sm-6">{{ observation.no_entitlement|yesno:'Yes,No' }}</dd>
+</dl>
 <h3 class="h5">Refund records</h3><ul class="list-group list-group-flush mb-3">{% for refund in comparison.refunds %}<li class="list-group-item px-0 text-break">{{ refund.refund_id }} · ₹{{ refund.amount|floatformat:2 }} {{ refund.currency }} · {{ refund.status }}</li>{% empty %}<li class="list-group-item px-0">No refund records reported.</li>{% endfor %}</ul>
 <p class="mb-0">Investigation reason: {{ observation.reason }}</p>
 {% else %}<p>No usable provider comparison is available. Inspect the payment before confirming a resolution.</p>{% endif %}
