@@ -1,6 +1,7 @@
 """Captured API principal, with real adapter validation and disposable DB evidence."""
 import hashlib
 import hmac
+from importlib import import_module
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
@@ -405,5 +406,13 @@ class InrApiTransactionTests(ApiHelpers, TransactionTestCase):
         MigrationExecutor(connection).migrate(leaves)
         c, gateway, _, _ = self.attempt()
         self.confirm(c, gateway)
-        with self.assertRaisesMessage(RuntimeError, "Cannot reverse 0044"):
+        before = list(InrPaymentCaptureEvidence.objects.values())
+        principal = list(InrPrincipalReceipt.objects.values())
+        with self.assertRaisesMessage(RuntimeError, "Retain independent draft policies"):
             MigrationExecutor(connection).migrate([("schemes", "0043_optional_payment_order_evidence")])
+        from .migration_helpers import applied_migration_apps
+        guard = import_module("schemes.migrations.0044_inr_api_capture_evidence").preserve_api_evidence
+        with connection.schema_editor() as editor, self.assertRaisesMessage(RuntimeError, "Cannot reverse 0044"):
+            guard(applied_migration_apps(), editor)
+        self.assertEqual(list(InrPaymentCaptureEvidence.objects.values()), before)
+        self.assertEqual(list(InrPrincipalReceipt.objects.values()), principal)

@@ -1,5 +1,6 @@
 """Verified-source integration; no live provider calls or collection activation."""
 import hashlib
+from importlib import import_module
 import json
 import uuid
 from concurrent.futures import ThreadPoolExecutor
@@ -20,6 +21,7 @@ from schemes.instalments import prepare_instalment_periods
 from schemes.instalment_payments import reserve_instalment
 from schemes.models import (Contribution, InrPrincipalReceipt, InrPrincipalCorrection,
     InStoreCashReceipt, InStoreCashContributionReversal, MetalAllocation, PaymentWebhookEvent)
+from schemes.payments import PaymentInspection
 from schemes.services import process_razorpay_webhook, reverse_in_store_cash_contribution, _classify_webhook_recovery
 from schemes.tests.test_audit_exceptions import make_owner, make_customer
 from schemes.tests.test_independent_agreement_storage import stored_future
@@ -184,10 +186,39 @@ class InrPaymentIntegrationTests(TestCase):
         self.assertEqual(get_inr_principal_summary(account).principal_recorded, Decimal("500"))
 
     def test_api_recovery_cannot_silently_mark_inr_processed_without_principal(self):
-        contribution, _, _ = online(self.account())
-        outcome, reason = _classify_webhook_recovery(event=None, contribution=contribution, inspection=None)
+        contribution, _, body = online(self.account())
+        contribution.refresh_from_db()
+        event = PaymentWebhookEvent.objects.create(contribution=contribution, gateway="razorpay", gateway_mode="live",
+            event_type="payment.captured", event_id=uuid.uuid4().hex, status="REVIEW_REQUIRED",
+            gateway_reference=f"pay_{contribution.pk}", gateway_order_id=contribution.gateway_order_id,
+            payload_sha256=hashlib.sha256(body).hexdigest())
+        inspection = PaymentInspection(event.gateway_reference, event.gateway_order_id, 50000, "INR", "captured", True)
+        outcome, reason = _classify_webhook_recovery(event=event, contribution=contribution, inspection=inspection)
         self.assertEqual(outcome, "MANUAL_REVIEW_REQUIRED")
         self.assertIn("reconciliation", reason)
+        contribution.refresh_from_db()
+        event.refresh_from_db()
+        self.assertEqual(contribution.status, "PENDING")
+        self.assertEqual(event.status, "REVIEW_REQUIRED")
+        self.assertFalse(InrPrincipalReceipt.objects.exists())
+
+    def test_missing_or_other_contribution_event_is_refused_before_inr_readiness(self):
+        contribution, _, _ = online(self.account())
+        other, _, body = online(self.account())
+        other.refresh_from_db()
+        event = PaymentWebhookEvent.objects.create(contribution=other, gateway="razorpay", gateway_mode="live",
+            event_type="payment.captured", event_id=uuid.uuid4().hex, status="REVIEW_REQUIRED",
+            gateway_reference=f"pay_{other.pk}", gateway_order_id=other.gateway_order_id,
+            payload_sha256=hashlib.sha256(body).hexdigest())
+        with patch("schemes.plan_policies.require_current_payment_workflow") as readiness:
+            for candidate_event in (None, event):
+                with self.subTest(event=getattr(candidate_event, "pk", None)):
+                    outcome, _ = _classify_webhook_recovery(
+                        event=candidate_event, contribution=contribution, inspection=None)
+                    self.assertEqual(outcome, "MANUAL_REVIEW_REQUIRED")
+            readiness.assert_not_called()
+        self.assertFalse(InrPrincipalReceipt.objects.exists())
+        self.assertFalse(Contribution.objects.exclude(status="PENDING").exists())
 
     def test_database_rejects_unattributed_cash_and_wrong_system_label(self):
         _, cash = self.cash(self.account())
@@ -233,6 +264,12 @@ class SystemPrincipalMigrationTests(TransactionTestCase):
         with patch("schemes.plan_policies.require_current_payment_workflow"):
             process_razorpay_webhook(gateway_mode="live", event_id=uuid.uuid4().hex, body=body, payload=payload)
         self.assertTrue(InrPrincipalReceipt.objects.filter(recorded_by=None).exists())
-        with self.assertRaisesMessage(RuntimeError, "Cannot reverse 0041"):
+        before = list(InrPrincipalReceipt.objects.values())
+        # A later draft-policy guard now protects this complete schema first.
+        with self.assertRaisesMessage(RuntimeError, "Retain independent draft policies"):
             MigrationExecutor(connection).migrate([("schemes", "0040_independent_agreement_storage")])
-        self.assertEqual(InrPrincipalReceipt.objects.count(), 1)
+        from .migration_helpers import applied_migration_apps
+        guard = import_module("schemes.migrations.0041_inr_system_receipts").preserve_system_receipts
+        with connection.schema_editor() as editor, self.assertRaisesMessage(RuntimeError, "Cannot reverse 0041"):
+            guard(applied_migration_apps(), editor)
+        self.assertEqual(list(InrPrincipalReceipt.objects.values()), before)

@@ -3,6 +3,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import date, timedelta
 from decimal import Decimal
 from io import StringIO
+from importlib import import_module
 from threading import Barrier
 from unittest.mock import patch
 
@@ -299,6 +300,14 @@ class InrSettlementTests(TestCase):
 
 
 class InrSettlementTransactionTests(TransactionTestCase):
+    def assert_independent_rollback_blocked(self):
+        from .migration_helpers import applied_migration_apps
+        with self.assertRaisesMessage(RuntimeError, "Retain independent draft policies"):
+            MigrationExecutor(connection).migrate([("schemes", "0037_inr_principal_foundation")])
+        guard = import_module("schemes.migrations.0040_independent_agreement_storage").preserve_independent_agreements
+        with connection.schema_editor() as editor, self.assertRaisesMessage(RuntimeError, "Cannot reverse 0040"):
+            guard(applied_migration_apps(), editor)
+
     def test_concurrent_completion_appends_one_terminal_event(self):
         owner, customer = make_owner(), make_customer()
         account = future_contract(owner, customer)
@@ -331,8 +340,7 @@ class InrSettlementTransactionTests(TransactionTestCase):
         record(owner, source, cash=cash)
         leaves = MigrationExecutor(connection).loader.graph.leaf_nodes()
         self.addCleanup(lambda: MigrationExecutor(connection).migrate(leaves))
-        with self.assertRaisesMessage(RuntimeError, "Cannot reverse 0040"):
-            MigrationExecutor(connection).migrate([("schemes", "0037_inr_principal_foundation")])
+        self.assert_independent_rollback_blocked()
         MigrationExecutor(connection).migrate(leaves)
         self.assertEqual(get_outstanding_entitlement(account), Decimal("1000.00"))
         self.assertEqual(InrSettlementProposal.objects.count(), 0)
@@ -362,9 +370,7 @@ class InrSettlementTransactionTests(TransactionTestCase):
         self.assertEqual(inr_settlement_balance(account).outstanding, 0)
 
     def test_reverse_migration_preserves_settlement_evidence(self):
-        from importlib import import_module
-        from types import SimpleNamespace
-        from django.apps import apps
+        from .migration_helpers import applied_migration_apps
         leaves = MigrationExecutor(connection).loader.graph.leaf_nodes()
         self.addCleanup(lambda: MigrationExecutor(connection).migrate(leaves))
         owner, customer = make_owner(), make_customer()
@@ -372,9 +378,13 @@ class InrSettlementTransactionTests(TransactionTestCase):
         source, cash = cash_source(account, owner)
         record(owner, source, cash=cash)
         p = propose(accepted_request(account, owner), owner)
-        with self.assertRaisesMessage(RuntimeError, "Cannot reverse 0040"):
-            MigrationExecutor(connection).migrate([("schemes", "0037_inr_principal_foundation")])
-        with self.assertRaisesMessage(RuntimeError, "Cannot reverse 0038"):
+        before = list(InrSettlementProposal.objects.values())
+        self.assert_independent_rollback_blocked()
+        with connection.schema_editor() as editor, self.assertRaisesMessage(RuntimeError, "Cannot reverse 0038"):
             import_module("schemes.migrations.0038_inr_manual_settlement").preserve_inr_settlement_history(
-                apps, SimpleNamespace(connection=connection))
-        self.assertTrue(InrSettlementProposal.objects.filter(pk=p.pk).exists())
+                applied_migration_apps(), editor)
+        self.assertEqual(list(InrSettlementProposal.objects.values()), before)
+        # Refused reversal can already have unapplied later, empty migrations.
+        # Restore the complete graph before using current runtime selectors.
+        MigrationExecutor(connection).migrate(leaves)
+        self.assertEqual(get_outstanding_entitlement(account), Decimal("1000.00"))

@@ -5,17 +5,79 @@
 Candidate preparation is isolated on `integration/builder-release-validation` from
 builder `261424c` and the prepared merge containing `main` `d0e5dd1`. Migration 0055
 joins checkout-prevention and builder history without data operations. Django checks
-and migration-drift checks passed. The serial 1,435-case suite is running with normal
-logging/password hashing against a fresh randomly named localhost PostgreSQL database;
-it is not yet a passing full-suite result. The additional
+and migration-drift checks passed. With normal logging/password hashing, the first
+serial run stopped after **735 tests in 2400.082s: 734 passed, one failed**. The INR
+recovery test supplied no webhook; the newer exact-event guard correctly refused it
+before the intended readiness check. Its corrected fixture now uses matching retained
+capture evidence, with separate missing/mismatched-event protection coverage.
+
+A focused payment/API/checkout run completed **70 tests in 369.380s: 68 passed, two
+failed**. Both expected older 0041/0044 downgrade errors, while 0050 now protects
+schema-2 plan/revision evidence first. The tests now assert that whole-graph refusal
+and directly exercise the earlier guards using the actually applied migration state.
+The same stale expectation in two settlement tests was aligned with 0050 while
+retaining direct 0040/0038 refusal and unchanged-evidence checks. No application
+guard or release gate was relaxed. The four-guard run completed in **230.148s**:
+three passed; the settlement test's final runtime balance lookup errored because the
+refused downgrade had already removed later empty tables. After restoring the full
+graph before that runtime selector, its focused rerun passed (**1 test, 33.139s**).
+The earlier historical-state guard and unchanged-proposal assertions were retained.
+A continuation over the remaining **703 cases** is in progress; these separate
+results are not a passing full-suite result.
+All use fresh randomly named localhost test databases. The additional
 `test_builder_checkout_merge_migration` regression upgrades the deployed checkout
 schema and compares original financial and retained checkout fields, legacy contract
-identity and outstanding entitlement. Its result will be recorded after completion.
+identity and outstanding entitlement. It passed on localhost PostgreSQL (**1 test in
+84.532s**) and inside the built Linux/Python 3.12 candidate (**1 test in 75.106s**).
+The fixture explicitly returns both lateral branches to their common ancestor before
+installing deployed checkout; selecting a lateral migration alone would leave the
+other branch applied and would not prove this upgrade.
+
+Draft PR [#77](https://github.com/rajeshr188/jsk-ss/pull/77) targets `main` with source
+commit `14af2f23d65aea059e1595dfd8336dde271bb050`. PR workflow run `40489106027` has
+passed container build/critical scan, initial migration, drift and application checks;
+the Django suite is still pending. Duplicate push run `40489034519` was cancelled
+to avoid redundant CI usage, not because a failure was waived.
+
+### Candidate-image synthetic restore checkpoint
+
+Local Docker image `jsk-builder-validation:14af2f2` has immutable image ID
+`sha256:cd2b579f63a2a2527b8dd81d7e99fe3cf7de464d0ba0af845b20c76ad21e8db3`.
+The production Dockerfile built committed candidate sources; this is a local image,
+not a published GHCR deployment digest. No build ran on the serving Linode.
+
+The isolated PostgreSQL 16 container had no external network or published port. The
+application shared only that container's loopback network. No production credentials,
+database content or provider/SMTP connection were supplied. A fresh synthetic source
+was migrated to accounts 0008, pages 0002 and schemes 0021_checkout_idempotency, with
+the unchanged other-app leaves. Historical models seeded three legacy agreements,
+paid Razorpay gold/silver allocations, submission/request/webhook evidence and a
+legacy mock cash contribution. New model columns were absent before seeding.
+
+PostgreSQL custom-format dump/restore created a separate target. The exact image
+applied **37 forward migrations**, comparing every original fixture column before
+and after. Legacy contracts stayed schema 1 with no configured revision; outstanding
+liabilities remained **INR 500.00**, **gold 0.100000 g** and **silver 10.000000 g**.
+An attempted downgrade to schemes 0020 refused removal of retained checkout evidence.
+Reapplying the **two pending merge migrations** restored the latest graph; all original
+fixture values still matched. Final Django and financial-exception checks passed.
+
+Both synthetic databases and dump were removed with their dedicated container/volume.
+The ignored artifact `.uv-cache/builder-image-rehearsal/drill.py` has SHA-256
+`7b0dbdd091d9073dc8efc1894fc54e1ee08d767cac8b48f886db2f07592c7d50`.
+Its manifest contains synthetic values only. The committed migration regression
+provides the repeatable schema/history check; the artifact records this bounded drill.
+
+Limits: this fixture does not contain every legacy correction or new configured
+benefit/refund/settlement chain. Its refusal checks retained checkout evidence, not
+all new-history downgrade guards. It is not a managed-cluster restore drill, a
+production-size latency measurement, a compatible rollback-image approval or full
+configured-family release acceptance. Those remaining evidence items stay open.
 
 This is not exact-image acceptance. `rehearse_workflow_release.py` is the older UI
 rehearsal: its old migration targets and current-model fixture creation must be
 reconciled with the actual deployed schema before using it for builder upgrade proof.
-Normal CI, image-based recovery/latency evidence and the operator/device/business
+Normal CI, remaining image-based recovery/latency evidence and the operator/device/business
 acceptances in MVP_PLAN.md remain open. Production and normal local application data
 are not targets of these runs.
 

@@ -10,13 +10,30 @@ reservations, optional-order investigation and refund review. Migration 0055 joi
 the two migration leaves without data operations. No production change or configured
 activation is included; the original worktree's unrelated edits remain untouched.
 
-Django system and migration-drift checks passed. The serial 1,435-case consolidated
-suite is in progress on a unique disposable localhost PostgreSQL database. A further
-deployed-schema migration regression compares original financial/checkout columns
-after upgrading the complete graph. Normal CI and exact-image recovery/latency
-acceptance are still pending. The older UI rehearsal script is not builder upgrade
-evidence: its legacy target and current-model fixture seeding need reconciliation
-with the deployed schema before it can be used for this release.
+Django system and migration-drift checks passed. The first serial consolidated run
+stopped after 735 cases: 734 passed and one INR recovery test supplied no webhook,
+so it hit the newer exact-event refusal before its intended readiness assertion.
+The corrected test supplies matching evidence; a separate test retains the missing/
+mismatched-event refusal. Focused payment/checkout coverage passed 68 of 70 cases;
+the two failures expected older rollback guards instead of the earlier 0050 refusal.
+Those expectations, plus the same issue in two settlement tests, now check both the
+complete graph's stronger guard and the older guard directly, preserving evidence.
+The four targeted rollback cases now have passing coverage (three passed together;
+the fourth passed after restoring the graph before its runtime balance assertion).
+The remaining consolidated cases are still running in a disposable localhost
+database. This is not yet a clean full-suite result. The deployed-schema
+regression passed locally and inside the built candidate image.
+Candidate `14af2f2` is pushed with draft PR #77; GitHub's image build/critical scan,
+migrations, drift and application checks passed, with the full Django suite pending.
+
+The candidate-image synthetic dump/restore drill preserved original checkout and
+financial columns across 37 forward migrations, separate legacy INR/gold/silver
+liabilities and legacy contracts. Downgrade refused retained checkout evidence;
+reapplying the two pending merge nodes restored the complete graph. The isolated
+database container and its volume were removed. TESTING.md records the exact image,
+fixture and limits: this is not complete configured-history/latency or production
+recovery acceptance. The older UI rehearsal script remains unsuitable as builder
+upgrade evidence without reconciling its targets and current-model fixture creation.
 
 **27 October 2026 - refund workspace browser review.**
 Synthetic responses from the real owner HTTP/service workflows were reviewed in
