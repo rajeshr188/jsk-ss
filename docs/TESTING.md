@@ -1,5 +1,29 @@
 # Testing
 
+## Consolidated migration-test follow-up - 27 October 2026
+
+Targeted deployed-checkout upgrade plus independent-storage tests initially returned
+two passes, one error and one failure (4 tests, 159.301s). Both storage failures were
+caused by 0050's newer retained-draft refusal. A current draft was being created before
+downgrading to a historical schema; another assertion expected the older 0040 guard.
+
+Corrected focused runs on disposable localhost PostgreSQL databases passed:
+- Independent agreement migration class: **3 tests, 165.051s**.
+- Independent request historical refusal/roundtrip and benefit reapplication
+  empty-roundtrip/original-proof/refusal: **3 tests, 180.140s**.
+- INR contract/principal retained-history reversal protection: **1 test, 60.863s**.
+
+Current services now execute only against the complete schema. Deliberately invalid
+historical fixtures are created at their historical state, with cleanup restoring
+the graph. Whole-graph 0050 refusal and direct earlier guards are both asserted;
+unchanged principal and benefit proof remain checked. The benefit test now accurately
+names its empty-schema roundtrip and retained-original-proof checks; it does not claim
+that retained independent plan history can be downgraded through 0050. Application
+services, constraints and migration guards are unchanged.
+
+The earlier 703-case continuation and remote normal CI were started before these
+corrections. They remain diagnostic runs, not current-head release acceptance.
+
 ## Color-mode selector - 27 October 2026
 
 Reviewed locally rendered public homepage, owner policy editor and customer sample

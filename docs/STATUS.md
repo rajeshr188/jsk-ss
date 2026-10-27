@@ -2,6 +2,22 @@
 
 ## Current milestone
 
+**27 October 2026 - consolidated migration-test follow-up.**
+Seven focused migration cases now pass across independent agreement storage,
+enrolment requests, INR principal and benefit reapplication. Older tests expected
+0040/0045 refusal even though 0050 now protects retained independent-plan evidence
+first, or tried to create current-service fixtures after removing required tables.
+Tests now assert the whole-graph refusal plus the earlier guard, construct invalid
+historical fixtures only at the relevant schema, and restore the complete graph
+before invoking current financial services. Original benefit proof is preserved.
+No production guard, migration or financial service was weakened or changed.
+
+The 703-case continuation started before these corrections and remains in progress;
+its failures and the older remote CI are not a passing current-candidate result.
+The next checkpoint is updated draft PR #77 with fresh CI, followed by the remaining
+performance, operator/device/inbox, recovery-image and INR publication evidence in
+MVP_PLAN.md. Configured-plan activation and production deployment remain pending.
+
 **27 October 2026 - light, dark and system appearance modes.**
 Public, customer and owner navigation now includes a Bootstrap color-mode selector.
 The device-local choice is applied before styles load, follows OS changes in System

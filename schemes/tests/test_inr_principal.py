@@ -373,22 +373,29 @@ class InrPrincipalConcurrencyAndMigrationTests(TransactionTestCase):
 
     def test_reverse_migration_refuses_to_drop_inr_contract_or_receipt(self):
         from importlib import import_module
-        from django.apps import apps
+        from .migration_helpers import applied_migration_apps
         guard = import_module("schemes.migrations.0037_inr_principal_foundation").preserve_inr_history
+        agreement_guard = import_module("schemes.migrations.0040_independent_agreement_storage").preserve_independent_agreements
         leaves = MigrationExecutor(connection).loader.graph.leaf_nodes()
         self.addCleanup(lambda: MigrationExecutor(connection).migrate(leaves))
         owner = make_owner()
         account = future_contract(owner, make_customer())
-        with self.assertRaisesMessage(RuntimeError, "Cannot reverse 0040"):
+        with self.assertRaisesMessage(RuntimeError, "Retain independent draft policies"):
             MigrationExecutor(connection).migrate([("schemes", "0036_independent_policy_fields")])
+        apps = applied_migration_apps()
+        with self.assertRaisesMessage(RuntimeError, "Cannot reverse 0040"):
+            agreement_guard(apps, SimpleNamespace(connection=connection))
         with self.assertRaisesMessage(RuntimeError, "Cannot reverse 0037"):
             guard(apps, SimpleNamespace(connection=connection))
         # A later empty migration may already have reversed before 0037 refuses.
         MigrationExecutor(connection).migrate(leaves)
         source, cash = cash_source(account, owner)
         record(owner, source, cash=cash)
-        with self.assertRaisesMessage(RuntimeError, "Cannot reverse 0040"):
+        with self.assertRaisesMessage(RuntimeError, "Retain independent draft policies"):
             MigrationExecutor(connection).migrate([("schemes", "0036_independent_policy_fields")])
+        apps = applied_migration_apps()
+        with self.assertRaisesMessage(RuntimeError, "Cannot reverse 0040"):
+            agreement_guard(apps, SimpleNamespace(connection=connection))
         with self.assertRaisesMessage(RuntimeError, "Cannot reverse 0037"):
             guard(apps, SimpleNamespace(connection=connection))
         # Empty later migrations (including 0044's nullable API-source field)

@@ -1,5 +1,6 @@
 """Future request integration in disposable PostgreSQL; runtime gates stay closed."""
 from datetime import date
+from importlib import import_module
 from decimal import Decimal
 from io import StringIO
 from unittest.mock import patch
@@ -303,8 +304,12 @@ class IndependentRequestTransactionTests(TransactionTestCase):
         MigrationExecutor(connection).migrate(leaves)
         self.assertEqual(SchemeEnrolmentRequest.objects.filter(pk=legacy.pk).values().get(), before)
         request = self.submit(self.offer())
-        with self.assertRaisesMessage(RuntimeError, "Independent enrolment requests exist"):
+        with self.assertRaisesMessage(RuntimeError, "Retain independent draft policies"):
             MigrationExecutor(connection).migrate([("schemes", "0044_inr_api_capture_evidence")])
+        from .migration_helpers import applied_migration_apps
+        guard = import_module("schemes.migrations.0045_independent_enrolment_requests").guard_reverse
+        with connection.schema_editor() as editor, self.assertRaisesMessage(RuntimeError, "Independent enrolment requests exist"):
+            guard(applied_migration_apps(), editor)
         self.assertTrue(SchemeEnrolmentRequest.objects.filter(pk=request.pk, request_schema_version=2).exists())
 
     def test_concurrent_inr_submission_is_single_request_and_audit(self):
@@ -336,9 +341,14 @@ class IndependentRequestTransactionTests(TransactionTestCase):
         request = submit_scheme_enrolment_request(customer=self.customer, plan=plan, metal_grade=grade,
             requested_contribution_amount=Decimal("500"), requested_months=12, customer_message="Keep",
             actor=self.customer.user).enrolment_request
-        config = self.offer(required_values(accumulation="EXACT_METAL"))["plan"].configuration
+        from schemes.plan_configuration import create_configuration_version
+        # An unattached preparation policy can exist at this historical schema;
+        # a current independent draft plan correctly prevents downgrade at 0050.
+        config = create_configuration_version(actor=self.owner, reason="Historical request fixture",
+            values=required_values(accumulation="EXACT_METAL"))
         executor = MigrationExecutor(connection)
         leaves = executor.loader.graph.leaf_nodes()
+        self.addCleanup(lambda: MigrationExecutor(connection).migrate(leaves))
         target = [("schemes", "0044_inr_api_capture_evidence")]
         executor.migrate(target)
         Historical = executor.loader.project_state(target).apps.get_model("schemes", "SchemeEnrolmentRequest")

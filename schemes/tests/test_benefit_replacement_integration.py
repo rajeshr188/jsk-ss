@@ -225,23 +225,25 @@ class BenefitReplacementTransactionTests(IntegrationFixture, TransactionTestCase
         self.assertEqual(sum(pk is not None for pk in ids), 1)
         self.assertEqual(BenefitInvoiceFulfilment.objects.filter(reapplication_decision=decision).count(), 1)
 
-    def test_migration_preserves_original_proof_and_refuses_reapplication_rollback(self):
+    def test_empty_roundtrip_and_retained_original_proof_refuse_reapplication_rollback(self):
         from importlib import import_module
         from types import SimpleNamespace
         from django.apps import apps
         leaves = MigrationExecutor(connection).loader.graph.leaf_nodes()
         self.addCleanup(lambda: MigrationExecutor(connection).migrate(leaves))
-        # Rehearse 0049's original-proof round trip before creating plan evidence
-        # protected by 0050. Never bypass the later production rollback guard.
-        MigrationExecutor(connection).migrate([("schemes", "0049_benefit_invoice_reapplication")])
+        # Rehearse the empty schema round trip before creating protected history.
+        # Current services must run with their complete schema, never an older one.
+        MigrationExecutor(connection).migrate([("schemes", "0048_benefit_reapplication_decisions")])
+        MigrationExecutor(connection).migrate(leaves)
         a, r, reversal = self.returned_benefit()
         original = reversal.fulfilment
         proof = original.evidence
-        executor = MigrationExecutor(connection)
-        executor.migrate([("schemes", "0048_benefit_reapplication_decisions")])
-        old = executor.loader.project_state([("schemes", "0048_benefit_reapplication_decisions")]).apps
-        self.assertEqual(old.get_model("schemes", "BenefitInvoiceFulfilment").objects.get(pk=original.pk).evidence, proof)
+        with self.assertRaisesMessage(RuntimeError, "Retain independent draft policies"):
+            MigrationExecutor(connection).migrate([("schemes", "0048_benefit_reapplication_decisions")])
         MigrationExecutor(connection).migrate(leaves)
+        # The earlier guard permits an original invoice, but forbids reapplication.
+        import_module("schemes.migrations.0049_benefit_invoice_reapplication").guard_reverse(
+            apps, SimpleNamespace(connection=connection))
         original.refresh_from_db()
         self.assertEqual(original.evidence, proof)
         self.assertIsNone(original.previous_id)
@@ -252,6 +254,9 @@ class BenefitReplacementTransactionTests(IntegrationFixture, TransactionTestCase
         with self.assertRaisesMessage(RuntimeError, "Retain benefit reapplication"):
             import_module("schemes.migrations.0049_benefit_invoice_reapplication").guard_reverse(
                 apps, SimpleNamespace(connection=connection))
+        MigrationExecutor(connection).migrate(leaves)
+        original.refresh_from_db()
+        self.assertEqual(original.evidence, proof)
         self.complete(p)
         with self.assertRaisesMessage(RuntimeError, "Retain independent draft policies and revisions"):
             MigrationExecutor(connection).migrate([("schemes", "0048_benefit_reapplication_decisions")])

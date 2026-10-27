@@ -1,5 +1,6 @@
 """Storage shape is not an enrolment bypass; fixtures live only in disposable DBs."""
 import uuid
+from importlib import import_module
 from datetime import date
 from decimal import Decimal
 from io import StringIO
@@ -142,8 +143,13 @@ class IndependentAgreementMigrationTests(TransactionTestCase):
         leaves = MigrationExecutor(connection).loader.graph.leaf_nodes()
         self.addCleanup(lambda: MigrationExecutor(connection).migrate(leaves))
         account = stored_future(make_owner(), make_customer(), required_values())
-        with self.assertRaisesMessage(RuntimeError, "Cannot reverse 0040"):
+        with self.assertRaisesMessage(RuntimeError, "Retain independent draft policies"):
             MigrationExecutor(connection).migrate([("schemes", "0039_inr_settlement_corrections")])
+        from .migration_helpers import applied_migration_apps
+        guard = import_module("schemes.migrations.0040_independent_agreement_storage").preserve_independent_agreements
+        with connection.schema_editor() as editor, self.assertRaisesMessage(RuntimeError, "Cannot reverse 0040"):
+            guard(applied_migration_apps(), editor)
+        MigrationExecutor(connection).migrate(leaves)
         account.refresh_from_db()
         self.assertEqual(account.required_count_snapshot, 10)
         self.assertIsNone(account.eligible_from)
@@ -151,18 +157,34 @@ class IndependentAgreementMigrationTests(TransactionTestCase):
         SchemeAccount.objects.filter(pk=account.pk).update(agreement_schema_version=1,
             eligibility_policy_snapshot="", required_count_snapshot=None, agreed_months=12,
             eligible_from=date(2027, 1, 30), frequency_rule_snapshot="FLEXIBLE")
-        with self.assertRaisesMessage(RuntimeError, "Cannot reverse 0040"):
+        with self.assertRaisesMessage(RuntimeError, "Retain independent draft policies"):
             MigrationExecutor(connection).migrate([("schemes", "0039_inr_settlement_corrections")])
+        with connection.schema_editor() as editor, self.assertRaisesMessage(RuntimeError, "Cannot reverse 0040"):
+            guard(applied_migration_apps(), editor)
 
     def test_forward_refuses_unversioned_schema_two_accounts(self):
         owner, customer = make_owner(), make_customer()
-        config, plan, revision, _ = preparation(owner, independent_values(accumulation="INR_PURCHASE_CREDIT",
-            eligibility_policy="CALENDAR", duration_months=12))
+        config = create_configuration_version(actor=owner, reason="Historical storage fixture",
+            values=independent_values(accumulation="INR_PURCHASE_CREDIT",
+                eligibility_policy="CALENDAR", duration_months=12))
         executor = MigrationExecutor(connection)
         leaves = executor.loader.graph.leaf_nodes()
+        self.addCleanup(lambda: MigrationExecutor(connection).migrate(leaves))
         target = [("schemes", "0039_inr_settlement_corrections")]
         executor.migrate(target)
-        historical = executor.loader.project_state(target).apps.get_model("schemes", "SchemeAccount")
+        from .migration_helpers import applied_migration_apps
+        apps = applied_migration_apps()
+        # Seed the deliberately invalid contract only after reaching its historical
+        # schema. A current schema-2 draft must correctly refuse downgrade at 0050.
+        plan = apps.get_model("schemes", "SchemePlan").objects.create(
+            name="Historical contract", code="HIST-UNVERSIONED", configuration_id=config.pk,
+            active=False, amount_rule="VARIABLE", frequency_rule="FLEXIBLE",
+            minimum_contribution=Decimal("100"))
+        revision = apps.get_model("schemes", "SchemePlanRevision").objects.create(
+            plan_id=plan.pk, number=1, actor_id=owner.pk, actor_label="Owner",
+            reason="Historical fixture", terms=dict(configuration=configuration_evidence(config),
+                name=plan.name, code=plan.code, metal_grades=[]))
+        historical = apps.get_model("schemes", "SchemeAccount")
         # This deliberately invalid historical fixture exists only in this disposable test DB.
         def cleanup():
             historical.objects.filter(scheme_number="UNVERSIONED").delete()
