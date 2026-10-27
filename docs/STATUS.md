@@ -19,8 +19,16 @@ rehearsal is underway. The latency probe is a point sample, not an application S
 Owner history reads are being refined to reuse successfully validated historical
 closure/disposition traversal within one read-only invocation. Current-source checks,
 fresh mutation authority and complete retained-history checks remain in place.
-Focused safety/performance tests are running. Remaining order: current-head CI and
-image/recovery evidence, owner/device/inbox acceptance, documented INR publication
+The exact `232284f` image passed PostgreSQL 18.6 configured-history restore, retained
+rollback refusal/forward recovery and the deployed-checkout upgrade regression.
+The earlier `fcc5cd7` image also read this restored history without a downgrade;
+published recovery-digest approval is still required. At an injected 1.5 ms/query,
+two-return page medians were 1.868s INR / 0.811s metal (one CPU, 768 MB); all financial
+hashes stayed unchanged. TESTING.md records scope, higher-latency results and family
+coverage. Rehearsal containers/volumes were removed. The **31-case** history, benefit,
+concurrency and migration regression passed in **1253.741s**; normal CI remains
+running. Remaining order: current-head CI, owner/device/inbox acceptance,
+approved recovery digest, documented INR publication
 and usable refund-route evidence, then coherent activation and approved rollout.
 The owner confirmed the external INR evidence is still pending; no gate has been opened.
 

@@ -2,6 +2,59 @@
 
 ## Ordered release validation - 27 October 2026
 
+Candidate code **232284fa1514619ca515cac054d6a778a369e282** built as local image
+`sha256:2ee8c8c3ee3ad6970e2f3406221ec8e59c69bffb170d921ef543cac0573c9425`.
+On isolated PostgreSQL **18.6**, the configured-history dump/restore, complete
+row/hash/liability comparison, expected returned-award holds, whole-graph 0054
+refusal, six earlier retained-evidence guards and forward recovery all passed.
+The deployed-checkout-to-builder upgrade test also passed inside this Python 3.12
+image: **1 test, 67.426s**. The earlier `fcc5cd7` image read the same restored history
+and passed its diagnostics without downgrading schema. This is local compatibility
+evidence; neither image is yet an approved published production recovery digest.
+Both disposable rehearsal containers and their anonymous volumes were removed.
+
+The committed harness now has a `latency` phase (same isolated restore database,
+manifest and default-off gate requirements as `verify`). Under a one-CPU/768 MB
+application limit, three samples per case produced:
+
+| Two-return owner page | Queries | No added latency, median | +1.5 ms/query, median | +10 ms/query, median |
+| --- | ---: | ---: | ---: | ---: |
+| INR purchase bonus | 481 | 0.787s | 1.868s | 5.787s |
+| Exact-grade metal VA | 265 | 0.378s | 0.811s | 3.143s |
+
+Every GET returned a private 200 response, rejected writes during rendering, and
+left all retained financial row hashes unchanged. Added sleeps model round-trip
+sensitivity; they do not simulate production query plans, concurrent load or a
+complete activated UI. The higher-latency case remains noticeably slower. Four-return
+local fixtures measured 1,101 INR queries / 1.293s and 713 metal queries / 0.779s;
+the new query ceilings preserve this improvement without truncating history.
+Current closure/source validation and mutation authority remain fresh. The broader
+31-case history, benefit, concurrency and migration run passed in **1253.741s**.
+It includes fresh-current-state checks after a historical read, changed principal
+proof, superseding holds, original closure damage, source drift, concurrent retries
+and retained migration guards. The initial six-case optimization trial exceeded two
+query ceilings; preserving historical traversal for return validation corrected that
+regression without dropping the separate fresh current-state checks. Query ceilings
+were then tightened to the observed improved counts; normal current-head CI remains
+required. System and migration-drift checks passed.
+
+The approved families map to these synthetic service/HTTP regressions; test presence
+and separate earlier passes do not replace the pending consolidated CI result:
+
+| Release journey | Existing regression coverage |
+| --- | --- |
+| All five families; both denominations; valid amount/basis/channel choices | `schemes.tests.test_collection_matrix` (120 collection combinations) |
+| Registration-first and existing-customer request-to-agreement | `accounts.test_independent_applications`, `schemes.tests.test_independent_requests`, `test_independent_enrolment` |
+| Duration, count, both, anytime, benefit-only monthly schedule | `test_independent_eligibility`, `test_independent_agreement_schedules`, `test_independent_instalment_ledger`, `test_independent_instalment_reviews` |
+| Normal/early full disposition, unused cancellation and retained rights | `test_independent_inr_settlement`, `test_independent_metal_settlement`, `test_scheme_closures`, `test_closure_acceptance` |
+| Full returns, approved replacement, stale/duplicate/concurrent attempts | `test_benefit_reapplications`, `test_benefit_replacement_integration`, `test_owner_history_queries`, `test_owner_workflow_queries` |
+| Frozen terms, date/count wording and notification revalidation | `test_independent_presentation`, request/application HTTP email tests, `test_event_reminder_revalidation`, `test_inr_completion_reminders` |
+
+Provider responses and future readiness are simulated only in test fixtures. Real
+owner/device/assistive-technology and inbox acceptance remain separate. The owner
+confirmed INR business/legal/accounting/provider evidence and usable refund-route
+approval are **still pending**; publication and combined activation remain blocked.
+
 The diagnostic continuation completed **703 tests in 5090.036s**, with nine failure
 events and three errors across 11 unique tests (the Account-button test has two
 failing subcases). The remaining 692 tests passed. Every affected case corresponds
