@@ -2,6 +2,21 @@
 
 ## Current milestone
 
+**29 October 2026 - physical Android customer review prepared; result pending.**
+The authorized USB-connected device is model 24090RA29I. A fresh loopback-only review
+database serves the `6c5034b` application runtime; later local changes are excluded
+tests/Markdown. USB reverse forwarding exposes localhost:8767 on the phone without
+a LAN listener or production deployment. Synthetic cases cover active 22K metal,
+completed INR full settlement, pending INR disposition and an uncertain order.
+All eight real customer GETs passed private-response assertions; an owner route
+refused customer access and retained scheme row hashes stayed unchanged. Only login
+and logout POSTs are permitted by this review harness; external provider/storage/SMTP
+calls are blocked. The phone opened the review page, and the owner has been asked to
+check readability, units/status/history, receipt/statement, theme, back navigation
+and logout. No physical acceptance is inferred from these technical checks.
+The temporary server has a three-hour cleanup lease. Backend readiness review is
+recorded in MVP_PLAN.md; runtime gates and production remain unchanged.
+
 **28 October 2026 - normal combined CI passed on the release-validation application candidate.**
 Run `40670193738` on `6c5034bb50d5097d8e4dad1817999a239b3e77b5` completed
 successfully: **1,473 tests in 14,359.871s** (about four hours), with zero failures

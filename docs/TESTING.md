@@ -1,5 +1,37 @@
 # Testing
 
+## Physical Android customer smoke test prepared - 29 October 2026
+
+The owner connected and authorized the USB device, model 24090RA29I, Android 16,
+Chrome 156.0.8078.47. The `6c5034b` application runtime is served from the local
+validation worktree; subsequent changes are excluded tests/Markdown. The ignored
+helper `.uv-cache/builder_android_review.py` has SHA-256
+`7ebd8544682f0e9578e69655ab196490c1b791147c599ce3c384ea10cc5f0747`.
+It created fresh disposable database `test_jsk_owner_review_229a5b586f58`, blocks
+external provider/storage/SMTP requests, uses locmem email/storage and exposes only
+host loopback. `adb reverse tcp:8767 tcp:8767` forwards that site to phone localhost;
+no LAN firewall exception or production change is used. The phone opened `/review/`
+successfully. This browser review is not a production TWA/payment verification.
+
+Real services seeded a completed cash-origin INR 500 disposition, pending INR 1000
+disposition, active 22K metal account with 0.050000 g, and held provider exceptions.
+Eight customer pages (list, gold detail/receipt/statement, completed INR detail,
+pending INR detail, uncertain-order detail and documents) returned private 200s.
+The customer was denied the owner exception route; the retained schemes snapshot
+was unchanged after these reads. Only login/logout POSTs are allowed while the
+owner reviews; financial/publication/enrolment writes are blocked independently of
+application readiness. Existing test helpers simulate unreleased readiness for
+seeding, not source/contract validation or a real transfer.
+
+The requested physical observations are amounts/units, pending versus completed
+status/history, receipt/statement readability, navigation/back, light/dark mode and
+logout without clipped content or inaccessible controls. **Owner result pending**;
+the technical checks above do not establish physical-device acceptance. State is
+in ignored `.uv-cache/builder-android-review-state.json`; the explicit stop marker
+is `.uv-cache/builder-android-review.stop`, with a three-hour automatic cleanup lease.
+Record final retained-history verification and database/USB-forward cleanup after
+the owner finishes. Runtime and production activation remain closed.
+
 ## Full combined CI passed - 28 October 2026
 
 [Run 40670193738](https://github.com/rajeshr188/jsk-ss/actions/runs/40670193738)

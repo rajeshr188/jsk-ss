@@ -163,6 +163,24 @@ phase, not an up-to-date inventory of missing code. Do not remove them merely
 because a local service test passes; the activation review must reconcile every
 barrier with the complete accepted workflow.
 
+**29 October readiness review (implementation not yet activated):** current code
+inspection identifies the central policy-family blockers, the schema-2 rejection in
+`require_operational_configuration`, and the unconditional INR rejection in
+`require_current_payment_workflow`. Reconcile these against the approved matrix and
+accepted engineering/operational evidence after the physical customer check. Add
+unmocked integration coverage for actual publication/enrolment, source-verified
+online/cash collection, eligibility and full closure in both denominations. Existing
+tests that simulate readiness do not by themselves establish activation readiness.
+Keep typed compatibility, immutable contracts, source/timing/duplicate checks and
+all financial locks/invariants. Keep the publication/new-enrolment switch default off
+and independent of existing agreements' payment/settlement rights. Legacy monthly
+eligibility and metal/duration-only preview boundaries must remain explicit rather
+than being removed with obsolete activation wording. Reconcile owner/customer/manual
+copy, including the INR "not activated" label, with the final implementation. Run
+affected regression and normal CI on that application change before release; today's
+base-candidate pass does not cover it. This is a bounded activation review, not a
+new feature matrix or production approval.
+
 Publication integration audit, 28 October (local, not activation): the offer service
 now distinguishes exact-metal grades from grade-free INR purchase credit, and the
 owner review uses the actual publication blockers. Forty-six affected tests passed;
