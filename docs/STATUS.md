@@ -2,6 +2,19 @@
 
 ## Current milestone
 
+**28 October 2026 - guided laptop explanation; Android check deferred.**
+The owner requested a guided explanation instead of confirming operator acceptance,
+and explicitly chose to complete the laptop review now with Android later. Chrome
+revisited the actual held-payment queue, completed cash case and pending original-
+method refund case. Explained containment/escalation, INR 500 = 360 principal applied
+to jewellery + 140 cash return, and INR 1,000 = 500 applied + 500 original-method refund
+still owed. Recorded principal remains history; outstanding principal determines what
+remains owed. Explained completion/reference/customer-receipt evidence and the final
+zero-outstanding/no-unresolved-issues closure decision. No new financial actions were
+performed during this explanation. Operator understanding is awaiting the owner's
+response; the physical Android customer smoke test remains required before activation,
+with its timing deferred rather than recorded as passed.
+
 **28 October 2026 - lean operational acceptance prepared; technical cases reviewed.**
 The owner accepted the short acceptance scope: four laptop cases, recognition and
 escalation for provider exceptions, one representative Android customer smoke test

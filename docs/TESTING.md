@@ -2,6 +2,14 @@
 
 ## Lean operational acceptance session - 28 October 2026
 
+Follow-up: the owner requested a guided laptop explanation and deferred the physical
+Android customer check until later, before activation. The same real queue, completed
+cash case and online case owing INR 500 were revisited read-only in Chrome. The agent
+explained principal versus outstanding, original-source routes, evidence and the final
+closure decision. Operator understanding is awaiting the owner's explicit response;
+this explanation alone does not mark acceptance complete. No new payment, refund,
+fulfilment, closure or external message was performed in this follow-up.
+
 Scope accepted by the owner: the handbook `#short-acceptance` four-case laptop
 procedure, operator recognition/containment/escalation, one physical Android customer
 smoke test and basic keyboard/critical-screen usability. Advanced independent recovery
