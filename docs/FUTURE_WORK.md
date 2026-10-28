@@ -410,6 +410,16 @@ outcome by itself. Source: [official HTMX documentation](https://htmx.org/docs/)
 
 ## Production operations
 
+- **FW-CI-001 — Profile and safely parallelize the full test suite:** Added
+  28 October 2026 after run `40670193738` passed 1,473 tests in 14,359.871s.
+  Profile the slowest tests and separate suitable groups for parallel execution
+  while preserving migration and concurrency checks, improving feedback time
+  without reducing coverage. Keep schema-mutating migration tests isolated and
+  retain transaction/concurrency semantics; do not enable blanket parallelism.
+  Compare repeated before/after wall times and verify the complete test inventory,
+  database isolation and reliable full-CI results. This is deferred optimization,
+  not a new blocker for the current builder release or permission to skip tests.
+
 - **FW-PROD-009 — Optional isolated staging for higher-risk releases:** Deferred by
   owner decision on 22 October 2026 in favour of CI, an exact-image local PostgreSQL
   rehearsal and a controlled production rollout. Separate staging is not a blanket

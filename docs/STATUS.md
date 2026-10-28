@@ -17,6 +17,9 @@ and four-email acceptance remain complete. Next: the deferred physical Android
 customer smoke test, coherent readiness activation with its affected checks/CI,
 then final published image/recovery evidence and explicit rollout approval.
 No merge, publication activation or production deployment follows automatically.
+CI duration profiling and safe test-group parallelization are now tracked as
+deferred `FW-CI-001` in FUTURE_WORK.md, preserving full coverage and isolated
+migration/concurrency checks; this adds no new current-release gate.
 
 **28 October 2026 - current local image recovery rehearsal passed, including catalogue history.**
 Application source `6c5034bb50d5097d8e4dad1817999a239b3e77b5` built with the normal
