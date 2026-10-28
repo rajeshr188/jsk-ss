@@ -1,5 +1,50 @@
 # Testing
 
+## Lean operational acceptance session - 28 October 2026
+
+Scope accepted by the owner: the handbook `#short-acceptance` four-case laptop
+procedure, operator recognition/containment/escalation, one physical Android customer
+smoke test and basic keyboard/critical-screen usability. Advanced independent recovery
+training, every device/browser combination, formal specialist audit and automated
+refunds are deferred. Critical financial/usability failures still block activation.
+Previously confirmed email readability and Android premature-completion refusal are
+retained, without repeating them solely for this session.
+
+Source `b2a9d62ef8e169fa1f0d432d53174ae33a660acc`: **24 tests passed in 65.086s**
+across owner manual, capture-recovery workspace, payment-refund workspace and the
+new-source-exposure INR settlement guard. Django checks passed; the test database
+was destroyed. Provider responses/readiness were simulated in these existing test
+fixtures; real roles, confirmation expiry, source identity, refund completeness,
+reinspection and financial guards remained enforced. No production/external calls.
+
+The ignored temporary review helper was restarted on the host's IPv4 loopback using
+`test_jsk_owner_review_f73937f82439`, separate credentials/cookies, in-memory mail and
+storage, blocked external HTTP/SMTP and a three-hour database cleanup lease. An initial
+sandbox listener could not replace the host's older page; both were stopped cleanly,
+the sandbox test database was removed, and the current helper was started on host
+loopback. Browser verification then confirmed the new Short operational acceptance
+page. Startup assertions verified: unbound lost-response order has no principal;
+late monthly capture retains timing review; a distinct duplicate capture on a paid
+order creates no second principal. Publication/enrolment/provider-investigation POSTs
+remain disallowed by the helper; the two synthetic settlement routes are permitted.
+
+Chrome reviewed the queue's unresolved identity/different-duplicate cases and the
+disabled Apply recovery action. Keyboard Tab reached confirmation and Check provider.
+The cash settlement began with INR 500 principal, INR 360 invoice application and
+INR 140 cash return. Simulated handover left INR 140 outstanding and completion
+disabled. The simulated cash return reduced outstanding to zero; explicit closure
+then showed Full INR settlement completed with both records retained. The online
+case retained INR 1,000 principal; simulated INR 500 jewellery handover leaves an
+INR 500 manual original-source provider refund owed and completion disabled. It is
+intentionally left pending for operator inspection. No real funds or goods moved.
+Screenshots are retained in ignored local `.uv-cache/acceptance-*.png` artifacts.
+
+Operator understanding and the physical Android customer smoke test are **pending**;
+the assistant has requested those observations and has not recorded acceptance on
+the operator's behalf. No device appeared in the local ADB inventory at preparation
+time. Basic keyboard reachability is bounded evidence, not a full accessibility audit.
+Current full CI and final-image/recovery acceptance remain separate release criteria.
+
 ## Independent customer entry, checkout and status - 28 October 2026
 
 **137 tests passed in 242.760s** across independent customer workflows, presentation,

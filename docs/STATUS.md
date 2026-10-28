@@ -2,6 +2,28 @@
 
 ## Current milestone
 
+**28 October 2026 - lean operational acceptance prepared; technical cases reviewed.**
+The owner accepted the short acceptance scope: four laptop cases, recognition and
+escalation for provider exceptions, one representative Android customer smoke test
+and basic critical-screen keyboard/usability checks. The handbook and release plan
+now distinguish required safeguards from deferred device matrices, specialist audits,
+automated refunds and advanced recovery training. Four-email readability and the
+owner's Android premature-completion refusal are carried forward as completed evidence.
+On source `b2a9d62`, 24 manual/capture/refund/changed-source acceptance checks passed
+in 65.086s; Django checks passed and their isolated database was destroyed.
+A separate host-loopback review database seeded real lost-response, late-timing and
+different-duplicate cases with external payment/storage/SMTP blocked. Startup checks
+proved no uncertain credit, retained late review and one principal receipt for the
+duplicate order. Chrome reviewed the visible queue and disabled unsafe recovery.
+The cash example moved INR 500 -> 140 -> 0 outstanding, then explicit completion
+retained its INR 360 jewellery and INR 140 simulated cash-return evidence. The online
+example retains INR 500 original-method refund outstanding after simulated handover;
+completion is disabled. Keyboard navigation reached the recovery confirmation and
+Check provider controls. The reviewer has been asked for operator observations; no
+physical Android device was connected at preparation time. These remain pending,
+not inferred from the agent's technical results. The temporary review has a three-hour
+cleanup lease. No production change, real refund or external customer message.
+
 **28 October 2026 - independent customer payment/status integration verified.**
 On `agent/independent-customer-workflows`, customer availability now uses the existing
 independent admission/resume checks behind the unchanged runtime readiness guard.
