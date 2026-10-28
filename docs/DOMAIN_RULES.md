@@ -351,6 +351,15 @@ retained catalogue closure records; use compatible forward recovery.
 - **METAL-006:** `GOLD_22K_916`, `GOLD_24K_9999`, and `SILVER_999`
   liabilities are independent. Account, rate, allocation, and redemption grades must
   match; base metal alone is not a sufficient financial key.
+- **METAL-007:** Average acquisition cost is a read-only historical INR-per-gram
+  metric for one agreement's exact grade: total paid INR divided by total grams
+  across its recorded `PAID` metal allocations, using the same allocation basis
+  as the balance. Pending/failed/unallocated payments and reversed contributions
+  do not enter either total. Use full stored gram precision and `Decimal`, then
+  `ROUND_HALF_UP` to two INR decimals for display. An empty allocation set has no
+  average. Redemptions and their reversals change remaining entitlement, not the
+  historical acquisition average; this is neither a current market quote nor a
+  calculation of remaining-inventory or taxable cost basis.
 - **RATE-001:** Only a manually published Jai Sri Krishna Jewellery `SchemeRate` for
   the exact account grade may be used for a new allocation.
 - **RATE-002:** A metal contribution must lock its current applicable grade-specific

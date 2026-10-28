@@ -214,6 +214,13 @@ class ContributionReceiptSummary:
 
 
 @dataclass(frozen=True)
+class MetalAcquisitionSummary:
+    paid_amount: Decimal
+    allocated_grams: Decimal
+    average_cost_per_gram: Decimal | None
+
+
+@dataclass(frozen=True)
 class StatementEntry:
     occurred_at: datetime
     description: str
@@ -1475,6 +1482,28 @@ def get_metal_balance(scheme_account):
         )
     )["total"]
     return allocated - redeemed
+
+
+def get_metal_acquisition_summary(scheme_account):
+    """Historical paid INR per recorded gram, separate from remaining entitlement.
+
+    Use the same PAID, exact-grade allocation basis as the metal balance. A cash
+    correction leaves its original allocation as evidence but marks its payment
+    reversed, so it contributes neither amount nor grams here. Redemptions and
+    their returns do not rewrite acquisition history. Divide six-decimal stored
+    quantities before rounding the final INR/g display, never average quoted rates.
+    """
+    if scheme_account.savings_mode not in {"GOLD", "SILVER"} or not scheme_account.metal_grade_id:
+        return None
+    totals = MetalAllocation.objects.filter(
+        contribution__scheme_account=scheme_account,
+        contribution__status=Contribution.Status.PAID,
+        metal_grade_id=scheme_account.metal_grade_id,
+    ).aggregate(paid=Sum("contribution__amount"), grams=Sum("quantity"))
+    paid = totals["paid"] or Decimal("0.00")
+    grams = totals["grams"] or Decimal("0.000000")
+    average = (paid / grams).quantize(MONEY_QUANTUM, rounding=ROUND_HALF_UP) if grams > 0 else None
+    return MetalAcquisitionSummary(paid, grams, average)
 
 
 def get_outstanding_entitlement(scheme_account):

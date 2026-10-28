@@ -69,6 +69,8 @@
   <div class="stat-label">{{ scheme_account.entitlement_name }} entitlement</div>
   <div class="stat-value">{{ metal_balance|floatformat:3 }} g</div>
   <div class="mt-3"><strong>Current Scheme Rate:</strong> {% if current_scheme_rate %}₹{{ current_scheme_rate.rate_per_gram|inr:4 }}/g{% else %}Not published{% endif %}</div>
+  <div class="mt-2"><strong>Average acquisition cost:</strong> {% if metal_acquisition.average_cost_per_gram is not None %}₹{{ metal_acquisition.average_cost_per_gram|inr }}/g{% else %}Not available{% endif %}</div>
+  <p class="small text-muted mt-2 mb-1">Total paid for completed allocations divided by the grams allocated, using your recorded grade. Reversed contributions are excluded. Redemptions do not change this historical average.</p>
   <small class="text-muted">Your recorded metal credits, less completed redemptions.</small>
 </div></div>
 {% endif %}

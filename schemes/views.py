@@ -1556,7 +1556,7 @@ def customer_documents(request):
 @login_required
 @never_cache
 def my_scheme_detail(request, scheme_number):
-    from .selectors import get_customer_payment_availability, get_customer_plan_next_action
+    from .selectors import get_customer_payment_availability, get_customer_plan_next_action, get_metal_acquisition_summary
 
     account = get_customer_scheme_account(request.user, scheme_number)
     if account is None:
@@ -1577,6 +1577,7 @@ def my_scheme_detail(request, scheme_number):
             "cash_balance": get_cash_balance(account),
             "cash_bonus": get_cash_bonus_summary(account),
             "metal_balance": get_metal_balance(account),
+            "metal_acquisition": get_metal_acquisition_summary(account),
             "contributions": payments_page.object_list,
             "page_obj": payments_page,
             "redemptions_page": redemptions_page,

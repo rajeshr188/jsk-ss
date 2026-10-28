@@ -1,5 +1,27 @@
 # Testing
 
+## Historical metal acquisition cost - 29 October 2026
+
+The new selector uses one aggregate query for a single agreement/exact grade and
+the balance's PAID allocation basis. Customer detail displays paid INR / recorded
+grams, rounded only at the final two-decimal INR/g step. All seven new cases passed
+with the owner-manual and existing cash suite: **31 tests in 70.949s**. Checks and
+migration drift passed; the unique disposable database was destroyed. Coverage:
+weighted 4000 / 0.300000 = 13333.33 instead of a mean of quoted rates; cash corrections
+exclude amount and quantity while retaining original rows; pending/failed/unallocated
+attempts and empty history have no average; account/22K/24K/silver isolation; completed
+redemption changes remaining entitlement but preserves historical average; tiny
+six-decimal allocations use full precision; customer HTTP rendering and cross-customer/
+anonymous denial; non-metal accounts return no metric without querying. A read-only
+snapshot assertion preserves Contribution/MetalAllocation/Redemption rows.
+The initial 31-case run had one fixture error: a paid-source factory was incorrectly
+used for PENDING, and the confirmation constraint rejected it. The correction creates
+proper unconfirmed pending/failed fixtures and retains the paid-unallocated helper.
+After the successful run, fixture classes were referenced through their modules so
+Django does not re-collect their existing tests as new tests. No original cases were
+removed from their own modules. This is local regression evidence, not current-head
+full CI or production activation. No new metric table or stored cost basis is added.
+
 ## Android acceptance result and dropdown follow-up - 29 October 2026
 
 The owner explicitly answered **"All checked and usable"** to the physical customer

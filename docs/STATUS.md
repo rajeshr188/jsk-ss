@@ -2,6 +2,23 @@
 
 ## Current milestone
 
+**29 October 2026 - customer metal acquisition-cost metric implemented and locally verified.**
+The metal agreement page now shows historical average acquisition cost per gram:
+paid INR divided by exact-grade grams across completed recorded allocations. It
+uses the same PAID allocation basis as the balance, full stored precision and Decimal
+rounding to two INR decimals. It excludes reversed/unallocated/unsuccessful payments;
+redemptions affect remaining grams but not this historical average. Empty allocation
+sets show Not available. INR purchase credit and legacy cash have no metal metric.
+The read is one aggregate query and creates no rate, balance or financial record.
+Seven new metric cases plus owner-manual and existing cash regressions passed:
+**31 tests in 70.949s**, with Django/drift checks passing. An initial fixture gave
+pending attempts paid-confirmation fields; the database correctly refused it, and
+the fixture was corrected without relaxing the constraint. Imports were then scoped
+through their modules to avoid collecting existing fixture TestCase classes twice.
+The illustrated handbook is Edition 5. Readiness activation regression remains in
+progress; the earlier full CI does not cover these later application changes.
+No production change.
+
 **29 October 2026 - Android customer acceptance confirmed; light dropdown visibility corrected.**
 The owner answered "All checked and usable" for the physical Android customer
 review: amounts/units, pending versus completed history, receipt/statement,
