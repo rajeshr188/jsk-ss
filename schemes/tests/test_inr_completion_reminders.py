@@ -170,6 +170,8 @@ class InrReminderMigrationTests(InrReminderFixture, TransactionTestCase):
     def test_migration_roundtrip_constraints_and_retained_notification_reverse_guard(self):
         executor = MigrationExecutor(connection)
         leaves = executor.loader.graph.leaf_nodes()
+        self.addCleanup(lambda: MigrationExecutor(connection).migrate(leaves))
+        current_tables = set(connection.introspection.table_names())
         executor.migrate([("schemes", "0050_independent_plan_drafts")])
         MigrationExecutor(connection).migrate(leaves)
         account, proposal, completion = self.completed()
@@ -183,6 +185,10 @@ class InrReminderMigrationTests(InrReminderFixture, TransactionTestCase):
                 SchemeReminder.objects.filter(pk=reminder.pk).update(**values)
         with self.assertRaisesMessage(RuntimeError, "Retain INR completion notification evidence"):
             MigrationExecutor(connection).migrate([("schemes", "0050_independent_plan_drafts")])
+        # Earlier reverse steps can succeed before the retained-history guard
+        # refuses 0051. Restore those newer tables before other tests use models.
+        MigrationExecutor(connection).migrate(leaves)
+        self.assertEqual(set(connection.introspection.table_names()), current_tables)
         self.assertEqual(SchemeReminder.objects.get().inr_completion_id, completion.pk)
         self.assertEqual(SchemeReminderDeliveryAttempt.objects.count(), 1)
 
@@ -202,6 +208,7 @@ class LegacyReminderMigrationTests(TransactionTestCase):
         attempts = list(SchemeReminderDeliveryAttempt.objects.values())
         executor = MigrationExecutor(connection)
         leaves = executor.loader.graph.leaf_nodes()
+        self.addCleanup(lambda: MigrationExecutor(connection).migrate(leaves))
         executor.migrate([("schemes", "0050_independent_plan_drafts")])
         executor = MigrationExecutor(connection)
         old_model = executor.loader.project_state([("schemes", "0050_independent_plan_drafts")]).apps.get_model("schemes", "SchemeReminder")

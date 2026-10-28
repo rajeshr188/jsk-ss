@@ -2,6 +2,22 @@
 
 ## Current milestone
 
+**28 October 2026 - five CI issues reproduced and affected regressions pass.**
+An isolated six-test run reproduced the exact one failure/four errors in 48.259s.
+The reminder reverse-guard test allowed newer migrations to unapply before 0051
+correctly refused history loss, then left the test schema downgraded. This caused the
+following legacy reminder setup and three INR correction tests to query absent tables.
+The test now restores current migration leaves after the refusal, asserts the full
+table set is restored and registers cleanup for both migration journeys. Production
+migrations and their retained-history protections are unchanged. The owner plan-table
+redesign also omitted the legacy bonus disclosure; its percentage/minimum duration
+is restored within the existing Plan cell, labelled for historical cash agreements.
+The exact original assertion is retained and now also checks the historical scope.
+Django and migration-drift checks passed. All **53 related reminder/correction/bonus/
+catalogue tests passed in 287.446s**, including the five original cases and the
+predecessor that exposed the test-schema leak. The isolated test database was
+destroyed. Normal combined CI on the resulting candidate remains required.
+
 **28 October 2026 - completed full CI reports five issues requiring diagnosis.**
 Run `40650621396` on `b2a9d62` finished: **1,473 tests in 6,829.483s,
 one failure and four errors**. The container build/critical scan, initial migrations,

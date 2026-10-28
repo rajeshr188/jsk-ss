@@ -1,5 +1,24 @@
 # Testing
 
+## CI failure reproduction and schema cleanup - 28 October 2026
+
+The six-case diagnostic (the reminder reverse-guard predecessor plus all five CI
+cases) reproduced **one failure and four errors in 48.259s**, matching run
+`40650621396`. The predecessor removed later tables before the retained INR reminder
+guard correctly refused 0051 reversal, and did not restore migration leaves. Later
+current-model fixtures then encountered missing catalogue/refund-resolution tables.
+The guard test now restores latest leaves immediately after the expected refusal,
+asserts that the complete original table set is restored, and registers recovery
+cleanup; the legacy roundtrip also registers cleanup before downgrading. No production
+migration or financial guard is relaxed. The bonus regression keeps its `5.00%`
+assertion; the owner plan cell again displays that legacy policy with a historical-only
+label. Eight table cells per row are retained. Django checks and migration drift passed.
+The broader four-module run then passed **53 tests in 287.446s**, including all five
+original cases, legacy reminder identity/delivery roundtrip, retained notification/
+correction reverse guards, transaction/concurrency cases, historical bonus display
+and the eight-cell catalogue rows. The disposable test database was destroyed.
+This is focused correction evidence; a fresh normal full-CI pass is still required.
+
 ## Completed full CI on b2a9d62 - 28 October 2026
 
 Run `40650621396`, Django job `122689575385`: **1,473 tests in 6,829.483s;

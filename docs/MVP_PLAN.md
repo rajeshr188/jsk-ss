@@ -197,6 +197,15 @@ Android was explicitly deferred until later, before activation, and remains pend
 No real payment/refund was required or performed, and no production activation follows
 automatically from this operator confirmation.
 
+Engineering follow-up: full CI on `b2a9d62` completed 1,473 tests with one failure and
+four errors. All five were reproduced in a six-case diagnostic; the reverse-guard
+test's missing schema restoration caused the four later fixture errors, and the
+owner table had omitted its legacy cash-bonus disclosure. Test cleanup/schema-set
+verification and the historical-only disclosure were corrected without weakening
+production financial/migration guards. All 53 affected reminder/correction/bonus/
+catalogue tests passed in 287.446s. Fresh normal full CI remains the next evidence
+requirement; the operator acceptance need not be repeated for this fixture/display fix.
+
 Customer integration follow-up: 137 affected tests passed in 242.760s, including all
 five families/both denominations, INR HTTP checkout, uncertain/expired attempts,
 read-only status and existing Razorpay/eligibility regressions. No migration. These
