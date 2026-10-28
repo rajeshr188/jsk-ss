@@ -2,6 +2,17 @@
 
 ## Lean operational acceptance session - 28 October 2026
 
+**Operator outcome: accepted for the agreed laptop scope.** Following the guided
+read-only walkthrough on source `b2a9d62ef8e169fa1f0d432d53174ae33a660acc`, the owner
+explicitly confirmed "Yes—the operator can follow these decisions" for containment/
+escalation, original-source refunds, completion/customer receipt evidence and final
+zero-outstanding/no-unresolved-issues closure. This closes the earlier pending
+operator-understanding observation below. It relies on the owner's confirmation and
+the bounded technical evidence; no real financial transaction was used as a test.
+The physical Android customer smoke test remains deferred and **not passed**. It is
+still required before activation. Full CI and final-image/recovery approval remain
+separate. Revisit acceptance if the operator's material workflow changes.
+
 Follow-up: the owner requested a guided laptop explanation and deferred the physical
 Android customer check until later, before activation. The same real queue, completed
 cash case and online case owing INR 500 were revisited read-only in Chrome. The agent

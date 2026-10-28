@@ -2,6 +2,19 @@
 
 ## Current milestone
 
+**28 October 2026 - laptop operational acceptance confirmed by the owner.**
+After the guided review of source `b2a9d62`, the owner explicitly answered:
+"Yes—the operator can follow these decisions" for holding/escalating uncertain or
+duplicate payments, using original-source refund routes, retaining completion and
+customer receipt evidence, and closing only after zero outstanding with no unresolved
+payment issues. Together with the recorded synthetic technical/browser evidence, this
+completes the agreed four-case laptop operational acceptance. Basic keyboard control
+reachability and readable labelled forms were technically checked. It is acceptance
+of the demonstrated procedure, not an assertion that real funds were refunded.
+The physical Android customer smoke test is explicitly deferred until later and
+remains pending before activation. Full CI, coherent readiness activation, final-image
+recovery and production approval remain separate; no production setting was changed.
+
 **28 October 2026 - guided laptop explanation; Android check deferred.**
 The owner requested a guided explanation instead of confirming operator acceptance,
 and explicitly chose to complete the laptop review now with Android later. Chrome
