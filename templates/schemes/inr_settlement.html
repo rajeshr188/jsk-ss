@@ -3,7 +3,7 @@
 {% block title %}INR final settlement{% endblock %}
 {% block content %}
 <h1>INR purchase-credit settlement</h1>
-<p>{{ closure.scheme_account.scheme_number }} · {{ closure.get_status_display }}</p>
+<p>{{ closure.scheme_account.scheme_number }} · {% include 'schemes/includes/closure_status.html' with closure=closure only %}</p>
 <p><a href="{% url 'schemes:scheme_statement' closure.scheme_account.scheme_number %}">Principal statement</a> · <a href="{% url 'schemes:closure_workspace' closure.scheme_account.scheme_number %}">Closure review</a></p>
 <p><a href="{% url 'schemes:benefit_reapplication' closure.scheme_account.scheme_number %}">Review returned benefit for a replacement invoice</a></p>
 <div class="alert alert-info">One final settlement: agree the complete split, record actual jewellery delivery and each required refund, then close. Saving a proposal does not reduce principal. Benefits are separate from refundable principal. No refund is sent by this screen.</div>

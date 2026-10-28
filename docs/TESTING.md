@@ -1,5 +1,81 @@
 # Testing
 
+## Owner handbook Edition 4 and settlement wording - 28 October 2026
+
+Ran `schemes.tests.test_plan_manual`,
+`schemes.tests.test_owner_inr_settlement_workspace.SettlementStatusPresentationTests`
+and `OwnerInrSettlementWorkspaceTests.test_fresh_form_offers_only_pending_portions_without_breaking_exact_retries`.
+All **14 tests passed in 11.080s** with clean Django checks; the random localhost
+test database was destroyed. Coverage includes owner-only manual/asset privacy,
+internal anchors, completed INR vs metal status, non-completed states, and the real
+partial-fulfilment HTTP flow (pending portion choices, retry safety, zero outstanding
+without premature completion). Stored financial status/event values are unchanged.
+
+Chrome served Edition 4 through the authenticated manual route in the isolated
+review. At 390/320 CSS pixel widths, document widths were 375/305 respectively
+(vertical scrollbar excluded), with no page-wide horizontal overflow. The INR
+worked example was changed from cramped columns to stacked explanatory steps and
+visually checked. Existing 23 October screenshots remain explicitly historical;
+new flow diagrams and current prose distinguish the independent builder and its
+remaining activation boundary. This is not physical-device/operator sign-off.
+
+Remote CI run `40511542243` finished with six failures in 1438 tests (8870.990s):
+four monthly-eligibility payment availability cases and two scheme-closure payment
+availability/checkout cases. This evidence supersedes earlier "running" observations;
+diagnosis and a clean current-head full run remain required.
+
+## Agent-led isolated settlement review - 28 October 2026
+
+The owner confirmed on Android that completion before fulfilment was refused, then
+requested an agent-led review and workflow explanation. This is one confirmed device
+observation, not complete owner/operator acceptance.
+
+Chrome reviewed the real forms for source `1705199` against the disposable
+`test_jsk_owner_review_1ce8c48a16fb` database, with external HTTP/provider/SMTP blocked.
+The cash-origin proposal retained INR 500 principal. Simulated jewellery fulfilment
+of INR 360 left INR 140 outstanding and the closure button disabled. Simulated cash
+return of INR 140 reduced outstanding to zero; explicit completion then displayed
+completed closure and retained both receipt records. No real goods, money or customer
+messages were involved. The online-origin case retained its original-method refund
+route: after simulated INR 500 jewellery fulfilment, INR 500 remained outstanding
+and closure was disabled. A mistakenly future-dated simulated refund was rejected
+without reducing the outstanding INR 500; the timestamp was corrected to elapsed time.
+The corrected simulated original-method refund reduced outstanding to zero; explicit
+completion then succeeded, retained both portions and removed the completion control.
+Both prepared cash/online cases therefore passed this narrow browser walkthrough.
+
+Usability follow-up: the INR completed-closure heading currently says "Full jewellery
+settlement completed" even when the settlement includes a principal refund. The
+amounts and retained records distinguish both portions, but the generic heading
+should be clarified before operator acceptance. The prepared review starts after
+proposal authorization; it does not by itself rehearse plan creation, enrolment,
+real payment capture, actual refund receipt or the customer's full journey.
+Start owner training from the full lifecycle before using these mid-workflow fixtures:
+offer and frozen agreement, contribution, customer-authorized closure, agreed full
+split, actual source-specific fulfilment evidence, zero outstanding, final completion.
+Agent testing is engineering evidence and does not stand in for the operator's
+understanding or actual customer authorization and fulfilment.
+
+## Candidate inbox-review preparation - 27 October 2026
+
+Source `1705199`: three existing workflow tests were reused to capture four real
+rendered messages from a disposable database: customer enrolment acknowledgement,
+approved agreement, duration eligibility reminder and completed INR disposition.
+All **3 tests passed in 23.797s** and the database was destroyed. The completion
+case also checks that a proposal/partial fulfilment cannot send a completion notice,
+that retries do not duplicate delivery, and that receipt/benefit records stay intact.
+Review copies add a TEST banner and disable links; original destinations are not
+used for delivery. The ignored local capture contains synthetic data only.
+The owner explicitly authorized delivery of these four TEST messages to the named
+developer inbox. They were sent once through the existing production Postmark SMTP
+connection with TLS, link/open tracking disabled, disabled sample links and unique
+message IDs. **SMTP accepted: 4/4**, each returning 1; the local one-shot receipt log
+is retained with the review artifacts. No application financial records, reminder
+records, configuration or services changed. Production rendered no candidate data:
+only the synthetic candidate message content was supplied to its mail connection.
+Actual inbox arrival, spam placement and Android email rendering still require the
+recipient's observations. SMTP acceptance alone does not establish delivery.
+
 ## Current-candidate visual acceptance preparation - 27 October 2026
 
 The subsequent approved-refund manual update passed all 10 existing

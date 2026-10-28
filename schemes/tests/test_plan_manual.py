@@ -55,8 +55,8 @@ class PlanManualTests(SimpleTestCase):
     def test_actual_gate_state_is_reported_without_changing_edition(self):
         response = plan_manual(self.request())
         self.assertContains(response, "<strong>enabled</strong>", html=True)
-        self.assertContains(response, "Edition 3")
-        self.assertContains(response, "26 October 2026")
+        self.assertContains(response, "Edition 4")
+        self.assertContains(response, "28 October 2026")
         self.assertContains(response, "not a live deployment assessment")
 
     def test_anonymous_is_redirected_without_document_or_image(self):

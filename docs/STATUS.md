@@ -2,6 +2,71 @@
 
 ## Current milestone
 
+**28 October 2026 - owner handbook Edition 4 and INR status wording.**
+The canonical illustrated handbook now starts with the full offer-to-closure journey,
+uses the independent builder as the current preparation path, and explicitly scopes
+the earlier editor/screenshots. It separates INR principal from metal grams, explains
+unused cancellation, authorization, actual fulfilment and final closure, and includes
+a five-step INR 500 / 360 / 140 worked example plus field-by-field receipt guidance.
+Phone practice instructions distinguish the full metal rehearsal from seeded INR
+mid-workflow cases. Owner training remains separate from engineering test acceptance.
+INR settlement, closure review/history and queue now use denomination-correct display
+wording; stored statuses, events, financial services and release controls are unchanged.
+All 14 affected manual, presentation and actual partial-fulfilment HTTP tests passed
+in 11.080s; Django checks passed and the disposable test database was destroyed.
+Chrome manual checks at 320/390 CSS pixels found no page-wide horizontal overflow;
+the cramped new three-column example was replaced by readable stacked steps.
+No migration, production change, new message or activation was performed.
+
+The completed remote CI run `40511542243` for `d12e18b` is **not passing**:
+1438 tests ran in 8870.990s with six failures in monthly eligibility and closure
+payment-availability/checkout tests. Deployment checks/collectstatic were skipped.
+The next engineering step is to reproduce and fix these failures, then obtain clean
+current-head CI; the focused pass above does not replace that requirement.
+
+**28 October 2026 - guided owner review and technical walkthrough.**
+The owner reached the isolated Android review and confirmed that completion before
+fulfilment was refused. They requested an agent-led technical review because the
+operator workflow is not yet familiar; this is not blanket operational acceptance.
+The disposable review was restarted after its three-hour expiry and USB forwarding
+restored. Browser review of the cash-origin case confirmed INR 500 outstanding
+before fulfilment, INR 140 remaining after the simulated INR 360 jewellery handover,
+and closure still blocked until the simulated INR 140 cash return. At zero outstanding,
+explicit full closure succeeded and retained both fulfilment records. All references
+are labelled synthetic; external provider/mail calls remain blocked. Production and
+publication gates are unchanged. Owner training and inbox observations remain pending.
+The online case likewise retained INR 500 outstanding after jewellery handover and
+blocked closure. Future-dated refund evidence was rejected; corrected simulated
+original-method refund evidence reduced the balance to zero and explicit full closure
+succeeded. Both seeded cases passed the technical browser walkthrough. The generic
+"Full jewellery settlement completed" INR heading needs clearer wording; the test
+begins after proposal preparation and does not replace a full owner training journey.
+
+**27 October 2026 - isolated owner/device acceptance environment prepared.**
+The owner confirmed an Android device and development computer are available on the
+same network. A temporary review server for source `1705199` now uses a fresh random
+localhost PostgreSQL database with synthetic cash-origin and online-origin INR
+settlement cases. Only fixture readiness is simulated; source, authorization and
+fulfilment checks remain real. External HTTP/provider and SMTP calls are blocked,
+mail is in-memory, and write routes are restricted to login and the two settlement
+workspaces. Authenticated fixture GETs and LAN review/login HTTP 200 checks passed.
+Physical-device/owner results remain pending. The helper and temporary credentials
+are ignored local artifacts; the server expires after three hours and drops only its
+own database. No normal local or production records/configuration were changed.
+The phone reached the listener using TLS against its HTTP-only port; this explains
+the reported connection failure without a firewall change. The owner authorized and
+connected USB debugging; a loopback relay and device reverse mapping now expose the
+review as localhost:8767. The temporary listener was made threaded with 15-second
+socket timeouts after an incomplete connection stalled its single-threaded version.
+The first synthetic database was cleanly removed before restarting fresh fixtures;
+desktop browser login and the pending-settlement page now work. The full-closure
+button is disabled while principal remains outstanding. Android acceptance is
+still pending. Four clearly labelled synthetic inbox samples were captured by three
+passing workflow tests (23.797s). The owner then explicitly authorized the four TEST
+messages to the developer inbox; Postmark SMTP accepted all four with tracking off.
+Arrival and Android readability confirmation remain pending. The send used the
+existing SMTP connection without application data, configuration or service changes.
+
 **27 October 2026 - INR business confirmation and refund-route approval.**
 The owner now confirms that the offered terms, accounting treatment and provider
 arrangements support the INR purchase-credit product. The subsequent explicit

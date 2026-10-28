@@ -2,6 +2,13 @@
 
 ## Owner builder v1 release contract (approved 24 October 2026)
 
+**28 October review checkpoint:** owner handbook Edition 4 now documents the current
+independent preparation path and the complete owner journey, including INR original-source
+refunds and a guided full-settlement example. Two isolated INR browser cases passed;
+the owner confirmed premature completion refusal on Android. This does not complete
+operator/inbox acceptance or activation. The full remote run has six failures to
+resolve; see STATUS.md and TESTING.md for exact evidence and the remaining sequence.
+
 Deliver one coherent owner-builder production activation, rather than activating
 the currently supported subset first. Develop, review and test in small increments
 behind `CONFIGURED_PLANS_ENABLED=False`; a completed development step or merged PR

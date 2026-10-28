@@ -4,7 +4,8 @@ import uuid
 from decimal import Decimal
 from unittest.mock import patch
 
-from django.test import Client, TestCase, override_settings
+from django.template.loader import render_to_string
+from django.test import Client, SimpleTestCase, TestCase, override_settings
 from django.urls import reverse
 
 from schemes.inr_settlement_selectors import inr_settlement_balance
@@ -15,6 +16,41 @@ from schemes.tests.test_independent_inr_settlement import InrClosureFixture
 from schemes.tests.test_independent_instalment_ledger import NOW
 from schemes.tests.test_independent_instalment_reviews import instant
 from schemes.tests.test_inr_corrections import return_evidence
+
+
+class SettlementStatusPresentationTests(SimpleTestCase):
+    """INR display must not imply jewellery-only delivery or premature completion."""
+
+    def closure(self, mode, status):
+        from schemes.models import SchemeAccount, SchemeClosureRequest
+        return SchemeClosureRequest(
+            scheme_account=SchemeAccount(scheme_number="SYNTHETIC-STATUS", savings_mode=mode),
+            status=status,
+        )
+
+    def test_completed_inr_workspace_and_closure_review_use_inr_label(self):
+        closure = self.closure("INR_CREDIT", "SETTLED")
+        for template in ("schemes/inr_settlement.html", "schemes/closure_workspace.html"):
+            with self.subTest(template=template):
+                html = render_to_string(template, {"closure": closure, "target": closure,
+                    "scheme_account": closure.scheme_account, "blocked": "Read-only display review"})
+                self.assertIn("Full INR settlement completed", html)
+                self.assertNotIn("Full jewellery settlement completed", html)
+
+    def test_unfinished_inr_status_never_claims_completion(self):
+        for status in ("PENDING", "ACCEPTED", "CANCELLED"):
+            with self.subTest(status=status):
+                closure = self.closure("INR_CREDIT", status)
+                html = render_to_string("schemes/includes/closure_status.html", {"closure": closure})
+                self.assertEqual(html.strip(), closure.get_status_display())
+                self.assertNotIn("completed", html)
+
+    def test_completed_metal_status_preserves_jewellery_wording(self):
+        for mode in ("GOLD", "SILVER"):
+            with self.subTest(mode=mode):
+                html = render_to_string("schemes/includes/closure_status.html",
+                    {"closure": self.closure(mode, "SETTLED")})
+                self.assertEqual(html.strip(), "Full jewellery settlement completed")
 
 
 @override_settings(IN_STORE_CASH_CONTRIBUTIONS_ENABLED=True, PAYMENT_INITIATION_KILL_SWITCH=False)
