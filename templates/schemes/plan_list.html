@@ -1,31 +1,27 @@
 {% extends '_base.html' %}
-
 {% block title %}Scheme plans | Jai Sri Krishna Jewellery{% endblock %}
-
 {% block content %}
 <div class="page-header">
   <div><p class="page-eyebrow">Scheme configuration</p><h1>Scheme plans</h1><p class="page-subtitle">Reusable terms for new customer agreements.</p></div>
   <div class="page-actions"><a class="btn btn-outline-dark" href="{% url 'schemes:plan_manual' %}">Plan reference manual</a><a class="btn btn-outline-dark" href="{% url 'schemes:plan_configuration_list' %}">Configuration catalogue</a><a class="btn btn-jsk" href="{% url 'schemes:plan_add' %}">Add existing-style plan</a></div>
 </div>
-<div class="table-responsive">
-  <table class="table align-middle">
-    <thead><tr><th scope="col">Plan</th><th scope="col">Amount</th><th scope="col">Frequency</th><th scope="col">Duration</th><th scope="col">Offered grades</th><th scope="col">Status</th><th scope="col">Public page</th><th scope="col">Action</th></tr></thead>
-    <tbody>
-      {% for plan in plans %}
-      <tr>
-        {% if plan.configuration_id %}<td colspan="8"><strong>{{ plan.name }} ({{ plan.code }})</strong> — {{ plan.configuration }} · {{ plan.configuration.get_amount_policy_display }} · {% if plan.active %}{% if configured_plans_enabled %}<span class="badge text-bg-success">Published offer</span>{% else %}<span class="badge text-bg-warning">Published; new intake disabled</span>{% endif %}{% else %}<span class="badge text-bg-warning">Preparation only / withdrawn</span>{% endif %} <a href="{% url 'schemes:plan_configuration_detail' plan.configuration_id %}">Review configuration</a> · <a href="{% url 'schemes:configured_plan_publication' plan.pk %}">Publication review</a>{% if not plan.active %} · <a href="{% url 'schemes:plan_edit' plan.pk %}">Edit draft</a>{% if plan.configuration.policy_schema_version == 2 %}<div class="mt-2">{% include 'schemes/includes/policy_facts.html' with configuration=plan.configuration %}{% if plan.configuration.accumulation == 'EXACT_METAL' %}<p>Offered grades: {% for offering in plan.metal_offerings.all %}{% if offering.active %}{{ offering.metal_grade.display_name }}; {% endif %}{% endfor %}</p>{% endif %}</div>{% endif %}{% endif %}</td>{% else %}
-        <td><strong>{{ plan.name }}</strong><br><small class="text-muted">{{ plan.code }}</small>{% if cash_scheme_activity_enabled and plan.cash_bonus_percentage %}<div class="small">Legacy cash bonus: {{ plan.cash_bonus_percentage|floatformat:2 }}% · minimum {{ plan.cash_bonus_minimum_months }} months (development only)</div>{% endif %}</td>
-        <td>{{ plan.get_amount_rule_display }}{% if plan.fixed_contribution_amount %} · ₹{{ plan.fixed_contribution_amount }}{% else %} · ₹{{ plan.minimum_contribution }}{% if plan.maximum_contribution %}–₹{{ plan.maximum_contribution }}{% else %} or more{% endif %}{% endif %}</td>
-        <td>{% if plan.configuration.instalment_policy == 'MONTHLY_COMPLETION' %}{{ plan.configuration.get_period_basis_display }} — one qualifying payment{% else %}{{ plan.get_frequency_rule_display }}{% endif %}</td>
-        {% if plan.configuration.policy_schema_version == 2 %}<td>{{ plan.configuration.get_accumulation_display }}<br>{{ plan.configuration.get_eligibility_policy_display }}<br>{% if plan.configuration.duration_months %}{{ plan.configuration.duration_months }} months{% else %}No duration condition{% endif %}{% if plan.configuration.required_count %}; {{ plan.configuration.required_count }} qualifying payments{% endif %}<br><small>Preparation only &middot; <a href="{% url 'schemes:plan_configuration_detail' plan.configuration_id %}">Review full policy</a></small></td>{% else %}        <td>{{ plan.default_months }} months suggested<br><small>Minimum {{ plan.minimum_months }} months; {% if plan.configuration.instalment_policy == 'MONTHLY_COMPLETION' %}calendar AND qualifying instalments (draft only){% else %}calendar-based eligibility{% endif %}</small></td>{% endif %}
-        <td>{% for offering in plan.metal_offerings.all %}{% if offering.active %}<div>{{ offering.metal_grade.display_name }}</div>{% endif %}{% endfor %}<small>{{ plan.agreement_count }} existing agreement{{ plan.agreement_count|pluralize }}</small></td>
-        <td>{% if plan.active %}<span class="badge text-bg-success">Active</span>{% else %}<span class="badge text-bg-secondary">Inactive</span>{% endif %}</td>
-        <td>{% if plan.active and plan.publicly_listed and plan.offered_grade_count %}<span class="badge text-bg-success">Published</span>{% elif plan.publicly_listed %}<span class="badge text-bg-warning">Hidden: inactive or no offered grades</span>{% else %}<span class="badge text-bg-secondary">Not listed</span>{% endif %}</td>
-        <td><a class="btn btn-sm btn-outline-dark" href="{% url 'schemes:plan_edit' plan.pk %}">Edit</a></td>
-        {% endif %}
-      </tr>
-      {% empty %}<tr><td colspan="8" class="text-muted text-center py-4">No plans yet.</td></tr>{% endfor %}
-    </tbody>
-  </table>
+<nav class="mb-3" aria-label="Plan status"><a href="{% url 'schemes:plan_list' %}" {% if not closed %}aria-current="page"{% endif %}>Current plans</a> &middot; <a href="?status=closed" {% if closed %}aria-current="page"{% endif %}>Archived and retired plans</a></nav>
+<div class="table-responsive" tabindex="0" role="region" aria-label="Scheme plan comparison">
+<table class="table align-middle">
+  <caption>One plan per row. Archive unused drafts or retire offers without changing existing agreements. Scroll horizontally on smaller screens.</caption>
+  <thead><tr><th scope="col">Plan</th><th scope="col">Amount</th><th scope="col">Frequency</th><th scope="col">Duration / eligibility</th><th scope="col">Offered grades</th><th scope="col">Status</th><th scope="col">Public page</th><th scope="col">Action</th></tr></thead>
+  <tbody>{% for plan in plans %}
+  <tr>
+    <th scope="row"><strong>{{ plan.name }}</strong><br><small>{{ plan.code }}</small>{% if plan.configuration_id %}<br><a href="{% url 'schemes:plan_configuration_detail' plan.configuration_id %}">{{ plan.configuration }}</a>{% endif %}<div class="small">{{ plan.agreement_count }} existing agreement{{ plan.agreement_count|pluralize }}</div></th>
+    <td>{% if plan.configuration_id %}{{ plan.configuration.get_amount_policy_display }}<br>₹{{ plan.configuration.minimum_amount }}{% if plan.configuration.maximum_amount %}–₹{{ plan.configuration.maximum_amount }}{% else %} or more{% endif %}{% else %}{{ plan.get_amount_rule_display }}<br>{% if plan.fixed_contribution_amount %}₹{{ plan.fixed_contribution_amount }}{% else %}₹{{ plan.minimum_contribution }}{% if plan.maximum_contribution %}–₹{{ plan.maximum_contribution }}{% else %} or more{% endif %}{% endif %}{% endif %}</td>
+    <td>{% if plan.configuration_id %}{{ plan.configuration.get_instalment_policy_display }}<br>{{ plan.configuration.get_frequency_rule_display }}{% if plan.configuration.period_basis %}<br>{{ plan.configuration.get_period_basis_display }}{% endif %}{% else %}{{ plan.get_frequency_rule_display }}{% endif %}</td>
+    <td>{% if plan.configuration.policy_schema_version == 2 %}{{ plan.configuration.get_eligibility_policy_display }}<br>{% if plan.configuration.duration_months %}{{ plan.configuration.duration_months }} months{% else %}No duration condition{% endif %}{% if plan.configuration.required_count %}<br>{{ plan.configuration.required_count }} qualifying payments{% endif %}{% else %}{{ plan.default_months }} months suggested<br><small>Minimum {{ plan.minimum_months }} months{% if plan.configuration_id %}; {{ plan.configuration.get_eligibility_policy_display }}{% else %}; calendar-based eligibility{% endif %}</small>{% endif %}</td>
+    <td>{% if plan.configuration.accumulation == 'INR_PURCHASE_CREDIT' %}{{ plan.configuration.get_accumulation_display }} — no metal grade{% else %}{% for offering in plan.metal_offerings.all %}{% if offering.active %}<div>{{ offering.metal_grade.display_name }}</div>{% endif %}{% empty %}No grades offered{% endfor %}{% endif %}</td>
+    <td>{% if plan.catalogue_closure %}<span class="badge text-bg-secondary">{{ plan.catalogue_closure.get_action_display }}</span>{% elif plan.configuration_id %}{% if plan.active %}{% if configured_plans_enabled %}<span class="badge text-bg-success">Published offer</span>{% else %}<span class="badge text-bg-warning">Published; new intake disabled</span>{% endif %}{% else %}<span class="badge text-bg-warning">Preparation only / withdrawn</span>{% endif %}{% elif plan.active %}<span class="badge text-bg-success">Active</span>{% else %}<span class="badge text-bg-secondary">Inactive</span>{% endif %}</td>
+    <td>{% if plan.catalogue_closure %}Not listed{% elif plan.active and plan.publicly_listed %}{% if plan.configuration_id and not configured_plans_enabled %}Hidden: release gate{% elif plan.offered_grade_count or plan.configuration.accumulation == 'INR_PURCHASE_CREDIT' %}Listed{% else %}Hidden: no offered grades{% endif %}{% else %}Not listed{% endif %}</td>
+    <td>{% if not plan.catalogue_closure %}{% if plan.configuration_id %}<a href="{% url 'schemes:configured_plan_publication' plan.pk %}">Publication review</a><br>{% endif %}{% if not plan.configuration_id or not plan.active %}<a href="{% url 'schemes:plan_edit' plan.pk %}">Edit{% if plan.configuration_id %} draft{% endif %}</a><br>{% endif %}<a href="{% url 'schemes:plan_catalogue_close' plan.pk %}">Archive / retire review</a>{% else %}<a href="{% url 'schemes:plan_catalogue_close' plan.pk %}">Archive / retirement history</a>{% endif %}</td>
+  </tr>
+  {% empty %}<tr><td colspan="8" class="text-muted text-center py-4">No plans in this view.</td></tr>{% endfor %}</tbody>
+</table>
 </div>
 {% endblock %}

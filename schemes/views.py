@@ -1284,8 +1284,9 @@ def owner_enrolment_request_enroll(request, request_id):
 @owner_required
 def plan_configuration_list(request):
     from .selectors import get_plan_configurations
-    page = Paginator(get_plan_configurations(), 20).get_page(request.GET.get("page"))
-    return render(request, "schemes/configuration_list.html", {"page": page})
+    closed = request.GET.get("status") == "closed"
+    page = Paginator(get_plan_configurations(closed=closed), 20).get_page(request.GET.get("page"))
+    return render(request, "schemes/configuration_list.html", {"page": page, "closed": closed})
 
 
 @owner_required
@@ -1415,8 +1416,9 @@ def configured_plan_publication(request, plan_id):
 @owner_required
 def plan_list(request):
     from .selectors import get_owner_plan_configuration
+    closed = request.GET.get("status") == "closed"
     return render(request, "schemes/plan_list.html", {
-        "plans": get_owner_plan_configuration(),
+        "plans": get_owner_plan_configuration(closed=closed), "closed": closed,
         "configured_plans_enabled": settings.CONFIGURED_PLANS_ENABLED,
         "cash_scheme_activity_enabled": cash_scheme_activity_is_enabled(),
     })

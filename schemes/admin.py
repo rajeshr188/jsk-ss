@@ -21,6 +21,7 @@ from .models import (
     SchemeEnrolmentRequest,
     SchemePlan,
     SchemePlanConfiguration,
+    PlanCatalogueClosure,
     SchemePlanOffering,
     SchemeReminder,
     SchemeReminderDeliveryAttempt,
@@ -28,7 +29,7 @@ from .models import (
 )
 
 
-@admin.register(SchemeClosureRequest, SchemeClosureEvent, ConfiguredSettlement, ConfiguredSettlementReversal)
+@admin.register(SchemeClosureRequest, SchemeClosureEvent, ConfiguredSettlement, ConfiguredSettlementReversal, PlanCatalogueClosure)
 class ClosureEvidenceAdmin(admin.ModelAdmin):
     def get_readonly_fields(self, request, obj=None):
         return tuple(field.name for field in self.model._meta.fields)

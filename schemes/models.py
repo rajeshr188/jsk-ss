@@ -448,6 +448,45 @@ class SchemePlanRevision(models.Model):
         return f"{self.plan_id} / revision {self.number}"
 
 
+class PlanCatalogueClosure(models.Model):
+    """One-way catalogue housekeeping; never an agreement closure or deletion."""
+
+    class Action(models.TextChoices):
+        ARCHIVE_CONFIGURATION = "ARCHIVE_CONFIGURATION", "Configuration archived"
+        ARCHIVE_DRAFT = "ARCHIVE_DRAFT", "Draft archived"
+        RETIRE_PLAN = "RETIRE_PLAN", "Plan retired"
+
+    configuration = models.OneToOneField(SchemePlanConfiguration, null=True, blank=True,
+        on_delete=models.PROTECT, related_name="catalogue_closure")
+    plan = models.OneToOneField(SchemePlan, null=True, blank=True,
+        on_delete=models.PROTECT, related_name="catalogue_closure")
+    action = models.CharField(max_length=24, choices=Action.choices)
+    actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    actor_label = models.CharField(max_length=254)
+    reason = models.TextField()
+    recorded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(condition=(
+                models.Q(configuration__isnull=False, plan__isnull=True, action="ARCHIVE_CONFIGURATION")
+                | models.Q(configuration__isnull=True, plan__isnull=False,
+                    action__in=["ARCHIVE_DRAFT", "RETIRE_PLAN"])
+            ), name="catalogue_closure_target_action"),
+            models.CheckConstraint(condition=~models.Q(actor_label="") & ~models.Q(reason=""),
+                name="catalogue_closure_evidence"),
+        ]
+
+    def save(self, *args, **kwargs):
+        if self.pk and type(self).objects.filter(pk=self.pk).exists():
+            raise ValidationError("Catalogue closure records are immutable.")
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Catalogue closure records cannot be deleted.")
+
+
 class SchemePlanOffering(models.Model):
     plan = models.ForeignKey(
         SchemePlan,

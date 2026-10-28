@@ -77,6 +77,9 @@ def save_scheme_plan(*, values, metal_grades, actor, reason, plan_id=None, expec
     ):
         raise ValidationError("Legacy cash bonus terms cannot be edited in production.")
     plan = SchemePlan.objects.select_for_update().get(pk=plan_id) if plan_id else SchemePlan()
+    from .catalogue_lifecycle import require_open_catalogue_item
+    if plan_id:
+        require_open_catalogue_item(plan=plan)
     if plan_id and plan.configuration_id:
         if plan.active or plan.publicly_listed:
             raise ValidationError("Withdraw the configured offer before editing it; existing agreements stay unchanged.")
@@ -87,7 +90,8 @@ def save_scheme_plan(*, values, metal_grades, actor, reason, plan_id=None, expec
             raise ValidationError("Create a separate draft to use another configuration version.")
         from .models import SchemePlanConfiguration
         from .plan_configuration import configuration_draft_values
-        plan.configuration = SchemePlanConfiguration.objects.get(pk=configuration_id)
+        plan.configuration = SchemePlanConfiguration.objects.select_for_update().get(pk=configuration_id)
+        require_open_catalogue_item(configuration=plan.configuration)
         for field, value in configuration_draft_values(plan.configuration).items():
             setattr(plan, field, value)
     independent = bool(plan.configuration_id and plan.configuration.policy_schema_version == 2)

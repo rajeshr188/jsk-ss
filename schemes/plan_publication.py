@@ -20,6 +20,8 @@ def validate_publication_evidence(plan):
 
 
 def require_configured_offer(plan):
+    from .catalogue_lifecycle import require_open_catalogue_item
+    require_open_catalogue_item(plan=plan)
     if not plan.configuration_id:
         return
     if not settings.CONFIGURED_PLANS_ENABLED:
@@ -37,6 +39,8 @@ def set_configured_plan_publication(*, plan_id, publish, actor, reason, expected
     if type(publish) is not bool or confirmed is not True or not reason or not reason.strip():
         raise ValidationError("Review confirmation and an audit reason are required.")
     plan = SchemePlan.objects.select_for_update().get(pk=plan_id)
+    from .catalogue_lifecycle import require_open_catalogue_item
+    require_open_catalogue_item(plan=plan)
     if not plan.configuration_id:
         raise ValidationError("Use the existing plan workflow for legacy offers.")
     if expected_digest != plan_edit_digest(plan):

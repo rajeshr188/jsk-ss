@@ -109,6 +109,8 @@ def create_configuration_version(*, values, actor, reason, previous_id=None):
     provenance = {}
     if previous_id:
         previous = SchemePlanConfiguration.objects.select_for_update().get(pk=previous_id)
+        from .catalogue_lifecycle import require_open_catalogue_item
+        require_open_catalogue_item(configuration=previous)
         if SchemePlanConfiguration.objects.filter(previous=previous).exists():
             raise ValidationError("This configuration already has a newer version. Open the latest version first.")
         provenance = {"previous": previous, "family_id": previous.family_id, "version": previous.version + 1}

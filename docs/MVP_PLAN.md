@@ -2,11 +2,21 @@
 
 ## Owner builder v1 release contract (approved 24 October 2026)
 
+**28 October scope addition:** the owner requested production catalogue housekeeping:
+archive unused drafts/configurations and retire plans with offer/customer history,
+without deleting retained terms or changing agreements. This is tracked on
+`agent/plan-archive-retirement`, separately from integration CI for `8f18263`.
+It also corrects the owner plan comparison to one eight-cell row per plan. All 84
+affected tests and Django/migration checks passed; Chrome verified draft creation,
+archive/history and responsive table scrolling. Full CI on the integrated feature
+is still required; existing CI on `8f18263` cannot attest to this later feature.
+
 **28 October review checkpoint:** owner handbook Edition 4 now documents the current
 independent preparation path and the complete owner journey, including INR original-source
 refunds and a guided full-settlement example. Two isolated INR browser cases passed;
-the owner confirmed premature completion refusal on Android. This does not complete
-operator/inbox acceptance or activation. The full remote run's six failures were
+the owner confirmed premature completion refusal on Android and arrival/readability
+of all four authorized test emails. Operator/device acceptance and activation remain
+incomplete. The full remote run's six failures were
 reproduced as missing synthetic webhook configuration in two test classes; the fixture
 fix passes the 63-case isolated regression batch and still requires a fresh full CI pass.
 See STATUS.md and TESTING.md

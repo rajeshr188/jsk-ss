@@ -378,6 +378,8 @@ def enroll_customer(
     from .plan_governance import ensure_plan_revision
 
     plan = SchemePlan.objects.select_for_update().get(pk=plan.pk)
+    from .catalogue_lifecycle import require_open_catalogue_item
+    require_open_catalogue_item(plan=plan)
     independent = bool(plan.configuration_id and plan.configuration.policy_schema_version == 2)
     inr_credit = independent and plan.configuration.accumulation == "INR_PURCHASE_CREDIT"
     if inr_credit:

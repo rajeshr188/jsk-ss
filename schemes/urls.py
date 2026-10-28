@@ -4,6 +4,7 @@ from . import views, instalment_views, closure_views, settlement_views, manual_v
 from .order_reconciliation import order_reconciliation
 from .optional_order_views import optional_order_recovery
 from . import payment_refund_views
+from .catalogue_views import catalogue_close
 from .checkout_recovery import checkout_identity_recovery
 
 app_name = "schemes"
@@ -115,6 +116,8 @@ urlpatterns = [
         name="customer_invitation_resend",
     ),
     path("owner/plans/", views.plan_list, name="plan_list"),
+    path("owner/plans/<int:plan_id>/close-catalogue/", catalogue_close, name="plan_catalogue_close"),
+    path("owner/plan-configurations/<int:configuration_id>/archive/", catalogue_close, name="configuration_archive"),
     path("owner/plan-manual/", manual_views.plan_manual, name="plan_manual"),
     path("owner/plan-manual/assets/<str:filename>", manual_views.plan_manual_asset, name="plan_manual_asset"),
     path("owner/plan-configurations/", views.plan_configuration_list, name="plan_configuration_list"),

@@ -14,6 +14,34 @@ from schemes.plan_policies import (
 
 
 class PlanPolicyTests(SimpleTestCase):
+    def test_documented_268_categorical_shapes_exclude_numeric_variants(self):
+        """Enumerate independent choices with canonical numbers, not 268 products."""
+        counts = {"EXACT_METAL": 0, "INR_PURCHASE_CREDIT": 0}
+        for accumulation, amount, obligation, basis, eligibility, missed, benefit, on_miss, after in product(
+            counts, ("PLAN_FIXED", "CUSTOMER_FIXED", "VARIABLE"), ("OPTIONAL", "REQUIRED_MONTHLY"),
+            (None, "CALENDAR_MONTH", "ANNIVERSARY"), ("DURATION", "COUNT", "DURATION_AND_COUNT", "ANYTIME"),
+            ("NONE", "EXTEND_THEN_REVIEW", "LOSE_UNEARNED_BENEFIT"),
+            ("NONE", "INR_PURCHASE_BONUS", "VA_DISCOUNT"),
+            ("NONE", "PRESERVE_ON_COMPLETION", "DISQUALIFY_UNEARNED"), (False, True),
+        ):
+            policy = PlanPolicy(accumulation=accumulation, amount_policy=amount, obligation=obligation,
+                period_basis=basis, payment_limit="ONCE_PER_PERIOD" if basis else "FLEXIBLE",
+                eligibility=eligibility, duration_months=12 if eligibility in {"DURATION", "DURATION_AND_COUNT"} else None,
+                required_count=12 if obligation == "REQUIRED_MONTHLY" else None,
+                missed_outcome=missed, extension_periods=3 if missed == "EXTEND_THEN_REVIEW" else None,
+                benefit_kind=benefit, benefit_percentage=Decimal("5.00") if benefit != "NONE" else None,
+                benefit_cap_inr=Decimal("1000.00") if benefit != "NONE" else None,
+                benefit_qualification=("REQUIRED_SCHEDULE" if obligation == "REQUIRED_MONTHLY" else "NORMAL_ELIGIBILITY") if benefit != "NONE" else "NONE",
+                benefit_on_miss=on_miss, allow_post_eligibility=after,
+                eligible_charge_definition="Eligible invoice VA charges" if benefit == "VA_DISCOUNT" else "")
+            try:
+                validate_plan_policy(policy)
+            except ValidationError:
+                continue
+            counts[accumulation] += 1
+        self.assertEqual(counts, {"EXACT_METAL": 104, "INR_PURCHASE_CREDIT": 164})
+        self.assertEqual(sum(counts.values()), 268)
+
     def optional(self, **changes):
         return PlanPolicy(**{
             "accumulation": "EXACT_METAL", "amount_policy": "VARIABLE",

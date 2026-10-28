@@ -2,6 +2,52 @@
 
 ## Current milestone
 
+**28 October 2026 - owner reviews preparation; manual explains the complete matrix.**
+The owner reviewed configuration and inactive draft-plan creation and requests the
+remaining release sequence. The handbook now includes the five-family eligibility
+table, compatible denomination/amount/schedule/benefit choices, immutable-rule versus
+offer distinction, and the scoped 268 categorical combinations (104 exact-metal,
+164 INR). A reproducible validator enumeration holds numeric values constant and
+does not imply a product-count limit or publication acceptance. All 22 policy/manual
+tests passed; Django checks passed. Publication remains blocked by the disposable
+sandbox, default-off release setting and unreconciled operational/schema guards.
+The publication service's metal-only offering check also needs denomination-aware
+integration. This review does not approve the remaining provider-exception/refund
+operations, final-image recovery or production activation.
+
+**28 October 2026 - catalogue archive/retirement implemented and locally verified.**
+The owner requested production housekeeping and flagged the configured-plan table's
+spanning-row layout. Work is isolated on `agent/plan-archive-retirement`; existing
+integration CI remains on `8f18263`. Migration 0056 adds retained one-way catalogue
+closure evidence with constrained target/action/actor/reason and a downgrade refusal.
+Owner confirmation/reason, fresh usage review and row locks protect archive/retire;
+new drafts/intake/republishing are blocked for closed items. Existing agreements and
+pending requests remain intact. Default lists hide closed items, with explicit history
+filters; each plan now aligns with eight table columns. The illustrated handbook
+documents the workflow. All 84 affected tests passed in 144.706s; Django checks and
+migration drift checks passed. Chrome verified inactive draft creation, archive,
+default-list removal and retained history. At a 390px viewport, all eight cells remain
+inside a horizontally scrollable table without page overflow. The laptop harness now
+allows draft creation and catalogue housekeeping; publication/enrolment remain blocked
+and external calls remain disabled. This supersedes its earlier plan-creation refusal.
+Integration run `40638199541` on `8f18263` is still running its full test suite; its
+container job passed. That run does not cover this later feature. No production
+deployment or activation occurred.
+
+**28 October 2026 - owner confirms test-email delivery and readability.**
+The owner confirms that all four authorized synthetic messages (request acknowledgement,
+agreement approval, eligibility reminder and final settlement) arrived and are readable.
+This closes the pending inbox observation; no further email was sent. It does not
+constitute complete operator/device or activation acceptance. The reported preparation
+POST refusal came from the disposable review harness, whose write allowlist covered
+only login and the two seeded settlements, not an application policy-validation failure.
+The ignored local harness now permits only the additional independent-policy create
+route (preview/save), binds directly to laptop loopback, and uses fresh synthetic data
+from `8f18263`. Its real middleware/view checks passed: preview creates no version,
+save creates one preparation version, plan creation returns 403, and plan/account/
+contribution/allocation/INR receipt counts remain unchanged. External calls remain
+blocked and the three-hour database cleanup lease remains. Production is untouched.
+
 **28 October 2026 - full-CI failure diagnosis and isolated payment fixtures.**
 All six failures from run `40511542243` were reproduced locally in 37.268s
 after removing ambient `RAZORPAY_*` variables. The monthly-eligibility and

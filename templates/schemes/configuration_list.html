@@ -6,9 +6,11 @@
 <p>Create an owner-defined configuration or reuse an existing version in a draft plan. Saving a new version never updates an earlier version or the plans using it.</p>
 <p><a href="{% url 'schemes:plan_manual' %}">Plan reference manual — illustrated creation, enrolment and closure guide</a></p>
 <div class="row g-3">
+  <nav aria-label="Configuration status"><a href="{% url 'schemes:plan_configuration_list' %}" {% if not closed %}aria-current="page"{% endif %}>Available configurations</a> &middot; <a href="?status=closed" {% if closed %}aria-current="page"{% endif %}>Archived configurations</a></nav>
   {% for configuration in page %}
   <div class="col-md-6"><section class="card p-3 h-100">
     <h2 class="h5"><a href="{% url 'schemes:plan_configuration_detail' configuration.pk %}">{{ configuration.name }} · v{{ configuration.version }}</a></h2>
+    {% if configuration.catalogue_closure %}<p><span class="badge text-bg-secondary">Archived</span></p>{% endif %}
     <p>{{ configuration.get_amount_policy_display }}<br>₹{{ configuration.minimum_amount }}{% if configuration.maximum_amount %}–₹{{ configuration.maximum_amount }}{% else %} or more{% endif %}<br>{{ configuration.get_frequency_rule_display }}
     {% if configuration.policy_schema_version == 2 %}<br>Independent policy — preparation only. {{ configuration.get_accumulation_display }}; {{ configuration.get_eligibility_policy_display }}.
     {% else %} · minimum {{ configuration.minimum_months }} months{% endif %}</p>
@@ -16,5 +18,5 @@
   </section></div>
   {% empty %}<p>No configuration versions yet.</p>{% endfor %}
 </div>
-<nav class="mt-3" aria-label="Configuration pages">{% if page.has_previous %}<a href="?page={{ page.previous_page_number }}">Previous</a>{% endif %} <span>Page {{ page.number }} of {{ page.paginator.num_pages }}</span> {% if page.has_next %}<a href="?page={{ page.next_page_number }}">Next</a>{% endif %}</nav>
+<nav class="mt-3" aria-label="Configuration pages">{% if page.has_previous %}<a href="?page={{ page.previous_page_number }}{% if closed %}&amp;status=closed{% endif %}">Previous</a>{% endif %} <span>Page {{ page.number }} of {{ page.paginator.num_pages }}</span> {% if page.has_next %}<a href="?page={{ page.next_page_number }}{% if closed %}&amp;status=closed{% endif %}">Next</a>{% endif %}</nav>
 {% endblock %}

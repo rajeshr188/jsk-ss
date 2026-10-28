@@ -199,6 +199,22 @@ This is the canonical source for stable business rules.
 - **CON-005:** Fixed contributions must exactly equal the snapshotted fixed amount. Variable contributions must remain within snapshotted minimum/maximum boundaries.
 - **CON-006:** Contributions are rejected before the account start date, after redemption, and after eligibility unless the agreement snapshot explicitly permits them.
 
+## Catalogue lifecycle (28 October 2026)
+
+Saved configurations and plan revisions remain retained. Owner-confirmed catalogue
+closure records append the exact target, action, actor, timestamp and reason. Archive
+an unused draft only when it has no active/listed/publication history, applications,
+requests or agreements; otherwise retire the plan. Both actions clear active/listed
+flags, block new intake and hide the item from default catalogue lists. History stays
+available through explicit filters. Existing agreement snapshots, payments, balances,
+benefits and settlement authority do not change. Pending requests remain for a separate
+decision, and cannot convert into a retired plan. No automatic email, refund or
+customer-account closure is implied. Archived configurations cannot supply new draft
+plans or successor versions; any plans still using the version must first be archived
+or retired. No restore or destructive-delete action is offered. Mutation services lock
+the target and recheck usage/stale-review evidence. Migration reversal refuses to drop
+retained catalogue closure records; use compatible forward recovery.
+
 ## Payment and metal rules
 
 - **PAY-001 / FIN-001:** One successful payment benefits a customer at most once; server verification and idempotency are mandatory.

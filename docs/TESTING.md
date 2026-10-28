@@ -1,5 +1,53 @@
 # Testing
 
+## Owner handbook policy matrix - 28 October 2026
+
+The owner confirms reviewing configuration and inactive draft creation. Added the
+five-family settlement table, compatible accumulation/amount/schedule/benefit choices
+and configuration-versus-offer explanation. A no-database enumeration of the current
+typed validator confirms 104 exact-metal and 164 INR categorical shapes: 268 total,
+with numeric values fixed. Numeric variants and grades are excluded; this is neither
+a plan-count limit nor activation evidence. All 22 policy/manual tests passed in
+0.192s, including the enumeration; Django checks passed.
+
+## Catalogue archive/retirement and aligned plan table - 28 October 2026
+
+On `agent/plan-archive-retirement`, **84 tests passed in 144.706s** across catalogue
+lifecycle, independent editor/draft preparation, plan governance/configuration,
+publication and the owner manual. Coverage includes stale confirmation, duplicate
+concurrent submissions, owner authorization/CSRF, audit rollback, database constraints,
+retained history, intake/publication guards and existing agreement preservation.
+Django checks, migration drift and `git diff --check` passed. The disposable test
+database was destroyed. Migration 0056 refuses reversal after catalogue evidence exists.
+
+The separate loopback review harness permits inactive/unlisted draft creation and
+catalogue archive/retirement. Its startup check verified draft creation with no financial
+record changes, while publication remains blocked. Chrome then created and archived a
+synthetic unused draft, verified its disappearance from the current list and its retained
+history row. Each row has eight cells. At 390px viewport width the document measured
+375px and the 351px table region contained 909px of horizontally scrollable content;
+no page-level horizontal overflow. Desktop and mobile layouts were visually inspected,
+and the temporary viewport override was reset. No external email/payment calls or
+production writes occurred. These checks do not replace full CI on the eventual
+integrated feature commit or remaining operator acceptance.
+
+## Inbox acceptance - 28 October 2026
+
+The owner confirms arrival and readability of all four previously authorized
+`[TEST - NO ACTION]` messages: request acknowledgement, agreement approval,
+eligibility reminder and final settlement. The previous SMTP-acceptance-only evidence
+is now supplemented by recipient observation. No new messages were sent; this is not
+blanket operator, physical-device or activation acceptance.
+
+The disposable laptop review harness was restarted from `8f18263` on loopback after
+cleanly removing its previous synthetic database. Added only independent-policy
+preview/save to its existing login/two-settlement POST allowlist. Direct requests
+through the harness and real CSRF middleware passed: preview 200/no saved version,
+save 302/one saved preparation version, configured-plan POST 403, and unchanged
+plan/account/contribution/allocation/INR receipt counts. External provider/mail calls
+remain blocked. Laptop review index and login HTTP checks passed. This helper is an
+ignored local artifact, not a production permission or release-gate change.
+
 ## Six full-CI failures: environment-independent fixtures - 28 October 2026
 
 Reproduced all six failures from run `40511542243` with the six exact test labels

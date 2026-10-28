@@ -40,17 +40,17 @@ from .models import (
 MONEY_QUANTUM = Decimal("0.01")
 
 
-def get_owner_plan_configuration():
-    return SchemePlan.objects.annotate(
+def get_owner_plan_configuration(*, closed=False):
+    return SchemePlan.objects.filter(catalogue_closure__isnull=not closed).annotate(
         agreement_count=Count("scheme_accounts", distinct=True),
         offered_grade_count=Count("metal_offerings", filter=Q(metal_offerings__active=True), distinct=True),
-    ).select_related("configuration").prefetch_related("metal_offerings__metal_grade")
+    ).select_related("configuration", "catalogue_closure").prefetch_related("metal_offerings__metal_grade")
 
 
-def get_plan_configurations():
+def get_plan_configurations(*, closed=False):
     from .models import SchemePlanConfiguration
-    return (SchemePlanConfiguration.objects.annotate(plan_count=Count("plans"))
-            .select_related("created_by").order_by("name", "family_id", "-version", "pk"))
+    return (SchemePlanConfiguration.objects.filter(catalogue_closure__isnull=not closed).annotate(plan_count=Count("plans"))
+            .select_related("created_by", "catalogue_closure").order_by("name", "family_id", "-version", "pk"))
 
 
 def get_plan_edit_impact(plan):
@@ -604,7 +604,7 @@ def get_owner_exception_keys(*, oldest_first=False, category="all"):
 def get_enrollable_scheme_plans():
     """Release switch only affects new offers, never existing agreement rights."""
     from django.conf import settings
-    plans = SchemePlan.objects.filter(active=True)
+    plans = SchemePlan.objects.filter(active=True, catalogue_closure__isnull=True)
     if not settings.CONFIGURED_PLANS_ENABLED:
         return plans.filter(configuration__isnull=True)
     return plans.filter(Q(configuration__isnull=True) | Q(publication_revision__isnull=False))
