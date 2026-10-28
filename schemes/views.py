@@ -1634,7 +1634,8 @@ def pay_contribution(request, scheme_number):
     form = form_class(request.POST if request.method == "POST" else None, scheme_account=account, initial=initial)
     if legacy_identity and request.method == "POST":
         response_status = 400
-    payment_availability = (
+    from .selectors import get_customer_payment_availability
+    payment_availability = get_customer_payment_availability(account) if account.agreement_schema_version == 2 else (
         get_payment_availability(metal_grade=account.metal_grade)
         if account.savings_mode
         in {SchemeAccount.SavingsMode.GOLD, SchemeAccount.SavingsMode.SILVER}
@@ -1652,7 +1653,7 @@ def pay_contribution(request, scheme_number):
             },
             status=503,
         )
-    if current_scheme_rate is None and account.savings_mode != SchemeAccount.SavingsMode.CASH:
+    if current_scheme_rate is None and account.savings_mode in {SchemeAccount.SavingsMode.GOLD, SchemeAccount.SavingsMode.SILVER}:
         return render(
             request,
             "schemes/contribution_form.html",
@@ -1810,7 +1811,8 @@ def razorpay_checkout(request, contribution_id):
             messages.warning(request, "This monthly payment requires showroom reconciliation and cannot be resumed.")
             return redirect("schemes:my_scheme_detail", scheme_number=contribution.scheme_account.scheme_number)
     availability = get_payment_availability(
-        metal_grade=contribution.scheme_account.metal_grade
+        metal_grade=contribution.scheme_account.metal_grade,
+        savings_mode=contribution.scheme_account.savings_mode,
     )
     if not availability.allowed:
         messages.warning(request, availability.message)

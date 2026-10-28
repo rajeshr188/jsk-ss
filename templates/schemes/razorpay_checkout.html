@@ -16,7 +16,7 @@
   </div></div>
   {% if razorpay_mode == 'live' %}
   <div class="alert alert-info" role="alert">
-    Live payment: Razorpay will charge the displayed contribution amount after you approve the payment. Your metal entitlement is recorded only after server verification confirms a captured payment.
+    Live payment: Razorpay will charge the displayed contribution amount after you approve the payment. Your {% if contribution.scheme_account.savings_mode == 'INR_CREDIT' %}INR purchase-credit principal{% else %}metal entitlement{% endif %} is recorded only after server verification confirms a captured payment.
   </div>
   {% else %}
   <div class="alert alert-warning" role="alert">

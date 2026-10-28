@@ -926,6 +926,12 @@ preferences do not become fixed, and no old agreement receives a configuration i
   ONCE_PER_PERIOD records the independent policy ceiling; it is never silently stored
   as FLEXIBLE. Model/service activation guards stay closed until integrated workflows
   exist. Migration does not infer consent or convert pre-existing schema-2 agreements.
+  Independent customer payment presentation reuses its own admission/resumption
+  checks behind operational readiness; INR uses global pause/hours without a metal
+  rate. A read-only eligible status does not persist maturity, authorize settlement
+  or award benefits. A stale creation form cannot create a second order; only a
+  checked, unexpired and reconciled checkout may be continued. The legacy metal/
+  duration preview cannot reinterpret an independent policy.
   Prospective schema-2 required windows use required_count, never duration_months.
   Calendar windows start on enrolment day then month boundaries; anniversary windows
   always clamp from the original start anchor. Ordinary replacement windows apply

@@ -227,6 +227,8 @@ def preview_configuration_agreement(*, configuration, amount, months, metal_grad
     """Read-only selected terms. This is NOT customer consent or an enrolment API."""
     configuration = SchemePlanConfiguration.objects.get(pk=configuration.pk)
     configuration.full_clean()
+    if configuration.policy_schema_version != 1:
+        raise ValidationError("Use the independent-policy preview for this configuration; the legacy preview is metal/duration-only.")
     require_operational_configuration(configuration)
     selected = validate_configuration_amount(configuration, amount)
     if type(months) is not int or not configuration.minimum_months <= months <= 32767:

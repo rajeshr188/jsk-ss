@@ -167,9 +167,9 @@ inside tests. The following are concrete remaining integration checks, not new s
 | Path | Required activation treatment |
 | --- | --- |
 | `plan_policies.require_operational_configuration` and `require_current_payment_workflow` | Reconcile conservative schema/family/INR barriers against accepted end-to-end evidence; preserve typed contract validation and keep new-intake flag separate from existing agreement rights. |
-| `selectors.get_customer_payment_availability` | Replace the unconditional independent-policy refusal with the independent admission/resume rules, including mode, unresolved capture, expiry, closure, operations and denomination checks. Do not expose a payment button by removing only a publication guard. |
-| `SchemeAccount.effective_status` | Route independent agreements through their own eligibility result; it currently reaches the deliberately rejecting legacy monthly property. Review callers and preserve legacy semantics. |
-| `preview_configuration_agreement` | Keep the legacy minimum-duration/metal-only preview explicitly scoped, or provide independent preview routing; opening the shared readiness guard must not expose incompatible legacy assumptions. |
+| `selectors.get_customer_payment_availability` | Implemented locally behind unchanged readiness: reload frozen contract, use independent admission/resume rules, check live mode, uncertain/expired orders, closure, containment and denomination-aware operations. INR entry/checkout no longer requires metal rates. Existing checked checkout links can resume; stale creation forms cannot duplicate orders. Included in the 137-test pass below. |
+| `SchemeAccount.effective_status` | Implemented locally using independent eligibility; remains a read-only projection, never settlement permission or stored status mutation. Legacy eligibility semantics and configured full-only route guards are retained. |
+| `preview_configuration_agreement` | Explicitly rejects schema 2 and directs to the independent-policy preview, preserving legacy metal/minimum-duration assumptions even after future shared readiness changes. |
 | Final integrated candidate | Run normal CI after these changes, rehearse its image/migrations/recovery and complete the outstanding operator/device acceptance before publication activation. |
 
 The owner has accepted configuration and inactive draft preparation and confirmed
@@ -177,6 +177,13 @@ all four test emails are readable. That acceptance does not cover publication or
 the outstanding uncertain/late/duplicate-capture and refund operations. The disposable
 review sandbox continues to prohibit publication/enrolment writes independently of
 the application release controls.
+
+Customer integration follow-up: 137 affected tests passed in 242.760s, including all
+five families/both denominations, INR HTTP checkout, uncertain/expired attempts,
+read-only status and existing Razorpay/eligibility regressions. No migration. These
+specific integration defects are resolved locally; the shared readiness barrier is
+still closed pending the combined release/operational evidence above. It must be
+reviewed coherently, not replaced with a global flag that interrupts existing rights.
 
 ### Historical implementation boundary after contract approval
 

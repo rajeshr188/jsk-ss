@@ -77,11 +77,11 @@ class IndependentAgreementStorageTests(TestCase):
                     with override_settings(CONFIGURED_PLANS_ENABLED=True):
                         for action in (account.full_clean, account.save,
                                        lambda: require_current_payment_workflow(account),
-                                       lambda: get_monthly_eligibility(account),
-                                       lambda: account.effective_status):
+                                       lambda: get_monthly_eligibility(account)):
                             with self.assertRaises(ValidationError):
                                 action()
                         self.assertFalse(get_customer_payment_availability(account).allowed)
+                        self.assertEqual(account.effective_status, "ACTIVE")
                     if account.required_count_snapshot:
                         self.assertGreaterEqual(len(expected_account_windows(account)), account.required_count_snapshot)
                     else:

@@ -1,5 +1,30 @@
 # Testing
 
+## Independent customer entry, checkout and status - 28 October 2026
+
+**137 tests passed in 242.760s** across independent customer workflows, presentation,
+agreement storage, policy fields, legacy/date/monthly eligibility, plan configuration
+and Razorpay. Django checks and migration-drift checks passed; no migration is needed.
+The isolated local PostgreSQL database was destroyed. External payment I/O was
+forbidden in the new tests; only order responses and future operational readiness
+were simulated. Financial services, contract validation and database evidence ran.
+
+New cases cover all five families in both denominations; read-only customer GETs;
+INR HTTP order creation, checked checkout continuation and stale-form duplicate
+refusal; expired/uncertain orders; pauses, hours and INR without a metal rate; missing
+webhook credentials/test mode; contained/closed/stale/damaged accounts; anytime/count
+eligibility without stored status mutation; calendar ceiling/duration boundary;
+and an explicit independent-policy rejection from the legacy preview. Actual runtime
+readiness still rejects entry and POST with either new-intake flag value. The first
+focused run exposed an incorrect test expectation that stale-form resubmission should
+redirect: the existing form deliberately returns the recorded-payment link without
+creating another order. The regression now asserts that behavior and separately
+verifies the authorized checkout link. No creation/form guard was weakened.
+
+These checks are local integration evidence, not full-suite acceptance or production
+activation. Prior-head CI `40648920451` on `321c32e` is still running normal tests;
+its container build/scan passed. Current-head CI and final-image rehearsal remain.
+
 ## Publication denomination and blocker review - 28 October 2026
 
 **46 tests passed in 86.496s** across independent publication, existing publication,

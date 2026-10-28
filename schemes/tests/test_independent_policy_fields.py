@@ -160,10 +160,11 @@ class IndependentPolicyTests(TestCase):
                 for action in (
                     lambda: require_operational_configuration(config),
                     lambda: configuration_plan_values(config),
-                    lambda: preview_configuration_agreement(configuration=config, amount=Decimal("100"), months=12, metal_grade=None),
                 ):
                     with self.assertRaisesMessage(ValidationError, "preparation-only"):
                         action()
+                with self.assertRaisesMessage(ValidationError, "independent-policy preview"):
+                    preview_configuration_agreement(configuration=config, amount=Decimal("100"), months=12, metal_grade=None)
         self.assertEqual(SchemePlan.objects.count(), 0)
 
     def test_owner_read_only_details_do_not_misrepresent_future_terms(self):

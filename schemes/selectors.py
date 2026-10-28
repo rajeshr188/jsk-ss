@@ -758,7 +758,8 @@ def get_customer_payment_availability(scheme_account):
         return PaymentAvailability(False, code, message)
 
     if scheme_account.agreement_schema_version == 2:
-        return blocked("INDEPENDENT_NOT_ACTIVATED", "This agreement's payment workflows are not activated. Contact the showroom.")
+        from .independent_payment_selectors import get_independent_payment_availability
+        return get_independent_payment_availability(scheme_account)
     if scheme_account.status == "CANCELLED":
         return blocked("CANCELLED", "This unused agreement has been cancelled. Your login and other agreements are unchanged.")
     if scheme_account.status == "REDEEMED":
@@ -841,7 +842,7 @@ def get_customer_plan_next_action(scheme_account, availability=None):
     ).first()
     if unresolved is not None:
         from .checkout_selectors import checkout_can_resume
-        if (not scheme_account.configuration_snapshot_id
+        if ((not scheme_account.configuration_snapshot_id or scheme_account.agreement_schema_version == 2)
                 and availability.allowed and checkout_can_resume(unresolved)):
             return dict(stage="Payment checkout ready", message="Continue your existing checkout to complete this contribution.",
                 label="Continue payment", url=reverse("schemes:razorpay_checkout", args=[unresolved.pk]), can_pay=True)

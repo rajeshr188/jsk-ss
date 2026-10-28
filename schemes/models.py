@@ -767,6 +767,9 @@ class SchemeAccount(models.Model):
     def effective_status(self):
         if self.status in (self.Status.REDEEMED, self.Status.CANCELLED, self.Status.CLOSURE_PENDING):
             return self.status
+        if self.agreement_schema_version == 2:
+            return (self.Status.REDEMPTION_ELIGIBLE if self.independent_eligibility.policy_eligible
+                    else self.Status.ACTIVE)
         monthly = self.monthly_eligibility
         if monthly is not None:
             return self.Status.REDEMPTION_ELIGIBLE if monthly.policy_eligible else self.Status.ACTIVE

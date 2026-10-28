@@ -12,6 +12,52 @@ from .instalments import AGREEMENT_TIMEZONE, period_boundary
 from .models import PaymentWebhookEvent, OptionalPaymentOrderRequest, Contribution
 
 
+def get_independent_payment_availability(account):
+    """Read-only customer entry/resume checks; services recheck under their locks.
+
+    Existing agreement rights do not depend on the new-offer publication flag.
+    The operational readiness guard remains authoritative until activation.
+    """
+    from django.conf import settings
+    from .closure_selectors import accepted_closure
+    from .instalments import has_monthly_instalments
+    from .instalment_selectors import resumable_instalment_contribution
+    from .models import SchemeAccount
+    from .operations import PaymentAvailability, get_payment_availability
+    from .payments import payment_gateway_is_configured
+    from .plan_policies import require_current_payment_workflow
+
+    def blocked(code, message):
+        return PaymentAvailability(False, code, message)
+
+    account = SchemeAccount.objects.select_related(
+        "configuration_snapshot", "metal_grade", "customer__user").get(pk=account.pk)
+    try:
+        require_current_payment_workflow(account)
+    except ValidationError:
+        return blocked("INDEPENDENT_NOT_ACTIVATED", "This agreement's payment workflows are not activated. Contact the showroom.")
+    if account.status in ("CANCELLED", "REDEEMED"):
+        return blocked(account.status, "This agreement is closed to further contributions. Its history remains available.")
+    if account.status == "CLOSURE_PENDING" or accepted_closure(account):
+        return blocked("CLOSURE_PENDING", "Closure has been accepted. Reconcile existing payments and complete settlement; do not pay again.")
+    user = account.customer.user
+    if not user.is_active or user.privacy_erased_at is not None:
+        return blocked("CUSTOMER_UNAVAILABLE", "This customer login cannot initiate new contributions.")
+    if not payment_gateway_is_configured():
+        return blocked("UNCONFIGURED", "Online payments are currently unavailable. Contact the showroom.")
+    if settings.PAYMENT_GATEWAY != "razorpay" or settings.RAZORPAY_MODE != "live":
+        return blocked("REAL_PAYMENT_REQUIRED", "This agreement requires live Razorpay payments. Contact the showroom.")
+    try:
+        resume = (resumable_instalment_contribution(account) if has_monthly_instalments(account)
+                  else resumable_optional_contribution(account))
+        if resume and (resume.gateway_mode != "live" or resume.razorpay_checkout_expired):
+            raise ValidationError("This checkout is expired or mode-mismatched; reconcile it before another payment.")
+        validate_independent_payment_window(account, exclude_contribution_id=resume.pk if resume else None)
+    except ValidationError as error:
+        return blocked("INDEPENDENT_PAYMENT_REVIEW", " ".join(error.messages))
+    return get_payment_availability(metal_grade=account.metal_grade, savings_mode=account.savings_mode)
+
+
 def unbound_optional_order_contributions():
     """Durable requests needing identity investigation, even before checkout expiry."""
     return Contribution.objects.filter(optional_order_request__isnull=False,

@@ -2,6 +2,24 @@
 
 ## Current milestone
 
+**28 October 2026 - independent customer payment/status integration verified.**
+On `agent/independent-customer-workflows`, customer availability now uses the existing
+independent admission/resume checks behind the unchanged runtime readiness guard.
+It reloads the agreement and checks closure, customer containment, live gateway,
+uncertain/expired orders, frozen terms, periods and denomination-aware operations.
+INR entry and checkout no longer demand a metal rate; checkout names INR principal
+correctly. Existing checked checkout links can resume; stale creation forms cannot
+create another order. Independent effective status uses its own read-only eligibility
+projection, and the legacy metal/duration preview explicitly rejects schema 2.
+All **137 affected tests passed in 242.760s**; Django and migration-drift checks passed.
+Tests include all five families in both denominations, actual HTTP creation/checkout
+with synthetic provider responses, unchanged stored status and read-only GETs.
+Operational readiness is simulated only in integration tests; real publication and
+payment gates still refuse activation. No new migration or production change.
+Full CI on prior head `321c32e` (run `40648920451`) is still testing; its container
+build/security scan passed. Final integrated CI, remaining operator/device evidence,
+coherent readiness activation and final-image recovery/rollout remain outstanding.
+
 **28 October 2026 - denomination-aware publication integration verified locally.**
 Handbook/catalogue commit `698dff1` is integrated into draft PR #77; its normal CI
 run `40647586082` is in progress, with container build/security scan passed.
