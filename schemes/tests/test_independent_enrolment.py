@@ -1,4 +1,4 @@
-"""Exercise future orchestration, never approve or bypass readiness in runtime code."""
+"""Agreement orchestration with retained isolation fixtures and actual readiness cases."""
 from contextlib import contextmanager
 from datetime import date
 from decimal import Decimal
@@ -21,7 +21,7 @@ from schemes.tests.test_independent_policy_fields import independent_values, req
 def future_readiness_only():
     # Only these two explicit readiness checks are simulated. Keep release flag,
     # publication evidence, consent, model validation, persistence and audits real.
-    # Unpatched tests below prove runtime never reaches the new write path today.
+    # Actual readiness is separately covered by the unpatched cases below.
     with patch("schemes.plan_publication.require_operational_configuration"), \
          patch("schemes.plan_policies.require_operational_configuration"):
         yield
@@ -38,7 +38,7 @@ class IndependentEnrolmentTests(TestCase):
         if grade:
             SchemePlanOffering.objects.create(plan=plan, metal_grade=grade)
         # A synthetic published offer in the disposable DB only. The real
-        # publication service remains fail-closed for schema 2.
+        # publication service is exercised without simulation in its dedicated suite.
         plan.active = True
         revision = ensure_plan_revision(plan=plan, actor=self.owner, reason="Synthetic accepted offer")
         SchemePlan.objects.filter(pk=plan.pk).update(active=True, publication_revision=revision)
@@ -48,15 +48,16 @@ class IndependentEnrolmentTests(TestCase):
             selected_amount_confirmed=True, expected_configuration_id=config.pk,
             expected_plan_digest=plan_edit_digest(plan), performed_by=self.owner)
 
-    def test_actual_gates_reject_even_when_release_enabled(self):
+    def test_actual_enrolment_requires_intake_permission_but_supports_both_denominations(self):
         for accumulation in ("EXACT_METAL", "INR_PURCHASE_CREDIT"):
             offer = self.offer(**required_values(accumulation=accumulation))
-            for enabled in (False, True):
-                with self.settings(CONFIGURED_PLANS_ENABLED=enabled), self.assertRaises(ValidationError):
-                    enroll_customer(**offer)
-        self.assertFalse(SchemeAccount.objects.exists())
-        self.assertFalse(SchemeInstalmentPeriod.objects.exists())
-        self.assertFalse(AuditEvent.objects.filter(action="CUSTOMER_ENROLMENT").exists())
+            with self.settings(CONFIGURED_PLANS_ENABLED=False), self.assertRaises(ValidationError):
+                enroll_customer(**offer)
+            with self.settings(CONFIGURED_PLANS_ENABLED=True):
+                account = enroll_customer(**offer)
+                self.assertEqual(account.agreement_schema_version, 2)
+        self.assertEqual(SchemeAccount.objects.count(), 2)
+        self.assertEqual(AuditEvent.objects.filter(action="CUSTOMER_ENROLMENT").count(), 2)
 
     def test_accepted_matrix_freezes_terms_schedule_and_audit_atomically(self):
         for accumulation in ("EXACT_METAL", "INR_PURCHASE_CREDIT"):

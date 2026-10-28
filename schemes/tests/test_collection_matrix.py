@@ -110,7 +110,7 @@ class CollectionMatrixTests(TestCase):
                     account.refresh_from_db()
                     self.assertEqual((account.eligible_from, account.required_count_snapshot, account.plan_revision.terms), before)
                     self.assertEqual(account.status, "ACTIVE")
-                    with self.assertRaisesMessage(ValidationError, "not activated"):
+                    with self.assertRaisesMessage(ValidationError, "legacy monthly projection"):
                         get_monthly_eligibility(account)
                     cases += 1
         self.assertEqual(cases, 120)
@@ -220,12 +220,14 @@ class CollectionMatrixTests(TestCase):
                         with self.assertRaisesMessage(ValidationError, "reservation or evidence review"):
                             self.cash(account)
 
-    def test_all_families_still_reject_real_entry_with_either_release_flag(self):
+    def test_all_families_reject_unaccepted_term_changes_with_either_intake_flag(self):
         accounts = [self.account(), self.account(eligibility_policy="CALENDAR", duration_months=12),
             self.account(True), self.account(True, eligibility_policy="CALENDAR_AND_COUNT", duration_months=18),
             self.account(True, eligibility_policy="CALENDAR", duration_months=18, max_extension_months=None,
                 missed_payment_policy="LOSE_UNEARNED_BENEFIT", **benefit_terms())]
         self.ready.stop()
+        for account in accounts:
+            type(account).objects.filter(pk=account.pk).update(plan_name_snapshot="Unaccepted changed terms")
         for account, enabled in product(accounts, (False, True)):
             with self.subTest(account=account.pk, enabled=enabled), override_settings(CONFIGURED_PLANS_ENABLED=enabled):
                 with self.assertRaises(ValidationError):

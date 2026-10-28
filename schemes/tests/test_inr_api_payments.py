@@ -206,9 +206,11 @@ class InrApiPaymentsTests(ApiHelpers, TestCase):
             self.confirm(c, gateway)
         self.assertFalse(InrPrincipalReceipt.objects.exists())
 
-    def test_runtime_gate_stays_closed_with_either_flag(self):
+    def test_changed_contract_blocks_callback_and_recovery_with_either_intake_flag(self):
         c, gateway, _, body = self.attempt()
         e = self.event(c, body)
+        type(c.scheme_account).objects.filter(pk=c.scheme_account.pk).update(plan_name_snapshot="Unaccepted changed terms")
+        c.scheme_account.plan_name_snapshot = "Unaccepted changed terms"
         self.ready.stop()
         for flag in (False, True):
             with override_settings(CONFIGURED_PLANS_ENABLED=flag):

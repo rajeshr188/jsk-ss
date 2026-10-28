@@ -16,7 +16,7 @@ def get_independent_payment_availability(account):
     """Read-only customer entry/resume checks; services recheck under their locks.
 
     Existing agreement rights do not depend on the new-offer publication flag.
-    The operational readiness guard remains authoritative until activation.
+    Recorded policy encoding and denomination still require validation.
     """
     from django.conf import settings
     from .closure_selectors import accepted_closure
@@ -35,7 +35,7 @@ def get_independent_payment_availability(account):
     try:
         require_current_payment_workflow(account)
     except ValidationError:
-        return blocked("INDEPENDENT_NOT_ACTIVATED", "This agreement's payment workflows are not activated. Contact the showroom.")
+        return blocked("INDEPENDENT_CONTRACT_REVIEW", "This agreement's recorded terms need showroom review before another contribution.")
     if account.status in ("CANCELLED", "REDEEMED"):
         return blocked(account.status, "This agreement is closed to further contributions. Its history remains available.")
     if account.status == "CLOSURE_PENDING" or accepted_closure(account):

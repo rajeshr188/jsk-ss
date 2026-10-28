@@ -187,10 +187,11 @@ class IndependentInrSettlementTests(InrClosureFixture, TestCase):
                 self.assertEqual(inr_settlement_balance(a).outstanding, 0)
         self.assertFalse(SchemeBenefitAward.objects.exists())
 
-    def test_real_gate_and_new_source_exposure_block_later_mutations(self):
+    def test_new_source_exposure_blocks_later_mutations_with_either_intake_flag(self):
         from schemes.inr_corrections import preview_inr_resolution
         a, r, p = self.prepared_bonus()
         values = self.handover_values(p)
+        source(a)  # New unresolved exposure is a real hold, not an intake switch.
         for enabled in (False, True):
             with override_settings(CONFIGURED_PLANS_ENABLED=enabled):
                 for action in (
@@ -203,7 +204,6 @@ class IndependentInrSettlementTests(InrClosureFixture, TestCase):
                     with self.assertRaises(ValidationError):
                         action()
         retained_award = SchemeBenefitAward.objects.values().get(scheme_account=a)
-        source(a)  # New unresolved provider exposure after the agreed proposal.
         with self.assertRaises(ValidationError):
             self.fulfil(values)
         with self.assertRaises(ValidationError):
@@ -314,7 +314,7 @@ class IndependentInrSettlementTests(InrClosureFixture, TestCase):
         with self.assertRaises(ValidationError):  # Prior authorization cannot be recycled.
             self.propose(self.proposal_values(r, token))
 
-    def test_authority_expiry_stale_sources_and_real_gate_fail_closed(self):
+    def test_authority_expiry_and_stale_sources_fail_closed_regardless_of_intake(self):
         a = self.benefit_account()
         self.cash(a)
         r = self.accepted(a)
@@ -322,7 +322,7 @@ class IndependentInrSettlementTests(InrClosureFixture, TestCase):
         values = self.proposal_values(r, token)
         for enabled in (False, True):
             with override_settings(CONFIGURED_PLANS_ENABLED=enabled), self.assertRaises(ValidationError):
-                propose_inr_settlement(**values)
+                propose_inr_settlement(**(values | {"actor": self.customer.user}))
         for changes in (dict(actor=self.customer.user), dict(preview_token=token + "tampered")):
             with self.assertRaises(ValidationError):
                 self.propose(values | changes)

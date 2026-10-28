@@ -152,17 +152,13 @@ class IndependentPolicyTests(TestCase):
         with self.assertRaises(IntegrityError), transaction.atomic(), connection.cursor() as cursor:
             cursor.execute("UPDATE schemes_schemeplanconfiguration SET benefit_cap_inr = 'NaN'::numeric WHERE id = %s", [config.pk])
 
-    def test_future_schema_cannot_enter_existing_runtime_even_when_release_enabled(self):
-        # Even a schema-2 policy matching an existing family is not runtime-compatible.
+    def test_independent_policy_is_supported_but_legacy_preview_remains_separate(self):
         config = self.create(independent_values(eligibility_policy="CALENDAR", duration_months=12))
         for enabled in (False, True):
             with override_settings(CONFIGURED_PLANS_ENABLED=enabled):
-                for action in (
-                    lambda: require_operational_configuration(config),
-                    lambda: configuration_plan_values(config),
-                ):
-                    with self.assertRaisesMessage(ValidationError, "preparation-only"):
-                        action()
+                require_operational_configuration(config)
+                self.assertEqual(configuration_plan_values(config)["minimum_contribution"], config.minimum_amount)
+                self.assertEqual(configuration_plan_values(config)["minimum_months"], config.duration_months)
                 with self.assertRaisesMessage(ValidationError, "independent-policy preview"):
                     preview_configuration_agreement(configuration=config, amount=Decimal("100"), months=12, metal_grade=None)
         self.assertEqual(SchemePlan.objects.count(), 0)

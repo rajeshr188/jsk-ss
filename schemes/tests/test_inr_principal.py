@@ -266,7 +266,7 @@ class InrPrincipalTests(TestCase):
     def test_read_only_check_detects_errors_without_printing_customer_data(self):
         output = StringIO()
         call_command("check_inr_principal", stdout=output)
-        self.assertIn("workflow=not_activated", output.getvalue())
+        self.assertIn("workflow=validated_existing_agreements", output.getvalue())
         cash_source(self.account, self.owner)
         output = StringIO()
         with self.assertRaises(CommandError):
@@ -275,16 +275,31 @@ class InrPrincipalTests(TestCase):
         self.assertNotIn(self.customer.email, output.getvalue())
         self.assertEqual(InrPrincipalReceipt.objects.count(), 0)
 
-    def test_existing_entrypoints_remain_blocked_even_with_release_flag(self):
+    def test_missing_principal_refuses_cash_correction_without_partial_reversal(self):
+        source, _ = cash_source(self.account, self.owner)
+        with self.assertRaisesMessage(ValidationError, "no recorded INR principal receipt"):
+            reverse_in_store_cash_contribution(contribution=source, processed_by=self.owner,
+                reason_code="WRONG_AMOUNT", reason="Unrecorded source must be reconciled")
+        source.refresh_from_db()
+        self.assertEqual(source.status, "PAID")
+        self.assertFalse(InStoreCashContributionReversal.objects.filter(contribution=source).exists())
+        self.assertFalse(InrPrincipalCorrection.objects.exists())
+
+    def test_changed_contract_blocks_existing_mutations_with_intake_enabled(self):
         source, cash = cash_source(self.account, self.owner)
+        type(self.account).objects.filter(pk=self.account.pk).update(plan_name_snapshot="Unaccepted changed terms")
+        self.account.plan_name_snapshot = "Unaccepted changed terms"
         with override_settings(CONFIGURED_PLANS_ENABLED=True, CASH_SCHEMES_ENABLED=True):
+            # Existing terminal confirmation and the locking account lookup are
+            # not permission to create principal or settle the changed contract.
+            replay = confirm_contribution(contribution_id=source.pk, payment_gateway="in_store_cash",
+                gateway_reference=source.gateway_reference, verified=True)
+            self.assertEqual(replay.pk, source.pk)
+            self.assertEqual(_account(self.account.pk).pk, self.account.pk)
             for operation in (
                 lambda: validate_contribution_allowed(self.account, Decimal("100")),
-                lambda: confirm_contribution(contribution_id=source.pk, payment_gateway="in_store_cash",
-                    gateway_reference=source.gateway_reference, verified=True),
                 lambda: validate_redemption_amount(self.account, Decimal("100")),
                 lambda: get_scheme_statement(self.account),
-                lambda: _account(self.account.pk),
                 lambda: reverse_in_store_cash_contribution(contribution=source, processed_by=self.owner,
                     reason_code="WRONG_AMOUNT", reason="Blocked until integrated"),
                 lambda: Redemption(scheme_account=self.account).clean(),

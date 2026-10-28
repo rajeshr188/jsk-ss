@@ -131,7 +131,10 @@ def record_cash_inr_correction(*, cash_reversal_id, actor):
     from .instalment_payments import reverse_cash_instalment
     reversal = InStoreCashContributionReversal.objects.get(pk=cash_reversal_id)
     account, source, actor = _locked_source(reversal.contribution_id, actor)
-    receipt = InrPrincipalReceipt.objects.get(contribution=source)
+    try:
+        receipt = InrPrincipalReceipt.objects.get(contribution=source)
+    except InrPrincipalReceipt.DoesNotExist:
+        raise ValidationError("This cash source has no recorded INR principal receipt; reconcile it before correction.") from None
     correction = record_inr_cash_correction(receipt_id=receipt.pk, cash_reversal_id=reversal.pk,
         actor=actor, reason=reversal.reason, idempotency_key=_source_key("cash-correction", reversal.pk))
     if has_monthly_instalments(account):

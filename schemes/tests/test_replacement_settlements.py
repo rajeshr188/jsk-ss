@@ -111,7 +111,7 @@ class ReplacementSettlementTests(ReplacementFixture, TestCase):
             self.assertEqual(original, list(a.contributions.values()))
         self.assertFalse(SchemeBenefitAward.objects.exists())
 
-    def test_fresh_authorization_invoice_preview_and_operational_gate_required(self):
+    def test_fresh_authorization_invoice_and_owner_are_required_with_either_intake_flag(self):
         a, r, p = self.no_benefit()
         correction = self.correction(p, kind="VOID")
         _, token = self.prepare(r, "500")
@@ -126,13 +126,13 @@ class ReplacementSettlementTests(ReplacementFixture, TestCase):
                 self.propose(values | changes)
         for enabled in (False, True):
             with override_settings(CONFIGURED_PLANS_ENABLED=enabled), self.assertRaises(ValidationError):
-                propose_inr_settlement(**values)
+                propose_inr_settlement(**(values | {"actor": self.customer.user}))
         with patch("django.core.signing.time.time", return_value=time.time() + 601), self.assertRaises(ValidationError):
-            self.propose(values)
+            propose_inr_settlement(**values)
         with self.assertRaises(ValidationError):
             preview_inr_settlement(request_id=r.pk, actor=self.owner, invoice_payable=Decimal("500"))
         self.assertEqual(a.inr_settlements.count(), 1)
-        self.propose(values)
+        propose_inr_settlement(**values)
 
     def test_later_calendar_date_does_not_reearn_an_unearned_benefit(self):
         a = self.benefit_account(monthly=False, eligibility_policy="CALENDAR", duration_months=1)

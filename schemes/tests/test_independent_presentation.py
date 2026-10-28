@@ -121,14 +121,14 @@ class IndependentPresentationTests(TestCase):
         ready.start()
         self.addCleanup(ready.stop)
 
-    def test_duration_reminder_is_gated_revalidated_and_idempotent(self):
+    def test_duration_reminder_is_current_proof_based_and_independent_of_intake(self):
         account = self.account(eligibility_policy="CALENDAR", duration_months=1)
         self.cash(account)
         day = account.eligible_from - timedelta(days=7)
         with patch("django.utils.timezone.now", return_value=instant(day)):
-            self.assertIsNone(eligibility_reminder_terms(account, as_of=day))
+            self.assertIsNotNone(eligibility_reminder_terms(account, as_of=day))
             with self.settings(CONFIGURED_PLANS_ENABLED=True):
-                self.assertIsNone(eligibility_reminder_terms(account, as_of=day))
+                self.assertIsNotNone(eligibility_reminder_terms(account, as_of=day))
         self.future_reminders()
         candidate = self.candidate_at(account, day)
         before = list(SchemeAccount.objects.values())
@@ -140,7 +140,7 @@ class IndependentPresentationTests(TestCase):
         self.assertIn("no metal rate or grams", mail.outbox[0].body)
         self.assertNotIn("becomes eligible for redemption", mail.outbox[0].body)
         with self.settings(CONFIGURED_PLANS_ENABLED=False):
-            self.assertEqual(deliver_scheme_reminder(candidate).outcome, "SKIPPED")
+            self.assertEqual(deliver_scheme_reminder(candidate).outcome, "ALREADY_SENT")
         SchemeAccount.objects.filter(pk=account.pk).update(status="CLOSURE_PENDING")
         self.assertEqual(deliver_scheme_reminder(candidate).outcome, "SKIPPED")
 

@@ -1,5 +1,4 @@
 """Current, fully evidenced INR completion notices; no financial writes."""
-from django.conf import settings
 from django.core.exceptions import ValidationError
 
 from .models import InrSettlementCompletion
@@ -10,8 +9,6 @@ from .closure_selectors import validate_closure_history
 
 
 def completed_inr_events(*, as_of, account=None, completion_id=None):
-    if not settings.CONFIGURED_PLANS_ENABLED:
-        return
     rows = InrSettlementCompletion.objects.filter(
         event__created_at__date=as_of, proposal__retired=False,
         proposal__resolution__isnull=True, proposal__closure__status="SETTLED",

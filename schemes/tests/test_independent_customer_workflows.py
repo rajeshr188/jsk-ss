@@ -61,15 +61,18 @@ class IndependentCustomerWorkflowTests(TestCase):
                     self.assertNotContains(page, "Current Scheme Rate:")
         self.assertFalse(Contribution.objects.exists())
 
-    def test_actual_readiness_still_blocks_entry_and_post_in_both_flag_states(self):
+    def test_existing_customer_entry_works_with_either_intake_flag_without_readiness_patch(self):
         account = self.account()
         self.ready.stop()
         for flag in (False, True):
             with self.settings(CONFIGURED_PLANS_ENABLED=flag):
-                self.assertEqual(self.available(account).code, "INDEPENDENT_NOT_ACTIVATED")
-                self.assertEqual(self.client.get(self.pay_url(account)).status_code, 503)
-                self.assertEqual(self.client.post(self.pay_url(account), {"amount": "500"}).status_code, 503)
-        self.assertFalse(Contribution.objects.exists())
+                self.assertTrue(self.available(account).allowed)
+                self.assertEqual(self.client.get(self.pay_url(account)).status_code, 200)
+        with self.settings(CONFIGURED_PLANS_ENABLED=False), patch(
+                "schemes.payments.RazorpayPaymentGateway.create_order",
+                side_effect=lambda c: PaymentOrder(f"order_{c.pk}", 50000, "INR")):
+            self.assertEqual(self.client.post(self.pay_url(account), {"amount": "500"}).status_code, 302)
+        self.assertEqual(account.contributions.count(), 1)
 
     def test_http_create_continue_checkout_and_stale_form_cannot_duplicate_inr(self):
         for required in (False, True):

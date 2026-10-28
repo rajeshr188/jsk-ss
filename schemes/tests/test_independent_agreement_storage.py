@@ -75,11 +75,11 @@ class IndependentAgreementStorageTests(TestCase):
                     self.assertEqual(account.required_count_snapshot, values["required_count"])
                     self.assertEqual(account.eligible_from is None, values["duration_months"] is None)
                     with override_settings(CONFIGURED_PLANS_ENABLED=True):
-                        for action in (account.full_clean, account.save,
-                                       lambda: require_current_payment_workflow(account),
-                                       lambda: get_monthly_eligibility(account)):
-                            with self.assertRaises(ValidationError):
-                                action()
+                        account.full_clean()
+                        account.save()
+                        require_current_payment_workflow(account)
+                        with self.assertRaisesMessage(ValidationError, "legacy monthly projection"):
+                            get_monthly_eligibility(account)
                         self.assertFalse(get_customer_payment_availability(account).allowed)
                         self.assertEqual(account.effective_status, "ACTIVE")
                     if account.required_count_snapshot:

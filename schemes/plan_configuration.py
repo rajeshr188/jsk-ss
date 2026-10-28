@@ -60,6 +60,8 @@ def configuration_evidence(configuration):
 def configuration_plan_values(configuration):
     """Compatibility columns; the immutable configuration remains authoritative."""
     require_operational_configuration(configuration)
+    if configuration.policy_schema_version == 2:
+        return configuration_draft_values(configuration)
     return {
         "amount_rule": "FIXED" if configuration.amount_policy == "PLAN_FIXED" else "VARIABLE",
         "fixed_contribution_amount": configuration.fixed_amount,

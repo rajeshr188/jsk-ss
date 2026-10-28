@@ -151,16 +151,16 @@ class OwnerInrSettlementWorkspaceTests(InrClosureFixture, TestCase):
                     account.refresh_from_db()
                     self.assertEqual(account.status, "CLOSURE_PENDING")
 
-    def test_invalid_preview_signature_expiry_confirmation_and_real_gate(self):
+    def test_real_preview_supports_existing_rights_and_refuses_invalid_signature_or_confirmation(self):
         a = self.benefit_account(); self.cash(a); closure = self.accepted(a)
         with future_award_readiness():
             gated_token_response = self.preview_http(closure)
         for enabled in (False, True):
             with override_settings(CONFIGURED_PLANS_ENABLED=enabled):
                 response = self.preview_http(closure)
-                self.assertTrue(response.context["preview_form"].errors)
-                self.assertNotIn("split", response.context)
-                self.assertEqual(self.propose_http(closure, gated_token_response).status_code, 200)
+                self.assertFalse(response.context["preview_form"].errors)
+                self.assertIn("split", response.context)
+                self.assertEqual(self.propose_http(closure, gated_token_response, preview_token="forged").status_code, 200)
         with future_award_readiness():
             for changes in ({"invoice_payable": "NaN"}, {"invoice_payable": "360.001"},
                     {"eligible_charges": "200"}, {"invoice_evidence_reference": ""}, {"include_benefit": ""}):

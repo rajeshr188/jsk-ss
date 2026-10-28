@@ -141,31 +141,28 @@ def validate_plan_policy(policy):
 
 
 def operational_policy_blockers(policy):
-    """Fail closed even for a design-valid policy. Release flags cannot clear these.
+    """The approved builder-v1 matrix has implemented workflows.
 
-    These are implementation blockers, not evidence of business/regulatory approval.
-    Do not remove a blocker until its complete workflow and tests are available.
+    Validate every call: publication permission, immutable agreement validation and
+    financial source/fulfilment authority remain separate checks. This is not a
+    switch that can disable existing agreement rights when intake is paused.
     """
     validate_plan_policy(policy)
-    blockers = []
-    if policy.accumulation == "INR_PURCHASE_CREDIT":
-        blockers.extend(("INR_LEDGER_AND_SETTLEMENT_NOT_IMPLEMENTED",
-                         "MANUAL_REFUND_FULFILMENT_NOT_IMPLEMENTED",
-                         "INR_PUBLICATION_APPROVAL_REQUIRED"))
-    if policy.benefit_kind != "NONE":
-        blockers.append("BENEFIT_LIFECYCLE_NOT_IMPLEMENTED")
-    if policy.eligibility in {"COUNT", "ANYTIME"}:
-        blockers.append("ELIGIBILITY_WORKFLOW_NOT_IMPLEMENTED")
-    if policy.duration_months is not None and policy.duration_months < 12:
-        blockers.append("SHORT_DURATION_NOT_SUPPORTED")
+    return ()
+
+
+def _legacy_policy_blockers(policy):
+    """Keep schema-1 interpretations unchanged; new dimensions require schema 2."""
+    supported = (policy.accumulation == "EXACT_METAL" and policy.benefit_kind == "NONE"
+        and policy.eligibility in {"DURATION", "DURATION_AND_COUNT"}
+        and policy.duration_months is not None and policy.duration_months >= 12)
     if policy.obligation == "REQUIRED_MONTHLY":
-        if (policy.amount_policy != "CUSTOMER_FIXED"
-                or policy.eligibility != "DURATION_AND_COUNT"
-                or policy.required_count != policy.duration_months):
-            blockers.append("EXTENDED_SCHEDULE_WORKFLOW_NOT_IMPLEMENTED")
-    elif policy.period_basis == "ANNIVERSARY":
-        blockers.append("OPTIONAL_ANNIVERSARY_LIMIT_NOT_IMPLEMENTED")
-    return tuple(blockers)
+        supported = supported and (policy.amount_policy == "CUSTOMER_FIXED"
+            and policy.eligibility == "DURATION_AND_COUNT"
+            and policy.required_count == policy.duration_months)
+    else:
+        supported = supported and policy.period_basis != "ANNIVERSARY"
+    return () if supported else ("Use an independent configuration for these policy dimensions.",)
 
 
 def require_operational_policy(policy):
@@ -179,7 +176,7 @@ def policy_from_configuration(configuration):
 
     The old format derives count from chosen duration. Its template projection uses
     default duration only; runtime agreement dates/counts still use frozen terms.
-    Schema 2 stores independent dimensions, but is not yet a runtime contract.
+    Schema 2 stores the approved independent dimensions without deriving count from duration.
     """
     schema = configuration.policy_schema_version
     if type(schema) is not int or schema not in (1, 2):
@@ -228,17 +225,26 @@ def policy_from_configuration(configuration):
 
 
 def require_operational_configuration(configuration):
-    """Schema-v2 persistence does not imply runtime agreement/ledger support."""
+    """Require an implemented encoding and validated compatible financial policy."""
     policy = policy_from_configuration(configuration)
-    validate_plan_policy(policy)
-    if configuration.policy_schema_version != 1:
-        raise ValidationError("Schema-v2 configurations are preparation-only until their financial workflows are complete.")
     require_operational_policy(policy)
+    if configuration.policy_schema_version == 1:
+        blockers = _legacy_policy_blockers(policy)
+        if blockers:
+            raise ValidationError({"policy": list(blockers)})
 
 
 def require_current_payment_workflow(account):
-    """Fail closed while the INR source ledger is not integrated with payments."""
-    if account.savings_mode == "INR_CREDIT":
-        raise ValidationError("INR purchase-credit payment workflows are not activated.")
-    if account.configuration_snapshot_id:
-        require_operational_configuration(account.configuration_snapshot)
+    """Validate denomination/encoding without tying existing rights to intake."""
+    configuration = account.configuration_snapshot if account.configuration_snapshot_id else None
+    if configuration:
+        if account.agreement_schema_version != configuration.policy_schema_version:
+            raise ValidationError("The agreement encoding must match its recorded configuration.")
+        require_operational_configuration(configuration)
+        expected_inr = configuration.accumulation == "INR_PURCHASE_CREDIT"
+        if expected_inr != (account.savings_mode == "INR_CREDIT"):
+            raise ValidationError("The agreement denomination must match its recorded configuration.")
+        if not expected_inr and account.savings_mode not in {"GOLD", "SILVER"}:
+            raise ValidationError("An exact-metal configuration requires a metal agreement.")
+    elif account.agreement_schema_version == 2 or account.savings_mode == "INR_CREDIT":
+        raise ValidationError("Independent and INR agreements require their recorded configuration.")

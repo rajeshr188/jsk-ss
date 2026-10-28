@@ -268,15 +268,14 @@ class IndependentEligibilityTests(IndependentReviewFixture, TestCase):
         self.assertFalse(any(q["sql"].lstrip().upper().startswith(("INSERT", "UPDATE", "DELETE")) for q in queries))
         self.assertEqual(SchemeAccount.objects.values().get(pk=account.pk), original)
 
-    def test_readable_progress_does_not_enable_payments_settlement_or_legacy_reminders(self):
+    def test_valid_count_completion_remains_read_only_and_does_not_enable_legacy_reminders(self):
         account = self.account(True, required_count=1)
         self.cash(account)
         for enabled in (False, True):
             with override_settings(CONFIGURED_PLANS_ENABLED=enabled):
                 self.assertTrue(get_independent_eligibility(account).policy_eligible)
                 self.assertFalse(get_customer_payment_availability(account).allowed)
-                with self.assertRaises(ValidationError):
-                    account.full_clean()
+                account.full_clean()
                 self.assertIsNone(eligibility_reminder_terms(account, as_of=account.start_date))
         end = account.instalment_periods.get(number=1).ends_before
         self.assertNotIn(account, get_upcoming_monthly_completion_accounts(as_of=end-timedelta(days=1), lead_days=(1,)))

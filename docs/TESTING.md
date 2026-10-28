@@ -1,5 +1,58 @@
 # Testing
 
+## Bounded readiness activation regression - 29 October 2026
+
+The approved compatible schema-2 matrix now passes actual runtime readiness.
+Schema-1 projections remain unchanged/restricted, and payment permission checks
+configuration encoding and denomination. New publication/enrolment stays default
+off. Existing collection, full settlement and evidence-based notices are independent
+of that intake flag; no financial authority comes from a diagnostic status or GET.
+Migration 0057 changes the INR display label only. An absent principal receipt in a
+cash correction is now a validation failure with outer transaction rollback.
+
+Local validation uses ignored `run_builder_activation_tests.py`, which asserts a
+loopback database host, strips ambient provider/storage/SMTP secrets, uses synthetic
+keys and locmem email, and assigns a unique disposable database to each run. It
+runs application checks and migration-drift checks first. Runtime is local Python
+3.13 / Django 6.0.4; normal CI and production images use the pinned project workflow.
+No live API, real message, production database or host build is used.
+
+- Main affected batch: **156 tests in 899.413s, OK**. Includes typed enumeration of
+  all 268 categorical shapes, legacy evidence/projection preservation, actual
+  publication/consent/role/intake controls, independent schedule/review paths,
+  customer entry, collection matrix, acquisition metric and manual access.
+- Unmocked integration within that batch: **20 complete journeys**, five families
+  x INR/exact-metal x cash/online. Only clock and external order creation are
+  simulated. Actual publication/enrolment and locked source/capture/eligibility
+  checks run; captured webhook replay is idempotent. Intake is then paused while
+  existing rights continue. Full INR disposition refuses premature completion,
+  requires each jewellery/original-source refund portion, and completes idempotently;
+  metal settles the full exact quantity. Final entitlement is zero.
+- Final proof batch: **47 tests in 315.044s, OK**. Rechecks independent eligibility,
+  malformed encoding/denomination, current event revalidation, exact-grade historical
+  acquisition cost, independent policy projection and principal diagnostics.
+- Updated handbook: **10 checks in 0.188s, OK**, no database access.
+- Final boundary/reminder regression: **64 tests in 679.930s, OK**, including
+migration round trips, retained-notification guards and concurrent dispatch checks.
+Django system checks, migration drift and syntax/diff checks passed; each disposable
+test database was destroyed.
+
+The initial 139-case activation run found 14 failures/one error: tests still expected
+foundation-only readiness refusals, and an outage fixture supplied acknowledgement
+later than the frozen clock. The first 13-case boundary audit exposed the same old
+assumptions (15 subtest failures/one legacy-schedule error). The subsequent 15-case
+audit had two remaining expectations that a terminal confirmation replay and locking
+account lookup must refuse; neither creates new principal or settles anything.
+Those assertions now verify idempotent/non-financial behaviour, while changed frozen
+terms still refuse actual writes. Boundary cases use real invalid terms, source
+exposure, wrong actors, missing principal/fulfilment, stale signatures and premature
+closure instead of treating an enabled intake switch as financial permission.
+
+No late/duplicate capture, original-method refund, mandatory period, full-only
+settlement, retained-history or concurrency guard was removed. Base-candidate full
+CI 40670193738 and its image rehearsal do not attest to this later change. Require
+current-head normal CI and final image/recovery approval before production activation.
+
 ## Historical metal acquisition cost - 29 October 2026
 
 The new selector uses one aggregate query for a single agreement/exact grade and

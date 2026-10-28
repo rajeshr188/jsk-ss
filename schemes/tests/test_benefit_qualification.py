@@ -201,12 +201,11 @@ class BenefitQualificationTests(IndependentReviewFixture, TestCase):
         SchemeAccount.objects.filter(pk=account.pk).update(status="REDEEMED")
         self.assertEqual(self.evaluate(account).state, "HISTORY_REVIEW")
 
-    def test_none_and_operational_gates_are_not_bypassed(self):
+    def test_none_and_independent_qualification_are_distinct_from_fulfilment(self):
         self.assertEqual(self.evaluate(self.account()).state, "NONE")
         account = self.benefit_account()
         self.cash(account)
         for flag in (False, True):
             with override_settings(CONFIGURED_PLANS_ENABLED=flag):
                 self.assertTrue(self.evaluate(account).qualification_met)
-                with self.assertRaises(ValidationError):
-                    require_operational_configuration(account.configuration_snapshot)
+                require_operational_configuration(account.configuration_snapshot)

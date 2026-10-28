@@ -255,10 +255,12 @@ class BenefitInvoiceTests(InvoiceFixture, TestCase):
             with self.assertRaises(IntegrityError), transaction.atomic():
                 BenefitInvoiceReversal.objects.filter(pk=r.pk).update(**changes)
 
-    def test_real_operational_gate_and_settlement_family_gate_remain_closed(self):
+    def test_changed_frozen_terms_and_missing_settlement_evidence_refuse_standalone_fulfilment(self):
         from schemes.inr_settlement_selectors import inr_source_evidence
         a, award, source = self.disposition()
         token = self.invoice(a, award, source)
+        type(a).objects.filter(pk=a.pk).update(plan_name_snapshot="Unaccepted changed terms")
+        a.plan_name_snapshot = "Unaccepted changed terms"
         with self.assertRaises(ValidationError):
             inr_source_evidence(a)
         for flag in (False, True):

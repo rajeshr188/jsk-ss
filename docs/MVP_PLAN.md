@@ -2,6 +2,18 @@
 
 ## Owner builder v1 release contract (approved 24 October 2026)
 
+**29 October follow-up:** the owner confirmed the representative physical Android
+customer check as "All checked and usable". The temporary review's retained-history
+assertion and cleanup passed. A subsequently reported translucent light dropdown
+was corrected and visually verified at mobile/desktop widths. The bounded readiness
+implementation is now under regression: accept validated schema-2 policies, preserve
+schema-1 interpretation and distinguish existing rights from the default-off intake
+switch. The owner also requested a read-only historical average acquisition cost
+on metal agreement pages. Its exact-grade, allocation-weighted definition is in
+DOMAIN_RULES.md; it changes no balance, rate or settlement formula. New application
+changes require their own tests/CI and final-image evidence before release. The prior
+`6c5034b` pass and Android acceptance are not a production activation instruction.
+
 **28 October scope addition:** the owner requested production catalogue housekeeping:
 archive unused drafts/configurations and retire plans with offer/customer history,
 without deleting retained terms or changing agreements. This is tracked on
@@ -97,7 +109,7 @@ historical meaning and are not fresh instructions to reimplement completed work.
   - Still required: complete owner operational-screen acceptance, consolidated lifecycle/provider-exception and notification acceptance, remaining query/latency and device acceptance, normal CI and coherent release rehearsal. No public INR offer is enabled by these foundations.
 - [x] Implement count-only and anytime eligibility and the agreed additional amount/schedule combinations, including consistent UI, reminders and full closure. Local gated paths and family tests exist; no automatic maturity forecast for count-only/anytime.
 - [x] Implement only defined benefit policies, including qualification, actual fulfilment and append-only corrections/reversal. Local retained awards, actual invoice application, full returns and customer-authorized replacement review are present; no benefit cashout or partial redemption.
-- [ ] Complete verified provider-history disposition needed for closure; ambiguous payments must not be cleared by an owner checkbox.
+- [x] Implement verified provider-history disposition needed for closure: read-only observations, fresh owner-bound payment resolution and separate all-attempt order retirement. Ambiguity remains a hold; no owner checkbox substitutes for provider evidence. Operator containment/escalation acceptance passed on 28 October; current-head CI still applies before release.
 - [ ] Verify every approved matrix row through enrolment, online/cash payment, missed/late/duplicate payment, correction, normal/early full settlement, unused cancellation and reversal. Test concurrent/idempotent paths and preserved legacy history.
 - [ ] Update generated agreements, public disclosures and owner manual; complete owner/mobile/keyboard acceptance and clean normal CI.
 - [ ] Rehearse exact-image migrations, rollback/forward-recovery and financial invariants; obtain explicit approval for the single production activation.
@@ -108,17 +120,17 @@ Arbitrary grace/catch-up choices are not automatically included; enumerate any r
 variants in the accepted matrix first. No production date is promised before that scope
 and its dependencies are resolved.
 
-### Remaining release evidence — reconciled 28 October 2026
+### Remaining release evidence — reconciled 29 October 2026
 
 | Area | Evidence already present | Required next evidence / owner |
 | --- | --- | --- |
 | Family lifecycle and legacy safety | Collection matrix; independent eligibility, INR/metal settlement, corrections, replacement and concurrency suites. Normal combined CI `40670193738` passed on `6c5034b`: 1,473 tests in 14,359.871s; migrations, drift, deployment checks, static collection and container build/scan passed | Full-CI blocker cleared for this application source. Later runtime activation changes still need their own affected checks and normal CI; preserve each family's journey mapping. This does not activate publication. |
 | Owner operations and provider exceptions | 28 October: 24 focused checks passed on `b2a9d62`; actual synthetic queue/cash/online forms reviewed. After guided explanation, owner confirmed the operator can follow hold/escalation, refund, evidence and final-closure decisions | Agreed four-case laptop acceptance complete. Initial operation uses recognition/containment and technical/provider escalation; independent owner mastery of every recovery screen is deferred. Full INR settlement fulfilment cannot clear a separate exception; real cases still require their actual evidence. Revisit if the material workflow changes. |
 | Performance | 31 focused tests passed; four-return reads use 1,101 INR / 713 metal queries. Current `6c5034b` local image on PostgreSQL 18.6 at one CPU/768 MB: two-return medians 1.742s INR / 0.860s metal with 1.5 ms added per query; 5.854s / 3.168s at 10 ms. Complete hashes and read-only assertions passed; TESTING.md records samples and limits | Engineering + owner: accept actual device/workflow latency on the final activation candidate. This is bounded synthetic sensitivity evidence, not a load test or SLA. Keep full history and fresh mutation authority; higher latency remains a limitation. |
-| Device, accessibility and messages | Current-candidate synthetic export: 16 real owner/customer screens and two captured completion emails; Chrome widths 320/390/1280, labels/error associations and light/dark text sampling. Keyboard-outline/theme-contrast corrected; laptop forms/keyboard reach checked. Owner confirmed all four test emails received/readable and premature completion refused on Android | Physical Android/TWA customer smoke test explicitly deferred by the owner until later, before activation; not yet passed. Record candidate/reviewer/result. Full device matrix and comprehensive specialist audit are deferred; critical defects still block. Do not repeat unchanged inbox/premature-closure checks solely for ceremony. |
-| INR publication and fulfilment | Owner confirmed business/accounting/provider suitability and approved original-source routes on 27 October. On 28 October, source-linked simulated fulfilment, pending refund containment and zero-outstanding closure were demonstrated; owner accepted the operator procedure | Laptop operational portion complete for `b2a9d62`. Real settlements still require actual fulfilment and customer receipt evidence; pending refunds or unsupported cash fallback cannot discharge liability. No automated refund API required. Base-candidate combined CI passed; publication still awaits the Android check, coherent readiness activation with its own checks and release approval. |
+| Device, accessibility and messages | Current-candidate synthetic export: 16 real owner/customer screens and two captured completion emails; Chrome widths 320/390/1280, labels/error associations and light/dark text sampling. Keyboard-outline/theme-contrast corrected; laptop forms/keyboard reach checked. Owner confirmed all four test emails received/readable and premature completion refused on Android | 29 October: owner confirmed the physical Android browser check as All checked and usable on the 6c5034b runtime; final history/cleanup passed. The subsequent light dropdown fix was locally verified at mobile/desktop widths. Later material UI changes need their own appropriate checks. Full device matrix and comprehensive specialist audit are deferred; critical defects still block. Do not repeat unchanged inbox/premature-closure checks solely for ceremony. |
+| INR publication and fulfilment | Owner confirmed business/accounting/provider suitability and approved original-source routes on 27 October. On 28 October, source-linked simulated fulfilment, pending refund containment and zero-outstanding closure were demonstrated; owner accepted the operator procedure | Laptop operational portion complete for `b2a9d62`. Real settlements still require actual fulfilment and customer receipt evidence; pending refunds or unsupported cash fallback cannot discharge liability. No automated refund API required. Base-candidate CI and the agreed Android check passed. Publication still awaits the readiness change checks/CI, final image evidence and release approval. |
 | Migration and recovery | Current `6c5034b` local image passed PostgreSQL 18.6 deployed-checkout upgrade (1 test, 67.801s), configured INR/metal dump/restore, complete row/liability comparison, whole-graph 0056 refusal and eight retained-history guards with forward recovery. The fixture includes archived draft/configuration and retired-plan evidence. Exact image identity and cleanup are recorded in TESTING.md | Engineering: base-candidate normal CI passed; approve a published compatible recovery digest and reconcile final activation-image evidence before deployment. Local image compatibility is not a production rollback approval. Never delete retained evidence to force a downgrade. |
-| Activation implementation | Global default-off flag, schema/family checks and model/service publication barriers remain closed | Engineering: review a coherent activation change only after the preceding evidence; update readiness descriptions/tests without bypassing contract validation. Merely setting CONFIGURED_PLANS_ENABLED=True is insufficient. |
+| Activation implementation | Local code now supports validated schema 2, preserves schema-1 restrictions and verifies account encoding/denomination. Publication/new intake stays default off; existing rights and reminders are independent of that switch. Unmocked 20-case family/denomination/channel journeys and the 156/64/47-case affected batches passed; 10 handbook checks passed | Former gate-only tests now exercise actual contract/source/role/fulfilment boundaries. Require current-head CI and final image/recovery review. No production flag change or rollout approval is implied. |
 | Production rollout | Existing digest-pinned GHCR deployment procedure | Owner + engineering: approve exact digest, current recovery point, compatible recovery image and one coherent activation. No build on the serving host. |
 
 The first refund-resolution prerequisite is local (0052): strict read-only Live
@@ -143,43 +155,50 @@ separate all-attempt order comparison/retirement and persistent review history. 
 performs no provider I/O or writes. Explicit confirmed POST binds the owner, route and
 fresh evidence; Apply rechecks independently. Credited principal has no clearance path.
 The guided laptop operator acceptance is complete as recorded below. The physical
-Android customer check and production approval remain pending; independent advanced
-recovery training is deferred under the agreed recognition/escalation procedure.
+Android customer check passed on 29 October; final candidate CI/image evidence and
+production approval remain pending. Independent advanced recovery training is deferred
+under the agreed recognition/escalation procedure.
 
-Current base-candidate CI and local image/recovery/latency checks passed. Next: complete
-the deferred Android customer smoke test, review coherent readiness activation and
-validate that change, then approve final published release/recovery images.
+Current base-candidate CI, local image/recovery/latency checks and the agreed Android
+customer smoke test passed. Next: finish readiness activation regression and current-head
+CI, then approve final published release/recovery images.
 Local synthetic browser review and the owner's
 acceptance of the guided containment/refund/closure procedure are recorded in TESTING.md.
 Technical tests still cover the separate payment-resolution and order-retirement
 confirmations. Revisit read amplification if final measurements are unacceptable.
 Inbox readability and the owner's business/provider confirmation are recorded;
-the physical Android check remains deferred until before activation. Use this table and
+the physical Android check passed on 29 October. Use this table and
 TESTING.md rather than adding more numbered milestones.
 
-Some retained readiness identifiers in `plan_policies.py` still end in
-`NOT_IMPLEMENTED`. They are conservative activation barriers from the foundation
-phase, not an up-to-date inventory of missing code. Do not remove them merely
-because a local service test passes; the activation review must reconcile every
-barrier with the complete accepted workflow.
+The foundation?s `NOT_IMPLEMENTED` family barriers are reconciled in the current
+local activation change against the accepted workflow matrix. Typed compatibility,
+contract validation, source evidence and actual fulfilment checks remain mandatory.
+The default-off configured intake flag still blocks new publication/enrolment; it
+does not suspend rights or notices for existing accepted agreements.
 
-**29 October readiness review (implementation not yet activated):** current code
-inspection identifies the central policy-family blockers, the schema-2 rejection in
-`require_operational_configuration`, and the unconditional INR rejection in
-`require_current_payment_workflow`. Reconcile these against the approved matrix and
-accepted engineering/operational evidence after the physical customer check. Add
-unmocked integration coverage for actual publication/enrolment, source-verified
-online/cash collection, eligibility and full closure in both denominations. Existing
-tests that simulate readiness do not by themselves establish activation readiness.
-Keep typed compatibility, immutable contracts, source/timing/duplicate checks and
-all financial locks/invariants. Keep the publication/new-enrolment switch default off
-and independent of existing agreements' payment/settlement rights. Legacy monthly
-eligibility and metal/duration-only preview boundaries must remain explicit rather
-than being removed with obsolete activation wording. Reconcile owner/customer/manual
-copy, including the INR "not activated" label, with the final implementation. Run
-affected regression and normal CI on that application change before release; today's
-base-candidate pass does not cover it. This is a bounded activation review, not a
-new feature matrix or production approval.
+**29 October readiness review (local implementation; not production activation):**
+Validated schema-2 configurations now pass actual runtime readiness. Schema-1
+interpretation remains restricted to its existing families, and payment entry verifies
+agreement/configuration encoding and denomination. No partial-redemption or custom
+rules-engine path is introduced. The independent duration/count projection stays
+separate from the legacy monthly projection; callers of the wrong schedule/eligibility
+helper receive an explicit validation error.
+
+The initial unmocked 20-case integration journey passed: five accepted policy families
+x INR/exact-metal x cash/verified online capture, through publication, enrolment,
+eligibility and actual full settlement. The online path replays captured evidence;
+INR closure refuses until jewellery and each original-source refund are evidenced.
+Pausing intake does not disable existing collection, settlement or notices. The
+156-case affected batch passed; the further 64-case boundary/reminder and 47-case
+proof batches passed, as did all 10 updated handbook checks. Current-head normal CI
+remains required. An INR cash source without a recorded principal receipt
+now refuses correction with a validation error and transaction rollback rather than
+an uncaught lookup error. No financial constraint or source requirement was relaxed.
+
+Publication roles, frozen revisions/consent, source/timing/duplicate holds, full-only
+settlement and actual fulfilment remain enforced. Keep configured intake default off
+through candidate CI and final published-image/recovery review. This bounded change
+and the acquisition-cost display do not authorize a production rollout.
 
 Publication integration audit, 28 October (local, not activation): the offer service
 now distinguishes exact-metal grades from grade-free INR purchase credit, and the

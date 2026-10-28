@@ -114,7 +114,7 @@ class IndependentAgreementTermsTests(TestCase):
         with self.assertRaises(ValidationError):
             self.resolve(legacy)
 
-    def test_resolved_terms_are_immutable_and_do_not_unlock_runtime(self):
+    def test_resolved_terms_are_immutable_and_runtime_support_does_not_create_accounts(self):
         config = self.configuration(eligibility_policy="CALENDAR", duration_months=12)
         before = SchemePlanConfiguration.objects.values().get(pk=config.pk)
         for enabled in (False, True):
@@ -124,8 +124,7 @@ class IndependentAgreementTermsTests(TestCase):
                     terms.fixed_amount = Decimal("5")
                 with self.assertRaises(FrozenInstanceError):
                     terms.policy.duration_months = 1
-                with self.assertRaisesMessage(ValidationError, "preparation-only"):
-                    require_operational_configuration(config)
+                require_operational_configuration(config)
         self.assertEqual(SchemePlanConfiguration.objects.values().get(pk=config.pk), before)
         self.assertEqual(SchemeAccount.objects.count(), 0)
 
@@ -137,18 +136,19 @@ class IndependentAccountIntegrityTests(TestCase):
         cls.customer = make_customer()
         cls.account = future_contract(cls.owner, cls.customer)
 
-    def test_frozen_terms_are_readable_but_not_enrolment_or_payment_permission(self):
+    def test_valid_frozen_terms_support_existing_rights_without_creating_financial_records(self):
         validate_inr_contract(self.account)
         validate_agreement_configuration(self.account)
         output = StringIO()
         call_command("check_plan_agreements", stdout=output)
         self.assertIn("revision_term_mismatches=0", output.getvalue())
+        before = [m.objects.count() for m in (Contribution, MetalAllocation)]
         for enabled in (False, True):
             with override_settings(CONFIGURED_PLANS_ENABLED=enabled):
-                for action in (self.account.full_clean, self.account.save,
-                               lambda: require_current_payment_workflow(self.account)):
-                    with self.assertRaises(ValidationError):
-                        action()
+                self.account.full_clean()
+                self.account.save()
+                require_current_payment_workflow(self.account)
+        self.assertEqual(before, [m.objects.count() for m in (Contribution, MetalAllocation)])
 
     def test_changed_current_plan_and_cached_policy_cannot_rewrite_contract(self):
         successor = create_configuration_version(values=independent_values(accumulation="INR_PURCHASE_CREDIT",

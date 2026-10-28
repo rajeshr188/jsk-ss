@@ -40,7 +40,7 @@ def get_monthly_eligibility(account, *, as_of=None):
     from .instalments import has_monthly_instalments
 
     if account.agreement_schema_version == 2:
-        raise ValidationError("Independent agreement eligibility workflows are not activated.")
+        raise ValidationError("Use independent eligibility for this agreement; the legacy monthly projection does not apply.")
     if not has_monthly_instalments(account):
         raise ValidationError("This agreement has no monthly-completion policy.")
     today = as_of or timezone.localdate(timezone=AGREEMENT_TIMEZONE)

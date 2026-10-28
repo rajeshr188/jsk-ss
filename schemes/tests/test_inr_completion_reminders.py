@@ -51,20 +51,21 @@ class InrCompletionReminderTests(InrReminderFixture, TestCase):
         self.refunds(proposal)
         self.assertEqual(self.candidates(), [])
         completion = self.finish(proposal)
-        # Neither the global flag nor a completed source bypasses real family readiness.
-        self.assertFalse(any(c.inr_completion for c in build_scheme_reminder_plan(as_of=timezone.localdate()).candidates))
+        # Real readiness is active; the completed proof, not intake, creates notices.
+        self.assertTrue(any(c.inr_completion for c in build_scheme_reminder_plan(as_of=timezone.localdate()).candidates))
         candidates = self.candidates()
         self.assertEqual(len(candidates), 2)
         self.assertEqual({c.inr_completion.pk for c in candidates}, {completion.pk})
         with self.settings(CONFIGURED_PLANS_ENABLED=False):
-            self.assertEqual(self.candidates(), [])
-            self.assertEqual(self.send(candidates[0]).outcome, "SKIPPED")
-        self.assertEqual(deliver_scheme_reminder(candidates[0]).outcome, "SKIPPED")
+            self.assertEqual(len(self.candidates()), 2)
+        with self.settings(SCHEME_REMINDERS_ENABLED=False):
+            self.assertEqual(deliver_scheme_reminder(candidates[0]).outcome, "SKIPPED")
         before = [list(model.objects.values()) for model in
                   (Contribution, InrPrincipalReceipt, InrSettlementProposal, InrSettlementFulfilment, SchemeAccount)]
-        for candidate in candidates:
-            self.assertEqual(self.send(candidate).outcome, "SENT")
-            self.assertEqual(self.send(candidate).outcome, "ALREADY_SENT")
+        for index, candidate in enumerate(candidates):
+            with self.settings(CONFIGURED_PLANS_ENABLED=bool(index)):
+                self.assertEqual(deliver_scheme_reminder(candidate).outcome, "SENT")
+                self.assertEqual(deliver_scheme_reminder(candidate).outcome, "ALREADY_SENT")
         self.assertEqual(before, [list(model.objects.values()) for model in
                          (Contribution, InrPrincipalReceipt, InrSettlementProposal, InrSettlementFulfilment, SchemeAccount)])
         self.assertEqual(SchemeReminder.objects.count(), 2)

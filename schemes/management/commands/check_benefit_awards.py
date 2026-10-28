@@ -21,7 +21,7 @@ class Command(BaseCommand):
             else:
                 review += int(get_benefit_award_status(award.scheme_account).needs_review)
         self.stdout.write(f"benefit_awards status={'error' if review else 'ok'} release={settings.APP_RELEASE} "
-            f"workflow=not_activated awards={count} review_required={review} "
+            f"workflow=validated_existing_agreements awards={count} review_required={review} "
             f"invoice_fulfilments={fulfilled} invoice_reversals={reversed_count}")
         if review:
             raise CommandError("Retain the awards and reconcile source/closure evidence; no records were changed.")

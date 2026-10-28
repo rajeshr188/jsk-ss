@@ -105,24 +105,29 @@ class IndependentPlanDraftTests(TestCase):
         self.assertEqual(plan.revisions.get(number=2).terms["configuration"], original["configuration"])
         self.assert_no_finance()
 
-    def test_publication_and_enrolment_remain_blocked_with_both_flag_values(self):
+    def test_draft_requires_intake_permission_and_audited_publication_before_enrolment(self):
         for accumulation in ("EXACT_METAL", "INR_PURCHASE_CREDIT"):
             plan = draft(self.owner, independent_values(accumulation=accumulation),
                 [self.grade] if accumulation == "EXACT_METAL" else [])
             before = plan_terms(plan)
+            with self.settings(CONFIGURED_PLANS_ENABLED=False), self.assertRaises(ValidationError):
+                set_configured_plan_publication(plan_id=plan.pk, publish=True, actor=self.owner,
+                    reason="Blocked intake", expected_digest=plan_edit_digest(plan), confirmed=True)
             for enabled in (False, True):
-                with self.settings(CONFIGURED_PLANS_ENABLED=enabled):
-                    with self.assertRaises(ValidationError):
-                        set_configured_plan_publication(plan_id=plan.pk, publish=True, actor=self.owner,
-                            reason="Attempt", expected_digest=plan_edit_digest(plan), confirmed=True)
-                    with self.assertRaises(ValidationError):
-                        enroll_customer(customer=self.customer, plan=plan, performed_by=self.owner)
+                with self.settings(CONFIGURED_PLANS_ENABLED=enabled), self.assertRaises(ValidationError):
+                    enroll_customer(customer=self.customer, plan=plan, performed_by=self.owner)
             for changes in ({"active": True}, {"publicly_listed": True}):
                 with self.assertRaises(IntegrityError), transaction.atomic():
                     SchemePlan.objects.filter(pk=plan.pk).update(**changes)
             plan.refresh_from_db()
             self.assertEqual(plan_terms(plan), before)
-            self.assertEqual(plan.revisions.count(), 1)
+            with self.settings(CONFIGURED_PLANS_ENABLED=True):
+                set_configured_plan_publication(plan_id=plan.pk, publish=True, actor=self.owner,
+                    reason="Approved separate publication", expected_digest=plan_edit_digest(plan), confirmed=True)
+            plan.refresh_from_db()
+            self.assertTrue(plan.active and plan.publicly_listed)
+            self.assertEqual(plan_terms(plan)["configuration"], before["configuration"])
+            self.assertEqual(plan.revisions.count(), 2)
         self.assert_no_finance()
 
     def test_identity_edit_appends_revision_and_rejects_stale_or_policy_mutations(self):
@@ -160,10 +165,10 @@ class IndependentPlanDraftTests(TestCase):
         self.assertContains(listing, "INR jewellery purchase credit")
         with self.settings(CONFIGURED_PLANS_ENABLED=True):
             review = self.client.get(reverse("schemes:configured_plan_publication", args=[plan.pk]))
-            self.assertContains(review, "Independent offers remain preparation-only")
+            self.assertNotContains(review, "Independent offers remain preparation-only")
             self.assertContains(review, "No minimum-duration condition")
             self.assertNotContains(review, "No bonus or discount is included.")
-            self.assertContains(review, 'disabled>Publish reviewed offer')
+            self.assertNotContains(review, 'disabled>Publish reviewed offer')
         self.assertEqual(plan.revisions.count(), 1)
         edit_url = reverse("schemes:plan_edit", args=[plan.pk])
         edit = self.client.get(edit_url)

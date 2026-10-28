@@ -138,19 +138,27 @@ class IndependentRequestTests(TestCase):
             with self.assertRaises(ValidationError):
                 submit_scheme_enrolment_request(**(offer | dict(expected_plan_digest=None)))
 
-    def test_runtime_gates_still_reject_requests_and_conversion(self):
+    def test_intake_gate_controls_request_and_conversion_with_real_readiness(self):
         offer = self.offer()
         data = self.form_data(offer)
         request = self.submit(offer)
-        for enabled in (False, True):
-            with self.settings(CONFIGURED_PLANS_ENABLED=enabled):
-                self.assertFalse(SchemeEnrolmentRequestForm(data, plan=offer["plan"]).is_valid())
-                with self.assertRaises(ValidationError):
-                    submit_scheme_enrolment_request(**offer)
-                with self.assertRaises(ValidationError):
-                    enroll_customer_from_request(enrolment_request=request, actor=self.owner, current_terms_confirmed=True,
-                        start_date=date(2026, 1, 30), agreed_months=None, reason="Review")
+        with self.settings(CONFIGURED_PLANS_ENABLED=False):
+            self.assertFalse(SchemeEnrolmentRequestForm(data, plan=offer["plan"]).is_valid())
+            with self.assertRaises(ValidationError):
+                submit_scheme_enrolment_request(**offer)
+            with self.assertRaises(ValidationError):
+                enroll_customer_from_request(enrolment_request=request, actor=self.owner, current_terms_confirmed=True,
+                    start_date=date(2026, 1, 30), agreed_months=None, reason="Review")
         self.assertFalse(SchemeAccount.objects.exists())
+        with self.settings(CONFIGURED_PLANS_ENABLED=True):
+            self.assertTrue(SchemeEnrolmentRequestForm(data, plan=offer["plan"]).is_valid())
+            self.assertEqual(submit_scheme_enrolment_request(**offer).enrolment_request.pk, request.pk)
+            account, created = enroll_customer_from_request(enrolment_request=request, actor=self.owner,
+                current_terms_confirmed=True, start_date=date(2026, 1, 30), agreed_months=None, reason="Review")
+        self.assertTrue(created)
+        self.assertEqual(account.customer_id, self.customer.pk)
+        self.assertEqual(SchemeAccount.objects.count(), 1)
+        self.assertFalse(Contribution.objects.exists())
 
     def test_inr_retry_unique_null_grade_and_immutable_snapshots(self):
         offer = self.offer()

@@ -95,7 +95,7 @@ class MetalGrade(models.Model):
 
 
 class SchemePlanConfiguration(models.Model):
-    """Immutable typed policy versions. Preparation-only until the full journey ships."""
+    """Immutable typed policy versions; publication and accepted agreements are separate."""
 
     class AmountPolicy(models.TextChoices):
         PLAN_FIXED = "PLAN_FIXED", "Amount fixed by the showroom"
@@ -518,7 +518,7 @@ class SchemePlanOffering(models.Model):
 class SchemeAccount(models.Model):
     class SavingsMode(models.TextChoices):
         CASH = "CASH", "Cash Savings"
-        INR_CREDIT = "INR_CREDIT", "INR jewellery purchase credit (not activated)"
+        INR_CREDIT = "INR_CREDIT", "INR jewellery purchase credit"
         GOLD = "GOLD", "Gold Savings"
         SILVER = "SILVER", "Silver Savings"
 
@@ -751,14 +751,14 @@ class SchemeAccount(models.Model):
 
     @property
     def independent_eligibility(self):
-        """Preparation-stage progress only; existing operational gates still apply."""
+        """Read-only independent progress, never settlement authorization."""
         from .agreement_eligibility import get_independent_eligibility
         return get_independent_eligibility(self) if self.agreement_schema_version == 2 else None
 
     @property
     def monthly_eligibility(self):
         if self.agreement_schema_version == 2:
-            raise ValidationError("Independent agreement eligibility workflows are not activated.")
+            raise ValidationError("Use independent eligibility for this agreement; the legacy monthly projection does not apply.")
         from .instalments import has_monthly_instalments
         from .instalment_selectors import get_monthly_eligibility
         return get_monthly_eligibility(self) if has_monthly_instalments(self) else None

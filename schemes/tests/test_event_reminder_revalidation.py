@@ -128,11 +128,9 @@ class ConfiguredEventReminderTests(MetalClosureFixture, TestCase):
         candidates = [c for c in build_scheme_reminder_plan(as_of=NOW.date()).candidates
                       if c.redemption and c.redemption.pk == redemption.pk]
         self.assertEqual(len(candidates), 2)
-        # Real per-family readiness remains closed even with the global flag on.
-        self.assertEqual(deliver_scheme_reminder(candidates[0]).outcome, "SKIPPED")
+        # Queue candidates before a real return; delivery must recheck current rights.
         self.reverse(self.reversal_values(redemption))
-        with patch("schemes.independent_reminders.require_operational_configuration"):
-            for candidate in candidates:
-                self.assertEqual(deliver_scheme_reminder(candidate).outcome, "SKIPPED")
+        for candidate in candidates:
+            self.assertEqual(deliver_scheme_reminder(candidate).outcome, "SKIPPED")
         self.assertFalse(SchemeReminder.objects.exists())
         self.assertEqual(len(mail.outbox), 0)

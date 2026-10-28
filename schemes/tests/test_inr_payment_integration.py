@@ -99,8 +99,10 @@ class InrPaymentIntegrationTests(TestCase):
         self.assertEqual(get_inr_principal_summary(account).principal_recorded, Decimal("500"))
         self.assertEqual(contribution.instalment_reservation.state, "REVIEW")
 
-    def test_runtime_gate_stays_closed(self):
+    def test_changed_frozen_terms_hold_capture_without_principal_credit(self):
         contribution, payload, body = online(self.account())
+        type(contribution.scheme_account).objects.filter(pk=contribution.scheme_account.pk).update(plan_name_snapshot="Unaccepted changed terms")
+        contribution.scheme_account.plan_name_snapshot = "Unaccepted changed terms"
         event = process_razorpay_webhook(gateway_mode="live", event_id=uuid.uuid4().hex, body=body, payload=payload)
         self.assertEqual(event.status, "REVIEW_REQUIRED")
         contribution.refresh_from_db()

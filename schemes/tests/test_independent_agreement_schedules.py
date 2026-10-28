@@ -105,7 +105,7 @@ class IndependentAgreementScheduleTests(TestCase):
         self.assertEqual(result.windows[-1].number, 32770)
         self.assertEqual(sum(w.extension for w in result.windows), 3)
 
-    def test_read_only_immutable_and_runtime_gates_remain_closed(self):
+    def test_independent_read_only_schedule_and_legacy_projection_boundary(self):
         config = self.create(required_values())
         models = (SchemeAccount, SchemeInstalmentPeriod, Contribution, InrPrincipalReceipt,
                   MetalAllocation, AuditEvent, SchemePlanConfiguration)
@@ -117,8 +117,7 @@ class IndependentAgreementScheduleTests(TestCase):
                     result.windows = ()
                 with self.assertRaises(FrozenInstanceError):
                     result.windows[0].amount = Decimal("1")
-                with self.assertRaises(ValidationError):
-                    require_operational_configuration(config)
+                require_operational_configuration(config)
                 with self.assertRaises(ValidationError):
                     build_instalment_windows(configuration=config, start_date=date(2026, 1, 30),
                         agreed_months=12, amount=Decimal("500"))

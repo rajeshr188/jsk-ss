@@ -19,7 +19,7 @@ class Command(BaseCommand):
             counts[state] += 1
         invalid = counts["INVALID"] + counts["STALE"]
         self.stdout.write(f"benefit_reapplications status={'error' if invalid else 'ok'} "
-            f"release={settings.APP_RELEASE} workflow=gated_invoice_integration spending_enabled=false "
+            f"release={settings.APP_RELEASE} workflow=settlement_invoice_integration standalone_spending_enabled=false "
             + " ".join(f"{name.lower()}={count}" for name, count in counts.items()))
         if invalid:
             raise CommandError("Reconcile stale or invalid return-review evidence; nothing was changed.")

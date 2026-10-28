@@ -101,11 +101,13 @@ class OwnerSettlementWorkspaceTests(MetalClosureFixture, TestCase):
         self.assertFalse(Redemption.objects.exists())
         self.assertFalse(SchemeBenefitAward.objects.exists())
 
-    def test_gate_permission_csrf_and_unknown_operation_remain_closed(self):
+    def test_changed_contract_permission_csrf_and_unknown_operation_remain_closed(self):
         account = self.benefit_account(metal=True, kind="VA_DISCOUNT")
         self.cash(account); closure = self.accepted(account)
         with future_award_readiness():
             token = self.preview_http(closure).context["form"].initial["preview_token"]
+        type(account).objects.filter(pk=account.pk).update(plan_name_snapshot="Unaccepted changed terms")
+        account.plan_name_snapshot = "Unaccepted changed terms"
         for enabled in (False, True):
             with self.settings(CONFIGURED_PLANS_ENABLED=enabled):
                 self.assertEqual(self.apply_http(closure, token).status_code, 200)

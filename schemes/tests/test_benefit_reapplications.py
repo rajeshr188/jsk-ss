@@ -91,7 +91,7 @@ class ReapplicationTests(ReapplicationFixture, TestCase):
         out = StringIO()
         call_command("check_benefit_reapplications", stdout=out)
         self.assertIn("approved_review=3", out.getvalue())
-        self.assertIn("spending_enabled=false", out.getvalue())
+        self.assertIn("standalone_spending_enabled=false", out.getvalue())
 
     def test_signature_expiry_retries_and_old_approval_cannot_override_hold(self):
         a, _, reversal = self.returned_benefit()
@@ -222,17 +222,16 @@ class ReapplicationTests(ReapplicationFixture, TestCase):
         self.assertEqual(list(reversal.reapplication_decisions.values_list("pk", flat=True)), [first.pk])
         self.assertEqual(self.decide(values).outcome, "HOLD")
 
-    def test_real_gate_remains_closed_even_if_flag_is_true(self):
-        a, _, reversal = self.returned_benefit()
-        token = self.review_preview(a, reversal)
+    def test_real_review_and_record_remain_available_with_either_intake_flag(self):
         for flag in (False, True):
+            a, _, reversal = self.returned_benefit()
+            token = self.review_preview(a, reversal)
             with override_settings(CONFIGURED_PLANS_ENABLED=flag):
-                with self.assertRaises(ValidationError):
-                    preview_benefit_reapplication(account_id=a.pk, reversal_id=reversal.pk, actor=self.owner,
-                        outcome="HOLD")
-                with self.assertRaises(ValidationError):
-                    record_benefit_reapplication(**self.review_values(a, token))
-        self.assertFalse(BenefitReapplicationDecision.objects.exists())
+                preview_benefit_reapplication(account_id=a.pk, reversal_id=reversal.pk, actor=self.owner, outcome="HOLD")
+                row = record_benefit_reapplication(**self.review_values(a, token))
+                self.assertEqual(row.outcome, "APPROVE")
+                self.assertEqual(reversal.reapplication_decisions.count(), 1)
+        self.assertEqual(BenefitReapplicationDecision.objects.count(), 2)
 
 
 @override_settings(IN_STORE_CASH_CONTRIBUTIONS_ENABLED=True, PAYMENT_INITIATION_KILL_SWITCH=False)

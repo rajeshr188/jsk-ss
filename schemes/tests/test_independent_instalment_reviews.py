@@ -238,17 +238,19 @@ class IndependentReviewTests(IndependentReviewFixture, TestCase):
         self.assertFalse(InstalmentOutageResolution.objects.exists())
         self.assertEqual(instalment_payment_ledger_summary(account_id=account.pk)["outage_held_accounts"], 1)
 
-    def test_enabled_release_flag_does_not_enable_independent_review_writes(self):
-        account = self.agreement()
-        hold = self.hold(account)
+    def test_existing_owner_review_and_outage_resolution_do_not_depend_on_intake(self):
         for enabled in (False, True):
-            with override_settings(CONFIGURED_PLANS_ENABLED=enabled), self.assertRaisesMessage(ValidationError, "preparation-only"):
-                record_instalment_review(period_id=hold.period_id, actor=self.owner, action="NOTE", reason="Review",
+            account = self.agreement()
+            hold = self.hold(account)
+            with override_settings(CONFIGURED_PLANS_ENABLED=enabled):
+                note = record_instalment_review(period_id=hold.period_id, actor=self.owner, action="NOTE", reason="Review",
                     evidence_reference="TEST", idempotency_key=uuid.uuid4(), expected_review_sequence=1)
-            with override_settings(CONFIGURED_PLANS_ENABLED=enabled), self.assertRaisesMessage(ValidationError, "preparation-only"):
-                resolve_instalment_outage(**self.resolution_values(hold))
-        self.assertEqual(InstalmentReview.objects.count(), 1)
-        self.assertFalse(InstalmentOutageResolution.objects.exists())
+                self.assertEqual(note.sequence, 2)
+                values = self.resolution_values(hold)
+                with patch("django.utils.timezone.now", return_value=values["customer_acknowledged_at"]):
+                    result = resolve_instalment_outage(**values)
+                self.assertIsNotNone(result.pk)
+        self.assertEqual(InstalmentOutageResolution.objects.count(), 2)
 
     def test_current_window_restoration_and_other_holds_preserve_payment_block(self):
         account = self.agreement()

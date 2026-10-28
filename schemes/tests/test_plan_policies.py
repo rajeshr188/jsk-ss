@@ -38,6 +38,7 @@ class PlanPolicyTests(SimpleTestCase):
                 validate_plan_policy(policy)
             except ValidationError:
                 continue
+            self.assertEqual(operational_policy_blockers(policy), ())
             counts[accumulation] += 1
         self.assertEqual(counts, {"EXACT_METAL": 104, "INR_PURCHASE_CREDIT": 164})
         self.assertEqual(sum(counts.values()), 268)
@@ -149,23 +150,21 @@ class PlanPolicyTests(SimpleTestCase):
         with self.assertRaises(ValidationError):
             validate_plan_policy(self.optional(benefit_cap_inr=Decimal("100")))
 
-    def test_valid_design_does_not_mean_operational_support(self):
+    def test_approved_independent_policies_have_runtime_support_without_intake_dependency(self):
+        policies = (self.optional(accumulation="INR_PURCHASE_CREDIT"),
+            self.optional(eligibility="ANYTIME", duration_months=None),
+            self.monthly(eligibility="COUNT", duration_months=None),
+            self.monthly(amount_policy="PLAN_FIXED"), self.monthly(required_count=10),
+            self.optional(period_basis="ANNIVERSARY", payment_limit="ONCE_PER_PERIOD"),
+            self.optional(duration_months=6), self.discount())
         for enabled in (False, True):
             with override_settings(CONFIGURED_PLANS_ENABLED=enabled):
-                for policy in (
-                    self.optional(accumulation="INR_PURCHASE_CREDIT"),
-                    self.optional(eligibility="ANYTIME", duration_months=None),
-                    self.monthly(eligibility="COUNT", duration_months=None),
-                    self.monthly(amount_policy="PLAN_FIXED"), self.monthly(required_count=10),
-                    self.optional(period_basis="ANNIVERSARY", payment_limit="ONCE_PER_PERIOD"),
-                    self.optional(duration_months=6), self.discount(),
-                ):
+                for policy in policies:
                     with self.subTest(enabled=enabled, policy=policy):
-                        self.assertTrue(operational_policy_blockers(policy))
-                        with self.assertRaises(ValidationError):
-                            require_operational_policy(policy)
-        self.assertIn("MANUAL_REFUND_FULFILMENT_NOT_IMPLEMENTED", operational_policy_blockers(
-            self.optional(accumulation="INR_PURCHASE_CREDIT")))
+                        self.assertEqual(operational_policy_blockers(policy), ())
+                        require_operational_policy(policy)
+        with self.assertRaises(ValidationError):
+            require_operational_policy(self.optional(settlement="PARTIAL"))
 
     def test_existing_formats_keep_identical_evidence_and_projection(self):
         for monthly, basis in ((False, None), (True, "ANNIVERSARY"), (True, "CALENDAR_MONTH")):

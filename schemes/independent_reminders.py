@@ -1,7 +1,6 @@
-"""Gated date-progress reminders; count-only and anytime have no forecast date."""
+"""Existing-agreement date progress; count-only and anytime have no forecast date."""
 from datetime import timedelta
 
-from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db.models import Q
 from django.utils import timezone
@@ -13,7 +12,7 @@ from .plan_policies import require_operational_configuration
 
 
 def reminder_workflow_available(account):
-    if not settings.CONFIGURED_PLANS_ENABLED or not account.configuration_snapshot_id:
+    if not account.configuration_snapshot_id:
         return False
     try:
         require_operational_configuration(account.configuration_snapshot)
@@ -36,7 +35,7 @@ def independent_reminder_terms(account, *, as_of):
 
 
 def upcoming_independent_accounts(*, as_of, lead_days):
-    if not settings.CONFIGURED_PLANS_ENABLED or as_of != timezone.localdate(timezone=AGREEMENT_TIMEZONE):
+    if as_of != timezone.localdate(timezone=AGREEMENT_TIMEZONE):
         return SchemeAccount.objects.none()
     dates = [as_of + timedelta(days=days) for days in lead_days]
     return SchemeAccount.objects.filter(agreement_schema_version=2, status="ACTIVE").filter(

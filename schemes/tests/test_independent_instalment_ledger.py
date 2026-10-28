@@ -191,23 +191,22 @@ class IndependentInstalmentLedgerTests(TestCase):
         with self.assertRaises(ValidationError):
             attribute_razorpay_instalment(event_id=event.pk, body=body + b" ")
 
-    def test_count_only_runtime_gates_stay_closed_and_compensation_preview_is_read_only(self):
+    def test_count_only_existing_rights_and_compensation_preview_do_not_depend_on_intake(self):
         account = self.account()
         for enabled in (False, True):
-            with override_settings(CONFIGURED_PLANS_ENABLED=enabled):
-                for action in (account.save, lambda: current_instalment_period(account),
-                               lambda: validate_contribution_allowed(account, Decimal("500"))):
-                    with self.assertRaises(ValidationError):
-                        action()
+            with override_settings(CONFIGURED_PLANS_ENABLED=enabled), patch("django.utils.timezone.now", return_value=NOW):
+                account.save()
+                self.assertEqual(current_instalment_period(account).number, 1)
+                validate_contribution_allowed(account, Decimal("500"))
         self.assertEqual(compensation_window(account, 1).number, account.required_count_snapshot + 4)
         self.assertFalse(Contribution.objects.exists())
 
-    def test_owner_review_and_all_outage_resolutions_remain_gated(self):
+    def test_customer_cannot_write_owner_reviews_or_outage_resolutions(self):
         account = self.account()
         period = account.instalment_periods.get(number=1)
         for action in ("NOTE", "OUTAGE_HOLD", "ACCEPT_TIMING"):
-            with self.assertRaisesMessage(ValidationError, "preparation-only"):
-                record_instalment_review(period_id=period.pk, actor=self.owner, action=action,
+            with self.assertRaises(ValidationError):
+                record_instalment_review(period_id=period.pk, actor=self.customer.user, action=action,
                     reason="Synthetic review", evidence_reference="TEST-ONLY",
                     idempotency_key=uuid.uuid4(), expected_review_sequence=0)
         self.assertFalse(InstalmentReview.objects.exists())
@@ -217,8 +216,8 @@ class IndependentInstalmentLedgerTests(TestCase):
             evidence_reference="TEST-ONLY", idempotency_key=uuid.uuid4())
         before = list(account.instalment_periods.values())
         for outcome in ("COMPENSATE", "RESTORED", "QUALIFIED"):
-            with self.assertRaisesMessage(ValidationError, "preparation-only"):
-                resolve_instalment_outage(hold_id=hold.pk, actor=self.owner, outcome=outcome,
+            with self.assertRaises(ValidationError):
+                resolve_instalment_outage(hold_id=hold.pk, actor=self.customer.user, outcome=outcome,
                     reason="Synthetic resolution", evidence_reference="TEST-ONLY",
                     incident_started_at=NOW, service_restored_at=NOW + timedelta(minutes=1),
                     customer_acknowledged_at=NOW + timedelta(minutes=2), acknowledgement_reference="TEST-ACK",

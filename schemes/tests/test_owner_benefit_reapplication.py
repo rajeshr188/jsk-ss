@@ -102,9 +102,11 @@ class OwnerBenefitReviewTests(IntegrationFixture, TestCase):
             self.assertTrue(self.preview_http(a, reversal, "UNKNOWN").context["preview_form"].errors)
         self.assertFalse(reversal.reapplication_decisions.exists())
 
-    def test_real_gates_remain_closed_for_preview_and_apply(self):
+    def test_changed_contract_refuses_owner_preview_and_apply(self):
         a, _, reversal = self.returned_benefit()
         token = self.review_preview(a, reversal)
+        type(a).objects.filter(pk=a.pk).update(plan_name_snapshot="Unaccepted changed terms")
+        a.plan_name_snapshot = "Unaccepted changed terms"
         for enabled in (False, True):
             with self.settings(CONFIGURED_PLANS_ENABLED=enabled):
                 self.assertTrue(self.preview_http(a, reversal).context["preview_form"].errors)

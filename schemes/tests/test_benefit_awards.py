@@ -1,4 +1,4 @@
-"""Retained rights on synthetic contracts; no real operational gate is opened."""
+"""Retained rights on synthetic contracts; actual readiness and source proof stay distinct."""
 import importlib
 import time
 import uuid
@@ -213,19 +213,18 @@ class BenefitAwardTests(AwardFixture, TestCase):
         with connection.schema_editor(atomic=False) as editor, self.assertRaises(RuntimeError):
             migration.guard_reverse(apps, editor)
 
-    def test_real_gate_blocks_service_and_direct_model_creation_with_flag_off_or_on(self):
-        account = self.benefit_account()
-        self.cash(account)
-        token = self.preview(account)
+    def test_actual_award_workflow_preserves_intake_independence_and_model_proof(self):
         for enabled in (False, True):
-            with override_settings(CONFIGURED_PLANS_ENABLED=enabled), self.assertRaises(ValidationError):
-                preview_benefit_award(account_id=account.pk, actor=self.owner)
-            with override_settings(CONFIGURED_PLANS_ENABLED=enabled), self.assertRaises(ValidationError):
-                record_benefit_award(account_id=account.pk, actor=self.owner, preview_token=token,
-                    reason="Try real gate", idempotency_key=uuid.uuid4())
-            with override_settings(CONFIGURED_PLANS_ENABLED=enabled), self.assertRaises(ValidationError):
-                SchemeBenefitAward(scheme_account=account).save()
-        self.assertFalse(SchemeBenefitAward.objects.exists())
+            account = self.benefit_account()
+            self.cash(account)
+            with override_settings(CONFIGURED_PLANS_ENABLED=enabled):
+                token = preview_benefit_award(account_id=account.pk, actor=self.owner)
+                award = record_benefit_award(account_id=account.pk, actor=self.owner, preview_token=token,
+                    reason="Accepted existing contractual right", idempotency_key=uuid.uuid4())
+                self.assertEqual(award.scheme_account_id, account.pk)
+                with self.assertRaises(ValidationError):
+                    SchemeBenefitAward(scheme_account=account).save()
+        self.assertEqual(SchemeBenefitAward.objects.count(), 2)
 
     def test_pending_provider_exposure_blocks_apply_even_after_a_valid_preview(self):
         account = self.benefit_account(monthly=False, allow_contributions_after_eligibility=True)

@@ -210,8 +210,10 @@ class OptionalOrderTests(TestCase):
         with self.assertRaises(IntegrityError), transaction.atomic():
             OptionalPaymentOrderBinding.objects.filter(pk=binding.pk).update(recovered=True)
 
-    def test_runtime_gate_remains_closed(self):
+    def test_changed_contract_refuses_optional_order_before_external_api(self):
         a, g = self.account(), self.gateway()
+        type(a).objects.filter(pk=a.pk).update(plan_name_snapshot="Unaccepted changed terms")
+        a.plan_name_snapshot = "Unaccepted changed terms"
         self.ready.stop()
         for enabled in (False, True):
             with override_settings(CONFIGURED_PLANS_ENABLED=enabled), self.assertRaises(ValidationError):

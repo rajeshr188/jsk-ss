@@ -2,6 +2,30 @@
 
 ## Current milestone
 
+**29 October 2026 - bounded builder readiness implementation and regression.**
+Validated schema-2 policies now reach the actual publication, enrolment, collection,
+eligibility and full-settlement workflows. Schema-1 interpretation stays restricted
+to its existing families; agreement/configuration encoding and denomination must
+match. New intake remains default off. Existing agreement rights and notices no
+longer depend on that intake switch; reminder-specific switches and fresh evidence
+checks remain. Legacy schedule/eligibility helpers reject independent policies
+explicitly. An INR cash source missing its principal receipt refuses correction
+with a ValidationError and transaction rollback. No source, fulfilment or database
+financial invariant was relaxed. Migration 0057 changes only the INR display label.
+
+The 156-test affected regression passed in 899.413s, including 20 unmocked complete
+journeys (five families x both denominations x cash/verified online). A further
+47-test proof/eligibility/metric batch passed in 315.044s, and all 10 updated handbook
+HTTP/access checks passed in 0.188s. Final boundary/reminder regression: **64 tests in 679.930s, OK**, including
+migration round trips, retained-notification guards and concurrent dispatch checks.
+Django system checks, migration drift and syntax/diff checks passed; each disposable
+test database was destroyed.
+These are isolated local PostgreSQL tests using Python 3.13 / Django 6.0.4, not a
+current-head hosted CI or final production-image result. The earlier full 1,473-case
+CI remains evidence only for 6c5034b. The acquisition-cost metric is committed as
+de52665. Final current-head CI, image/recovery review and explicit production rollout
+approval remain; no production environment or customer record changed.
+
 **29 October 2026 - customer metal acquisition-cost metric implemented and locally verified.**
 The metal agreement page now shows historical average acquisition cost per gram:
 paid INR divided by exact-grade grams across completed recorded allocations. It

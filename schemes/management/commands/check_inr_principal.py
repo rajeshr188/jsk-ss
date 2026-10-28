@@ -39,7 +39,7 @@ class Command(BaseCommand):
         wrong_denomination = InrPrincipalReceipt.objects.exclude(scheme_account__savings_mode="INR_CREDIT").count()
         errors = contracts + missing + source_errors + wrong_denomination + settlement_errors
         self.stdout.write(f"inr_principal_check status={'error' if errors else 'ok'} release={settings.APP_RELEASE} "
-                          f"workflow=not_activated accounts={len(accounts)} contract_errors={contracts} "
+                          f"workflow=validated_existing_agreements accounts={len(accounts)} contract_errors={contracts} "
                           f"unrecorded_sources={missing} source_errors={source_errors} wrong_denomination={wrong_denomination} "
                           f"settlement_errors={settlement_errors} outstanding_inr={outstanding} refund_pending_inr={refund_pending}")
         if errors:

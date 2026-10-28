@@ -45,6 +45,8 @@ def build_instalment_windows(*, configuration, start_date, agreed_months, amount
     from .plan_configuration import validate_configuration_amount
     from .plan_policies import require_operational_configuration
 
+    if configuration.policy_schema_version != 1:
+        raise ValidationError("Use the independent schedule for this policy; the legacy schedule derives count from duration.")
     configuration.full_clean()
     require_operational_configuration(configuration)
     if configuration.instalment_policy != "MONTHLY_COMPLETION":

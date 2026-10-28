@@ -112,20 +112,24 @@ class IndependentApplicationTests(IndependentApplicationFixtures, TestCase):
         call_command("check_public_customer_registrations", stdout=output)
         self.assertIn("status=ok", output.getvalue())
 
-    def test_gates_reject_unpatched_services_and_public_forms(self):
+    def test_intake_permission_controls_real_application_submission_and_approval(self):
         self.offer()
         application = self.ready()
-        for enabled in (False, True):
-            with self.settings(CONFIGURED_PLANS_ENABLED=enabled):
-                with self.assertRaises(ValidationError):
-                    submit_plan_application(plan=self.plan, metal_grade=None, amount=Decimal("500"), months=None,
-                        message="", full_name="Blocked", email="blocked@example.com", mobile_number="9000000099",
-                        source_ip="203.0.113.8", offer_digest=offer_form_digest(self.plan), base_url="https://example.test")
-                with self.assertRaises(ValidationError):
-                    approve_plan_application(registration_id=application.registration_id, actor=self.owner,
-                        mobile_verified=True, terms_reviewed=True, reason="Reviewed", base_url="https://example.test")
-                self.assertFalse(application_terms_current(application))
+        with self.settings(CONFIGURED_PLANS_ENABLED=False):
+            with self.assertRaises(ValidationError):
+                submit_plan_application(plan=self.plan, metal_grade=None, amount=Decimal("500"), months=None,
+                    message="", full_name="Blocked", email="blocked@example.com", mobile_number="9000000099",
+                    source_ip="203.0.113.8", offer_digest=offer_form_digest(self.plan), base_url="https://example.test")
+            with self.assertRaises(ValidationError):
+                approve_plan_application(registration_id=application.registration_id, actor=self.owner,
+                    mobile_verified=True, terms_reviewed=True, reason="Reviewed", base_url="https://example.test")
+            self.assertFalse(application_terms_current(application))
         self.assertFalse(SchemeAccount.objects.exists())
+        with self.settings(CONFIGURED_PLANS_ENABLED=True):
+            self.assertTrue(application_terms_current(application))
+            approve_plan_application(registration_id=application.registration_id, actor=self.owner,
+                mobile_verified=True, terms_reviewed=True, reason="Reviewed", base_url="https://example.test")
+        self.assertEqual(SchemeAccount.objects.count(), 1)
 
     def test_stale_offer_requires_new_explicit_confirmation_and_preserves_history(self):
         self.offer(required_values(accumulation="INR_PURCHASE_CREDIT", required_count=2))

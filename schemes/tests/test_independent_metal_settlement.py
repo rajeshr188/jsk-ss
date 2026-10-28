@@ -297,15 +297,16 @@ class IndependentMetalSettlementTests(MetalClosureFixture, TestCase):
         with self.assertRaises(ValidationError):
             get_closure_eligibility(request.__class__(pk=other.pk, scheme_account=a))
 
-    def test_diagnostic_detects_missing_linked_benefit_and_real_gate_stays_closed(self):
+    def test_real_settlement_is_intake_independent_and_missing_linked_benefit_is_detected(self):
         a = self.benefit_account(metal=True, kind="VA_DISCOUNT")
         self.cash(a)
         request = self.accepted(a)
         _, token = self.prepared(request)
         params = self.settlement_values(request, token)
         for enabled in (False, True):
-            with override_settings(CONFIGURED_PLANS_ENABLED=enabled), self.assertRaises(ValidationError):
-                settle_configured_agreement(**params)
+            with override_settings(CONFIGURED_PLANS_ENABLED=enabled):
+                settled = settle_configured_agreement(**params)
+                self.assertEqual(settled.scheme_account_id, a.pk)
         r = self.settle(params)
         # Synthetic privileged corruption; no supported service deletes these records.
         BenefitInvoiceFulfilment.objects.all().delete()

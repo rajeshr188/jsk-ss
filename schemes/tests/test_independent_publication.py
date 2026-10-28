@@ -1,10 +1,4 @@
-"""Publication integration only; real independent readiness remains closed.
-
-The explicit test context simulates future workflow acceptance while retaining
-policy validation, release/role checks, actual publication, revisions and enrolment.
-It is not used by application code and does not approve production activation.
-"""
-from contextlib import contextmanager
+"""Actual publication/enrolment integration; no readiness function is mocked."""
 from datetime import date
 from decimal import Decimal
 from unittest.mock import patch
@@ -17,7 +11,6 @@ from schemes.catalogue_lifecycle import close_catalogue_item
 from schemes.catalogue_selectors import catalogue_closure_preview
 from schemes.models import AuditEvent, Contribution, MetalGrade, SchemeAccount, SchemePlanOffering
 from schemes.plan_governance import plan_edit_digest
-from schemes.plan_policies import policy_from_configuration, validate_plan_policy
 from schemes.plan_publication import set_configured_plan_publication, validate_publication_evidence
 from schemes.publication_selectors import get_publication_blockers
 from schemes.selectors import get_public_scheme_plans
@@ -25,16 +18,6 @@ from schemes.services import enroll_customer
 from schemes.tests.test_audit_exceptions import make_owner, make_customer
 from schemes.tests.test_independent_plan_drafts import draft
 from schemes.tests.test_independent_policy_fields import independent_values, required_values
-
-
-@contextmanager
-def accepted_workflows_only():
-    def validated(configuration):
-        validate_plan_policy(policy_from_configuration(configuration))
-    with patch("schemes.plan_publication.require_operational_configuration", side_effect=validated), \
-         patch("schemes.plan_policies.require_operational_configuration", side_effect=validated), \
-         patch("schemes.publication_selectors.require_operational_configuration", side_effect=validated):
-        yield
 
 
 @override_settings(CONFIGURED_PLANS_ENABLED=True)
@@ -55,17 +38,19 @@ class IndependentPublicationTests(TestCase):
         plan.refresh_from_db()
         return result
 
-    def test_actual_readiness_stays_closed_with_either_release_flag(self):
+    def test_actual_publication_requires_intake_flag_and_preserves_existing_evidence(self):
         for denomination in ("EXACT_METAL", "INR_PURCHASE_CREDIT"):
             plan = self.offer(accumulation=denomination)
-            for enabled in (False, True):
-                with self.settings(CONFIGURED_PLANS_ENABLED=enabled):
-                    self.assertTrue(get_publication_blockers(plan))
-                    with self.assertRaises(ValidationError):
-                        self.publish(plan)
-            plan.refresh_from_db()
+            with self.settings(CONFIGURED_PLANS_ENABLED=False):
+                self.assertIn("The configured-plan release gate is disabled.", get_publication_blockers(plan))
+                with self.assertRaises(ValidationError):
+                    self.publish(plan)
+            self.assertEqual(get_publication_blockers(plan), ())
+            self.publish(plan)
+            with self.settings(CONFIGURED_PLANS_ENABLED=False):
+                validate_publication_evidence(plan)
+                self.publish(plan, publish=False)
             self.assertFalse(plan.active or plan.publicly_listed)
-            self.assertEqual(plan.revisions.count(), 1)
 
     def test_five_families_publish_and_enrol_without_metal_on_inr(self):
         for denomination in ("EXACT_METAL", "INR_PURCHASE_CREDIT"):
@@ -81,16 +66,15 @@ class IndependentPublicationTests(TestCase):
             for values in cases:
                 with self.subTest(denomination=denomination, eligibility=values["eligibility_policy"]):
                     plan = self.offer(**values)
-                    with accepted_workflows_only():
-                        self.assertEqual(get_publication_blockers(plan), ())
-                        self.publish(plan)
-                        validate_publication_evidence(plan)
-                        self.assertIn(plan, get_public_scheme_plans())
-                        account = enroll_customer(customer=self.customer, plan=plan,
-                            metal_grade=self.grade if denomination == "EXACT_METAL" else None,
-                            selected_contribution_amount=Decimal("500"), selected_amount_confirmed=True,
-                            start_date=date(2026, 1, 30), expected_configuration_id=plan.configuration_id,
-                            expected_plan_digest=plan_edit_digest(plan), performed_by=self.owner)
+                    self.assertEqual(get_publication_blockers(plan), ())
+                    self.publish(plan)
+                    validate_publication_evidence(plan)
+                    self.assertIn(plan, get_public_scheme_plans())
+                    account = enroll_customer(customer=self.customer, plan=plan,
+                        metal_grade=self.grade if denomination == "EXACT_METAL" else None,
+                        selected_contribution_amount=Decimal("500"), selected_amount_confirmed=True,
+                        start_date=date(2026, 1, 30), expected_configuration_id=plan.configuration_id,
+                        expected_plan_digest=plan_edit_digest(plan), performed_by=self.owner)
                     self.assertEqual(account.configuration_snapshot_id, plan.configuration_id)
                     self.assertEqual(account.plan_revision_id, plan.publication_revision_id)
                     self.assertEqual(account.metal_grade_id, self.grade.pk if denomination == "EXACT_METAL" else None)
@@ -103,30 +87,27 @@ class IndependentPublicationTests(TestCase):
         credit = self.offer(accumulation="INR_PURCHASE_CREDIT")
         SchemePlanOffering.objects.create(plan=credit, metal_grade=self.grade)
         for plan in (metal, credit):
-            with accepted_workflows_only():
-                self.assertTrue(get_publication_blockers(plan))
-                with self.assertRaises(ValidationError):
-                    self.publish(plan)
+            self.assertTrue(get_publication_blockers(plan))
+            with self.assertRaises(ValidationError):
+                self.publish(plan)
             plan.refresh_from_db()
             self.assertFalse(plan.active or plan.publicly_listed)
 
     def test_post_publication_denomination_corruption_is_not_valid_evidence(self):
         for denomination in ("EXACT_METAL", "INR_PURCHASE_CREDIT"):
             plan = self.offer(accumulation=denomination)
-            with accepted_workflows_only():
-                self.publish(plan)
-                if denomination == "EXACT_METAL":
-                    plan.metal_offerings.update(active=False)
-                else:
-                    SchemePlanOffering.objects.create(plan=plan, metal_grade=self.grade)
-                with self.assertRaises(ValidationError):
-                    validate_publication_evidence(plan)
+            self.publish(plan)
+            if denomination == "EXACT_METAL":
+                plan.metal_offerings.update(active=False)
+            else:
+                SchemePlanOffering.objects.create(plan=plan, metal_grade=self.grade)
+            with self.assertRaises(ValidationError):
+                validate_publication_evidence(plan)
 
     def test_withdrawal_preserves_publication_revision_and_survives_release_disabled(self):
         plan = self.offer(accumulation="INR_PURCHASE_CREDIT")
-        with accepted_workflows_only():
-            self.publish(plan)
-            revision = plan.publication_revision_id
+        self.publish(plan)
+        revision = plan.publication_revision_id
         with self.settings(CONFIGURED_PLANS_ENABLED=False):
             self.publish(plan, publish=False)
         self.assertFalse(plan.active or plan.publicly_listed)
@@ -137,36 +118,34 @@ class IndependentPublicationTests(TestCase):
         plan = self.offer(accumulation="INR_PURCHASE_CREDIT")
         self.client.force_login(self.owner)
         url = reverse("schemes:configured_plan_publication", args=[plan.pk])
-        response = self.client.get(url)
-        self.assertContains(response, "preparation-only")
-        self.assertContains(response, 'class="btn btn-jsk" disabled')
-        with accepted_workflows_only():
+        with self.settings(CONFIGURED_PLANS_ENABLED=False):
             response = self.client.get(url)
-            self.assertNotContains(response, 'class="btn btn-jsk" disabled')
-            self.assertContains(response, "INR purchase credit: no metal grade")
-        # A previously ready page never grants permission to its later POST.
-        response = self.client.post(url, dict(expected_digest=plan_edit_digest(plan),
-            reason="Ready page became stale", confirmed="on"))
+            self.assertContains(response, 'class="btn btn-jsk" disabled')
+        response = self.client.get(url)
+        self.assertNotContains(response, 'class="btn btn-jsk" disabled')
+        self.assertContains(response, "INR purchase credit: no metal grade")
+        # A ready GET cannot authorize a later POST after intake is disabled.
+        with self.settings(CONFIGURED_PLANS_ENABLED=False):
+            response = self.client.post(url, dict(expected_digest=plan_edit_digest(plan),
+                reason="Ready page became stale", confirmed="on"))
         self.assertEqual(response.status_code, 200)
         plan.refresh_from_db()
         self.assertFalse(plan.active)
 
     def test_retired_plan_cannot_be_republished_after_acceptance(self):
         plan = self.offer(accumulation="INR_PURCHASE_CREDIT")
-        with accepted_workflows_only():
-            self.publish(plan)
+        self.publish(plan)
         close_catalogue_item(actor=self.owner, reason="Retire synthetic offer", confirmed=True,
             expected_digest=catalogue_closure_preview(plan=plan)["expected_digest"], plan_id=plan.pk)
         plan.refresh_from_db()
-        with accepted_workflows_only():
-            self.assertTrue(get_publication_blockers(plan))
-            with self.assertRaises(ValidationError):
-                self.publish(plan)
+        self.assertTrue(get_publication_blockers(plan))
+        with self.assertRaises(ValidationError):
+            self.publish(plan)
 
     def test_audit_failure_rolls_back_publication_and_revision(self):
         plan = self.offer(accumulation="INR_PURCHASE_CREDIT")
         before = AuditEvent.objects.count()
-        with accepted_workflows_only(), patch("schemes.services.record_scheme_plan_change", side_effect=RuntimeError("audit unavailable")):
+        with patch("schemes.services.record_scheme_plan_change", side_effect=RuntimeError("audit unavailable")):
             with self.assertRaises(RuntimeError):
                 self.publish(plan)
         plan.refresh_from_db()

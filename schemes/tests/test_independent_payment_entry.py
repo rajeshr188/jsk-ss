@@ -262,8 +262,10 @@ class IndependentPaymentEntryTests(TestCase):
         gateway.create_order.assert_not_called()
         self.assertFalse(Contribution.objects.exists())
 
-    def test_runtime_gate_remains_closed_even_with_release_flag(self):
+    def test_changed_contract_blocks_collection_with_either_intake_flag(self):
         account = self.account(True)
+        type(account).objects.filter(pk=account.pk).update(plan_name_snapshot="Unaccepted changed terms")
+        account.plan_name_snapshot = "Unaccepted changed terms"
         self.ready.stop()
         for enabled in (False, True):
             with override_settings(CONFIGURED_PLANS_ENABLED=enabled):
