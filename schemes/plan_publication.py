@@ -8,6 +8,19 @@ from .plan_governance import PLAN_FIELDS, ensure_plan_revision, plan_edit_digest
 from .plan_policies import require_operational_configuration
 
 
+def validate_offer_denomination(plan):
+    """A purchase-credit offer has no grades; a metal offer must name its grades."""
+    has_grades = plan.metal_offerings.filter(active=True).exists()
+    if plan.configuration.accumulation == "INR_PURCHASE_CREDIT":
+        if plan.configuration.policy_schema_version != 2 or has_grades:
+            raise ValidationError("INR purchase-credit offers require an independent policy and no metal grades.")
+    elif plan.configuration.accumulation == "EXACT_METAL":
+        if not has_grades:
+            raise ValidationError("Select at least one exact metal grade before publishing.")
+    else:
+        raise ValidationError("Unsupported offer accumulation.")
+
+
 def validate_publication_evidence(plan):
     """Storage integrity, independent of the operational new-enrolment switch."""
     revision = plan.publication_revision
@@ -17,6 +30,7 @@ def validate_publication_evidence(plan):
         raise ValidationError("A listed configured offer must be active.")
     plan.configuration.full_clean()
     require_operational_configuration(plan.configuration)
+    validate_offer_denomination(plan)
 
 
 def require_configured_offer(plan):
@@ -55,8 +69,7 @@ def set_configured_plan_publication(*, plan_id, publish, actor, reason, expected
     plan.configuration.full_clean()
     if publish:
         require_operational_configuration(plan.configuration)
-    if publish and not plan.metal_offerings.filter(active=True).exists():
-        raise ValidationError("Select at least one exact metal grade before publishing.")
+        validate_offer_denomination(plan)
     before = {field: getattr(plan, field) for field in PLAN_FIELDS}
     before["publication_revision_id"] = plan.publication_revision_id
     # A revision is appended inside this transaction before the guarded plan update.

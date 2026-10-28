@@ -3,7 +3,7 @@
 {% block title %}Review offer publication | Jai Sri Krishna Jewellery{% endblock %}
 {% block content %}
 <div class="page-header"><div><p class="page-eyebrow">Owner plan builder</p><h1>{% if publish %}Review and publish{% else %}Withdraw offer{% endif %}</h1><p class="page-subtitle">{{ plan.name }} ({{ plan.code }}) · Configuration version {{ plan.configuration.version }}</p></div></div>
-{% if plan.configuration.policy_schema_version == 2 %}<div class="alert alert-warning">Independent offers remain preparation-only until the complete-builder release review. Saving a draft does not approve publication.</div>{% endif %}
+{% if publication_blockers %}<div class="alert alert-warning" role="status"><p>{% if plan.configuration.policy_schema_version == 2 %}Independent offers remain preparation-only while the following checks are blocked.{% else %}Resolve these checks before publication.{% endif %} Saving a draft does not approve publication.</p><ul class="mb-0">{% for blocker in publication_blockers %}<li>{{ blocker }}</li>{% endfor %}</ul></div>{% endif %}
 {% if not release_enabled %}<div class="alert alert-warning" role="status">The configured-plan release gate is disabled. Publication and new enrolments are blocked; withdrawal remains available. This is not a payment pause for existing agreements.</div>{% endif %}
 <div class="row g-4"><div class="col-lg-7">
 {% if plan.configuration.policy_schema_version == 2 %}{% include 'schemes/includes/policy_facts.html' with configuration=plan.configuration %}{% else %}{% include 'account/includes/application_offer.html' %}{% endif %}
@@ -15,7 +15,7 @@
 <a href="{% url 'schemes:plan_configuration_detail' plan.configuration_id %}">Review amount and missed-payment scenarios</a>
 </div></section></div><div class="col-lg-5"><section class="card"><div class="card-body"><h2 class="h5">Record decision</h2>
 <form method="post">{% csrf_token %}{{ form|crispy }}
-<button type="submit" class="btn btn-jsk" {% if publish %}{% if not release_enabled or plan.configuration.policy_schema_version == 2 %}disabled{% endif %}{% endif %}>{% if publish %}Publish reviewed offer{% else %}Withdraw from new applications{% endif %}</button>
+<button type="submit" class="btn btn-jsk" {% if publish and publication_blockers %}disabled{% endif %}>{% if publish %}Publish reviewed offer{% else %}Withdraw from new applications{% endif %}</button>
 <a class="btn btn-outline-dark mt-2" href="{% url 'schemes:plan_list' %}">Back to plans</a></form>
 </div></section></div></div>
 {% endblock %}

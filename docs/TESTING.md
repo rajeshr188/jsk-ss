@@ -1,5 +1,25 @@
 # Testing
 
+## Publication denomination and blocker review - 28 October 2026
+
+**46 tests passed in 86.496s** across independent publication, existing publication,
+independent draft services and catalogue lifecycle. Django checks passed; the isolated
+local PostgreSQL test database was destroyed. No migration is introduced.
+
+All five families were exercised for exact metal and INR through real draft,
+publication and enrolment services, yielding ten snapshotted agreements and no
+contributions. Those cases explicitly simulate future operational acceptance in the
+test context while still validating the typed policy; they are not evidence that the
+application's current runtime readiness gates are open. Separate tests prove those
+gates still block publication with either release-flag value. Coverage also includes
+incorrect or later-corrupted grade offerings, actual blocker presentation, service
+revalidation after a previously ready page, withdrawal with the flag disabled,
+retirement and atomic rollback on audit failure. No external messages or payments.
+
+Full CI on `698dff1` is run `40647586082`: container build and critical-vulnerability
+scan passed; normal Django tests remain in progress. That run does not cover this
+subsequent publication integration; a new current-head run remains necessary.
+
 ## Owner handbook policy matrix - 28 October 2026
 
 The owner confirms reviewing configuration and inactive draft creation. Added the

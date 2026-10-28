@@ -1394,6 +1394,7 @@ def configured_plan_publication(request, plan_id):
     from .forms import ConfiguredPlanPublicationForm
     from .plan_governance import plan_edit_digest
     from .plan_publication import set_configured_plan_publication
+    from .publication_selectors import get_publication_blockers
 
     plan = get_object_or_404(SchemePlan.objects.select_related("configuration", "publication_revision"),
                              pk=plan_id, configuration__isnull=False)
@@ -1410,7 +1411,8 @@ def configured_plan_publication(request, plan_id):
                              "Offer withdrawn. Existing agreements and their rights are unchanged.")
             return redirect("schemes:plan_list")
     return render(request, "schemes/plan_publication.html", {"plan": plan, "form": form,
-        "publish": publish, "release_enabled": settings.CONFIGURED_PLANS_ENABLED})
+        "publish": publish, "release_enabled": settings.CONFIGURED_PLANS_ENABLED,
+        "publication_blockers": get_publication_blockers(plan) if publish else ()})
 
 
 @owner_required

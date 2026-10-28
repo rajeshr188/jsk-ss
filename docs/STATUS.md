@@ -2,6 +2,20 @@
 
 ## Current milestone
 
+**28 October 2026 - denomination-aware publication integration verified locally.**
+Handbook/catalogue commit `698dff1` is integrated into draft PR #77; its normal CI
+run `40647586082` is in progress, with container build/security scan passed.
+On `agent/builder-publication-activation`, publication now requires exact grades for
+metal offers and prohibits them for INR purchase credit. The review page lists actual
+service blockers instead of an unconditional schema-2 button restriction; POST still
+revalidates. All 46 affected publication/draft/catalogue tests passed in 86.496s.
+The five-family, two-denomination integration cases simulate workflow acceptance
+only in tests, retaining real policy validation, revisions, enrolment and audit.
+They do not establish operational activation: real schema/payment guards remain
+closed. The remaining customer availability, effective-status and legacy-preview
+integration points are tracked in MVP_PLAN.md before any coherent activation change.
+No production change or release approval is implied.
+
 **28 October 2026 - owner reviews preparation; manual explains the complete matrix.**
 The owner reviewed configuration and inactive draft-plan creation and requests the
 remaining release sequence. The handbook now includes the five-family eligibility
@@ -11,8 +25,8 @@ offer distinction, and the scoped 268 categorical combinations (104 exact-metal,
 does not imply a product-count limit or publication acceptance. All 22 policy/manual
 tests passed; Django checks passed. Publication remains blocked by the disposable
 sandbox, default-off release setting and unreconciled operational/schema guards.
-The publication service's metal-only offering check also needs denomination-aware
-integration. This review does not approve the remaining provider-exception/refund
+The publication service's metal-only offering check is addressed by the subsequent
+local integration above. This review does not approve the remaining provider-exception/refund
 operations, final-image recovery or production activation.
 
 **28 October 2026 - catalogue archive/retirement implemented and locally verified.**
