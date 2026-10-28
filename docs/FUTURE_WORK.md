@@ -410,15 +410,25 @@ outcome by itself. Source: [official HTMX documentation](https://htmx.org/docs/)
 
 ## Production operations
 
-- **FW-CI-001 — Profile and safely parallelize the full test suite:** Added
-  28 October 2026 after run `40670193738` passed 1,473 tests in 14,359.871s.
-  Profile the slowest tests and separate suitable groups for parallel execution
-  while preserving migration and concurrency checks, improving feedback time
-  without reducing coverage. Keep schema-mutating migration tests isolated and
-  retain transaction/concurrency semantics; do not enable blanket parallelism.
-  Compare repeated before/after wall times and verify the complete test inventory,
-  database isolation and reliable full-CI results. This is deferred optimization,
-  not a new blocker for the current builder release or permission to skip tests.
+- **FW-CI-001 - Profile and safely parallelize the full test suite:** Owner
+  prioritized implementation on 29 October 2026 before rerunning release CI.
+  Baseline run `40670193738` passed 1,473 tests in 14,359.871s. The two duplicate
+  runs on `e27f820` were cancelled intentionally; neither is a test failure.
+  - [x] Remove duplicate feature push/PR runs; cancel superseded PR runs without
+    interrupting main image publication.
+  - [x] Partition complete discovered classes across four separate runner/PostgreSQL
+    jobs, sequential within each job; preserve migration round trips, internal
+    concurrency tests, normal hashing and every discovered test.
+  - [x] Preserve required `django` and `container` checks. The Django gate requires
+    checks/all shards and verifies exact complete inventory, executed IDs, revision
+    and success; missing/stale/duplicate/failed reports refuse approval.
+  - [x] Add all-test duration artifacts, slowest-test output and Django database/suite
+    timings; start with deterministic transactional-first/class-size balancing, then use measured results
+    for later rebalance. No performance improvement is asserted before measurement.
+  - [ ] Complete the first optimized hosted run and compare its wall time with the
+    baseline; review per-shard imbalance and repeat measurements as needed. Keep
+    full coverage and database isolation. Implementation does not replace the current
+    builder release's successful full-CI requirement.
 
 - **FW-PROD-009 — Optional isolated staging for higher-risk releases:** Deferred by
   owner decision on 22 October 2026 in favour of CI, an exact-image local PostgreSQL

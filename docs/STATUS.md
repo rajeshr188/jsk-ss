@@ -2,6 +2,26 @@
 
 ## Current milestone
 
+**29 October 2026 - CI optimization prioritized before the next release run.**
+The owner requested FW-CI-001 now. Cancelled both duplicate `e27f820` CI runs
+(`40783890107` PR / `40783885495` push). Four isolated runner/PostgreSQL jobs now
+execute complete test classes serially. Normal discovery finds all 1,483 previous
+tests plus nine infrastructure checks: 1,492 total, 373 per shard. The required
+`django` gate verifies complete execution reports and all validation jobs; required
+`container` build/scan and main publication gating remain. Superseded PRs cancel,
+feature push duplication is removed, and main publication is not interrupted.
+All-test timing artifacts and slowest-case output support measured later rebalance.
+Nine pure infrastructure checks passed in 0.103s; native CLI inventory and checksum-
+verified Actionlint passed. Native CLI validation passed **12 tests in 75.701s** (115.862s total,
+including 39.459s database setup), exercising a real migration round trip, threaded
+checkout race, exact-grade metric and infrastructure cases. The complete profile
+matched all executed/planned IDs. The migration took 65.135s, metric case 1.546s
+and concurrency case 0.968s; this is representative local profiling, not a full
+suite speed claim. The extended four-shard execution/gate test passed in the
+final nine-case native-CLI infrastructure rerun (0.096s).
+Current optimized hosted CI remains required; no speedup is claimed before its
+measurement. No application financial rule, production settings or host changed.
+
 **29 October 2026 - bounded builder readiness implementation and regression.**
 Validated schema-2 policies now reach the actual publication, enrolment, collection,
 eligibility and full-settlement workflows. Schema-1 interpretation stays restricted

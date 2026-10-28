@@ -1,5 +1,59 @@
 # Testing
 
+## CI optimization and complete inventory gate - 29 October 2026
+
+The owner prioritized FW-CI-001 before the next release run. Both `e27f820` runs
+(PR `40783890107`, push `40783885495`) were intentionally cancelled. CI now starts
+for PRs, main pushes or an explicit workflow dispatch; feature pushes no longer run
+a second copy alongside the PR. Superseded PR revisions cancel; active main image
+publication is not interrupted by a later push.
+
+The opt-in `django_project.ci_runner.CiRunner` uses normal Django discovery/order,
+fixtures, PostgreSQL, hashing, constraints and transaction handling. Four jobs each
+have their own PostgreSQL 18.6 service and run serially (`--parallel 1`). Entire
+classes stay together, including schema-mutating and internally concurrent tests.
+The production/default TEST_RUNNER setting is unchanged; CI-only runner/verifier
+modules and generated reports are excluded from production images. No test list, tag filter,
+SQLite substitution, fast hasher, skipped migration or fail-fast coverage shortcut
+is introduced. Initial balancing spreads transactional classes first, then fills by class sizes;
+this is a bootstrap heuristic, not an unverified timing claim.
+
+A discovery-only checks step writes an authoritative revision-bound plan. Each job
+records planned IDs, IDs actually started, result/count and all unittest durations.
+The existing required `django` status requires checks plus every shard to succeed,
+then rejects missing/duplicate/stale/failed/incomplete reports and verifies that
+all discovered IDs executed exactly once. The separate required `container` build/
+critical scan and main publication dependency remain unchanged. Artifacts retain
+only IDs/status/timings for seven days, not customer records or database contents.
+
+Local discovery: **1,492 tests = all 1,483 pre-existing tests + nine infrastructure
+cases**, assigned 373/373/373/373, with class boundaries intact. Nine pure checks
+passed in 0.103s, exercising deterministic coverage, class grouping, missing/extra/
+duplicate/error/stale report refusal, actual-ID recording, failure/skip propagation,
+forbidden filters/parallelism and discovery-only planning without database setup.
+A native manage.py CLI smoke test exposed the empty-tuple label shape; validation
+now accepts the CLI's empty inventory request without permitting narrowed labels,
+and the regression case uses that actual shape. Actionlint 1.7.12 syntax/expression validation passed (optional ShellCheck and
+Pyflakes are unavailable locally) after
+checking the official download checksum. Artifact actions are pinned to their
+verified v7.0.2/v8.0.2 commits. Native CLI validation passed **12 tests in 75.701s** (115.862s total,
+including 39.459s database setup), exercising a real migration round trip, threaded
+checkout race, exact-grade metric and infrastructure cases. The complete profile
+matched all executed/planned IDs. The migration took 65.135s, metric case 1.546s
+and concurrency case 0.968s; this is representative local profiling, not a full
+suite speed claim. The extended four-shard execution/gate test passed in the
+final nine-case native-CLI infrastructure rerun (0.096s).
+
+Reports show the 30 slowest unittest executions, suite times and execution totals;
+Django's `--timing` logs retain database setup/teardown cost. Unittest case durations
+include setUp/tearDown but exclude Django outer fixtures/class setup and database
+creation; do not confuse these with total job wall time. Use the first full optimized
+hosted result to measure speed/imbalance and compare with the 14,359.871s base run.
+This optimization changes CI infrastructure only and supplies no production release
+approval. Official references: [Django runner hooks](https://docs.djangoproject.com/en/6.0/topics/testing/advanced/),
+[GitHub matrix jobs](https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/run-job-variations),
+[workflow concurrency](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency).
+
 ## Bounded readiness activation regression - 29 October 2026
 
 The approved compatible schema-2 matrix now passes actual runtime readiness.

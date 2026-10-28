@@ -2,6 +2,14 @@
 
 ## Owner builder v1 release contract (approved 24 October 2026)
 
+**29 October CI priority:** the owner asked to optimize CI before the next release
+run. Runs `40783890107` (PR) and `40783885495` (duplicate push) were intentionally
+cancelled. FW-CI-001 now implements four isolated serial test shards with complete
+inventory verification and timing artifacts, retaining the required Django/container
+and image publication gates. Local discovery includes all 1,483 application tests
+plus nine CI infrastructure cases. The first optimized hosted result and final-image
+review remain required; cancellation is not a failed financial regression.
+
 **29 October follow-up:** the owner confirmed the representative physical Android
 customer check as "All checked and usable". The temporary review's retained-history
 assertion and cleanup passed. A subsequently reported translucent light dropdown
