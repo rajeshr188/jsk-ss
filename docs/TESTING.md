@@ -1,5 +1,25 @@
 # Testing
 
+## Full combined CI passed - 28 October 2026
+
+[Run 40670193738](https://github.com/rajeshr188/jsk-ss/actions/runs/40670193738)
+passed on `6c5034bb50d5097d8e4dad1817999a239b3e77b5` (PR #77's current head).
+Django job `122754704916` reported **1,473 tests in 14,359.871s: OK**, with no
+failures/errors. Migrations, migration drift, application checks, deployment
+checks and collectstatic passed; 231 static files were copied and 665 post-processed.
+Container job `122754704285` passed its production build and fixable-critical scan.
+The deployment check's sole warning was `jsk.W002` for CI's explicitly non-TLS
+loopback PostgreSQL service. Managed production TLS requirements remain unchanged.
+Image publication was skipped for this PR event; no published digest is inferred.
+
+The normal combined-CI requirement for this application candidate is complete.
+Local evidence follow-up `182a1fe` changes only the excluded harness/Markdown and
+was not this run's head. Any later runtime activation change requires its own checks;
+do not transfer this result to an arbitrary later application commit. The accepted
+laptop operator procedure and current local-image recovery evidence remain valid
+within their stated scope. Deferred physical Android customer acceptance, coherent
+readiness activation and final release/recovery approval are still pending.
+
 ## Current candidate image restore and catalogue history - 28 October 2026
 
 Application source `6c5034bb50d5097d8e4dad1817999a239b3e77b5` was built locally
@@ -55,8 +75,7 @@ The private 200 GETs rejected SQL writes and preserved retained row hashes. Thes
 injected sleeps measure round-trip sensitivity, not managed-database query plans,
 concurrent production load, a final activated UI or a latency SLA. High read counts
 and the slower high-latency case remain limitations. No history was truncated.
-Normal full CI on `6c5034b` is still required; the separate container build/critical
-scan passed in run `40670193738` while its Django test step remained in progress.
+Normal full CI on `6c5034b` subsequently passed in run `40670193738`, as recorded above.
 The accepted laptop operator procedure is unchanged. Physical Android customer
 acceptance, coherent readiness activation and approved published release/recovery
 digests remain separate requirements before production activation.

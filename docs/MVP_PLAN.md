@@ -112,12 +112,12 @@ and its dependencies are resolved.
 
 | Area | Evidence already present | Required next evidence / owner |
 | --- | --- | --- |
-| Family lifecycle and legacy safety | Collection matrix; independent eligibility, INR/metal settlement, corrections, replacement and concurrency suites; selected combined runs in TESTING.md | Engineering: consolidated normal CI on the exact release commit, with each approved family mapped to its journeys. Existing tests from different commits do not substitute for one passing candidate. |
+| Family lifecycle and legacy safety | Collection matrix; independent eligibility, INR/metal settlement, corrections, replacement and concurrency suites. Normal combined CI `40670193738` passed on `6c5034b`: 1,473 tests in 14,359.871s; migrations, drift, deployment checks, static collection and container build/scan passed | Full-CI blocker cleared for this application source. Later runtime activation changes still need their own affected checks and normal CI; preserve each family's journey mapping. This does not activate publication. |
 | Owner operations and provider exceptions | 28 October: 24 focused checks passed on `b2a9d62`; actual synthetic queue/cash/online forms reviewed. After guided explanation, owner confirmed the operator can follow hold/escalation, refund, evidence and final-closure decisions | Agreed four-case laptop acceptance complete. Initial operation uses recognition/containment and technical/provider escalation; independent owner mastery of every recovery screen is deferred. Full INR settlement fulfilment cannot clear a separate exception; real cases still require their actual evidence. Revisit if the material workflow changes. |
 | Performance | 31 focused tests passed; four-return reads use 1,101 INR / 713 metal queries. Current `6c5034b` local image on PostgreSQL 18.6 at one CPU/768 MB: two-return medians 1.742s INR / 0.860s metal with 1.5 ms added per query; 5.854s / 3.168s at 10 ms. Complete hashes and read-only assertions passed; TESTING.md records samples and limits | Engineering + owner: accept actual device/workflow latency on the final activation candidate. This is bounded synthetic sensitivity evidence, not a load test or SLA. Keep full history and fresh mutation authority; higher latency remains a limitation. |
 | Device, accessibility and messages | Current-candidate synthetic export: 16 real owner/customer screens and two captured completion emails; Chrome widths 320/390/1280, labels/error associations and light/dark text sampling. Keyboard-outline/theme-contrast corrected; laptop forms/keyboard reach checked. Owner confirmed all four test emails received/readable and premature completion refused on Android | Physical Android/TWA customer smoke test explicitly deferred by the owner until later, before activation; not yet passed. Record candidate/reviewer/result. Full device matrix and comprehensive specialist audit are deferred; critical defects still block. Do not repeat unchanged inbox/premature-closure checks solely for ceremony. |
-| INR publication and fulfilment | Owner confirmed business/accounting/provider suitability and approved original-source routes on 27 October. On 28 October, source-linked simulated fulfilment, pending refund containment and zero-outstanding closure were demonstrated; owner accepted the operator procedure | Laptop operational portion complete for `b2a9d62`. Real settlements still require actual fulfilment and customer receipt evidence; pending refunds or unsupported cash fallback cannot discharge liability. No automated refund API required. Publication still awaits combined CI, remaining Android check, readiness activation and release approval. |
-| Migration and recovery | Current `6c5034b` local image passed PostgreSQL 18.6 deployed-checkout upgrade (1 test, 67.801s), configured INR/metal dump/restore, complete row/liability comparison, whole-graph 0056 refusal and eight retained-history guards with forward recovery. The fixture includes archived draft/configuration and retired-plan evidence. Exact image identity and cleanup are recorded in TESTING.md | Engineering: complete normal CI and approve a published compatible recovery digest for deployment. Local image compatibility is not a production rollback approval. Never delete retained evidence to force a downgrade. |
+| INR publication and fulfilment | Owner confirmed business/accounting/provider suitability and approved original-source routes on 27 October. On 28 October, source-linked simulated fulfilment, pending refund containment and zero-outstanding closure were demonstrated; owner accepted the operator procedure | Laptop operational portion complete for `b2a9d62`. Real settlements still require actual fulfilment and customer receipt evidence; pending refunds or unsupported cash fallback cannot discharge liability. No automated refund API required. Base-candidate combined CI passed; publication still awaits the Android check, coherent readiness activation with its own checks and release approval. |
+| Migration and recovery | Current `6c5034b` local image passed PostgreSQL 18.6 deployed-checkout upgrade (1 test, 67.801s), configured INR/metal dump/restore, complete row/liability comparison, whole-graph 0056 refusal and eight retained-history guards with forward recovery. The fixture includes archived draft/configuration and retired-plan evidence. Exact image identity and cleanup are recorded in TESTING.md | Engineering: base-candidate normal CI passed; approve a published compatible recovery digest and reconcile final activation-image evidence before deployment. Local image compatibility is not a production rollback approval. Never delete retained evidence to force a downgrade. |
 | Activation implementation | Global default-off flag, schema/family checks and model/service publication barriers remain closed | Engineering: review a coherent activation change only after the preceding evidence; update readiness descriptions/tests without bypassing contract validation. Merely setting CONFIGURED_PLANS_ENABLED=True is insufficient. |
 | Production rollout | Existing digest-pinned GHCR deployment procedure | Owner + engineering: approve exact digest, current recovery point, compatible recovery image and one coherent activation. No build on the serving host. |
 
@@ -146,8 +146,10 @@ The guided laptop operator acceptance is complete as recorded below. The physica
 Android customer check and production approval remain pending; independent advanced
 recovery training is deferred under the agreed recognition/escalation procedure.
 
-Immediate engineering order: run consolidated candidate CI and exact-image rehearsal,
-including representative latency. Local synthetic browser review and the owner's
+Current base-candidate CI and local image/recovery/latency checks passed. Next: complete
+the deferred Android customer smoke test, review coherent readiness activation and
+validate that change, then approve final published release/recovery images.
+Local synthetic browser review and the owner's
 acceptance of the guided containment/refund/closure procedure are recorded in TESTING.md.
 Technical tests still cover the separate payment-resolution and order-retirement
 confirmations. Revisit read amplification if final measurements are unacceptable.
@@ -207,8 +209,11 @@ test's missing schema restoration caused the four later fixture errors, and the
 owner table had omitted its legacy cash-bonus disclosure. Test cleanup/schema-set
 verification and the historical-only disclosure were corrected without weakening
 production financial/migration guards. All 53 affected reminder/correction/bonus/
-catalogue tests passed in 287.446s. Fresh normal full CI remains the next evidence
+catalogue tests passed in 287.446s. Fresh normal full CI then passed on `6c5034b`
+(run `40670193738`, 1,473 tests in 14,359.871s). This clears that candidate's full-CI
 requirement; the operator acceptance need not be repeated for this fixture/display fix.
+The next acceptance is the explicitly deferred physical Android customer smoke test,
+followed by coherent runtime activation review and final published-image/recovery approval.
 
 Customer integration follow-up: 137 affected tests passed in 242.760s, including all
 five families/both denominations, INR HTTP checkout, uncertain/expired attempts,

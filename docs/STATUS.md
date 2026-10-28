@@ -2,6 +2,22 @@
 
 ## Current milestone
 
+**28 October 2026 - normal combined CI passed on the release-validation application candidate.**
+Run `40670193738` on `6c5034bb50d5097d8e4dad1817999a239b3e77b5` completed
+successfully: **1,473 tests in 14,359.871s** (about four hours), with zero failures
+or errors. Initial migrations, migration drift, application checks, production
+deployment checks, collectstatic and the separate image build/critical scan passed.
+The CI-only loopback PostgreSQL connection produced the expected non-blocking TLS
+warning; this is not approval to weaken managed production database TLS. Image
+publication was skipped because this was a PR run. The full-CI blocker for this
+application source is cleared. The local recovery evidence/harness follow-up
+`182a1fe` is separate and changes only excluded tests/Markdown; this pass must not
+be attributed to an untested later application or activation change. Laptop operator
+and four-email acceptance remain complete. Next: the deferred physical Android
+customer smoke test, coherent readiness activation with its affected checks/CI,
+then final published image/recovery evidence and explicit rollout approval.
+No merge, publication activation or production deployment follows automatically.
+
 **28 October 2026 - current local image recovery rehearsal passed, including catalogue history.**
 Application source `6c5034bb50d5097d8e4dad1817999a239b3e77b5` built with the normal
 Dockerfile as local image
