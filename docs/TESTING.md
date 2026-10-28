@@ -1,5 +1,26 @@
 # Testing
 
+## Completed full CI on b2a9d62 - 28 October 2026
+
+Run `40650621396`, Django job `122689575385`: **1,473 tests in 6,829.483s;
+one failure, four errors**. Initial migrations, drift/application checks and the
+separate container build/critical scan passed. Deployment checks/collectstatic and
+image publication were skipped. Logs were read after the laptop acceptance session.
+
+- `LegacyReminderMigrationTests.test_old_reminder_identity_and_delivery_survive_roundtrip`:
+  missing `schemes_plancatalogueclosure` while its setup calls current enrolment code.
+- `InrCorrectionTransactionTests.test_concurrent_resolution_records_one_return_set`,
+  `test_original_proposal_survives_independent_agreement_rollback_refusal`, and
+  `test_reverse_migration_refuses_to_discard_corrections`: missing
+  `schemes_paymenterrorrefundresolution` while setting up a proposal.
+- `CashBonusTests.test_customer_owner_and_plan_views_show_bonus_breakdown`:
+  owner plan-list response did not contain the expected `5.00%` bonus.
+
+Root causes and corrective changes still require isolated reproduction; do not infer
+that production tables are missing or weaken financial guards from these test traces.
+The next engineering step is fixing these cases and rerunning normal combined CI.
+The separately accepted laptop operator procedure does not replace this requirement.
+
 ## Lean operational acceptance session - 28 October 2026
 
 **Operator outcome: accepted for the agreed laptop scope.** Following the guided

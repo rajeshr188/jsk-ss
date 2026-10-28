@@ -2,6 +2,18 @@
 
 ## Current milestone
 
+**28 October 2026 - completed full CI reports five issues requiring diagnosis.**
+Run `40650621396` on `b2a9d62` finished: **1,473 tests in 6,829.483s,
+one failure and four errors**. The container build/critical scan, initial migrations,
+drift and application checks passed; deployment checks, collectstatic and image
+publication were skipped after test failure. The errors report missing catalogue/
+refund-resolution tables during historical reminder-migration and INR correction
+transaction fixtures; the failure expects the legacy cash bonus percentage on the
+owner plan list. These are traceback observations, not a completed root-cause analysis.
+Next engineering action: reproduce these five cases in isolation, correct their
+underlying causes and obtain normal current-candidate CI. Laptop operator acceptance
+below remains valid for its agreed scope; this CI run does not authorize release.
+
 **28 October 2026 - laptop operational acceptance confirmed by the owner.**
 After the guided review of source `b2a9d62`, the owner explicitly answered:
 "Yes—the operator can follow these decisions" for holding/escalating uncertain or
