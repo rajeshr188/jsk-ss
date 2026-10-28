@@ -2,6 +2,19 @@
 
 ## Current milestone
 
+**28 October 2026 - full-CI failure diagnosis and isolated payment fixtures.**
+All six failures from run `40511542243` were reproduced locally in 37.268s
+after removing ambient `RAZORPAY_*` variables. The monthly-eligibility and
+scheme-closure test classes configured fake API credentials but omitted the webhook
+secret, depending on developer environment settings. Both fixtures now explicitly
+provide a synthetic webhook secret. New negative cases retain the real missing-secret
+payment-availability and checkout guards; production code and CI credentials are unchanged.
+All 63 tests across both affected classes, Razorpay gateway and deployment checks
+passed in 140.134s with ambient Razorpay settings removed; Django checks passed and
+the disposable database was destroyed. This includes all six original failures and
+both new missing-secret regressions. A fresh normal full-CI pass remains required
+before release acceptance; no production or activation change was made.
+
 **28 October 2026 - owner handbook Edition 4 and INR status wording.**
 The canonical illustrated handbook now starts with the full offer-to-closure journey,
 uses the independent builder as the current preparation path, and explicitly scopes

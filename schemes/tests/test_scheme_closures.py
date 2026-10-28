@@ -41,8 +41,18 @@ class ClosureFixture(OutageFixture):
 
 
 @override_settings(IN_STORE_CASH_CONTRIBUTIONS_ENABLED=True, PAYMENT_GATEWAY="razorpay",
-    RAZORPAY_MODE="live", RAZORPAY_KEY_ID="rzp_live_fixture", RAZORPAY_KEY_SECRET="fixture")
+    RAZORPAY_MODE="live", RAZORPAY_KEY_ID="rzp_live_fixture", RAZORPAY_KEY_SECRET="fixture",
+    RAZORPAY_WEBHOOK_SECRET="fixture-webhook")
 class SchemeClosureTests(ClosureFixture, TestCase):
+    @override_settings(RAZORPAY_WEBHOOK_SECRET="")
+    def test_missing_webhook_secret_blocks_checkout(self):
+        contribution = self.online()
+        self.client.force_login(self.account.customer.user)
+        with patch("schemes.views.get_payment_gateway") as gateway_factory:
+            response = self.client.get(reverse("schemes:razorpay_checkout", args=[contribution.pk]))
+        self.assertEqual(response.status_code, 404)
+        gateway_factory.assert_not_called()
+
     def test_pending_request_is_nonfinancial_and_preserves_payment_rights(self):
         before = SchemeAccount.objects.values().get(pk=self.account.pk)
         request = self.request_closure()

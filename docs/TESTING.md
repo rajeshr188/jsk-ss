@@ -1,5 +1,25 @@
 # Testing
 
+## Six full-CI failures: environment-independent fixtures - 28 October 2026
+
+Reproduced all six failures from run `40511542243` with the six exact test labels
+in a disposable localhost PostgreSQL database: **6 failures in 37.268s**.
+Before Django setup, every ambient `RAZORPAY_*` variable was removed and the default
+gateway set to `mock`, matching the CI credential boundary. Both affected classes
+overrode fake API credentials but omitted `RAZORPAY_WEBHOOK_SECRET`; the real gateway
+guard correctly returned `UNCONFIGURED` or checkout 404 before the intended assertions.
+The class fixtures now include a synthetic webhook secret. Added explicit blank-secret
+regressions for payment availability and HTTP checkout, without weakening the guards
+or adding credentials to the CI test environment. Provider operations remain mocked.
+
+Final verification under the same environment isolation: **63 tests passed in
+140.134s**, covering `MonthlyEligibilityTests`, `SchemeClosureTests`,
+`RazorpayGatewayTests` and `test_deployment_checks`. Django system checks passed;
+the random test database was destroyed. The first verification attempt caught a
+wrong mock-factory name in the new checkout negative test; it was corrected before
+this complete rerun. All six original failures and both new guard regressions pass.
+This focused batch is not a substitute for the fresh normal full-CI run on the PR.
+
 ## Owner handbook Edition 4 and settlement wording - 28 October 2026
 
 Ran `schemes.tests.test_plan_manual`,

@@ -23,8 +23,16 @@ from schemes.tests.test_instalment_payments import NOW
 
 
 @override_settings(IN_STORE_CASH_CONTRIBUTIONS_ENABLED=True, PAYMENT_GATEWAY="razorpay",
-    RAZORPAY_MODE="live", RAZORPAY_KEY_ID="rzp_live_fixture", RAZORPAY_KEY_SECRET="fixture")
+    RAZORPAY_MODE="live", RAZORPAY_KEY_ID="rzp_live_fixture", RAZORPAY_KEY_SECRET="fixture",
+    RAZORPAY_WEBHOOK_SECRET="fixture-webhook")
 class MonthlyEligibilityTests(OutageFixture, TestCase):
+    @override_settings(RAZORPAY_WEBHOOK_SECRET="")
+    def test_missing_webhook_secret_blocks_payment_availability(self):
+        availability = get_customer_payment_availability(self.account)
+        self.assertFalse(availability.allowed)
+        self.assertEqual(availability.code, "UNCONFIGURED")
+        self.gateway.create_order.assert_not_called()
+
     def instant(self, number, *, end=False):
         period = self.account.instalment_periods.get(number=number)
         return datetime.combine(period.ends_before if end else period.starts_on,

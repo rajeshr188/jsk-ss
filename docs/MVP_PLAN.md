@@ -6,8 +6,11 @@
 independent preparation path and the complete owner journey, including INR original-source
 refunds and a guided full-settlement example. Two isolated INR browser cases passed;
 the owner confirmed premature completion refusal on Android. This does not complete
-operator/inbox acceptance or activation. The full remote run has six failures to
-resolve; see STATUS.md and TESTING.md for exact evidence and the remaining sequence.
+operator/inbox acceptance or activation. The full remote run's six failures were
+reproduced as missing synthetic webhook configuration in two test classes; the fixture
+fix passes the 63-case isolated regression batch and still requires a fresh full CI pass.
+See STATUS.md and TESTING.md
+for exact evidence and the remaining sequence.
 
 Deliver one coherent owner-builder production activation, rather than activating
 the currently supported subset first. Develop, review and test in small increments
