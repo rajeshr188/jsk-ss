@@ -2,6 +2,27 @@
 
 ## Current milestone
 
+**28 October 2026 - current local image recovery rehearsal passed, including catalogue history.**
+Application source `6c5034bb50d5097d8e4dad1817999a239b3e77b5` built with the normal
+Dockerfile as local image
+`sha256:282eaac8cee2d2ab18a852b515c07af9d12808f3d36eb7684216dcb83e1dcec3`.
+The read-only mounted harness now seeds archived draft/configuration and retired-plan
+evidence through real services. On isolated PostgreSQL 18.6, dump/restore preserved
+every schemes row/column hash, including three catalogue closures. Separate outstanding
+liabilities stayed INR 500.00 and GOLD_22K_916 0.050000 g; returned benefits retained
+their expected review holds. Whole-graph 0056 downgrade refusal, eight retained-history
+guards and forward recovery passed. The deployed-checkout upgrade test passed inside
+the image: **1 test in 67.801s**, with Django checks passing. Final snapshot/liability
+comparison passed and only the identified disposable container and volumes were removed.
+Three-sample owner-page medians at 1.5 ms added per query were 1.742s INR / 0.860s
+metal; at 10 ms, 5.854s / 3.168s. Read-only assertions passed; substantial read overhead
+remains a documented limitation, not a production latency SLA. Exact harness/manifest
+identities and initial fixture correction are in TESTING.md. Normal CI run `40670193738`
+on `6c5034b` remains in progress; its container build/critical scan passed. This local
+image is not a published or approved production recovery digest. Laptop operator
+acceptance remains complete; Android customer smoke, coherent readiness activation
+and final release/recovery approval remain pending. No production change.
+
 **28 October 2026 - five CI issues reproduced and affected regressions pass.**
 An isolated six-test run reproduced the exact one failure/four errors in 48.259s.
 The reminder reverse-guard test allowed newer migrations to unapply before 0051

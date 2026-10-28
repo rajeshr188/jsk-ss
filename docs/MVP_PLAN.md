@@ -108,16 +108,16 @@ Arbitrary grace/catch-up choices are not automatically included; enumerate any r
 variants in the accepted matrix first. No production date is promised before that scope
 and its dependencies are resolved.
 
-### Remaining release evidence — reconciled 27 October 2026
+### Remaining release evidence — reconciled 28 October 2026
 
 | Area | Evidence already present | Required next evidence / owner |
 | --- | --- | --- |
 | Family lifecycle and legacy safety | Collection matrix; independent eligibility, INR/metal settlement, corrections, replacement and concurrency suites; selected combined runs in TESTING.md | Engineering: consolidated normal CI on the exact release commit, with each approved family mapped to its journeys. Existing tests from different commits do not substitute for one passing candidate. |
 | Owner operations and provider exceptions | 28 October: 24 focused checks passed on `b2a9d62`; actual synthetic queue/cash/online forms reviewed. After guided explanation, owner confirmed the operator can follow hold/escalation, refund, evidence and final-closure decisions | Agreed four-case laptop acceptance complete. Initial operation uses recognition/containment and technical/provider escalation; independent owner mastery of every recovery screen is deferred. Full INR settlement fulfilment cannot clear a separate exception; real cases still require their actual evidence. Revisit if the material workflow changes. |
-| Performance | 31 focused tests passed; four-return reads use 1,101 INR / 713 metal queries. Exact `232284f` image on PostgreSQL 18.6 at one CPU/768 MB: two-return medians 1.868s INR / 0.811s metal with 1.5 ms added per query. Complete hashes and read-only assertions passed; TESTING.md records stress results and limits | Engineering + owner: accept actual device/workflow latency on the final activation candidate. This is bounded synthetic sensitivity evidence, not a load test or SLA. Keep full history and fresh mutation authority; higher latency remains a limitation. |
+| Performance | 31 focused tests passed; four-return reads use 1,101 INR / 713 metal queries. Current `6c5034b` local image on PostgreSQL 18.6 at one CPU/768 MB: two-return medians 1.742s INR / 0.860s metal with 1.5 ms added per query; 5.854s / 3.168s at 10 ms. Complete hashes and read-only assertions passed; TESTING.md records samples and limits | Engineering + owner: accept actual device/workflow latency on the final activation candidate. This is bounded synthetic sensitivity evidence, not a load test or SLA. Keep full history and fresh mutation authority; higher latency remains a limitation. |
 | Device, accessibility and messages | Current-candidate synthetic export: 16 real owner/customer screens and two captured completion emails; Chrome widths 320/390/1280, labels/error associations and light/dark text sampling. Keyboard-outline/theme-contrast corrected; laptop forms/keyboard reach checked. Owner confirmed all four test emails received/readable and premature completion refused on Android | Physical Android/TWA customer smoke test explicitly deferred by the owner until later, before activation; not yet passed. Record candidate/reviewer/result. Full device matrix and comprehensive specialist audit are deferred; critical defects still block. Do not repeat unchanged inbox/premature-closure checks solely for ceremony. |
 | INR publication and fulfilment | Owner confirmed business/accounting/provider suitability and approved original-source routes on 27 October. On 28 October, source-linked simulated fulfilment, pending refund containment and zero-outstanding closure were demonstrated; owner accepted the operator procedure | Laptop operational portion complete for `b2a9d62`. Real settlements still require actual fulfilment and customer receipt evidence; pending refunds or unsupported cash fallback cannot discharge liability. No automated refund API required. Publication still awaits combined CI, remaining Android check, readiness activation and release approval. |
-| Migration and recovery | Per-migration guards through schemes 0054/accounts 0009; merge 0055 regression. Exact `232284f` image passed PostgreSQL 18.6 legacy-checkout upgrade, configured INR/metal restore, row/liability comparison, retained-history refusals and forward recovery. Earlier `fcc5cd7` image also read the restored history without downgrade. Family regression map is in TESTING.md | Engineering: complete normal CI and approve a published compatible recovery digest for deployment. Local image compatibility is not a production rollback approval. Never delete retained evidence to force a downgrade. |
+| Migration and recovery | Current `6c5034b` local image passed PostgreSQL 18.6 deployed-checkout upgrade (1 test, 67.801s), configured INR/metal dump/restore, complete row/liability comparison, whole-graph 0056 refusal and eight retained-history guards with forward recovery. The fixture includes archived draft/configuration and retired-plan evidence. Exact image identity and cleanup are recorded in TESTING.md | Engineering: complete normal CI and approve a published compatible recovery digest for deployment. Local image compatibility is not a production rollback approval. Never delete retained evidence to force a downgrade. |
 | Activation implementation | Global default-off flag, schema/family checks and model/service publication barriers remain closed | Engineering: review a coherent activation change only after the preceding evidence; update readiness descriptions/tests without bypassing contract validation. Merely setting CONFIGURED_PLANS_ENABLED=True is insufficient. |
 | Production rollout | Existing digest-pinned GHCR deployment procedure | Owner + engineering: approve exact digest, current recovery point, compatible recovery image and one coherent activation. No build on the serving host. |
 
@@ -142,14 +142,17 @@ The private owner UI is now local: retained payment inspection, exact-payment re
 separate all-attempt order comparison/retirement and persistent review history. GET
 performs no provider I/O or writes. Explicit confirmed POST binds the owner, route and
 fresh evidence; Apply rechecks independently. Credited principal has no clearance path.
-Operator/device and production acceptance remain pending.
+The guided laptop operator acceptance is complete as recorded below. The physical
+Android customer check and production approval remain pending; independent advanced
+recovery training is deferred under the agreed recognition/escalation procedure.
 
 Immediate engineering order: run consolidated candidate CI and exact-image rehearsal,
-including representative latency. Local synthetic browser review of the refund
-workspaces is recorded in TESTING.md; showroom-owner acceptance of uncertain/late/
-duplicate captures and the two separate refund confirmations remains required. Revisit read amplification if those measurements are unacceptable.
-Device/inbox and business approvals can proceed alongside engineering;
-they remain explicit pending evidence, not assumed approvals. Use this table and
+including representative latency. Local synthetic browser review and the owner's
+acceptance of the guided containment/refund/closure procedure are recorded in TESTING.md.
+Technical tests still cover the separate payment-resolution and order-retirement
+confirmations. Revisit read amplification if final measurements are unacceptable.
+Inbox readability and the owner's business/provider confirmation are recorded;
+the physical Android check remains deferred until before activation. Use this table and
 TESTING.md rather than adding more numbered milestones.
 
 Some retained readiness identifiers in `plan_policies.py` still end in
@@ -172,9 +175,10 @@ inside tests. The following are concrete remaining integration checks, not new s
 | `preview_configuration_agreement` | Explicitly rejects schema 2 and directs to the independent-policy preview, preserving legacy metal/minimum-duration assumptions even after future shared readiness changes. |
 | Final integrated candidate | Run normal CI after these changes, rehearse its image/migrations/recovery and complete the outstanding operator/device acceptance before publication activation. |
 
-The owner has accepted configuration and inactive draft preparation and confirmed
-all four test emails are readable. That acceptance does not cover publication or
-the outstanding uncertain/late/duplicate-capture and refund operations. The disposable
+The owner has accepted configuration/inactive draft preparation and the guided
+laptop operational procedure, and confirmed all four test emails are readable.
+Those observations do not authorize publication or replace the remaining Android,
+combined-CI and final-image/release checks. The disposable
 review sandbox continues to prohibit publication/enrolment writes independently of
 the application release controls.
 

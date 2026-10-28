@@ -1,5 +1,66 @@
 # Testing
 
+## Current candidate image restore and catalogue history - 28 October 2026
+
+Application source `6c5034bb50d5097d8e4dad1817999a239b3e77b5` was built locally
+with the normal Dockerfile as `jsk-builder-validation:6c5034b`, immutable local ID
+`sha256:282eaac8cee2d2ab18a852b515c07af9d12808f3d36eb7684216dcb83e1dcec3`.
+This is not a published GHCR digest or an approved production recovery image.
+The extended test harness was mounted read-only; application modules came from
+the image. Tests and these Markdown evidence files are excluded from that image.
+Harness SHA-256:
+`8c8842d1ac2bfc0fed48aab4d09f31d4908b2301979f4be4dd8ec820f9d2d141`.
+
+The dedicated PostgreSQL 18.6 container had no external network or published port;
+application containers shared only its loopback network. Fresh source and restore
+databases, locmem email, synthetic settings and a closed configured-plan gate were
+used. The first seed stopped because the new synthetic legacy-plan fixture omitted
+required fields. Using the established valid plan factory corrected the harness;
+only the two identified disposable databases were reset before the successful run.
+No application financial behavior or production data was changed.
+
+The successful seed/dump/restore compared every schemes model's ordered rows and
+all columns against the source manifest. It retained six accounts/contributions,
+four invoices/full returns/reapplication decisions, four payment refund resolutions,
+eight refund observations, four refunded-order retirements, and **three catalogue
+closure records**: archived draft, archived configuration and retired exposed plan.
+The catalogue cases use the actual preparation/closure services. Separate outstanding
+liabilities stayed **INR 500.00** and **GOLD_22K_916 0.050000 g**; the four never-credited
+refunded orders retained zero entitlement. Principal, closure, refund disposition,
+reapplication and grade diagnostics passed. The two returned original benefit awards
+correctly remained in review, rather than reopening spending automatically.
+
+Whole-graph downgrade toward 0055 refused at 0056's retained catalogue guard. Direct
+retention checks also refused history loss at 0047/0048/0049/0050/0052/0053/0054/0056.
+Returning to the current graph preserved the complete snapshot and liabilities.
+The deployed-checkout-to-builder migration test also passed inside this image:
+**1 test in 67.801s**, with Django system checks passing and its separate test database
+destroyed. A final read-only snapshot/liability comparison after the latency and
+upgrade phases passed. The identified disposable PostgreSQL container, both drill
+databases, dump and anonymous volume were removed; the local image and ignored
+evidence logs remain. No other container or volume was removed.
+Manifest SHA-256:
+`629edf94f416c27661f0daaf4eba6124823c5a9147ad9610ce48b30557e9cf55`.
+Ignored local logs and manifest are under
+`.uv-cache/builder-image-rehearsal/current-6c5034b-r2-2fa3e3a5/`.
+
+With one CPU/768 MB for the application, three samples per two-return owner page gave:
+
+| Page | Queries | No added latency, median | +1.5 ms/query, median | +10 ms/query, median |
+| --- | ---: | ---: | ---: | ---: |
+| INR purchase bonus | 481 | 0.849s | 1.742s | 5.854s |
+| Exact-grade metal VA | 265 | 0.390s | 0.860s | 3.168s |
+
+The private 200 GETs rejected SQL writes and preserved retained row hashes. These
+injected sleeps measure round-trip sensitivity, not managed-database query plans,
+concurrent production load, a final activated UI or a latency SLA. High read counts
+and the slower high-latency case remain limitations. No history was truncated.
+Normal full CI on `6c5034b` is still required; the separate container build/critical
+scan passed in run `40670193738` while its Django test step remained in progress.
+The accepted laptop operator procedure is unchanged. Physical Android customer
+acceptance, coherent readiness activation and approved published release/recovery
+digests remain separate requirements before production activation.
+
 ## CI failure reproduction and schema cleanup - 28 October 2026
 
 The six-case diagnostic (the reminder reverse-guard predecessor plus all five CI

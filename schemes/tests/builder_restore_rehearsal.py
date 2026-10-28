@@ -107,6 +107,27 @@ def seed():
                 contribution, _, _, _ = refund.prepare(monthly, metal)
                 refund.retire(contribution, refund.order_review(contribution))
                 print(f"refunded_order=SEEDED monthly={monthly} metal={metal}", flush=True)
+        # Retain the latest catalogue evidence alongside the financial history.
+        # These are real preparation/closure services, not database backfills.
+        from schemes.catalogue_lifecycle import close_catalogue_item
+        from schemes.catalogue_selectors import catalogue_closure_preview
+        from schemes.tests.test_audit_exceptions import make_plan
+        from schemes.plan_configuration import create_configuration_version, create_configured_plan_draft
+        from schemes.tests.test_independent_policy_fields import independent_values
+        configuration = create_configuration_version(values=independent_values(
+            name="Synthetic archived configuration", accumulation="INR_PURCHASE_CREDIT"),
+            actor=fixture.owner, reason="Prepare isolated catalogue recovery history")
+        draft = create_configured_plan_draft(configuration_id=configuration.pk,
+            name="Synthetic unused draft", code="RESTORE-ARCHIVE", metal_grades=[],
+            actor=fixture.owner, reason="Prepare isolated draft")
+        exposed = make_plan(code="RESTORE-RETIRE")
+        for target in ({"plan": draft}, {"configuration": configuration}, {"plan": exposed}):
+            preview = catalogue_closure_preview(**target)
+            record, _ = close_catalogue_item(actor=fixture.owner, reason="Synthetic catalogue recovery rehearsal",
+                confirmed=True, expected_digest=preview["expected_digest"],
+                plan_id=target["plan"].pk if "plan" in target else None,
+                configuration_id=target["configuration"].pk if "configuration" in target else None)
+            print(f"catalogue_history=SEEDED action={record.action}", flush=True)
         return {"owner": fixture.owner.pk, "profile_accounts": accounts,
                 "rows": snapshot(), "balances": balances()}
     finally:
@@ -187,13 +208,13 @@ def reverse_refusal(manifest):
     executor = MigrationExecutor(connection)
     leaves = executor.loader.graph.leaf_nodes()
     try:
-        executor.migrate([("schemes", "0053_payment_error_refund_resolution")])
+        executor.migrate([("schemes", "0055_merge_builder_checkout_prevention")])
     except RuntimeError as exc:
-        if "Cannot reverse 0054" not in str(exc):
+        if "Retained catalogue" not in str(exc):
             raise
         print("whole_graph_downgrade_refusal=PASS", str(exc), flush=True)
     else:
-        raise AssertionError("Retained refunded-order history did not refuse downgrade")
+        raise AssertionError("Retained catalogue history did not refuse downgrade")
     MigrationExecutor(connection).migrate(leaves)
     for module, function in (
         ("0047_benefit_invoice_fulfilment", "guard_reverse"),
@@ -202,6 +223,8 @@ def reverse_refusal(manifest):
         ("0050_independent_plan_drafts", "guard_reverse"),
         ("0052_payment_refund_observations", "preserve_refund_observations"),
         ("0053_payment_error_refund_resolution", "preserve_resolutions"),
+        ("0054_refunded_order_retirement", "preserve_retirements"),
+        ("0056_plan_catalogue_closure", "refuse_history_loss"),
     ):
         guard = getattr(import_module("schemes.migrations." + module), function)
         try:
