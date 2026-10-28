@@ -2,6 +2,26 @@
 
 ## Current milestone
 
+**29 October 2026 - Android customer acceptance confirmed; light dropdown visibility corrected.**
+The owner answered "All checked and usable" for the physical Android customer
+review: amounts/units, pending versus completed history, receipt/statement,
+navigation/back, theme switching and logout without clipped content. This completes
+the agreed representative browser check on model 24090RA29I / Android 16 / Chrome
+156.0.8078.47 against the `6c5034b` runtime. It is not a real-payment or production
+TWA test. The final retained-history assertion passed, the review process exited
+successfully, its exact disposable database was verified absent, and only USB
+forward tcp:8767 was removed.
+The owner subsequently reported translucent light-mode dropdowns. Removed the
+mobile navbar's translucent/pale-text overrides; Account and Appearance menus now
+use the solid theme surface, explicit text colours and readable selected/focus
+states at every width. Actual header/style preview in Chrome at 390/1280 px verified
+opaque light RGB(255,253,249), text RGB(36,25,20), and opaque dark RGB(37,33,29)
+with text RGB(243,236,226). Keyboard focus remained visible. No financial workflow,
+framework or production setting changed. This CSS follow-up is locally verified;
+the prior full-CI pass still applies to `6c5034b`, not later runtime changes.
+Next is the bounded readiness activation implementation/tests and final release
+image/recovery approval. Production remains unchanged.
+
 **29 October 2026 - physical Android customer review prepared; result pending.**
 The authorized USB-connected device is model 24090RA29I. A fresh loopback-only review
 database serves the `6c5034b` application runtime; later local changes are excluded

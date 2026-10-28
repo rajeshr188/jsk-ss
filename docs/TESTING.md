@@ -1,5 +1,32 @@
 # Testing
 
+## Android acceptance result and dropdown follow-up - 29 October 2026
+
+The owner explicitly answered **"All checked and usable"** to the physical customer
+check below. Acceptance covers its agreed readability/units/status/history,
+receipt/statement, navigation/back, theme and logout scope on Android 16 / Chrome
+156.0.8078.47, model 24090RA29I. This is physical browser evidence for the `6c5034b`
+runtime, not a desktop viewport substitute, production TWA re-verification or real
+payment/refund. The harness logged `ANDROID_FINAL_RETAINED_HISTORY_PASS`, removed
+`test_jsk_owner_review_229a5b586f58` and exited 0. A separate loopback catalogue query
+verified that exact database absent. USB tcp:8767 forwarding was removed.
+
+The subsequent light-mode dropdown report exposed the mobile navbar's RGBA
+background/pale-text override. The shared navbar menu now has an explicit solid
+theme surface and text; mobile no longer overrides them with translucency. The
+active Appearance choice also shares the readable hover/focus palette. No new
+behavioural test was added for this reversible CSS correction. A local static preview
+rendered the actual customer header and used the current application styles and
+Bootstrap 5.3.3. Chrome inspection at 390/1280 px verified light background
+RGB(255,253,249), text RGB(36,25,20), opacity 1; keyboard focus used RGB(246,234,208)
+with text RGB(45,24,17). Dark background/text remained RGB(37,33,29) / RGB(243,236,226).
+Menus were visually opaque over content; keyboard arrow selection/focus worked.
+Screenshots are ignored local artifacts `.uv-cache/dropdown-light-mobile-account.png`,
+`dropdown-light-mobile-appearance.png` and `dropdown-light-desktop.png`.
+The viewport and original preview theme were restored; the preview tab/server were
+closed. These are targeted local visual checks, not a new physical-device sign-off
+or full accessibility audit. No financial data or production setting changed.
+
 ## Physical Android customer smoke test prepared - 29 October 2026
 
 The owner connected and authorized the USB device, model 24090RA29I, Android 16,
