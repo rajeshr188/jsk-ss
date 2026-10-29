@@ -330,8 +330,11 @@ scope: ADR-0017. These approved design items are not implemented by migration 00
   - [ ] Obtain owner commercial-copy/CMS acceptance through `FW-UX-002`. Measure
     actual outcomes through `FW-UX-001`, without treating visual polish, browser
     emulation or synthetic tests as physical-device proof or conversion uplift.
-  - [ ] Obtain hosted CI and reviewed deployment acceptance; no production changes
-    or INR-offer launch are part of the local implementation evidence.
+  - [x] Hosted PR/main CI, exact-image rehearsal and controlled deployment accepted
+    on 29 October: `b20241a`, digest `c8f60b76ef601889b9ee10d440b00721556451a6194acc21a9f98a8f7f3cd86b`.
+    Health/public routes, 14 integrity commands, timer checks and 50 unchanged
+    scheme-model snapshots pass. No additional INR offer was launched; owner
+    commercial-copy/CMS follow-up remains separate. See PRODUCTION_DEPLOYMENT.md.
   Keep existing Bootstrap/Django/services/selectors. Do not add product reservations,
   new benefit formulas (`FW-PLAN-009`), unrestricted signup or customer policy authoring.
 

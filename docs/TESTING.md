@@ -1,5 +1,41 @@
 # Testing
 
+## FW-UX-006 exact-image and production verification - 29 October 2026
+
+Main run `40884955268` succeeded, including all four test shards, inventory gate
+and publication/security scan of digest
+`c8f60b76ef601889b9ee10d440b00721556451a6194acc21a9f98a8f7f3cd86b` for
+`b20241ab961b24a6d7ca98e94cbf1c6ed1e67c3e`. The image label matches that revision.
+
+An isolated local PostgreSQL 18.6 container used `--network none`, no published
+ports and a synthetic-only database; the exact app image shared that network
+namespace, used mock payments and in-memory email, and received no production
+environment. Applied migrations to the empty database and ran Django checks.
+Created synthetic exact-metal and INR offers through the existing services.
+Public/health routes returned 200, the metal example displayed 0.227 g, INR
+retained principal/source-refund wording, and both detail routes refused POST.
+All scheme records compared equal before/after the examples; no agreement,
+contribution, allocation or SchemeRate existed. The initial rehearsal helper's
+import path and policy URL were corrected before this successful run; production
+code was unchanged. Container/volume cleanup passed. Log remains ignored at
+`.uv-cache/offer-exact-image-smoke.log`.
+
+Production preflight verified zero pending orders/migrations, existing flags,
+capacity, candidate identity and equivalent read-only financial snapshots. The
+first post-Caddy-recreation connection probe refused TCP before startup completed;
+the automatic compatible rollback was healthy. Retried with bounded
+`--retry-connrefused` checks, preserving TLS validation; the rollout then passed.
+
+Origin/public live and ready return the new release. Home, plans, plan 3 detail,
+how-it-works, terms and refunds return 200. Fourteen integrity commands pass for
+configuration, agreements, schedules, payment ledger, financial exceptions, live
+Razorpay, graded rates, in-store cash, INR principal, benefits/reapplications,
+closures, optional orders and enrolment requests. All 50 compared scheme-model
+snapshots/counts and liabilities match the prior image. Timer/service checks pass.
+Host-only evidence is recorded in PRODUCTION_DEPLOYMENT.md; no live payment,
+customer email or new offer was used as a test. This is not new physical-device
+acceptance or owner approval to launch an additional offer.
+
 ## PR #78 full hosted acceptance and merge - 29 October 2026
 
 [Run 40875176430](https://github.com/rajeshr188/jsk-ss/actions/runs/40875176430)

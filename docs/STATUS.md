@@ -2,6 +2,32 @@
 
 ## Current milestone
 
+**29 October 2026 - FW-UX-006 presentation deployed and verified.**
+Main CI `40884955268` passed and published release
+`b20241ab961b24a6d7ca98e94cbf1c6ed1e67c3e`, digest
+`c8f60b76ef601889b9ee10d440b00721556451a6194acc21a9f98a8f7f3cd86b`.
+The exact image passed an isolated PostgreSQL 18.6 rehearsal covering synthetic
+metal/INR offers, public pages, GET examples, POST refusal and unchanged scheme
+records after illustration requests. The isolated containers and volume were removed.
+
+Deployed to the authorized `172.235.9.77` host by pulling the digest, preserving
+the compatible prior image and changing only APP_IMAGE/APP_RELEASE. No build,
+migration, flag change, offer publication, enrolment, payment or refund occurred.
+The first immediate Caddy probe encountered connection refusal and the safeguard
+restored the prior release. Confirmed healthy rollback; bounded connection-refused
+retries resolved the probe startup race and the second rollout passed.
+
+Web is healthy; certificate-validated origin/public live/ready and all six public
+page probes pass, including the existing plan 3 detail/example. All 14 financial,
+contract, instalment, benefit and closure integrity commands pass. Fifty compared
+scheme-model snapshots, 15 customers, 14 agreements and separate liabilities match;
+pending orders remain zero. Both reminder/reconciliation timers are active and their
+services report success. Final available RAM is 369 MiB; disk has 7.8 GB free (67%).
+Private host evidence and the environment backup are retained in
+`/home/deploy/jsk-rollouts/20261029-b20241a-presentation` (directory 700, files 600).
+Engineering rollout is accepted. Owner commercial-copy/CMS follow-up and operating
+observation remain distinct; this does not approve additional INR/benefit offers.
+
 **29 October 2026 - FW-UX-006 PR #78 merged after successful full CI.**
 Run `40875176430` passed on `216ba565b2a5bba0e9c6b6e665d861ef6919f33d`:
 all four test shards, checks, required Django inventory gate and container job.
