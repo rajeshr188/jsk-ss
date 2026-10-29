@@ -2,6 +2,17 @@
 
 ## Current milestone
 
+**30 October 2026 - owner accepted the deployed Savings Plans presentation.**
+After the requested production review, the owner reported "reviewed looks great".
+The reviewed deployed presentation under FW-UX-006 is accepted; do not infer a
+specific device/browser matrix, conversion improvement or approval of a new offer.
+Next recommended product step is preparing one differentiated supported offer,
+preferably flexible 22K, for review of its actual amount limits, eligibility and
+full-only settlement terms before publication. This requires no new builder or
+VA-waiver formula. Existing first-offer observation continues; its suggested
+5 November review date is not a technical gate. Rollout evidence remains local
+on `agent/denomination-offers-rollout-evidence` until pushed through review.
+
 **29 October 2026 - FW-UX-006 presentation deployed and verified.**
 Main CI `40884955268` passed and published release
 `b20241ab961b24a6d7ca98e94cbf1c6ed1e67c3e`, digest

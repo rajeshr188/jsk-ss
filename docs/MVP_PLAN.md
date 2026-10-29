@@ -13,8 +13,10 @@ including keyboard, examples and errors. Five presentation findings were correct
 `216ba56` and merged as `b20241a` with an identical tree. Main CI/image publication,
 isolated exact-image rehearsal and controlled production rollout now pass; release
 `b20241a` is live with unchanged financial snapshots and existing offer/flags.
-Owner commercial-copy/CMS review and operating observation remain separate from
-engineering rollout acceptance. The earlier automation interruption was resolved
+The owner accepted the deployed Savings Plans presentation on 30 October. Next
+is one reviewed differentiated offer using supported rules; proposed amount limits,
+eligibility and commercial terms still need offer-specific confirmation before
+publication. Operating observation continues independently. The earlier automation interruption was resolved
 through a fresh valid native-browser observation, with no safety bypass.
 Do not treat this as approval to list INR offers or advertise a gold-value VA waiver.
 
