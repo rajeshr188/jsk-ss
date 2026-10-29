@@ -126,11 +126,14 @@ class PlanGovernanceTests(TestCase):
         self.assertFalse(admin.has_add_permission(request))
         self.assertFalse(admin.has_delete_permission(request, self.plan))
 
-    def test_policies_use_agreed_date_not_fixed_twelve_month_discontinuation(self):
+    def test_policies_use_agreed_eligibility_not_fixed_twelve_month_discontinuation(self):
         for name in ("terms", "cancellation_refund"):
-            response = self.client.get(reverse(name))
-            self.assertContains(response, "before its recorded eligibility date")
-            self.assertNotContains(response, "within 12 months")
+            with self.subTest(policy=name):
+                response = self.client.get(reverse(name))
+                self.assertContains(response, "before its normal eligibility conditions are met")
+                self.assertContains(response, "including agreements longer than twelve months")
+                self.assertNotContains(response, "before its recorded eligibility date")
+                self.assertNotContains(response, "within 12 months")
 
     def test_owner_creation_requires_reason_and_stale_post_is_visible(self):
         self.client.force_login(self.owner)

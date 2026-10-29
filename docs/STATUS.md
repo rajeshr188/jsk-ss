@@ -2,6 +2,17 @@
 
 ## Current milestone
 
+**29 October 2026 - PR #78 CI policy-copy regression identified and corrected.**
+Hosted run `40865018323` on `25f0b3b` failed one of the 376 tests in shard 3:
+the governance policy test still required date-only early-discontinuation wording.
+The other three test shards, application checks and container job passed; the
+required aggregate failed as a consequence of shard 3. Reproduced the exact
+failure locally before changing the test. The corrected assertion covers normal
+eligibility conditions, agreements longer than twelve months and rejection of a
+blanket twelve-month cutoff on both terms and refund pages. Financial services,
+policy copy and CI coverage are unchanged. Local verification and a fresh hosted
+run are tracked in TESTING.md; this does not mark hosted CI or release accepted.
+
 **29 October 2026 - FW-UX-006 local visual and copy review completed.**
 The user authorized local desktop/mobile review. The in-app browser host was
 unavailable, but a fresh native Chrome observation established the current URL.

@@ -1,5 +1,29 @@
 # Testing
 
+## PR #78 hosted CI policy-copy fix - 29 October 2026
+
+Run `40865018323` on `25f0b3b` reported one failing governance assertion in
+shard 3 (376 tests). The other three shards, checks and container job passed;
+the required `django` aggregate failed because shard 3 failed. The exact test
+was reproduced on isolated local PostgreSQL before editing: **1 test, 1 failure
+in 1.232s**. The earlier 99-test presentation selection did not include this
+governance module.
+
+The assertion required "before its recorded eligibility date", although the
+approved presentation now covers duration, qualifying count, both and anytime
+eligibility. Updated the test to require "before its normal eligibility conditions
+are met" on both terms and refund pages, explicitly cover agreements longer
+than twelve months, and reject date-only wording and "within 12 months".
+No production template, financial service, test inventory or CI workflow changed.
+
+Post-fix local regression passed **62 tests in 36.429s** across
+`schemes.tests.test_plan_governance`, `pages.test_offers` and `pages.tests`.
+Django checks passed and no migration drift was detected. The runner used a
+disposable loopback PostgreSQL database, mock payments and in-memory email.
+Ignored logs: `.uv-cache/offer-ci-failure-repro.log` and
+`.uv-cache/offer-ci-governance-fix.log`. A fresh full hosted run is still required
+on the pushed fix; local success does not approve merging or deployment.
+
 ## FW-UX-006 visual review follow-up - 29 October 2026
 
 The user authorized the local review. In-app browser host was unavailable; fresh
