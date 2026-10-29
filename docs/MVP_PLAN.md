@@ -2,6 +2,15 @@
 
 ## Owner builder v1 release contract (approved 24 October 2026)
 
+**Current product step - 30 October 2026:** owner authorized preparing one new
+offer after accepting the deployed presentation. **Plan 4 / FLEX22K-ANYTIME** and
+configuration **2/v1** now exist in production, inactive/unlisted and without a
+publication revision. Proposed INR 150-100,000 variable contributions reuse legacy
+`fsp` bounds for review; 22K only, optional payments, anytime full settlement with
+positive verified grams, no bonus and no partial/cash withdrawal. No existing
+agreement/publication or financial record changed. Review these actual proposed
+terms before publication; another builder or VA formula is not needed. See STATUS.md.
+
 **Current engineering item - 29 October 2026:** owner authorized `FW-UX-006` while
 the first published offer is observed. Local branch `agent/denomination-aware-offers`
 now contains denomination-aware shared copy, comparable facts, public per-offer

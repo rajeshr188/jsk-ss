@@ -7,6 +7,34 @@ explicit Razorpay Test/Live modes, and manually published Scheme Rate build. Dev
 
 ## Production-readiness boundary
 
+### Unpublished Flexible 22K preparation - 30 October 2026
+
+No deployment was required. On release `b20241a`, owner-authorized preparation
+through `create_configuration_version` and `create_configured_plan_draft` saved
+configuration **2/v1**, plan **4 / FLEX22K-ANYTIME**. Active/listed remain false,
+publication revision null, no linked agreement. The configuration uses exact
+GOLD_22K_916 grams, optional variable contributions, anytime full settlement,
+no instalment/duration obligation or benefit, and permits further contributions
+before closure under existing guards. Proposed INR 150-100,000 bounds copy the
+existing `fsp` offer and await review; this is not new public-term approval.
+
+The existing configuration author's active administrator account passed the
+normal owner-service authorization; the retained reason explicitly identifies
+delegated operator preparation under the owner's instruction. No direct SQL
+write, flag/publication change, customer message, rate, payment or enrolment ran.
+Existing rows across all 53 scheme models were compared within the transaction;
+no existing row changed. Only preparation/configuration/audit/offering records
+were appended, with 22K as the sole active grade. Original public offer IDs 3/2/1,
+14 agreements and separate liabilities remain. Configuration, agreement and
+financial checks pass; `/plans/4/` returns 404. Read-only structured offer facts
+confirm positive verified entitlement, customer authorization and full-only
+showroom settlement without voluntary conversion to cash.
+
+Private preparation evidence is
+`/home/deploy/jsk-rollouts/20261030-flex22k-draft/prepared.json` (directory 700/file 600).
+Review under owner plans and configuration 2; publication requires a subsequent
+explicit decision. Immutable policy revisions preserve earlier agreements.
+
 ### Denomination-aware presentation rollout - 29 October 2026
 
 PR #78 merged as `b20241ab961b24a6d7ca98e94cbf1c6ed1e67c3e` with the same

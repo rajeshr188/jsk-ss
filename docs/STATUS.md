@@ -2,6 +2,30 @@
 
 ## Current milestone
 
+**30 October 2026 - Flexible 22K offer prepared for owner review, unpublished.**
+Owner authorized the next recommendation. Used the existing explicit services on
+the deployed `b20241a` application to create configuration **2/v1** and plan **4**,
+**FLEX22K-ANYTIME / Flexible 22K Jewellery Savings**. The audit records delegated
+operator preparation, not an owner-interface submission or publication approval.
+Proposed bounds copy existing legacy offer `fsp`: **INR 150-100,000 per contribution**,
+no additional increment. These remain review choices, not approved new public terms.
+
+Rules: variable optional contributions, **GOLD_22K_916 only**, no compulsory
+instalments/duration/qualifying count, no bonus, flexible payment timing, and
+positive verified entitlement permits requesting one final full showroom jewellery
+settlement. Review, customer authorization, reconciliation and actual fulfilment
+remain required; no voluntary metal-to-cash conversion. Further contributions may
+continue before closure under the normal payment guards. Existing agreements are
+not converted. Plan is inactive/unlisted, has no publication revision or agreement.
+
+All existing rows across 53 scheme models match before/after. Only one configuration,
+plan, revision and audit plus offering rows were appended; only the 22K offering is
+active. Existing public offer IDs 3/2/1 and liabilities are unchanged. Configuration,
+agreement and financial checks pass; public plan-detail access returns 404.
+Host evidence: `/home/deploy/jsk-rollouts/20261030-flex22k-draft/prepared.json`
+(directory 700/file 600). Next: owner reviews the actual draft, especially bounds
+and anytime full-only eligibility, before separately authorizing publication.
+
 **30 October 2026 - owner accepted the deployed Savings Plans presentation.**
 After the requested production review, the owner reported "reviewed looks great".
 The reviewed deployed presentation under FW-UX-006 is accepted; do not infer a
