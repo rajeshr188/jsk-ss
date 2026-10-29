@@ -2,6 +2,151 @@
 
 ## Current milestone
 
+**29 October 2026 - first configured enrolment verified; controlled acceptance complete.**
+The owner reported successfully enrolling as the test customer. Read-only production
+verification finds exactly one configured agreement: **JSK-958ABDE4 / ID 14**, ACTIVE,
+plan **MC22K-5000-12M**, immutable offer revision **2**, configuration **1/v1**,
+agreement schema **2**. Fixed amount **INR 5,000**, exact grade **GOLD_22K_916**,
+required count **12**, duration **12 months**, calendar-month/once-per-period rule,
+no post-cutoff collection and the frozen independent contract all validate.
+
+The existing-customer request is ENROLLED, with matching schema-2/revision evidence,
+disclosure version `2026-09-04`, retained customer acceptance at **15:42:20 IST**,
+owner decision at **15:43:28 IST**, and exactly one enrolment audit. No identity,
+email address, secret or raw consent payload is copied into this documentation.
+The customer's receipt/approval email inbox was not independently rechecked here.
+
+Start date is **29 October 2026**. There are **15** valid immutable periods:
+12 original qualifying windows plus three ordinary replacement windows, all at
+INR 5,000. The first is **29 October through 31 October 2026** (exclusive end
+1 November); the twelfth ends before **1 October 2027**. The duration floor is
+**29 October 2027**, so twelve payments alone do not permit earlier normal closure.
+If missed payments require replacements, the final qualifying period and other
+eligibility/authorization checks still apply. Current progress is NO_ENTITLEMENT,
+zero qualified payments, not eligible; dates do not create an entitlement.
+
+Comparison with publication baseline shows only **one new SchemeAccount**, **one
+new SchemeEnrolmentRequest** and **15 new SchemeInstalmentPeriod** records. All
+other 43 compared scheme-model snapshots, legacy offers and liabilities are
+unchanged. Total agreements **14** (13 legacy, one configured); the new agreement
+has zero contributions, metal allocations, provider webhooks, principal/cash
+receipts or redemptions. Plan configuration/agreement, schedule/payment ledger,
+enrolment request, financial exception, graded-rate and live Razorpay checks pass.
+Evidence is retained under the existing protected host directory as
+`first-enrolment.json`, `first-enrolment-baseline-comparison.json` and eight check
+outputs. No production mutation was performed by this verification.
+
+**Next is bounded operating observation**, not another enrolment/payment ceremony.
+Recommend seven calendar days (29 October-5 November) before reviewing friction
+and choosing the next single improvement; this is an observation recommendation,
+not a new financial rule or a scheduled automation. Real payments are optional
+customer decisions handled through existing verified workflows. `FW-UX-006` remains
+the next presentation improvement before public INR offers. Separate overdue
+deletion reviews still require owner attention. This completes the initial
+activation/enrolment checkpoint, not every deferred backlog or future variant.
+
+**29 October 2026 - approved configured intake enabled; first offer published.**
+The owner approved the prepared offer unchanged ("i approve it as it is"), including
+controlled intake activation and publication. On the existing release `8f3ba5a` /
+digest `e9c126344938846b0e991644958265804317417636305447e364d99d10b75834`,
+set only `CONFIGURED_PLANS_ENABLED=True` in the Linode production environment,
+recreated web without building/pulling, waited for healthy, validated/recreated
+Caddy and checked certificate-validated origin/public live/ready responses.
+
+Published plan **3 / MC22K-5000-12M / 22K Monthly Jewellery Savings** through the
+authenticated owner's existing publication form. Immutable offer revision **2**
+(ID **2**) and `SCHEME_CHANGE` audit **118** record publication at **29 October
+2026 15:32:25 IST**. Configuration **1/v1** and all approved terms remain unchanged:
+INR 5,000 fixed; GOLD_22K_916 only; 12 months AND 12 qualifying calendar-month
+payments; joining month counts; no extra grace/advance/bulk catch-up; three ordinary
+replacements then review; separate acknowledged outage relief; no benefit;
+full-only settlement and no post-cutoff collection. Public `/plans/` returns 200
+and includes this offer, monthly terms and its application CTA.
+
+All **46** compared scheme-model record snapshots, legacy offer fields and separate
+liabilities match before activation and after publication. Existing plans remain
+active/listed with 10 and 3 agreements; total agreements **13**, configured
+agreements **0**. Gold remains **2.576623 g 22K / 0.329272 g 24K**; silver and
+INR purchase-credit/legacy cash liabilities remain zero. Plan configuration,
+agreement, financial exception, graded-rate, live Razorpay, INR principal and payment
+operation checks pass. All grades remain OPEN with zero pending orders. Both
+checkout-reconciliation and scheme-reminder timers remain active; their services
+report Result=success / ExecMainStatus=0. One Python-client public TLS handshake
+timed out; subsequent certificate-validated IPv4 curl live/ready probes passed,
+without changing TLS, DNS or application security settings.
+
+Protected host evidence: `/home/deploy/jsk-rollouts/20261029T100052Z-configured-intake`
+(mode 700; environment backup mode 600). No application code/migration, real
+customer enrolment, payment, refund or customer message was created by activation.
+**Next: one genuine customer application and owner-approved enrolment**, checking
+the frozen revision/configuration, amount, grade, monthly periods/count/dates and
+consent without requiring payment. No customer has been selected or enrolled by
+automation. The earlier disabled/draft checkpoints below are historical.
+
+**29 October 2026 - first real configured offer prepared, inactive and unlisted.**
+Using the authenticated production owner interface, inspected the empty configuration
+catalogue, reviewed the server-generated independent-policy preview and saved
+configuration **1 / v1** (family `2fdc420f-6129-423a-926f-191a38ae3e48`). Created
+draft plan **3**, **22K Monthly Jewellery Savings**, code `MC22K-5000-12M`, offering
+only `GOLD_22K_916`. The owner plans screen confirms preparation-only/unlisted,
+zero agreements for the draft, and existing plans still active/listed with their
+10 and 3 agreements. No existing offer was edited or retired.
+
+Proposed review terms: showroom-fixed INR 5,000; 12-month duration AND 12 qualifying
+calendar-month payments, including the joining month; at most one qualifying
+payment per period; zero extra grace/no bulk catch-up or advance payments; three
+ordinary replacement periods then review, preserving paid entitlement. Outage
+compensation stays separate and customer-acknowledged. No bonus/VA discount or
+post-cutoff contributions. Full-only exact-grade jewellery settlement; early exit
+needs authorization/reconciliation, with no voluntary metal-to-cash payout.
+These are proposed draft terms, not owner publication/activation approval. Internal
+notes and both audit reasons explicitly retain that boundary.
+
+The live owner guide confirmed configured intake disabled. No environment change,
+publication, enrolment, payment, refund, rate publication or customer message was
+performed. Next is owner acceptance/amendment of the concrete offer and its
+customer-facing terms, followed by separately approved controlled activation.
+Policy changes require a successor immutable configuration, not an edit to v1.
+
+Read-only host verification confirms release `8f3ba5a`, configured intake false,
+plan 3 inactive/unlisted, only GOLD_22K_916 offered, zero draft agreements and 13
+total agreements. The publication selector reports only the disabled release gate.
+Financial exceptions pass with paid/unallocated, failed/mismatched webhooks,
+expired checkouts, unresolved optional orders and refund-disposition errors all zero.
+Origin certificate-validated live/ready probes pass; public apex readiness returns
+200 and www returns its existing 301 redirect. Containers remain healthy, with
+394 MiB available RAM during diagnosis.
+
+The browser briefly showed HTTP 502 and then 525 while opening the read-only
+publication page. No corresponding web crash/error was found; Caddy recorded a
+successful 200 review response in 0.266s. After one safe GET reload, the actual
+owner publication page loaded successfully and showed only the disabled intake
+gate, with Publish disabled. Root cause of the transient transport failure is
+unproven; recurrence needs investigation, not an assumed application fix. No TLS,
+proxy, DNS, restart or security-setting change was made.
+
+**29 October 2026 - competitor research documented; controlled activation stays next.**
+Owner requested preserving the public-market audit and reconciling it with the
+deployed builder rather than starting every suggested improvement. MVP_PLAN.md now
+records official sources/limits, core-versus-exact compatibility, benefit-basis
+arithmetic, presentation/onboarding observations and the recommended sequence.
+FUTURE_WORK.md tracks denomination-aware presentation as `FW-UX-006` and selected
+financial-policy extensions as conditional `FW-PLAN-009`, reusing `FW-PRICE-002`
+for early-exit tiers. No new ADR: this is research/sequencing, not an accepted new
+financial contract or architecture change.
+
+Next remains one owner-reviewed supported configuration/inactive draft, explicit
+activation approval, publication of only that offer and one genuine enrolment
+without requiring payment. Recommend a 22K exact-metal/no-new-benefit offer for the
+first operating sample; owner must confirm actual terms. INR/benefit engineering
+is not removed from scope or labelled unfinished. Shared metal-only public copy
+must be corrected before public INR listing; another benefit formula must be
+implemented before its promise is advertised. These conditional gates do not
+reopen completed CI/device/image acceptance for accurate supported metal offers.
+Three overdue deletion reviews remain prompt, separate owner operations. The
+research produced no competitor account/payment, code, database, environment or
+production change. Configured intake remains disabled per the deployment record.
+
 **29 October 2026 - builder release deployed; configured intake remains disabled.**
 Normal CI `40799459905` passed on `46c7fd8`: all **1,492 tests** exactly once,
 four successful 373-case PostgreSQL shards, complete inventory verification,

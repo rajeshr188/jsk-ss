@@ -10,6 +10,45 @@ Detailed completed-work evidence belongs in [Project status](STATUS.md), the
 historical milestone ledger remain here so stable `FW-*` identifiers and previously
 recorded limitations are not lost.
 
+## Current priority override — 29 October 2026
+
+Builder v1 is deployed on `8f3ba5a`; reviewed-head/main CI, exact-image upgrade,
+restore/forward recovery, operator/device/email acceptance and disabled-first
+production verification are complete. The owner accepted the first offer unchanged;
+`CONFIGURED_PLANS_ENABLED=True` is live and plan 3 `MC22K-5000-12M` is published
+with immutable revision 2 / audit 118. Health and integrity checks pass, all 46
+compared scheme-model snapshots and liabilities match, legacy offers are unchanged.
+This supersedes older "local/in development/release pending" wording for the
+delivered builder below. Dated notes remain history, not instructions to repeat
+completed work. Evidence is in STATUS.md, TESTING.md and PRODUCTION_DEPLOYMENT.md.
+
+**Current acceptance:** first enrolment is verified: JSK-958ABDE4, revision 2,
+configuration 1/v1, correct 22K/INR 5,000/12-count/12-month/calendar rules, consent,
+one audit and 15 periods. No contribution, order, allocation or receipt was created;
+other compared financial history and liabilities remain unchanged. Total agreements
+are 14, with one configured. Inbox delivery was not independently rechecked.
+
+**Next:** bounded observation before another delivery item. Recommend seven calendar
+days (29 October-5 November), then review actual friction and choose one improvement;
+no automation or additional payment is scheduled/required. This does not reduce the delivered INR/benefit
+scope. Triage three overdue deletion reviews separately as owner operations;
+retain balances/holds and review individually, never bulk-complete.
+
+First offer is now published: plan 3 `MC22K-5000-12M`, configuration 1/v1, 22K only,
+INR 5,000 fixed, 12 months AND 12 qualifying calendar-month payments, no benefit,
+full-only settlement. Active/listed with one verified agreement; financial checks pass.
+Owner terms/activation/publication approval is recorded. See the current
+MVP_PLAN.md checklist; do not create another pilot draft or repeat completed gates.
+
+The [market review](MVP_PLAN.md#jewellery-savings-market-review-29-october-2026)
+records sources, compatibility, design observations and gaps. The
+[execution sequence](MVP_PLAN.md#current-execution-priority--29-october-2026)
+separates offer-specific prerequisites from later improvements. Competitor parity
+is not required for the first supported offer. Correct shared denomination copy
+before public INR listing; implement a new financial promise before advertising it.
+Calculators, tiers, mandates and unrelated CMS/mobile work are not bundled into
+activation. Existing incident response/checks continue; prior deferrals remain.
+
 ## Review checkpoint — 22 October 2026
 
 Reviewed against the current repository, commit `7d07cf2`, the recorded Phase 1–4
@@ -195,6 +234,28 @@ dispute restrictions before INR activation; a recorded amount cap is not route a
   customer confirmation before normal enrolment. Proposal submission creates no financial
   records or payment access. Not included in immediate owner-builder implementation.
 
+- **FW-PLAN-009 — Selected market-derived policy extensions (conditional):**
+  Research recorded in the 29 October MVP_PLAN.md market review. Not a blocker for
+  existing supported offers. Select one actual commercial need rather than cloning
+  every competitor or reopening builder-v1 completion. Prioritize explicit VA bases
+  if JSK wants a waiver based on eligible gold value: percentage-of-charges differs.
+  Other conditional dimensions: exact-day/due-day/grace/collection boundaries,
+  tiered benefits, product exclusions and excess-purchase/offer-stacking scope.
+  Early-exit tiers remain `FW-PRICE-002`, presentation `FW-UX-006` and customer-authored
+  proposals `FW-PLAN-008`; avoid duplicate implementation.
+  - [ ] Select one offer and agree complete anchors, benefit base/caps/qualification,
+    payment and exit treatment. Competitor headlines do not authorize JSK terms or
+    prove legal/accounting/provider suitability.
+  - [ ] Approve bounded design preserving immutable old contracts, separate INR/grades,
+    principal/benefits and actual source/fulfilment/refund evidence.
+  - [ ] Implement the selected calculation/schedule/eligibility/settlement/correction
+    paths with Decimal arithmetic, retained rounding, database and concurrency tests.
+    Plain-text charge definitions cannot substitute for a new calculation formula.
+  - [ ] Accept public examples, owner/customer journeys, notices and the exact-image
+    release before offering the variant; no partial redemption or silent forfeiture.
+  Single-advance presets require fit analysis first. Nominees, mandates, fees, gifts
+  and online jewellery fulfilment remain later separate scope, not implied approval.
+
 Execution/acceptance checklist: MVP_PLAN.md; policy compatibility, legacy handling and
 scope: ADR-0017. These approved design items are not implemented by migration 0021.
 
@@ -239,6 +300,27 @@ scope: ADR-0017. These approved design items are not implemented by migration 00
   completion, wrong turns and misunderstood payment/application stages without personal
   details, private links or payment references. Resolve findings and obtain language
   approval before publication. No Tamil translations or participant results are complete.
+
+- **FW-UX-006 — Denomination-aware offers and truthful illustrations:** Added from
+  the 29 October market review. **Prerequisite for public INR listing:** shared
+  homepage/plans/how-it-works/FAQ/refund content must distinguish purchase credit
+  from exact-grade metal, and match accepted full-only terms/source refund routes.
+  Current shared homepage lead/plans introduction assume all payments create grams.
+  A correctly described metal offer does not require this broader INR-copy change.
+  Existing configuration-specific facts are not proof all shared prose is correct.
+  - [ ] Audit shared copy against each denomination; eliminate metal-only assertions
+    from INR paths and contradictory withdrawal/benefit promises before INR listing.
+  - [ ] After first-offer acceptance, standardize comparable facts: accumulation,
+    amount, obligation/period, eligibility, conditional benefit, exclusions and early exit.
+    Preserve plan-first application, protected progress and secure returning-customer pay.
+  - [ ] Add read-only worked illustrations using authoritative policy/Decimal reads;
+    label hypothetical rate assumptions and separate principal, grams, benefit/cap,
+    making charges and taxes. Do not value metal into spendable INR or create a lock.
+  - [ ] Verify applicable family/role/flag paths, mobile/keyboard/errors and accepted
+    terms; obtain copy approval through `FW-UX-002`. Measure actual outcomes through
+    `FW-UX-001`, without treating visual polish or synthetic tests as conversion uplift.
+  Keep existing Bootstrap/Django/services/selectors. Do not add product reservations,
+  new benefit formulas (`FW-PLAN-009`), unrestricted signup or customer policy authoring.
 
 ## Browser workflow audit — 22 October 2026
 
@@ -396,6 +478,11 @@ outcome by itself. Source: [official HTMX documentation](https://htmx.org/docs/)
   full-page fallback. Compare payload/request counts and actual usability before expanding.
 
 ## Prioritization
+
+Use the **29 October current priority override** above for active delivery order:
+one reviewed supported offer through controlled activation, then observed feedback,
+then one scoped improvement. The principles below govern risk; they do not reopen
+every historic backlog item as a new prerequisite for this already-deployed builder.
 
 1. Protect real funds: monitoring, recovery, rotation, webhook reconciliation, and
    correction controls.
