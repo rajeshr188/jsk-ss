@@ -2,6 +2,36 @@
 
 ## Current milestone
 
+**29 October 2026 - builder release reviewed and PR #77 merged; final image pending.**
+Normal CI `40799459905` passed on `46c7fd8`: all **1,492 tests** exactly once,
+four successful 373-case PostgreSQL shards, complete inventory verification,
+migration/drift/application/deployment/static checks and container build/critical
+scan. Downloaded reports were independently reverified. Total hosted job span was
+62m39s (06:46:57-07:49:36 IST); the previous serial base suite was about four hours.
+Different application revisions/runner conditions mean this is an operational
+comparison, not a controlled benchmark. Profiles retain the observed shard imbalance
+for later tuning without dropping tests.
+
+Final release review found no additional merge-blocking issue in the reviewed
+publication/default-off intake, owner/customer scoping, frozen-contract/source
+confirmation, full-only settlement and original-source refund/actual-fulfilment
+boundaries. Branch protection remained enforced, required checks were green and no
+review thread was unresolved. Marked ready and merged the exact tested head as
+**8f3ba5ad0000a3645f69eddf63607436f91720a8**. The merge tree matches `46c7fd8`;
+no new application change was inserted after CI. Local main was fast-forwarded.
+The PR review/body and merge message retain the green CI and separate rollout boundary.
+
+Main run **40818256991** is now responsible for full checks and publishing the
+immutable GHCR image. Its digest, exact-image migration/financial/dump-restore and
+compatible recovery evidence are still pending. Keep configured intake explicitly
+off in the candidate production environment until the controlled activation is
+approved. A fresh managed-PostgreSQL recovery point and exact rollback/forward-
+recovery choice must be confirmed for deployment. Production has not been changed;
+no build, migration, flag update or real transaction ran on Linode.
+This separate evidence branch collects the final image/rollout record without
+changing the merged application candidate. Separate staging remains deferred under
+FW-PROD-009; the accepted isolated exact-image rehearsal remains required.
+
 **29 October 2026 - first optimized CI failures reproduced and locally fixed.**
 Run `40786013227` on `fb59370` completed all four 373-case shards. Shards 0/3,
 application/migration/deployment/static checks and the container build/scan passed.

@@ -1,5 +1,52 @@
 # Testing
 
+## Green optimized CI and final merge review - 29 October 2026
+
+Run [40799459905](https://github.com/rajeshr188/jsk-ss/actions/runs/40799459905)
+passed on application head `46c7fd83c672d10a587a6c0cc5401f35866b6814`.
+All four test jobs, checks, aggregate required Django gate and container build/
+critical scan succeeded. PR-only image publication was correctly skipped.
+The downloaded authoritative plan and reports were independently verified through
+`verify_reports`: **1,492 tests, each exactly once, no missing/duplicate IDs, every
+report successful**. Plan fingerprint: `0ef47b82d9688bebc052d08b0eef0f109637e6b1c77917ae5c116e5b31ab3fcd`.
+Downloaded plan-file SHA-256: `c1a7f9b7acb9b9d751b231f94c8582ca18726dc2a7d3f4a6112ed811a759b6f2`.
+Raw local artifacts are ignored `.uv-cache/ci-run-40799459905`; the source inventory
+can be reconstructed from the recorded commit and CI runner. No business data or
+credentials are part of these reports.
+
+| Shard | Tests | Suite seconds | Result |
+| --- | ---: | ---: | --- |
+| 0 | 373 | 2,440.372 | Passed |
+| 1 | 373 | 1,804.285 | Passed |
+| 2 | 373 | 1,278.436 | Passed |
+| 3 | 373 | 3,636.609 | Passed |
+
+The successful hosted run spanned 62m39s, 29 October 2026 06:46:57-07:49:36 IST.
+The earlier serial base run used 14,359.871s for 1,473 tests. The new source has
+1,492 tests and different runner conditions; this is useful observed feedback-time
+improvement, not an isolated performance benchmark. Remaining uneven class costs
+are visible in artifacts and may be tuned later without changing coverage or
+transaction semantics. FW-CI-001's first successful optimized-run acceptance is met.
+
+Release review verified default-off configured intake and separate existing rights,
+owner/customer scope, immutable contract/source evidence, full-only settlements,
+original-source refund/fulfilment requirements and retained-history recovery guards.
+No new merge-blocking finding was identified in that scope. Existing laptop operator,
+four-email and representative Android acceptance remain recorded; this is not an
+independent human review or a new production/payment test. Required protected checks
+`django` and `container` passed, base was current and no review thread was unresolved.
+PR #77 was marked ready and merged with expected-head protection into
+`8f3ba5ad0000a3645f69eddf63607436f91720a8`. A local full-tree diff against `46c7fd8`
+was empty. The tested application tree was preserved.
+
+Main CI [40818256991](https://github.com/rajeshr188/jsk-ss/actions/runs/40818256991)
+must pass and publish its exact digest before the final image rehearsal. The older
+`6c5034b` image drill is retained base evidence, not proof for this activation image.
+Exact-image migrations, financial invariants, dump/restore, compatible recovery
+selection, fresh production recovery point and explicit rollout/activation approval
+remain. No production host or data changed. This evidence-only branch does not
+change the running main image-publication candidate.
+
 ## First optimized CI failure repair - 29 October 2026
 
 Hosted run `40786013227` (`fb59370`) executed 373 tests per isolated shard:

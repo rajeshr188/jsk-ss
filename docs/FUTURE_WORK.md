@@ -425,11 +425,16 @@ outcome by itself. Source: [official HTMX documentation](https://htmx.org/docs/)
   - [x] Add all-test duration artifacts, slowest-test output and Django database/suite
     timings; start with deterministic transactional-first/class-size balancing, then use measured results
     for later rebalance. No performance improvement is asserted before measurement.
-  - [ ] Obtain successful optimized hosted CI after the first run exposed one outdated
-    assertion and seven schema-leak errors (40786013227); compare wall time with the
-    baseline, review per-shard imbalance and repeat measurements as needed. Keep
-    full coverage and database isolation. Implementation does not replace the current
-    builder release's successful full-CI requirement.
+  - [x] Successful optimized full CI accepted: run `40799459905` on `46c7fd8`
+    passed all 1,492 tests exactly once, with required checks/build/security gates.
+    Hosted span 62m39s compared with the approximately four-hour earlier serial base
+    suite; differing revisions/runner conditions prevent a controlled speedup claim.
+    Initial schema-leak/obsolete-assertion failures were reproduced and fixed before
+    this green result. PR #77 merged without changing the tested tree.
+  - Optional follow-up: use retained all-case timings to rebalance the slowest classes
+    (successful shard suites ranged 1,278-3,637s), repeat same-revision measurements
+    and preserve complete inventory/database isolation. This tuning is deferred and
+    does not add a new blocker to the builder's final image/release acceptance.
 
 - **FW-PROD-009 — Optional isolated staging for higher-risk releases:** Deferred by
   owner decision on 22 October 2026 in favour of CI, an exact-image local PostgreSQL

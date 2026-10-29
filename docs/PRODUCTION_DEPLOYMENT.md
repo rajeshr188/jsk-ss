@@ -7,6 +7,27 @@ explicit Razorpay Test/Live modes, and manually published Scheme Rate build. Dev
 
 ## Production-readiness boundary
 
+### Builder v1 merged candidate - 29 October 2026; not deployed
+
+PR #77 merged as `8f3ba5ad0000a3645f69eddf63607436f91720a8` after reviewed-head CI
+`40799459905` passed all 1,492 tests and build/security checks. The merge tree equals
+tested head `46c7fd8`. Main CI `40818256991` must publish the immutable image;
+no production digest or compatible recovery image has yet been approved for this
+builder activation. The dated foundation sections below retain their historical
+implementation boundaries; the current release state is tracked in MVP_PLAN.md.
+
+Keep `CONFIGURED_PLANS_ENABLED=False` explicitly in the candidate production file.
+This switch governs new configured publication/enrolment, not existing agreement
+payment/settlement rights. Do not run migrations or enable offers from this merge
+record alone. First rehearse the published digest on isolated PostgreSQL, preserve
+complete histories and separate INR/exact-grade liabilities, exercise forward
+recovery/refusal of history-losing downgrade, and select a compatible recovery plan.
+Then confirm a fresh managed-database recovery point and obtain explicit approval
+for the exact digest-pinned rollout. No build runs on the 1 GB serving Linode.
+The accepted local exact-image rehearsal applies; separate staging remains deferred
+under FW-PROD-009. No new real payment/refund or duplicate inbox/device ceremony is
+required merely to repeat already accepted unchanged workflows.
+
 ### Captured-payment comparison and refund handoff (27 October 2026; local acceptance)
 
 From **Exception queue → Review recovery**, use **Check provider** and compare the
@@ -4725,7 +4746,8 @@ separate `PUBLIC_BLOG_ENABLED=True` activation remain future controlled work.
 The target full-production checklist remains below. Live acceptance does not mark
 owner-deferred controls complete:
 
-- [ ] The exact image passed CI, scanning, staging, and production deploy checks.
+- [ ] The exact image passed CI, scanning, the approved isolated rehearsal (separate
+      staging only when required by the release plan), and production deploy checks.
 - [ ] Production uses `DJANGO_DEBUG=False`, explicit hosts/origins, HTTPS, secure
       cookies, staged HSTS, and verified proxy-header behavior.
 - [ ] Database TLS/private access, backups, PITR, RPO/RTO, and an isolated restore
