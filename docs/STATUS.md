@@ -2,6 +2,20 @@
 
 ## Current milestone
 
+**29 October 2026 - FW-UX-006 PR #78 merged after successful full CI.**
+Run `40875176430` passed on `216ba565b2a5bba0e9c6b6e665d861ef6919f33d`:
+all four test shards, checks, required Django inventory gate and container job.
+Final review found no blocking issue or unresolved review thread. The automated
+security review completed on application-code commit `25f0b3b`; the later delta
+was the reproduced governance-test correction and validation documentation.
+Owner authorized proceeding; merged as `b20241ab961b24a6d7ca98e94cbf1c6ed1e67c3e`.
+Fetched main and verified its complete tree matches the tested PR head.
+
+Main run `40884955268` is in progress. Wait for its required checks and successful
+digest publication before preparing an exact-image production rollout. No image
+digest, production change, new offer launch or owner commercial-copy/CMS acceptance
+is inferred from this merge. Production remains on the previously accepted release.
+
 **29 October 2026 - PR #78 CI policy-copy regression identified and corrected.**
 Hosted run `40865018323` on `25f0b3b` failed one of the 376 tests in shard 3:
 the governance policy test still required date-only early-discontinuation wording.

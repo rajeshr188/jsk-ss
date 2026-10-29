@@ -9,8 +9,9 @@ explanations and GET-only Decimal illustrations derived from recorded policy.
 No plan rules, agreements or production settings changed. The user-authorized
 engineering visual/copy review now passes at desktop/390px/320px and both themes,
 including keyboard, examples and errors. Five presentation findings were corrected;
-99 local regression tests pass. See TESTING.md. Owner commercial-copy/CMS acceptance,
-hosted CI and reviewed deployment remain; the earlier automation interruption was
+99 local regression tests pass. See TESTING.md. PR #78 full hosted CI passed on
+`216ba56` and merged as `b20241a` with an identical tree. Main image publication,
+owner commercial-copy/CMS acceptance and reviewed deployment remain; the earlier automation interruption was
 resolved through a fresh valid native-browser observation, with no safety bypass.
 Do not treat this as approval to list INR offers or advertise a gold-value VA waiver.
 

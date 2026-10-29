@@ -1,5 +1,19 @@
 # Testing
 
+## PR #78 full hosted acceptance and merge - 29 October 2026
+
+[Run 40875176430](https://github.com/rajeshr188/jsk-ss/actions/runs/40875176430)
+passed on exact head `216ba565b2a5bba0e9c6b6e665d861ef6919f33d`: all four
+test shards, application checks, required `django` inventory gate and container
+build/security job. Image publication was correctly skipped for the PR event.
+No unresolved review thread or change-request review was present at final review.
+
+[PR #78](https://github.com/rajeshr188/jsk-ss/pull/78) merged as
+`b20241ab961b24a6d7ca98e94cbf1c6ed1e67c3e`. Fetching main and comparing its tree
+with the tested PR head returned no differences. Main release run `40884955268`
+started; its completion and published digest remain separate deployment evidence.
+This records engineering CI/merge acceptance, not production or commercial approval.
+
 ## PR #78 hosted CI policy-copy fix - 29 October 2026
 
 Run `40865018323` on `25f0b3b` reported one failing governance assertion in
