@@ -40,12 +40,67 @@ PR #77 was marked ready and merged with expected-head protection into
 was empty. The tested application tree was preserved.
 
 Main CI [40818256991](https://github.com/rajeshr188/jsk-ss/actions/runs/40818256991)
-must pass and publish its exact digest before the final image rehearsal. The older
-`6c5034b` image drill is retained base evidence, not proof for this activation image.
-Exact-image migrations, financial invariants, dump/restore, compatible recovery
-selection, fresh production recovery point and explicit rollout/activation approval
-remain. No production host or data changed. This evidence-only branch does not
-change the running main image-publication candidate.
+passed all four test shards, aggregate inventory verification, checks, publication
+and published-image critical scan. Its exact image was then rehearsed independently
+as recorded below. This evidence-only branch does not change the application image.
+
+### Published-image rehearsal - 29 October 2026
+
+- Release: `8f3ba5ad0000a3645f69eddf63607436f91720a8`.
+- Image: `ghcr.io/rajeshr188/jsk-savings@sha256:e9c126344938846b0e991644958265804317417636305447e364d99d10b75834`.
+- Local image ID: `sha256:af607c9271371aabf8baf253b2895a61070614bc1e83538b0209dfe42535b134`;
+  created `2026-10-29T05:21:38.011912959Z`; OCI revision matches the release.
+- PostgreSQL 18.6, isolated network namespace without external connectivity or
+  published ports; synthetic data and locmem email only. App CPU limit one,
+  memory limit 768 MB; database limit 512 MB. No build on the serving Linode.
+- Committed tests mounted read-only into the production image; application code
+  remained the published image. Test files matched the merge commit.
+
+`builder_restore_rehearsal.py` seeded six synthetic agreements: INR and exact-grade
+financial histories with benefit invoice return/reapplication/replacement chains,
+four never-credited payment-refund/order histories, and retained catalogue closures.
+`pg_dump -Fc` and `pg_restore --exit-on-error` restored to a separate database.
+All ordered scheme-model row/column hashes matched; separate outstanding liabilities
+remained **INR 500.00** and **22K gold 0.050000 g**. Other four accounts remained zero.
+Returned benefit awards intentionally stayed held for review: the diagnostic
+`benefit_awards status=error` is expected fixture evidence, not a hidden passing
+financial condition. Principal, closures, reapplications, financial exceptions and
+graded-metal checks passed with the expected retained states.
+
+The graph downgrade refused at 0056. Independent guards for 0047/0048/0049/0050/
+0052/0053/0054/0056 refused history loss. Reapplying current graph leaves preserved
+all hashes and liabilities. The separate deployed-checkout-to-builder regression
+passed **one test in 60.027s**, including unchanged legacy paid contribution,
+allocation, checkout and webhook evidence. After the drills, Gunicorn booted from
+the image against the restored database with read-only filesystem, dropped
+capabilities and no-new-privileges; live/ready both returned HTTP 200 and exact
+release. A final retained-history verification passed. Temporary app/database
+containers and the synthetic database volume were removed.
+
+Read-only retained-history profiling used three samples per case, with fixed delay
+injected per SQL query. This is bounded synthetic evidence, not a production SLA.
+
+| Liability/history | Queries per read | No delay median | 1.5 ms/query median | 10 ms/query median |
+| --- | ---: | ---: | ---: | ---: |
+| INR, two returns | 482 | 0.906 s | 1.799 s | 6.158 s |
+| Gold, two returns | 266 | 0.394 s | 0.995 s | 3.348 s |
+
+The high retained-history query counts remain a performance limitation; larger
+histories/concurrency need monitoring and future profiling. Profiling caused no
+financial writes. Harness SHA-256:
+`9066e754d9b6d02a824f6f81bd9200769e36e707589c5937b5c6097aa251b0e5`.
+Synthetic manifest SHA-256:
+`366c0a5687c2de8c1473562cc0aa7d06e81453cb6ec04379c57c5744f60f6f54`.
+Ignored local evidence: `.uv-cache/builder-image-rehearsal/final-8f3ba5a`.
+
+Production was inspected read-only: PostgreSQL 18.6; release `d0e5dd1`; 15 customers,
+13 agreements, no pending Razorpay or paid-unallocated records, passing financial
+and live-readiness checks, healthy web and 8.7 GB free disk. These counts are a
+preparation snapshot; capture fresh separate liabilities under pause at rollout.
+The nominated recovery point **29 October 2026 10:00 AM IST** is not independently
+verified in Linode. Exact deployment approval and recovery-point confirmation remain.
+Recover forward with compatible code; do not run the old pre-builder image over
+new configured histories or reverse migrations to discard records.
 
 ## First optimized CI failure repair - 29 October 2026
 

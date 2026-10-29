@@ -2,7 +2,7 @@
 
 ## Current milestone
 
-**29 October 2026 - builder release reviewed and PR #77 merged; final image pending.**
+**29 October 2026 - builder release merged; exact published-image rehearsal passed.**
 Normal CI `40799459905` passed on `46c7fd8`: all **1,492 tests** exactly once,
 four successful 373-case PostgreSQL shards, complete inventory verification,
 migration/drift/application/deployment/static checks and container build/critical
@@ -21,13 +21,24 @@ review thread was unresolved. Marked ready and merged the exact tested head as
 no new application change was inserted after CI. Local main was fast-forwarded.
 The PR review/body and merge message retain the green CI and separate rollout boundary.
 
-Main run **40818256991** is now responsible for full checks and publishing the
-immutable GHCR image. Its digest, exact-image migration/financial/dump-restore and
-compatible recovery evidence are still pending. Keep configured intake explicitly
-off in the candidate production environment until the controlled activation is
-approved. A fresh managed-PostgreSQL recovery point and exact rollback/forward-
-recovery choice must be confirmed for deployment. Production has not been changed;
-no build, migration, flag update or real transaction ran on Linode.
+Main run **40818256991** passed all four shards, aggregate inventory verification,
+checks, publication and the published-image critical scan. The approved-tree image is
+`ghcr.io/rajeshr188/jsk-savings@sha256:e9c126344938846b0e991644958265804317417636305447e364d99d10b75834`.
+Its revision label matches `8f3ba5a`. Isolated PostgreSQL 18.6 exact-image upgrade,
+complete retained-history dump/restore, history-loss downgrade refusal, forward
+reapplication and Gunicorn live/ready checks passed. The upgrade regression passed
+one test in 60.027s. See TESTING.md for liabilities, hashes and latency limits.
+
+Read-only production checks found release `d0e5dd1`, healthy web, zero pending
+Razorpay orders, passing financial/live-readiness checks and 8.7 GB free disk.
+Keep configured intake explicitly off for initial deployment. Recovery is forward
+with compatible code and retained database history; the pre-builder image is not
+approved over new configured records. The owner allowed selecting yesterday or this
+morning; **29 October 2026 10:00 AM IST** is nominated, not independently confirmed
+as an available Linode recovery point. Confirm availability and exact rollout
+approval before production mutation. No build, migration, flag update or real
+transaction ran on Linode. Synthetic rehearsal containers and their database volume
+were removed; ignored evidence logs remain locally.
 This separate evidence branch collects the final image/rollout record without
 changing the merged application candidate. Separate staging remains deferred under
 FW-PROD-009; the accepted isolated exact-image rehearsal remains required.

@@ -11,19 +11,37 @@ explicit Razorpay Test/Live modes, and manually published Scheme Rate build. Dev
 
 PR #77 merged as `8f3ba5ad0000a3645f69eddf63607436f91720a8` after reviewed-head CI
 `40799459905` passed all 1,492 tests and build/security checks. The merge tree equals
-tested head `46c7fd8`. Main CI `40818256991` must publish the immutable image;
-no production digest or compatible recovery image has yet been approved for this
-builder activation. The dated foundation sections below retain their historical
+tested head `46c7fd8`. Main CI `40818256991` passed and published
+`ghcr.io/rajeshr188/jsk-savings@sha256:e9c126344938846b0e991644958265804317417636305447e364d99d10b75834`.
+The exact-image PostgreSQL 18.6 upgrade, complete retained-history restore, guarded
+downgrade, forward reapplication and application live/ready rehearsal passed (TESTING.md).
+The dated foundation sections below retain their historical
 implementation boundaries; the current release state is tracked in MVP_PLAN.md.
 
 Keep `CONFIGURED_PLANS_ENABLED=False` explicitly in the candidate production file.
 This switch governs new configured publication/enrolment, not existing agreement
 payment/settlement rights. Do not run migrations or enable offers from this merge
-record alone. First rehearse the published digest on isolated PostgreSQL, preserve
-complete histories and separate INR/exact-grade liabilities, exercise forward
-recovery/refusal of history-losing downgrade, and select a compatible recovery plan.
-Then confirm a fresh managed-database recovery point and obtain explicit approval
-for the exact digest-pinned rollout. No build runs on the 1 GB serving Linode.
+record alone. The selected recovery strategy is forward with compatible application
+code and retained database history. The old pre-builder image is not approved over
+new configured records; never reverse migrations or restore an older database merely
+to erase subsequent financial activity. Restoring a managed recovery point requires
+incident review and reconciliation of changes after that point.
+
+Read-only host inspection confirmed `/opt/jsk/app` on `172.235.9.77` is healthy at
+release `d0e5dd1897debb054d99647d6ea16575d08b1a48`, image
+`ghcr.io/rajeshr188/jsk-savings@sha256:00caf93dfa3933cc662f39745c4a3bd823768b523a73163d71bb60c474e0ec6d`.
+It has PostgreSQL 18.6, zero pending Razorpay orders and 8.7 GB free disk. These
+are preliminary observations, not a substitute for paused rollout baselines.
+
+The owner allowed choosing yesterday or this morning: **29 October 2026 10:00 AM
+IST** is nominated. Its actual availability has not been verified with Linode.
+Confirm availability and obtain explicit approval for the exact digest-pinned
+rollout. Then pause intake/payments, reconcile open orders, record separate liability
+baselines and inspect the candidate migration plan. Pull the approved image, apply
+the reviewed migration graph, recreate web, verify health/integrity and recreate
+Caddy as required. Keep configured intake false throughout this deployment; verify
+unchanged existing rights before resuming payments. New configured offer activation
+is a subsequent controlled decision. No build runs on the 1 GB serving Linode.
 The accepted local exact-image rehearsal applies; separate staging remains deferred
 under FW-PROD-009. No new real payment/refund or duplicate inbox/device ceremony is
 required merely to repeat already accepted unchanged workflows.

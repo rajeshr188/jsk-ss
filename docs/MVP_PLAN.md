@@ -5,11 +5,14 @@
 **29 October release checkpoint:** current-head normal CI `40799459905` passed
 all 1,492 tests, inventory verification, checks and container security gate. Final
 release review completed and PR #77 merged as `8f3ba5a`, with the tested tree
-unchanged. Local main is current. Main CI `40818256991` must publish the exact image;
-then complete its isolated migration/financial/restore rehearsal, compatible recovery
-selection and approved production rollout. Owner laptop/Android/email acceptance
-and readiness engineering are complete for this candidate; final-image/production
-acceptance is not. Keep configured intake off until the separate activation decision.
+unchanged. Main CI `40818256991` passed and published digest `e9c126344938846b0e991644958265804317417636305447e364d99d10b75834`.
+Its isolated PostgreSQL 18.6 upgrade, financial/history dump-restore, guarded downgrade,
+forward reapplication and actual application health rehearsal passed. Owner
+laptop/Android/email acceptance and readiness engineering are complete. Remaining:
+confirm availability of nominated **29 October 2026 10:00 AM IST** managed recovery
+point, approve the exact rollout with compatible forward recovery, deploy/verify
+with configured intake off, then separately accept controlled intake activation.
+Production acceptance is not yet complete. Detailed image evidence is in TESTING.md.
 
 **29 October CI priority:** the owner asked to optimize CI before the next release
 run. Runs `40783890107` (PR) and `40783885495` (duplicate push) were intentionally
