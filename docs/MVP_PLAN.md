@@ -2,6 +2,19 @@
 
 ## Owner builder v1 release contract (approved 24 October 2026)
 
+**Current product checkpoint - 30 October 2026:** owner requested the complete
+recommended range as independently reviewable unpublished drafts. Plan 4 flexible
+22K is reused; plan 5 customer-choice monthly 22K, plan 6 monthly INR purchase
+savings and plan 7 flexible silver are now saved, all inactive/unlisted with no
+publication revision or agreement. Proposed contribution bounds are INR 150-100,000.
+Monthly families use customer-fixed amounts, 12 months AND 12 calendar-month
+payments, three replacements then review. INR proposes a 5% purchase-only bonus
+capped at INR 3,000, conditional on schedule qualification and actual fulfilment.
+These are concrete review proposals, not commercial approval or a new financial
+formula. No existing offer/contract/payment changed. Next is owner review and
+individual publication/cutover through the existing controls; no builder code or
+deployment is needed merely to publish a supported reviewed draft. See STATUS.md.
+
 **Owner plan management follow-up - 30 October 2026:** approved customer-facing
 names are applied: **Monthly Gold Savings (22K)** remains published; **Flexible
 Gold Savings (22K)** remains an unpublished draft. Existing agreement snapshots

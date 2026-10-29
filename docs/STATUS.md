@@ -2,6 +2,38 @@
 
 ## Current milestone
 
+**30 October 2026 - requested four-offer range is prepared, all unpublished.**
+Owner requested generating the recommended range for independent review/publication.
+Reused plan **4 / Flexible Gold Savings (22K)** and configuration **2/v1** unchanged.
+Existing validated services created three new configurations and three drafts:
+
+| Review draft | Code / configuration | Proposed rules |
+| --- | --- | --- |
+| **5 — Monthly Gold Savings (22K) - Choose Your Amount** | MC22K-CHOICE-12M / 3/v1 | Customer-selected fixed amount, 22K grams, 12 calendar months AND 12 qualifying monthly payments, three replacement periods then review, no bonus. |
+| **6 — Jewellery Purchase Savings** | INR-MONTHLY-12M / 4/v1 | Customer-selected fixed monthly amount; INR principal, not grams; same 12-month/12-count schedule; proposed 5% purchase-only bonus capped at INR 3,000 after required-schedule qualification. Completion within allowed replacements preserves qualification; early discontinuation does not qualify. |
+| **7 — Flexible Silver Savings** | SILVER-FLEX-ANYTIME / 5/v1 | Optional variable payments, SILVER_999 grams, anytime full settlement with positive verified entitlement, no bonus. |
+
+All four use proposed INR **150-100,000 per contribution**, without an additional
+step, copied from the existing flexible draft. Gold/silver flexible offers permit
+continued contributions before closure; monthly offers stop at qualification.
+All use one final full showroom settlement. INR unused principal uses the agreed
+original-source return process; its benefit is purchase-only and never cashable.
+Amounts, the new monthly variants and especially the 5%/INR 3,000 benefit remain
+review proposals, not new public promises or implied legal/accounting approvals.
+
+All four are inactive/unlisted, with null publication revision and zero linked
+agreements. Existing public offers 1/2/3 and all existing rows across 53 scheme
+models match; only 3 configurations/plans/revisions/audits and 6 offering rows
+were appended. Liabilities and 14 agreements are unchanged; INR principal is zero.
+Exact preparation/repeat/cap/amount-bound rehearsal passed locally; production
+configuration/agreement/financial/INR checks pass. See TESTING.md and runbook.
+No code deployment, publication, retirement, customer message or payment ran.
+Owner can review/publish each draft through existing forms without waiting for
+the new owner workspace in PR #80. Review withdrawing the fixed-INR-5,000 offer
+when adopting its customer-choice replacement; do not silently migrate agreements.
+Evidence is retained privately on the host; local documentation is kept on
+`agent/offer-range-drafts-evidence` to avoid interrupting PR #80's CI.
+
 **30 October 2026 - approved clearer names applied; owner plan workspace prepared.**
 Owner explicitly selected **Flexible Gold Savings (22K)** and **Monthly Gold
 Savings (22K)**. On production `b20241a`, existing validated services renamed
