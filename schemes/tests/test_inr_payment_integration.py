@@ -7,7 +7,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
 from decimal import Decimal
 from threading import Barrier
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, close_old_connections, connection, transaction
@@ -19,10 +19,11 @@ from schemes.inr_principal import (record_captured_inr_principal, record_cash_in
 from schemes.inr_selectors import get_inr_principal_summary
 from schemes.instalments import prepare_instalment_periods
 from schemes.instalment_payments import reserve_instalment
-from schemes.models import (Contribution, InrPrincipalReceipt, InrPrincipalCorrection,
+from schemes.models import (Contribution, InrPaymentCaptureEvidence, InrPrincipalReceipt, InrPrincipalCorrection,
     InStoreCashReceipt, InStoreCashContributionReversal, MetalAllocation, PaymentWebhookEvent)
 from schemes.payments import PaymentInspection
-from schemes.services import process_razorpay_webhook, reverse_in_store_cash_contribution, _classify_webhook_recovery
+from schemes.services import (process_razorpay_webhook, reverse_in_store_cash_contribution,
+    _classify_webhook_recovery, reconcile_razorpay_webhook)
 from schemes.tests.test_audit_exceptions import make_owner, make_customer
 from schemes.tests.test_independent_agreement_storage import stored_future
 from schemes.tests.test_independent_policy_fields import independent_values, required_values
@@ -187,7 +188,7 @@ class InrPaymentIntegrationTests(TestCase):
         self.assertFalse(InrPrincipalCorrection.objects.exists())
         self.assertEqual(get_inr_principal_summary(account).principal_recorded, Decimal("500"))
 
-    def test_api_recovery_cannot_silently_mark_inr_processed_without_principal(self):
+    def test_api_recovery_preview_and_failed_apply_cannot_mark_processed_without_principal(self):
         contribution, _, body = online(self.account())
         contribution.refresh_from_db()
         event = PaymentWebhookEvent.objects.create(contribution=contribution, gateway="razorpay", gateway_mode="live",
@@ -195,14 +196,42 @@ class InrPaymentIntegrationTests(TestCase):
             gateway_reference=f"pay_{contribution.pk}", gateway_order_id=contribution.gateway_order_id,
             payload_sha256=hashlib.sha256(body).hexdigest())
         inspection = PaymentInspection(event.gateway_reference, event.gateway_order_id, 50000, "INR", "captured", True)
-        outcome, reason = _classify_webhook_recovery(event=event, contribution=contribution, inspection=inspection)
-        self.assertEqual(outcome, "MANUAL_REVIEW_REQUIRED")
-        self.assertIn("reconciliation", reason)
+        outcome, _ = _classify_webhook_recovery(event=event, contribution=contribution, inspection=inspection)
+        self.assertEqual(outcome, "ELIGIBLE_FOR_RECOVERY")
         contribution.refresh_from_db()
         event.refresh_from_db()
         self.assertEqual(contribution.status, "PENDING")
         self.assertEqual(event.status, "REVIEW_REQUIRED")
         self.assertFalse(InrPrincipalReceipt.objects.exists())
+        self.assertFalse(InrPaymentCaptureEvidence.objects.exists())
+
+        gateway = Mock(name="Synthetic mode-matched provider inspection")
+        gateway.name, gateway.mode = "razorpay", "live"
+        gateway.inspect_payment.return_value = inspection
+        values = dict(webhook_event_id=event.pk, gateway=gateway, performed_by=self.owner,
+            reason="Verified exact captured INR payment")
+        with patch("django.utils.timezone.now", return_value=NOW + timedelta(minutes=1)):
+            preview = reconcile_razorpay_webhook(**values)
+            self.assertEqual(preview.outcome, "ELIGIBLE_FOR_RECOVERY")
+            self.assertFalse(preview.applied)
+            with patch.object(InrPrincipalReceipt, "save", side_effect=ValidationError("Interrupted principal")):
+                with self.assertRaisesMessage(ValidationError, "Interrupted principal"):
+                    reconcile_razorpay_webhook(**values, apply=True)
+            contribution.refresh_from_db()
+            event.refresh_from_db()
+            self.assertEqual(contribution.status, "PENDING")
+            self.assertEqual(event.status, "REVIEW_REQUIRED")
+            self.assertFalse(InrPrincipalReceipt.objects.exists())
+            self.assertFalse(InrPaymentCaptureEvidence.objects.exists())
+
+            self.assertTrue(reconcile_razorpay_webhook(**values, apply=True).applied)
+            self.assertTrue(reconcile_razorpay_webhook(**values, apply=True).applied)
+        contribution.refresh_from_db()
+        event.refresh_from_db()
+        self.assertEqual(contribution.status, "PAID")
+        self.assertEqual(event.status, "PROCESSED")
+        self.assertEqual(InrPrincipalReceipt.objects.filter(contribution=contribution).count(), 1)
+        self.assertEqual(InrPaymentCaptureEvidence.objects.filter(contribution=contribution).count(), 1)
 
     def test_missing_or_other_contribution_event_is_refused_before_inr_readiness(self):
         contribution, _, _ = online(self.account())

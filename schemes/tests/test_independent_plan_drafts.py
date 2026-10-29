@@ -218,10 +218,17 @@ class IndependentDraftMigrationTests(TransactionTestCase):
         self.assertEqual(revision.terms, before)
 
     def test_reverse_refuses_independent_drafts_without_discarding_evidence(self):
+        leaves = MigrationExecutor(connection).loader.graph.leaf_nodes()
+        current_tables = set(connection.introspection.table_names())
+        # Newer additive migrations may reverse before 0050 refuses. Restore
+        # the complete graph even when this test's assertions themselves fail.
+        self.addCleanup(lambda: MigrationExecutor(connection).migrate(leaves))
         plan = draft(make_owner(), independent_values(accumulation="INR_PURCHASE_CREDIT"))
         before = plan.revisions.get().terms
         with self.assertRaisesMessage(RuntimeError, "Retain independent draft"):
             MigrationExecutor(connection).migrate([("schemes", "0049_benefit_invoice_reapplication")])
+        MigrationExecutor(connection).migrate(leaves)
+        self.assertEqual(set(connection.introspection.table_names()), current_tables)
         plan.refresh_from_db()
         self.assertIsNone(plan.minimum_months)
         self.assertEqual(plan.revisions.get().terms, before)

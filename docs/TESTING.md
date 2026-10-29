@@ -1,5 +1,54 @@
 # Testing
 
+## First optimized CI failure repair - 29 October 2026
+
+Hosted run `40786013227` (`fb59370`) executed 373 tests per isolated shard:
+
+| Shard | Suite seconds | Outcome |
+| --- | ---: | --- |
+| 0 | 1,315.415 | Passed |
+| 1 | 2,448.431 | One INR recovery assertion failure |
+| 2 | 658.642 | Seven missing-table setup/service errors |
+| 3 | 2,196.834 | Passed |
+
+Application/migration/drift/deployment/static validation and container build/critical
+scan passed. Every one of 1,492 discovered IDs started exactly once, verified against
+the retained authoritative artifact; failures remain failures. The aggregate Django
+gate refused approval and publication was skipped. This failed first run is timing
+information, not a successful full-suite benchmark; shard 2 did not execute the seven
+errored bodies successfully. Do not claim a complete optimized release acceptance.
+
+Local reproduction selected the obsolete recovery assertion, the preceding draft
+rollback-refusal test and both affected request/correction TransactionTestCase
+classes. It reproduced **9 tests in 52.070s, one failure/seven errors**, in the same
+order as the hosted execution report. The disposable database was destroyed.
+
+Root causes and retained checks:
+- `IndependentDraftMigrationTests.test_reverse_refuses_independent_drafts_without_discarding_evidence`
+  correctly hits 0050's retained-draft refusal, after newer empty additive tables
+  have already reversed. It lacked restoration, leaking missing catalogue/refund-
+  resolution tables into subsequent classes. Register current-leaf cleanup before
+  the attempt, restore immediately after expected refusal, assert the complete
+  table set and unchanged draft/revision. Keep the actual history-loss refusal.
+  Do not silently remigrate between all CI tests or weaken a production guard.
+- The old INR integration assertion expected missing principal to imply permanent
+  manual review. Implemented owner API recovery intentionally permits a pending
+  exact captured source to be previewed and then credited atomically. The revised
+  case starts from REVIEW_REQUIRED: pure classification/preview creates no principal
+  or processed event; injected receipt failure rolls confirmation/API evidence/event
+  status back; a successful retry and replay retain exactly one principal/API record.
+  Provider inspection is synthetic; no live request or money is involved.
+
+The exact failing-order regression now passes **9 tests in 168.798s**
+(206.720s including database setup/cleanup); the broader API/integration regression
+passes **31 tests in 49.649s** (96.559s total). Native CI-runner profiles verify
+complete planned/executed identity and successful results. Django system and
+migration-drift checks passed; disposable databases were removed.
+The existing nine-case and broader API regressions use fresh unique loopback-only
+PostgreSQL databases and scrubbed ambient provider/SMTP settings. Financial services
+and migrations are unchanged. Require new-head full CI; successful shards from the
+old revision cannot substitute for its new complete inventory reports.
+
 ## CI optimization and complete inventory gate - 29 October 2026
 
 The owner prioritized FW-CI-001 before the next release run. Both `e27f820` runs

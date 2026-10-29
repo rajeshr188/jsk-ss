@@ -2,6 +2,29 @@
 
 ## Current milestone
 
+**29 October 2026 - first optimized CI failures reproduced and locally fixed.**
+Run `40786013227` on `fb59370` completed all four 373-case shards. Shards 0/3,
+application/migration/deployment/static checks and the container build/scan passed.
+Shard 1 had one INR recovery assertion failure; shard 2 had seven missing-table
+errors. All 1,492 discovered test IDs started exactly once, and the required Django
+gate correctly refused approval. This is not a passed release candidate.
+
+The exact nine-case local reproduction matched **one failure/seven errors in
+52.070s**. The independent-draft rollback-refusal test reversed newer additive
+migrations before 0050 correctly refused, but left the test database downgraded.
+It now restores current graph leaves even after assertion failure and verifies
+the full current table set plus retained plan/revision. The INR classification
+assertion still expected the foundation's closed runtime gate. Its replacement
+checks eligible read-only preview, principal-save failure rolling back payment/API
+evidence/event status, and successful idempotent owner recovery creating exactly
+one principal receipt. Production services, migrations and financial guards are
+unchanged. The exact failing-order regression now passes **9 tests in 168.798s**
+(206.720s including database setup/cleanup); the broader API/integration regression
+passes **31 tests in 49.649s** (96.559s total). Native CI-runner profiles verify
+complete planned/executed identity and successful results. Django system and
+migration-drift checks passed; disposable databases were removed.
+A fresh complete optimized CI run remains required before merge/deployment.
+
 **29 October 2026 - CI optimization prioritized before the next release run.**
 The owner requested FW-CI-001 now. Cancelled both duplicate `e27f820` CI runs
 (`40783890107` PR / `40783885495` push). Four isolated runner/PostgreSQL jobs now

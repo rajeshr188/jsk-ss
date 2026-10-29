@@ -425,8 +425,9 @@ outcome by itself. Source: [official HTMX documentation](https://htmx.org/docs/)
   - [x] Add all-test duration artifacts, slowest-test output and Django database/suite
     timings; start with deterministic transactional-first/class-size balancing, then use measured results
     for later rebalance. No performance improvement is asserted before measurement.
-  - [ ] Complete the first optimized hosted run and compare its wall time with the
-    baseline; review per-shard imbalance and repeat measurements as needed. Keep
+  - [ ] Obtain successful optimized hosted CI after the first run exposed one outdated
+    assertion and seven schema-leak errors (40786013227); compare wall time with the
+    baseline, review per-shard imbalance and repeat measurements as needed. Keep
     full coverage and database isolation. Implementation does not replace the current
     builder release's successful full-CI requirement.
 

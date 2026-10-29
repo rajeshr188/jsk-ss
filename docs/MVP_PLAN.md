@@ -7,8 +7,10 @@ run. Runs `40783890107` (PR) and `40783885495` (duplicate push) were intentional
 cancelled. FW-CI-001 now implements four isolated serial test shards with complete
 inventory verification and timing artifacts, retaining the required Django/container
 and image publication gates. Local discovery includes all 1,483 application tests
-plus nine CI infrastructure cases. The first optimized hosted result and final-image
-review remain required; cancellation is not a failed financial regression.
+plus nine CI infrastructure cases. The first optimized hosted run completed with
+one outdated recovery assertion and seven cascading schema-leak errors, reproduced
+locally. Test-only repairs passed the exact nine-case failing order and 31 API
+regressions; a successful new-head full run and final-image review remain required. Cancellation of the two earlier duplicate runs was intentional.
 
 **29 October follow-up:** the owner confirmed the representative physical Android
 customer check as "All checked and usable". The temporary review's retained-history
