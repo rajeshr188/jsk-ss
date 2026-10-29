@@ -312,4 +312,6 @@ class CashBonusTests(TestCase):
         self.assertContains(owner_page, "Projected bonus")
         self.assertContains(owner_page, "Cash redeemable obligation")
         self.assertContains(plan_page, "5.00%")
+        self.assertContains(plan_page, "Legacy cash bonus:")
+        self.assertContains(plan_page, "Historical cash agreements only.")
         self.assertContains(redemption_page, "Earned bonus")

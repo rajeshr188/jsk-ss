@@ -1,0 +1,44 @@
+{% extends '_base.html' %}
+{% block title %}Payment refund review | Jai Sri Krishna Jewellery{% endblock %}
+{% block content %}
+{% if compared_contribution %}{% include 'schemes/includes/customer_context.html' with customer=compared_contribution.scheme_account.customer scheme_account=compared_contribution.scheme_account %}{% endif %}
+<div class="page-header"><div><p class="page-eyebrow">Owner reconciliation · Step 1</p><h1>Review an exact payment refund</h1><p class="page-subtitle">Verify a manual provider refund for a payment that never created a local entitlement.</p></div>
+<div class="page-actions"><a class="btn btn-outline-dark" href="{% url 'schemes:webhook_recovery' event.pk %}">Capture investigation</a><a class="btn btn-outline-dark" href="{% url 'schemes:refund_history' %}">Refund review history</a></div></div>
+<div class="alert alert-info">This page does not send money. Complete any approved refund through the authorized provider process first. Provider “processed” status is not independent proof of bank credit. Refunds of already-credited principal use the separate settlement/correction procedure.</div>
+<section class="card card-body mb-4" aria-labelledby="payment-identity"><h2 class="h4" id="payment-identity">Exact payment and local record</h2>
+<dl class="row mb-0"><dt class="col-sm-4">Provider mode</dt><dd class="col-sm-8">Live</dd>
+<dt class="col-sm-4">Payment</dt><dd class="col-sm-8 text-break">{{ event.gateway_reference|default:'Unavailable' }}</dd>
+<dt class="col-sm-4">Order</dt><dd class="col-sm-8 text-break">{{ event.gateway_order_id|default:'Unavailable' }}</dd>
+<dt class="col-sm-4">Original event status</dt><dd class="col-sm-8">{{ event.get_status_display }} · #{{ event.pk }}</dd>
+<dt class="col-sm-4">Contribution</dt><dd class="col-sm-8">{% if compared_contribution %}#{{ compared_contribution.pk }} · {{ compared_contribution.get_status_display }} · ₹{{ compared_contribution.amount|floatformat:2 }}{% else %}Not safely matched{% endif %}</dd></dl></section>
+{% if binding_error %}<div class="alert alert-danger" role="alert">{{ binding_error }}</div>{% endif %}
+{% if resolution %}
+<section class="card card-body mb-4" aria-labelledby="resolution-heading"><h2 class="h4" id="resolution-heading">Retained payment resolution #{{ resolution.pk }}</h2>
+<p>{{ resolution.resolved_at|date:'d M Y, g:i A' }} · {{ resolution.actor_label }}</p><p>{{ resolution.reason }}</p>
+<p>Reviewed observation #{{ resolution.reviewed_observation_id }}; fresh applied observation #{{ resolution.applied_observation_id }}.</p>
+{% if resolution_valid and exact_event_resolved %}<p class="alert alert-success mb-0">This exact capture is resolved. Original event history remains unchanged. Other payments and any pending order remain subject to their own checks.</p>
+{% else %}<p class="alert alert-warning mb-0">This retained resolution does not clear the current event, or its evidence needs investigation. Keep this case held; do not repeat or override the resolution.</p>{% endif %}</section>
+{% endif %}
+<section class="card card-body mb-4" aria-labelledby="refund-comparison"><h2 class="h4" id="refund-comparison">Latest retained provider inspection</h2>
+{% if comparison %}
+<p>{{ observation.observed_at|date:'d M Y, g:i A' }} · {{ observation.actor_label }}. This is retained evidence, not a live query.</p>
+<h3 class="h5">Provider payment and local entitlement checks</h3>
+<dl class="row">
+<dt class="col-sm-6">Payment / order</dt><dd class="col-sm-6 text-break">{{ comparison.payment_id }}<br>{{ comparison.order_id }}</dd>
+<dt class="col-sm-6">Payment amount</dt><dd class="col-sm-6">&#8377;{{ comparison.amount|floatformat:2 }} {{ comparison.currency }}</dd>
+<dt class="col-sm-6">Provider state</dt><dd class="col-sm-6">{{ comparison.status }} &middot; captured: {{ comparison.captured|yesno:'Yes,No' }}</dd>
+<dt class="col-sm-6">Refunded amount</dt><dd class="col-sm-6">&#8377;{{ comparison.refunded|floatformat:2 }} &middot; {{ comparison.refund_status|default:'No refund reported' }}</dd>
+<dt class="col-sm-6">Complete processed refund</dt><dd class="col-sm-6">{{ observation.fully_refunded|yesno:'Yes,No' }}</dd>
+<dt class="col-sm-6">No historical local entitlement from this payment</dt><dd class="col-sm-6">{{ observation.no_entitlement|yesno:'Yes,No' }}</dd>
+</dl>
+<h3 class="h5">Refund records</h3><ul class="list-group list-group-flush mb-3">{% for refund in comparison.refunds %}<li class="list-group-item px-0 text-break">{{ refund.refund_id }} · ₹{{ refund.amount|floatformat:2 }} {{ refund.currency }} · {{ refund.status }}</li>{% empty %}<li class="list-group-item px-0">No refund records reported.</li>{% endfor %}</ul>
+<p class="mb-0">Investigation reason: {{ observation.reason }}</p>
+{% else %}<p>No usable provider comparison is available. Inspect the payment before confirming a resolution.</p>{% endif %}
+{% if review_error and not resolution %}<p class="alert alert-warning mt-3 mb-0">{{ review_error }}</p>{% endif %}</section>
+{% if not resolution %}
+<p><strong>Confirm payment resolution</strong> records the verified full refund and prevents future credit from this payment. It does not release a pending order, qualify an instalment or close the customer’s agreement.</p>
+{% include 'schemes/includes/refund_review_form.html' with can_inspect=compared_contribution can_apply=can_resolve inspect_label='Inspect payment refund' apply_label='Confirm payment resolution' %}
+{% endif %}
+{% if compared_contribution %}<section class="card card-body mb-4"><h2 class="h4">Separate order review</h2><p>A pending or previously abandoned order needs an all-attempt review before its reservation can be released. A legitimate credited payment stays credited.</p><a class="btn btn-outline-dark align-self-start" href="{% url 'schemes:refunded_order_review' compared_contribution.pk %}">Review this order and capture history</a></section>{% endif %}
+<p><a href="{% url 'schemes:plan_manual' %}#capture-refund-review">Read the owner refund procedure</a></p>
+{% endblock %}

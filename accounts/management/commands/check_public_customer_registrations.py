@@ -1,7 +1,8 @@
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.management.base import BaseCommand, CommandError
-from django.db.models import F
+from django.db.models import F, Q
 from django.utils import timezone
 
 from accounts.models import CustomerRegistration, CustomerRegistrationAttempt, PlanApplication
@@ -37,12 +38,22 @@ class Command(BaseCommand):
             registration__status="APPROVED", scheme_account__isnull=True,
         ).count()
         linked = plan_applications.filter(scheme_account__isnull=False)
-        agreement_identity_mismatches = linked.exclude(
+        valid_identity = Q(
             registration__status="APPROVED",
             registration__approved_user_id=F("scheme_account__customer__user_id"),
-            plan_id=F("scheme_account__plan_id"), metal_grade_id=F("scheme_account__metal_grade_id"),
-            requested_months=F("scheme_account__agreed_months"), start_date=F("scheme_account__start_date"),
-        ).count()
+            plan_id=F("scheme_account__plan_id"), start_date=F("scheme_account__start_date"),
+        ) & (Q(metal_grade_id=F("scheme_account__metal_grade_id"))
+             | Q(metal_grade__isnull=True, scheme_account__metal_grade__isnull=True)) & (
+            Q(requested_months=F("scheme_account__agreed_months"))
+            | Q(requested_months__isnull=True, scheme_account__agreed_months__isnull=True))
+        agreement_identity_mismatches = linked.exclude(valid_identity).count()
+        from accounts.application_contracts import validate_independent_application
+        independent_term_mismatches = 0
+        for application in plan_applications.filter(terms_schema_version=2).select_related("scheme_account").iterator():
+            try:
+                validate_independent_application(application)
+            except (ValidationError, ObjectDoesNotExist):
+                independent_term_mismatches += 1
 
         errors = (
             approved_missing_customer
@@ -50,6 +61,7 @@ class Command(BaseCommand):
             + approved_email_mismatches
             + approved_without_agreement
             + agreement_identity_mismatches
+            + independent_term_mismatches
         )
         status = "ok" if errors == 0 else "error"
         self.stdout.write(
@@ -71,6 +83,7 @@ class Command(BaseCommand):
                     f"plan_applications={plan_applications.count()}",
                     f"approved_without_agreement={approved_without_agreement}",
                     f"agreement_identity_mismatches={agreement_identity_mismatches}",
+                    f"independent_term_mismatches={independent_term_mismatches}",
                 ]
             )
         )

@@ -40,6 +40,14 @@ class CheckoutIdempotencyTests(TestCase):
             callback_order_id=contribution.gateway_order_id, payment_id=f'pay_checkout_{contribution.pk}',
             signature='verified', gateway=self.gateway)
 
+    def test_legacy_service_cannot_bypass_configured_reservation_workflow(self):
+        from schemes.checkout_services import initiate_checkout
+        with patch('schemes.instalments.has_monthly_instalments', return_value=True), self.assertRaises(ValidationError):
+            initiate_checkout(scheme_account=self.account, amount=Decimal('5000'),
+                gateway=self.gateway, submission_key=self.key)
+        self.assertEqual(self.gateway.order_calls, 0)
+        self.assertFalse(RazorpayOrderRequest.objects.exists())
+
     def test_repeated_submission_and_two_tabs_share_one_order(self):
         first = self.start()
         same = self.start()
@@ -279,13 +287,13 @@ class CheckoutIdempotencyTests(TestCase):
         from schemes.payments import RazorpayPaymentGateway
         c = self.start()
         intent = c.checkout_order_request
-        response = dict(id='order_adapter', amount=500000, currency='INR', status='created',
+        response = dict(id='order_adapter', entity='order', amount=500000, currency='INR', status='created',
             created_at=int(intent.created_at.timestamp()), receipt=intent.receipt,
             notes=dict(contribution_id=str(c.pk), request_token=str(intent.token)))
         with patch('schemes.payments.urlopen', return_value=FakeResponse(response)):
             identity = RazorpayPaymentGateway().inspect_order_identity(order_id='order_adapter')
             self.assertEqual(identity.request_token, str(intent.token))
-        for bad in ({**response, 'created_at': True}, {**response, 'amount': 500000.0}, {**response, 'notes': []}):
+        for bad in ({**response, 'entity': 'other'}, {**response, 'created_at': True}, {**response, 'amount': 500000.0}, {**response, 'notes': []}):
             with patch('schemes.payments.urlopen', return_value=FakeResponse(bad)), self.assertRaises(PaymentGatewayError):
                 RazorpayPaymentGateway().inspect_order_identity(order_id='order_adapter')
 
@@ -474,6 +482,15 @@ class CheckoutMigrationTests(TransactionTestCase):
     previous = [('schemes', '0020_scheme_enrolment_requests')]
     latest = [('schemes', '0021_checkout_idempotency')]
 
+    def restore_current_schema(self):
+        from django.db.migrations.executor import MigrationExecutor
+        executor = MigrationExecutor(connection)
+        executor.migrate(executor.loader.graph.leaf_nodes())
+
+    def tearDown(self):
+        self.restore_current_schema()
+        super().tearDown()
+
     def test_preflight_refuses_legacy_overlap_and_preserves_remaining_history(self):
         from django.db.migrations.executor import MigrationExecutor
         _, account = make_account(email='migration-checkout@example.com', frequency='FLEXIBLE')
@@ -505,6 +522,6 @@ class CheckoutMigrationTests(TransactionTestCase):
             with self.assertRaisesMessage(RuntimeError, 'Retained checkout evidence'):
                 MigrationExecutor(connection).migrate(self.previous)
         finally:
-            MigrationExecutor(connection).migrate(self.latest)
+            self.restore_current_schema()
         self.assertTrue(RazorpayOrderRequest.objects.filter(contribution_id=c.pk).exists())
         self.assertEqual(Contribution.objects.get(pk=c.pk).gateway_order_id, c.gateway_order_id)

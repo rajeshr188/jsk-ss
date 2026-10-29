@@ -1,0 +1,17 @@
+{% extends '_base.html' %}
+{% load crispy_forms_tags %}
+{% block title %}Prepare independent policy | Jai Sri Krishna Jewellery{% endblock %}
+{% block content %}
+<div class="row justify-content-center"><div class="col-lg-9">
+  <h1>{% if previous %}New version of {{ previous.name }}{% else %}Prepare independent policy{% endif %}</h1>
+  <p class="alert alert-warning">Preparation only. Saving records rules for review; it does not create an offer, agreement, payment or benefit. Publication and financial workflows remain behind the complete-builder release gates.</p>
+  {% if previous %}<p>This appends to version {{ previous.version }}. Earlier versions and every plan/agreement using them remain unchanged.</p>{% endif %}
+  <p>Full-only closure, zero extra grace and no advance or bulk catch-up are fixed boundaries. Paid entitlement is never forfeited. <a href="{% url 'schemes:plan_manual' %}#independent-families">Read the independent-family guide</a>.</p>
+  {% if preview %}<section class="card card-body mb-4" aria-labelledby="policy-review"><h2 id="policy-review" class="h4">Review before saving</h2><p>This preview has saved nothing. Saving revalidates the submitted fields.</p>{% include 'schemes/includes/policy_facts.html' with configuration=preview %}</section>{% endif %}
+  <form method="post" class="card p-3" novalidate>{% csrf_token %}
+    {{ form.non_field_errors }}
+    {% for title, fields in form.groups %}<fieldset class="mb-4"><legend class="h5">{{ title }}</legend>{% for field in fields %}{{ field|as_crispy_field }}{% endfor %}</fieldset>{% endfor %}
+    <div class="d-flex flex-wrap gap-2"><button type="submit" name="action" value="preview" class="btn btn-outline-dark">Review configuration</button><button type="submit" name="action" value="save" class="btn btn-jsk">Save immutable version</button><a class="btn btn-outline-dark" href="{% url 'schemes:plan_configuration_list' %}">Cancel</a></div>
+  </form>
+</div></div>
+{% endblock %}

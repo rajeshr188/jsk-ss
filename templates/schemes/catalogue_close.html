@@ -1,0 +1,16 @@
+{% extends '_base.html' %}
+{% load crispy_forms_tags %}
+{% block title %}{{ preview.label }} | Jai Sri Krishna Jewellery{% endblock %}
+{% block content %}
+<div class="page-header"><div><h1>{{ preview.label }}</h1><p>{{ item }}</p></div></div>
+<p>This is catalogue housekeeping. No customer agreement, contribution, balance, benefit or settlement record will be deleted or cancelled.</p>
+{% if plan %}<p>The plan will be hidden from the default list and closed to new requests and enrolments. Existing agreements keep their accepted terms and payment/settlement rights. Pending requests remain available for a separate decision; they cannot be converted into this retired plan.</p>
+<dl><dt>Existing agreements</dt><dd>{{ preview.counts.agreements }}</dd><dt>Enrolment requests (all statuses)</dt><dd>{{ preview.counts.requests }}</dd><dt>Registration-first applications (all statuses)</dt><dd>{{ preview.counts.applications }}</dd></dl>
+{% else %}<p>This exact configuration version will no longer be available for new draft plans or successor versions. Linked historical records remain readable. Archive or retire any plans still using it first.</p>{% endif %}
+<p>This action has no restore button. Prepare a separate configuration or offer if you need different terms later.</p>
+{% if preview.record %}
+<section class="card p-3"><h2 class="h5">{{ preview.record.get_action_display }}</h2><p>Recorded {{ preview.record.recorded_at|date:'d M Y H:i' }} by {{ preview.record.actor_label }}</p><p>{{ preview.record.reason }}</p></section>
+{% elif preview.blocked %}<div class="alert alert-warning">{{ preview.blocked }}</div>
+{% else %}<form method="post">{% csrf_token %}{{ form|crispy }}<button type="submit" class="btn btn-danger">{{ preview.label }}</button></form>{% endif %}
+<p class="mt-3"><a href="{% if plan %}{% url 'schemes:plan_list' %}{% else %}{% url 'schemes:plan_configuration_list' %}{% endif %}">Back to catalogue</a></p>
+{% endblock %}

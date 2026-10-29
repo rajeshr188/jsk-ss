@@ -274,6 +274,9 @@ as customer forfeiture or as justification for retaining unrelated personal data
   exports/paper, and backups. Each needs treatment, purpose, minimum fields, a
   start event, duration/hold-release condition and next review date. The 365-day
   maximum between reviews is an application guard, not a statutory retention period.
+  The local 24 October form allows shared start/condition/review terms, with explicit
+  per-category exceptions. Those values are expanded into complete category rows
+  before existing service validation; no retention decision or period is pre-approved.
 - Completion serializes customer/user/request and agreement/contribution rows,
   rechecks current state, and refuses pending payments, unallocated payments,
   unresolved matched webhooks, pending enrolment decisions and ambiguous other

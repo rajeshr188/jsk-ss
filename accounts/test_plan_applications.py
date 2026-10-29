@@ -90,6 +90,18 @@ class ApplicationFixtures:
 
 @override_settings(**APPLICATION_SETTINGS)
 class PlanApplicationTests(ApplicationFixtures, TestCase):
+    def test_approval_passes_confirmed_selection_without_fixing_legacy_preference(self):
+        from schemes.services import enroll_customer
+        application = self.ready()
+        with patch("accounts.applications.enroll_customer", wraps=enroll_customer) as enroll:
+            account, created = self.approve(application)
+        self.assertTrue(created)
+        self.assertEqual(enroll.call_args.kwargs["selected_contribution_amount"], application.requested_amount)
+        self.assertTrue(enroll.call_args.kwargs["selected_amount_confirmed"])
+        self.assertIsNone(enroll.call_args.kwargs["expected_configuration_id"])
+        self.assertEqual(account.amount_rule_snapshot, "VARIABLE")
+        self.assertIsNone(account.fixed_amount_snapshot)
+
     def test_contact_submission_persists_choices_without_address_login_or_agreement(self):
         with self.captureOnCommitCallbacks(execute=True):
             submission = self.submit()

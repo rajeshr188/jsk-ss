@@ -1,0 +1,48 @@
+{% load workspace %}
+{% if scheme_account.agreement_schema_version == 2 %}
+{% independent_agreement scheme_account %}
+{% else %}
+<section class="card p-3 my-3" aria-labelledby="agreement-basis">
+  <h2 id="agreement-basis" class="h5">Your recorded agreement</h2>
+  {% if scheme_account.status == 'CANCELLED' %}<p class="alert alert-secondary">Cancelled unused agreement. The terms below are retained historical terms, not an invitation to contribute or redeem. No payment, redemption or refund was created by cancellation. Your login and other agreements are unchanged.</p>{% endif %}
+  {% if scheme_account.configuration_snapshot_id and scheme_account.status == 'REDEEMED' %}<p class="alert alert-secondary">Full jewellery settlement completed. The terms below are retained historical terms, not an invitation to contribute again. Your login and other agreements are unchanged.</p>{% endif %}
+  {% if scheme_account.status == 'CLOSURE_PENDING' %}<p class="alert alert-warning">Settlement was reversed and the entitlement restored. Closure remains accepted; new contributions are still blocked. A fresh full settlement needs review and customer confirmation.</p>{% endif %}
+  {% if scheme_account.configuration_snapshot_id %}<p><a href="{% url 'schemes:closure_workspace' scheme_account.scheme_number %}">View agreement closure and settlement history</a> — requesting review does not settle or cancel this agreement.</p>{% endif %}
+  {% if scheme_account.configuration_snapshot_id %}<p>Recorded configuration: {{ scheme_account.configuration_snapshot }}. {% if scheme_account.configuration_snapshot.amount_policy == 'CUSTOMER_FIXED' %}Your confirmed contribution amount is fixed for this agreement.{% endif %} No bonus or discount is included. Settlement uses the full exact-grade balance, subject to showroom review and customer confirmation; partial redemption is not available.</p>{% endif %}
+  {% if scheme_account.contribution_step_snapshot %}<p>Use increments of ₹{{ scheme_account.contribution_step_snapshot|floatformat:2 }} from the recorded minimum.</p>{% endif %}
+  <p>{{ scheme_account.display_plan_name }} · {{ scheme_account.display_plan_code }} · {{ scheme_account.entitlement_name }}</p>
+  {% if scheme_account.plan_revision_id %}
+  <p class="small">Plan revision reference {{ scheme_account.plan_revision_id }} was recorded at enrolment. Individual dates, duration and contribution rules are recorded separately on this agreement; subsequent plan edits do not replace them.</p>
+  {% else %}
+  <p class="small">Legacy agreement: the plan name and code were preserved when revision tracking was introduced. They are not evidence of the original accepted plan revision. Existing economic terms and eligibility are unchanged.</p>
+  {% endif %}
+  {% if scheme_account.configuration_snapshot.instalment_policy == 'MONTHLY_COMPLETION' %}
+  <p>Instalment period basis: {{ scheme_account.configuration_snapshot.get_period_basis_display }}. {% if scheme_account.configuration_snapshot.period_basis == 'CALENDAR_MONTH' %}The enrolment month is the first required month, even near month-end. An enrolment-day payment counts; the first period ends before the first of the following month. Normal eligibility still waits for the full agreed duration and the final qualifying period end.{% endif %}</p>
+  {% with eligibility=scheme_account.monthly_eligibility %}
+  <div class="alert alert-info" role="status">
+    <p>{{ eligibility.message }}</p>
+    <p>Recorded qualifying payments: {{ eligibility.qualified_payments }} of {{ eligibility.required_payments }}.</p>
+    {% if eligibility.completion_date %}<p>Normal completion date (duration and count): {{ eligibility.completion_date|date:"d M Y" }} (India time). This is not automatic settlement or a benefit award.</p>{% endif %}
+    {% if eligibility.forecast_date %}<p>Conditional forecast: {{ eligibility.forecast_date|date:"d M Y" }}, only if every needed remaining payment qualifies.</p>{% endif %}
+    {% if eligibility.allocation_pending %}<p>Metal allocation is still pending for a recorded payment. Payment qualification does not confirm settlement readiness.</p>{% endif %}
+  </div>
+  {% endwith %}
+  <p>Exceptional outage relief requires a separate customer-acknowledged amendment: at most three additional months using the agreed period basis, separate from ordinary extensions, and at most one per affected unpaid period. No automatic extra time or free instalment is granted.</p>
+  {% for amendment in scheme_account.outage_resolutions.all %}
+  <p>Recorded outage resolution ({{ amendment.created_at|date:"d M Y" }}): {{ amendment.get_outcome_display }}.{% if amendment.compensation_period %} Additional payment window: {{ amendment.compensation_period.starts_on|date:"d M Y" }} to before {{ amendment.compensation_period.ends_before|date:"d M Y" }} (India time). Original payment count, amount and grade are unchanged; this is not a guaranteed eligibility date.{% endif %}</p>
+  {% endfor %}
+  <p>Original calendar date: {{ scheme_account.eligible_from|date:"d M Y" }}. This monthly-completion policy also requires {{ scheme_account.agreed_months }} qualifying payments, one per agreed monthly period. This date alone does not grant eligibility. Missed periods may extend completion by up to three months, followed by discontinuation review without forfeiture of paid entitlement. Full settlement is a separate reviewed and customer-confirmed action, not an automatic consequence of eligibility.</p>
+  {% else %}
+  <p>Eligibility: {{ scheme_account.eligible_from|date:"d M Y" }}, after {{ scheme_account.agreed_months }} calendar months from {{ scheme_account.start_date|date:"d M Y" }}. Metal redemption eligibility is date-based, not conditional on twelve successful monthly instalments. Redemption still requires a positive recorded entitlement.</p>
+  {% endif %}
+  <p>Contribution frequency: {% if scheme_account.configuration_snapshot.instalment_policy == 'MONTHLY_COMPLETION' %}at most one qualifying payment per agreed monthly period, with no advance or bulk catch-up{% else %}{{ scheme_account.get_frequency_rule_snapshot_display }}{% endif %}. This limits payments; it does not promise a discount or confirm benefit qualification.</p>
+  <p>{% if scheme_account.amount_rule_snapshot == 'FIXED' %}Fixed contribution: ₹{{ scheme_account.fixed_amount_snapshot|floatformat:2 }}.{% else %}Variable contribution: minimum ₹{{ scheme_account.minimum_amount_snapshot|floatformat:2 }}{% if scheme_account.maximum_amount_snapshot %}, maximum ₹{{ scheme_account.maximum_amount_snapshot|floatformat:2 }}{% endif %}.{% endif %}</p>
+  {% if scheme_account.status == 'CANCELLED' or scheme_account.status == 'REDEEMED' or scheme_account.status == 'CLOSURE_PENDING' %}
+  <p>No further contributions are permitted to this agreement in its current state. Retained contribution terms do not override closure controls.</p>
+  {% elif scheme_account.configuration_snapshot.instalment_policy == 'MONTHLY_COMPLETION' %}
+  <p>After the original calendar date, qualifying payments may continue in available approved extension windows until the required count is complete, subject to payment and review controls. No additional contribution is permitted after the required count is complete.</p>
+  {% else %}
+  <p>Contributions after eligibility: {% if scheme_account.allow_post_eligibility_contributions_snapshot %}permitted within the recorded contribution rules.{% else %}not permitted.{% endif %}</p>
+  {% endif %}
+</section>
+{% endif %}

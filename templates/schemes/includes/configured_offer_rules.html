@@ -1,0 +1,13 @@
+{% if plan.configuration.policy_schema_version == 2 %}
+{% include 'schemes/includes/policy_facts.html' with configuration=plan.configuration %}
+{% elif plan.configuration_id %}
+<p class="small mt-2">Contributions accumulate the agreed exact-grade gold or silver quantity, not INR purchase credit. No bonus or discount is included.</p>
+{% if plan.configuration.instalment_policy == 'MONTHLY_COMPLETION' %}
+<p class="small">Normal eligibility requires both the agreed duration and qualifying instalment count; it cannot precede the final qualifying period end. At most one instalment qualifies per selected period: {{ plan.configuration.get_period_basis_display }}. {% if plan.configuration.period_basis == 'CALENDAR_MONTH' %}Your enrolment month is the first required month, even when you join near month-end. A payment on enrolment day counts; the deadline is before the first of the next month.{% endif %} There is no catch-up or additional grace period. Up to {{ plan.configuration.max_extension_months }} ordinary extension periods are available; continued shortfall requires review, not forfeiture of paid metal. Verified showroom outages are reviewed separately; compensation is not automatic.</p>
+{% else %}
+<p class="small">Normal eligibility follows the agreed calendar duration, not a count of paid instalments. A contribution frequency limit is not an instalment-completion requirement.</p>
+{% endif %}
+<p class="small">Redemption is full-only: all available exact-grade metal is applied toward jewellery and that agreement closes. Early discontinuation requires customer-authorized full settlement of actual paid entitlement, with unresolved payments reviewed first. No partial redemption, cash payout or unearned benefit. A genuinely unused agreement can be cancelled without redemption.</p>
+{% else %}
+<p class="small mt-2">Eligibility is date-based, not dependent on twelve paid instalments. A frequency limit is not a benefit-qualification rule. The showroom records your individual start date and agreed duration at enrolment.</p>
+{% endif %}

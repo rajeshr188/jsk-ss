@@ -1,0 +1,15 @@
+<form method="post" class="card card-body mb-4" novalidate>
+  {% csrf_token %}
+  {{ form.review_token }}{{ form.review_token.errors }}
+  {% if form.non_field_errors %}<div class="alert alert-danger" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+  {{ form.action.errors }}
+  <label class="form-label" for="{{ form.reason.id_for_label }}">{{ form.reason.label }}</label>
+  {{ form.reason }}{{ form.reason.errors }}
+  <div class="form-text mb-3" id="{{ form.reason.auto_id }}_helptext">{{ form.reason.help_text }}</div>
+  <div class="form-check mb-3">{{ form.confirmed }} {{ form.confirmed.label_tag }}{{ form.confirmed.errors }}</div>
+  <div class="d-flex flex-wrap gap-2">
+    <button class="btn btn-outline-dark" type="submit" name="action" value="INSPECT"{% if not can_inspect %} disabled aria-disabled="true"{% endif %}>{{ inspect_label }}</button>
+    <button class="btn btn-danger" type="submit" name="action" value="APPLY"{% if not can_apply %} disabled aria-disabled="true"{% endif %}>{{ apply_label }}</button>
+  </div>
+  <p class="form-text mt-3 mb-0">Confirmation requires your own fresh review within ten minutes. The server checks the provider again. If a check fails or the review expires, inspect again; no manual override is available.</p>
+</form>

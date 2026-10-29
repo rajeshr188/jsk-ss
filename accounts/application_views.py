@@ -99,6 +99,12 @@ def application_progress_view(request, application_id):
             "requested_months": application.requested_months, "customer_message": application.customer_message,
             "start_date": application.start_date or timezone.localdate(), "offer_digest": offer_form_digest(application.plan),
         }
+        if application.plan.configuration_id and application.plan.configuration.policy_schema_version == 2:
+            configuration = application.plan.configuration
+            initial["requested_months"] = configuration.duration_months
+            initial["requested_contribution_amount"] = application.requested_amount
+            if configuration.amount_policy == "PLAN_FIXED":
+                initial["requested_contribution_amount"] = configuration.fixed_amount
         form = PlanApplicationCompletionForm(request.POST or None, plan=application.plan, initial=initial)
         if request.method == "POST" and form.is_valid():
             try:

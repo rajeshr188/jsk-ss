@@ -7,6 +7,8 @@ from allauth.socialaccount.models import SocialAccount, SocialToken
 from django.db.models import Count, Q, OuterRef, Subquery
 from django.utils import timezone
 
+from schemes.payment_refund_selectors import unresolved_payment_events
+
 from .models import (
     CustomerAccountDeletionRequest,
     CustomerInvitation,
@@ -42,6 +44,8 @@ class DeletionAccountBalance:
     cash_principal: Decimal
     cash_earned_bonus: Decimal
     metal_quantity: Decimal
+    purchase_credit_principal: Decimal | None = Decimal("0.00")
+    benefit_pending: bool = False
 
 
 @dataclass(frozen=True)
@@ -54,6 +58,7 @@ class DeletionDispositionPreview:
     allocation_exceptions: int
     unresolved_webhooks: int
     has_financial_history: bool
+    financial_exceptions: int = 0
 
 
 def customer_account_deletion_disposition(deletion_request):
@@ -61,7 +66,7 @@ def customer_account_deletion_disposition(deletion_request):
 
     Per-account balances use the financial selectors, without summing different
     grades or netting separate agreements. External disputes cannot be inferred
-    from local payment status. A future completion service must recheck under locks.
+    from local payment status. Completion rechecks this preview under agreement locks.
     """
     from schemes.models import (
         AuditEvent,
@@ -83,26 +88,52 @@ def customer_account_deletion_disposition(deletion_request):
     enrolments = customer.enrolment_requests.all()
     balances = []
     flags = []
+    financial_exceptions = 0
     for account in accounts:
         cash = get_cash_bonus_summary(account)
         quantity = get_metal_balance(account)
+        principal = Decimal("0.00")
+        from django.core.exceptions import ValidationError
+        from schemes.statement_selectors import benefit_document, inr_statement, validate_metal_document_history
+        if account.savings_mode == "INR_CREDIT":
+            try:
+                document = inr_statement(account)
+                principal, benefit = document.remaining_entitlement, document.benefit
+            except ValidationError:
+                benefit = benefit_document(account)
+                principal = None  # Unknown is never presented as zero liability.
+                financial_exceptions += 1
+                flags.append(f"{account.scheme_number}: INR principal/disposition evidence requires reconciliation.")
+        else:
+            benefit = benefit_document(account)
+            try:
+                validate_metal_document_history(account)
+            except ValidationError:
+                financial_exceptions += 1
+                flags.append(f"{account.scheme_number}: metal settlement/benefit history requires reconciliation.")
+        if benefit and benefit.needs_review:
+            financial_exceptions += 1
+            flags.append(f"{account.scheme_number}: benefit evidence requires reconciliation; retain the recorded right.")
         balances.append(
             DeletionAccountBalance(
                 scheme_number=account.scheme_number,
                 status=account.get_status_display(),
                 grade=(
                     account.metal_grade.code
-                    if account.metal_grade_id else "CASH (legacy)"
+                    if account.metal_grade_id else "INR purchase credit" if account.savings_mode == "INR_CREDIT" else "CASH (legacy)"
                 ),
                 cash_principal=cash.principal_outstanding,
                 cash_earned_bonus=cash.earned_bonus,
                 metal_quantity=quantity,
+                purchase_credit_principal=principal,
+                benefit_pending=bool(benefit and (benefit.pending_right or benefit.needs_review)),
             )
         )
     if balances:
         flags.append("Scheme history exists, even if current balances are zero; review contractual and financial retention.")
     if any(
         b.cash_principal != 0 or b.cash_earned_bonus != 0 or b.metal_quantity != 0
+        or b.purchase_credit_principal != 0 or b.benefit_pending
         for b in balances
     ):
         flags.append("A non-zero entitlement or balance exception needs settlement/reconciliation review. Deletion never forfeits it.")
@@ -136,10 +167,7 @@ def customer_account_deletion_disposition(deletion_request):
             ).exclude(gateway_reference="").values("gateway_reference"),
         )
     )
-    unresolved = webhooks.exclude(status__in=[
-        PaymentWebhookEvent.Status.PROCESSED,
-        PaymentWebhookEvent.Status.IGNORED,
-    ]).count()
+    unresolved = unresolved_payment_events(webhooks).count()
     if unresolved:
         flags.append(f"Linked or identifier-matched webhook events need review: {unresolved}.")
     if enrolments.filter(
@@ -177,6 +205,27 @@ def customer_account_deletion_disposition(deletion_request):
         ("Related financial audits", AuditEvent.objects.filter(Q(actor=user) | Q(scheme_account__customer=customer) | Q(contribution__in=contributions) | Q(redemption__scheme_account__customer=customer)).distinct().count(), "Review actor labels, free text and identifiers; immutable evidence is not automatically anonymous."),
         ("Privacy requests", customer.account_deletion_requests.count(), "Minimize request email/digests and customer actor labels; decisions/actions have their own bounded evidence purpose."),
     )
+    from schemes import models as financial
+    retained_history = (
+        ("Closure requests", financial.SchemeClosureRequest, "scheme_account__customer"),
+        ("Closure decisions", financial.SchemeClosureEvent, "request__scheme_account__customer"),
+        ("Configured metal settlements", financial.ConfiguredSettlement, "redemption__scheme_account__customer"),
+        ("Configured metal settlement reversals", financial.ConfiguredSettlementReversal, "settlement__redemption__scheme_account__customer"),
+        ("INR principal receipts", financial.InrPrincipalReceipt, "scheme_account__customer"),
+        ("INR principal corrections", financial.InrPrincipalCorrection, "receipt__scheme_account__customer"),
+        ("INR settlement proposals", financial.InrSettlementProposal, "scheme_account__customer"),
+        ("INR fulfilments", financial.InrSettlementFulfilment, "proposal__scheme_account__customer"),
+        ("INR completions", financial.InrSettlementCompletion, "proposal__scheme_account__customer"),
+        ("INR resolutions", financial.InrSettlementResolution, "proposal__scheme_account__customer"),
+        ("INR physical returns", financial.InrFulfilmentReturn, "fulfilment__proposal__scheme_account__customer"),
+        ("Retained benefit awards", financial.SchemeBenefitAward, "scheme_account__customer"),
+        ("Benefit invoice applications", financial.BenefitInvoiceFulfilment, "award__scheme_account__customer"),
+        ("Benefit invoice reversals", financial.BenefitInvoiceReversal, "fulfilment__award__scheme_account__customer"),
+        ("Benefit reapplication reviews", financial.BenefitReapplicationDecision, "reversal__fulfilment__award__scheme_account__customer"),
+    )
+    inventory += tuple((label, model.objects.filter(**{path: customer}).count(),
+        "Retain financial sources, invoice/return links and authority evidence, including embedded identity and free text; completion does not erase them.")
+        for label, model, path in retained_history)
     return DeletionDispositionPreview(
         generated_at=timezone.now(),
         account_balances=tuple(balances),
@@ -185,6 +234,7 @@ def customer_account_deletion_disposition(deletion_request):
         allocation_exceptions=allocation_exceptions,
         unresolved_webhooks=unresolved,
         has_financial_history=bool(balances) or enrolments.exists() or AuditEvent.objects.filter(actor=user).exists(),
+        financial_exceptions=financial_exceptions,
         external_checks=(
             "Razorpay: verify unresolved captures, refunds, disputes and provider retention. Local zero counts do not establish their absence.",
             "Postmark, Google and support mail: record deletion requests or justified retention and delivery evidence; do not claim provider copies were removed without confirmation.",

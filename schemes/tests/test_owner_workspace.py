@@ -12,7 +12,7 @@ from django.utils import timezone
 from accounts.models import CustomerRegistration
 from accounts.services import approve_customer_registration
 from schemes.models import Contribution, PaymentWebhookEvent, SchemeAccount, SchemeEnrolmentRequest, SchemePlan
-from schemes.selectors import get_owner_application_keys, get_owner_application_items
+from schemes.selectors import get_owner_application_keys, get_owner_application_items, get_owner_settlement_review_count
 from schemes.services import create_customer, enroll_customer, submit_scheme_enrolment_request
 from schemes.tests.grade_helpers import grade_for_mode
 from schemes.views import owner_applications, owner_today
@@ -78,6 +78,20 @@ class OwnerWorkspaceTests(TestCase):
         self.assertFalse(Contribution.objects.exists())
         self.assertEqual(len(mail.outbox), 0)
         self.assertIn("no-store", response.headers["Cache-Control"])
+
+    def test_calendar_review_count_preserves_legacy_date_boundary_without_settlement_promise(self):
+        from schemes.eligibility import add_calendar_months
+        today = timezone.localdate()
+        account = enroll_customer(customer=self.customer, plan=self.plan, metal_grade=self.grade,
+            start_date=add_calendar_months(today, -12), agreed_months=12,
+            performed_by=self.owner, reason="Accepted legacy terms")
+        self.assertEqual(get_owner_settlement_review_count(as_of=account.eligible_from - timedelta(days=1)), 0)
+        self.assertEqual(get_owner_settlement_review_count(as_of=account.eligible_from), 1)
+        response = self.client.get(reverse("schemes:owner_today"))
+        self.assertContains(response, "review settlement eligibility")
+        self.assertNotContains(response, "plans eligible for showroom settlement")
+        SchemeAccount.objects.filter(pk=account.pk).update(status="REDEEMED")
+        self.assertEqual(get_owner_settlement_review_count(), 0)
 
     def test_guest_customer_and_cms_staff_cannot_open_owner_workspaces(self):
         urls = [reverse("schemes:owner_today"), reverse("schemes:owner_applications"), reverse("schemes:customer_list")]

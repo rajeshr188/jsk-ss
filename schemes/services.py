@@ -1,18 +1,27 @@
 import hashlib
 import secrets
+from contextlib import nullcontext
 from dataclasses import dataclass
 from datetime import date, timedelta
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.core.exceptions import ImproperlyConfigured, ValidationError
+from django.core.exceptions import ImproperlyConfigured, ObjectDoesNotExist, ValidationError
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from accounts.services import issue_customer_invitation
 
 from .bonuses import CASH_BONUS_POLICY_VERSION
+from .instalments import AGREEMENT_TIMEZONE, has_monthly_instalments
+from .instalment_selectors import current_instalment_period, resumable_instalment_contribution
+from .instalment_payments import (
+    reserve_instalment, attribute_cash_instalment, attribute_razorpay_instalment,
+    note_verified_instalment, reverse_cash_instalment, release_reconciled_instalment,
+    note_late_instalment_capture,
+    begin_instalment_order_request, complete_instalment_order_request,
+)
 from .eligibility import (
     add_calendar_months,
     calculate_eligibility_date,
@@ -25,6 +34,7 @@ from .models import (
     GatewayMode,
     InStoreCashContributionReversal,
     InStoreCashReceipt,
+    InstalmentReservation,
     MetalAllocation,
     MetalGrade,
     PaymentChannel,
@@ -89,8 +99,8 @@ class InStoreCashContributionPreview:
     scheme_account: SchemeAccount
     amount: Decimal
     contribution_period: date
-    scheme_rate: SchemeRate
-    quantity: Decimal
+    scheme_rate: SchemeRate | None
+    quantity: Decimal | None
 
 
 @dataclass(frozen=True)
@@ -149,13 +159,14 @@ def record_audit_event(*, action, reason, actor=None, **targets):
     return event
 
 
-def ensure_payment_initiation_allowed(*, metal_grade, at=None, lock=False):
-    if metal_grade is None:
+def ensure_payment_initiation_allowed(*, metal_grade, at=None, lock=False, savings_mode=None):
+    if metal_grade is None and savings_mode != SchemeAccount.SavingsMode.INR_CREDIT:
         return
     availability = get_payment_availability(
         metal_grade=metal_grade,
         at=at,
         lock=lock,
+        savings_mode=savings_mode,
     )
     if not availability.allowed:
         raise ValidationError(availability.message)
@@ -352,15 +363,33 @@ def enroll_customer(
     savings_mode=None,
     start_date=None,
     agreed_months=None,
+    selected_contribution_amount=None,
+    selected_amount_confirmed=False,
+    expected_configuration_id=None,
+    expected_plan_digest=None,
     performed_by=None,
     reason="Customer enrolled through service.",
 ):
     customer = Customer.objects.select_for_update().get(pk=customer.pk)
     if get_user_model().objects.filter(pk=customer.user_id, privacy_erased_at__isnull=False).exists():
         raise ValidationError("A removed customer login cannot receive new enrolments.")
+    # Resolve denomination from the locked offer, not caller-cached configuration.
+    from .models import SchemePlan
+    from .plan_governance import ensure_plan_revision
+
+    plan = SchemePlan.objects.select_for_update().get(pk=plan.pk)
+    from .catalogue_lifecycle import require_open_catalogue_item
+    require_open_catalogue_item(plan=plan)
+    independent = bool(plan.configuration_id and plan.configuration.policy_schema_version == 2)
+    inr_credit = independent and plan.configuration.accumulation == "INR_PURCHASE_CREDIT"
+    if inr_credit:
+        if metal_grade is not None or savings_mode not in (None, SchemeAccount.SavingsMode.INR_CREDIT):
+            raise ValidationError("INR purchase credit cannot carry a metal grade or another denomination.")
+        savings_mode = SchemeAccount.SavingsMode.INR_CREDIT
     if metal_grade is not None:
+        metal_grade = MetalGrade.objects.get(pk=metal_grade.pk)
         savings_mode = metal_grade.metal
-    elif savings_mode != SchemeAccount.SavingsMode.CASH:
+    elif savings_mode != SchemeAccount.SavingsMode.CASH and not inr_credit:
         raise ValidationError(
             {"metal_grade": "Select the exact metal grade for this enrolment."}
         )
@@ -369,7 +398,18 @@ def enroll_customer(
         and not cash_scheme_activity_is_enabled()
     ):
         raise ValidationError({"savings_mode": CASH_SCHEME_ACTIVITY_UNAVAILABLE})
-    plan.full_clean()
+    # Serialize enrolment with audited offer edits; never use a stale caller instance.
+    if plan.configuration_id:
+        from .plan_publication import require_configured_offer
+        from .plan_governance import plan_edit_digest
+        require_configured_offer(plan)
+        if expected_plan_digest != plan_edit_digest(plan):
+            raise ValidationError('The configured offer changed; review it with the customer again.')
+    if not independent:
+        plan.full_clean()
+    # Independent policy is authoritative: the legacy plan duration/frequency
+    # columns cannot represent COUNT/ANYTIME. require_configured_offer above still
+    # checks publication, exact revision evidence and operational readiness.
     if not plan.active:
         raise ValidationError({"plan": "Only active plans can accept new enrolments."})
     if metal_grade is not None and not SchemePlanOffering.objects.filter(
@@ -381,38 +421,50 @@ def enroll_customer(
             {"metal_grade": "This metal grade is not offered by the selected plan."}
         )
     start_date = start_date or timezone.localdate()
-    agreed_months = agreed_months or plan.default_months
-    if agreed_months < plan.minimum_months:
-        raise ValidationError(
-            {"agreed_months": "Agreed duration cannot be below the plan minimum."}
+    from .plan_configuration import agreement_snapshot_values
+    if plan.configuration_id:
+        _validate_owner(performed_by)
+        if expected_configuration_id != plan.configuration_id or selected_amount_confirmed is not True:
+            raise ValidationError({"plan": 'Confirm the current configuration and individual amount with the customer.'})
+    if independent:
+        from .agreement_contracts import resolve_independent_agreement_terms
+        terms = resolve_independent_agreement_terms(configuration_id=plan.configuration_id,
+            start_date=start_date, selected_amount=selected_contribution_amount,
+            metal_grade_id=metal_grade.pk if metal_grade else None)
+        if agreed_months is not None and (type(agreed_months) is not int or agreed_months != terms.policy.duration_months):
+            raise ValidationError("The selected duration must match the accepted independent policy; count is not duration.")
+        snapshots = terms.account_snapshots()
+        revision = plan.publication_revision
+    else:
+        agreed_months = agreed_months or plan.default_months
+        if agreed_months < plan.minimum_months:
+            raise ValidationError(
+                {"agreed_months": "Agreed duration cannot be below the plan minimum."}
+            )
+        snapshots = agreement_snapshot_values(plan=plan, selected_amount=selected_contribution_amount)
+        snapshots.update(start_date=start_date, agreed_months=agreed_months,
+            eligible_from=calculate_eligibility_date(start_date=start_date, agreed_months=agreed_months),
+            savings_mode=savings_mode, metal_grade_id=metal_grade.pk if metal_grade else None)
+        revision = ensure_plan_revision(
+            plan=plan, actor=performed_by,
+            reason='Current offer recorded at enrolment; individual agreement terms are snapshotted separately.',
         )
-
     account = SchemeAccount(
         scheme_number=_reference("JSK", SchemeAccount, "scheme_number"),
         customer=customer,
         plan=plan,
-        start_date=start_date,
-        agreed_months=agreed_months,
-        eligible_from=calculate_eligibility_date(
-            start_date=start_date,
-            agreed_months=agreed_months,
-        ),
-        savings_mode=savings_mode,
-        metal_grade=metal_grade,
-        amount_rule_snapshot=plan.amount_rule,
-        frequency_rule_snapshot=plan.frequency_rule,
-        fixed_amount_snapshot=plan.fixed_contribution_amount,
-        minimum_amount_snapshot=plan.minimum_contribution,
-        maximum_amount_snapshot=plan.maximum_contribution,
-        allow_post_eligibility_contributions_snapshot=(
-            plan.allow_contributions_after_eligibility
-        ),
+        plan_name_snapshot=plan.name,
+        plan_code_snapshot=plan.code,
+        plan_revision=revision,
+        **snapshots,
         cash_bonus_policy_version_snapshot=CASH_BONUS_POLICY_VERSION,
-        cash_bonus_percentage_snapshot=plan.cash_bonus_percentage,
-        cash_bonus_minimum_months_snapshot=plan.cash_bonus_minimum_months,
     )
     account.full_clean()
     account.save()
+    if account.configuration_snapshot_id and account.configuration_snapshot.instalment_policy == "MONTHLY_COMPLETION":
+        from .instalments import prepare_instalment_periods
+        prepare_instalment_periods(account_id=account.pk, actor=performed_by,
+            reason='Schedule recorded atomically with the accepted configured agreement.')
     record_audit_event(
         action=AuditEvent.Action.CUSTOMER_ENROLMENT,
         actor=performed_by,
@@ -421,10 +473,16 @@ def enroll_customer(
         scheme_account=account,
         details={
             "scheme_number": account.scheme_number,
+            'plan_revision_id': revision.pk,
+            'configuration_id': account.configuration_snapshot_id,
+            'fixed_contribution_amount': str(account.fixed_amount_snapshot) if account.fixed_amount_snapshot is not None else None,
             "savings_mode": account.savings_mode,
             "metal_grade": account.metal_grade.code if account.metal_grade_id else None,
             "agreed_months": account.agreed_months,
-            "eligible_from": account.eligible_from.isoformat(),
+            "eligible_from": account.eligible_from.isoformat() if account.eligible_from else None,
+            **({"agreement_schema_version": account.agreement_schema_version,
+                "eligibility_policy": account.eligibility_policy_snapshot,
+                "required_count": account.required_count_snapshot} if independent else {}),
         },
     )
     return account
@@ -442,6 +500,9 @@ def _validate_customer_actor(*, customer, actor):
 
 
 def _normalize_requested_contribution(*, plan, amount):
+    if plan.configuration_id:
+        from .plan_configuration import validate_configuration_amount
+        return validate_configuration_amount(plan.configuration, amount)
     try:
         normalized = Decimal(str(amount)).quantize(MONEY_QUANTUM)
     except (InvalidOperation, TypeError, ValueError):
@@ -484,9 +545,27 @@ def _normalize_requested_contribution(*, plan, amount):
 
 
 def enrolment_request_offer_is_current(enrolment_request):
-    plan = enrolment_request.plan
+    # A request may hold a cached plan from before an owner edit. Current-offer
+    # comparison must read persisted terms; conversion already holds its row lock.
+    plan = SchemePlan.objects.select_related("configuration", "publication_revision").get(pk=enrolment_request.plan_id)
+    from .plan_publication import require_configured_offer
+    try:
+        require_configured_offer(plan)
+    except ValidationError:
+        return False
     if not plan.active or not plan.publicly_listed:
         return False
+    if enrolment_request.request_schema_version == 2:
+        from .enrolment_contracts import validate_request_terms
+        from .plan_governance import plan_edit_digest
+        try:
+            validate_request_terms(enrolment_request)
+        except (ValidationError, ObjectDoesNotExist):
+            return False
+        return (enrolment_request.configuration_snapshot_id == plan.configuration_id
+            and enrolment_request.plan_revision_snapshot_id == plan.publication_revision_id
+            and enrolment_request.offer_digest == plan_edit_digest(plan)
+            and enrolment_request.disclosure_version == settings.CUSTOMER_ENROLMENT_REQUEST_DISCLOSURE_VERSION)
     if not SchemePlanOffering.objects.filter(
         plan=plan,
         metal_grade=enrolment_request.metal_grade,
@@ -495,6 +574,7 @@ def enrolment_request_offer_is_current(enrolment_request):
         return False
     return all(
         [
+            enrolment_request.configuration_snapshot_id == plan.configuration_id,
             enrolment_request.amount_rule_snapshot == plan.amount_rule,
             enrolment_request.plan_name_snapshot == plan.name,
             enrolment_request.plan_code_snapshot == plan.code,
@@ -519,7 +599,11 @@ def _request_audit_details(enrolment_request):
         "enrolment_request_id": str(enrolment_request.pk),
         "customer_number": enrolment_request.customer.customer_number,
         "plan_code": enrolment_request.plan_code_snapshot,
-        "metal_grade": enrolment_request.metal_grade.code,
+        "metal_grade": enrolment_request.metal_grade.code if enrolment_request.metal_grade_id else None,
+        **({"request_schema_version": 2, "savings_mode": enrolment_request.savings_mode_snapshot,
+            "plan_revision_id": enrolment_request.plan_revision_snapshot_id,
+            "eligibility_policy": enrolment_request.eligibility_policy_snapshot,
+            "required_count": enrolment_request.required_count_snapshot} if enrolment_request.request_schema_version == 2 else {}),
         "requested_contribution_amount": str(
             enrolment_request.requested_contribution_amount
         ),
@@ -551,6 +635,7 @@ def submit_scheme_enrolment_request(
     requested_months,
     customer_message,
     actor,
+    expected_plan_digest=None,
 ):
     if not settings.CUSTOMER_ENROLMENT_REQUESTS_ENABLED:
         raise ValidationError("Online enrolment requests are currently unavailable.")
@@ -558,12 +643,26 @@ def submit_scheme_enrolment_request(
         pk=customer.pk
     )
     _validate_customer_actor(customer=customer, actor=actor)
-    plan = SchemePlan.objects.get(pk=plan.pk)
-    metal_grade = MetalGrade.objects.get(pk=metal_grade.pk)
-    plan.full_clean()
+    plan = SchemePlan.objects.select_for_update().get(pk=plan.pk)
+    from .plan_publication import require_configured_offer
+    require_configured_offer(plan)
+    independent = bool(plan.configuration_id and plan.configuration.policy_schema_version == 2)
+    inr_credit = independent and plan.configuration.accumulation == "INR_PURCHASE_CREDIT"
+    if not independent:
+        plan.full_clean()
+    if inr_credit and metal_grade is not None:
+        raise ValidationError("INR purchase credit cannot carry a metal grade.")
+    if not inr_credit and metal_grade is None:
+        raise ValidationError({"metal_grade": "Select the exact offered grade."})
+    if metal_grade is not None:
+        metal_grade = MetalGrade.objects.get(pk=metal_grade.pk)
+    if independent:
+        from .plan_governance import plan_edit_digest
+        if expected_plan_digest != plan_edit_digest(plan):
+            raise ValidationError("The displayed offer changed or expired; review it and submit again.")
     if not plan.active or not plan.publicly_listed:
         raise ValidationError({"plan": "This plan is not open for online requests."})
-    if not SchemePlanOffering.objects.filter(
+    if not inr_credit and not SchemePlanOffering.objects.filter(
         plan=plan,
         metal_grade=metal_grade,
         active=True,
@@ -604,20 +703,13 @@ def submit_scheme_enrolment_request(
     if existing is not None:
         return EnrolmentRequestSubmission(existing, False)
 
-    try:
-        requested_months = int(requested_months)
-    except (TypeError, ValueError):
-        raise ValidationError(
-            {"requested_months": "Enter a valid preferred duration."}
-        ) from None
-    if requested_months < plan.minimum_months:
-        raise ValidationError(
-            {
-                "requested_months": (
-                    f"This plan requires at least {plan.minimum_months} months."
-                )
-            }
-        )
+    if not independent:
+        try:
+            requested_months = int(requested_months)
+        except (TypeError, ValueError):
+            raise ValidationError({"requested_months": "Enter a valid preferred duration."}) from None
+        if requested_months < plan.minimum_months:
+            raise ValidationError({"requested_months": f"This plan requires at least {plan.minimum_months} months."})
     normalized_amount = _normalize_requested_contribution(
         plan=plan,
         amount=requested_contribution_amount,
@@ -633,6 +725,7 @@ def submit_scheme_enrolment_request(
         metal_grade=metal_grade,
         plan_name_snapshot=plan.name,
         plan_code_snapshot=plan.code,
+        configuration_snapshot_id=plan.configuration_id,
         requested_contribution_amount=normalized_amount,
         requested_months=requested_months,
         customer_message=normalized_message,
@@ -651,6 +744,14 @@ def submit_scheme_enrolment_request(
         expires_at=now
         + timedelta(days=settings.CUSTOMER_ENROLMENT_REQUEST_EXPIRY_DAYS),
     )
+    if independent:
+        from .enrolment_contracts import independent_request_values
+        values = independent_request_values(configuration_id=plan.configuration_id,
+            metal_grade_id=metal_grade.pk if metal_grade else None, amount=normalized_amount, months=requested_months)
+        for field, value in values.items():
+            setattr(enrolment_request, field, value)
+        enrolment_request.plan_revision_snapshot_id = plan.publication_revision_id
+        enrolment_request.offer_digest = expected_plan_digest
     enrolment_request.save()
     record_audit_event(
         action=AuditEvent.Action.ENROLMENT_REQUEST_SUBMITTED,
@@ -665,7 +766,7 @@ def submit_scheme_enrolment_request(
 @transaction.atomic
 def withdraw_scheme_enrolment_request(*, enrolment_request, actor):
     enrolment_request = (
-        SchemeEnrolmentRequest.objects.select_for_update()
+        SchemeEnrolmentRequest.objects.select_for_update(of=("self", "customer", "customer__user", "plan"))
         .select_related("customer__user", "plan", "metal_grade")
         .get(pk=enrolment_request.pk)
     )
@@ -704,7 +805,7 @@ def decide_scheme_enrolment_request(*, enrolment_request, status, actor, reason)
     }:
         raise ValidationError("Select a supported enrolment request decision.")
     enrolment_request = (
-        SchemeEnrolmentRequest.objects.select_for_update()
+        SchemeEnrolmentRequest.objects.select_for_update(of=("self", "customer", "customer__user", "plan"))
         .select_related("customer__user", "plan", "metal_grade")
         .get(pk=enrolment_request.pk)
     )
@@ -748,7 +849,7 @@ def enroll_customer_from_request(
 ):
     _validate_owner(actor)
     enrolment_request = (
-        SchemeEnrolmentRequest.objects.select_for_update()
+        SchemeEnrolmentRequest.objects.select_for_update(of=("self", "customer", "customer__user"))
         .select_related("customer__user", "metal_grade")
         .get(pk=enrolment_request.pk)
     )
@@ -776,7 +877,7 @@ def enroll_customer_from_request(
         raise ValidationError(
             "This request has expired. Record expiry and ask the customer to submit again."
         )
-    if not current_terms_confirmed:
+    if current_terms_confirmed is not True:
         raise ValidationError(
             "Confirm that the current terms were reviewed with the customer."
         )
@@ -787,12 +888,17 @@ def enroll_customer_from_request(
         )
     if agreed_months != enrolment_request.requested_months:
         raise ValidationError("The duration differs from the customer's request. Ask the customer to withdraw and confirm a new request; do not substitute a duration.")
+    from .plan_governance import plan_edit_digest
     account = enroll_customer(
         customer=enrolment_request.customer,
         plan=enrolment_request.plan,
         metal_grade=enrolment_request.metal_grade,
         start_date=start_date,
         agreed_months=agreed_months,
+        selected_contribution_amount=enrolment_request.requested_contribution_amount,
+        selected_amount_confirmed=current_terms_confirmed,
+        expected_configuration_id=enrolment_request.configuration_snapshot_id,
+        expected_plan_digest=plan_edit_digest(current_plan),
         performed_by=actor,
         reason=reason,
     )
@@ -821,12 +927,18 @@ def contribution_period_for(value):
 
 
 def validate_contribution_amount(scheme_account, amount):
+    if isinstance(amount, (float, bool)):
+        raise ValidationError({'amount': 'Use a decimal INR amount.'})
+    from .plan_configuration import validate_agreement_configuration
+    validate_agreement_configuration(scheme_account)
     try:
         amount = Decimal(str(amount))
         normalized_amount = amount.quantize(MONEY_QUANTUM)
     except (InvalidOperation, TypeError, ValueError):
         raise ValidationError({"amount": "Enter a valid contribution amount."}) from None
 
+    if not normalized_amount.is_finite():
+        raise ValidationError({'amount': 'Enter a finite contribution amount.'})
     if amount != normalized_amount:
         raise ValidationError({"amount": "Contribution amounts support at most 2 decimal places."})
     if normalized_amount <= 0:
@@ -849,10 +961,15 @@ def validate_contribution_amount(scheme_account, amount):
             raise ValidationError(
                 {"amount": f"Maximum contribution is ₹{scheme_account.maximum_amount_snapshot}."}
             )
+    if (scheme_account.contribution_step_snapshot is not None
+            and (normalized_amount - scheme_account.minimum_amount_snapshot) % scheme_account.contribution_step_snapshot):
+        raise ValidationError({'amount': 'Use an allowed contribution increment from the agreement minimum.'})
     return normalized_amount
 
 
 def validate_redemption_amount(scheme_account, amount):
+    if scheme_account.configuration_snapshot_id:
+        raise ValidationError('Full-only settlement for configured agreements has not been released.')
     quantum = (
         MONEY_QUANTUM
         if scheme_account.savings_mode == SchemeAccount.SavingsMode.CASH
@@ -880,7 +997,13 @@ def validate_contribution_allowed(
     *,
     contribution_period=None,
     exclude_contribution_id=None,
+    _server_instant=None,
 ):
+    from .plan_policies import require_current_payment_workflow
+    require_current_payment_workflow(scheme_account)
+    from .closure_selectors import require_no_accepted_closure
+    require_no_accepted_closure(scheme_account)
+    monthly = has_monthly_instalments(scheme_account)
     if Customer.objects.filter(
         pk=scheme_account.customer_id, user__privacy_erased_at__isnull=False,
     ).exists():
@@ -890,12 +1013,26 @@ def validate_contribution_allowed(
         and not cash_scheme_activity_is_enabled()
     ):
         raise ValidationError(CASH_SCHEME_ACTIVITY_UNAVAILABLE)
+    if scheme_account.agreement_schema_version == 2:
+        from .independent_payment_selectors import validate_independent_payment_window
+        period = validate_independent_payment_window(scheme_account,
+            contribution_date=contribution_date, contribution_period=contribution_period,
+            exclude_contribution_id=exclude_contribution_id, at=_server_instant)
+        return validate_contribution_amount(scheme_account, amount), period
+    if monthly:
+        today = timezone.now().astimezone(AGREEMENT_TIMEZONE).date()
+        if contribution_date is not None and contribution_date != today:
+            raise ValidationError('Monthly instalments cannot be backdated or paid in advance.')
+        if contribution_period is not None and contribution_period != contribution_period_for(today):
+            raise ValidationError("The accounting month cannot override an agreed instalment period.")
+        current_instalment_period(scheme_account, exclude_contribution_id=exclude_contribution_id)
+        contribution_date = today
     contribution_date = contribution_date or timezone.localdate()
     if scheme_account.status == SchemeAccount.Status.REDEEMED:
         raise ValidationError("A redeemed scheme cannot receive contributions.")
     if contribution_date < scheme_account.start_date:
         raise ValidationError("Contributions cannot be made before the scheme start date.")
-    if is_redemption_eligible(
+    if not monthly and is_redemption_eligible(
         eligible_from=scheme_account.eligible_from,
         as_of=contribution_date,
     ) and not scheme_account.allow_post_eligibility_contributions_snapshot:
@@ -959,9 +1096,13 @@ def initiate_contribution(
     contribution_date=None,
 ):
     locked_account = SchemeAccount.objects.select_for_update().get(pk=scheme_account.pk)
+    if locked_account.agreement_schema_version == 2:
+        if payment_gateway != "razorpay" or gateway_mode != GatewayMode.LIVE:
+            raise ValidationError("Independent online contributions require live Razorpay.")
     ensure_payment_initiation_allowed(
         metal_grade=locked_account.metal_grade,
         lock=True,
+        savings_mode=locked_account.savings_mode,
     )
     normalized_amount, period = validate_contribution_allowed(
         locked_account, amount, contribution_date
@@ -989,21 +1130,34 @@ def initiate_contribution(
     _lock_current_scheme_rate(contribution)
     contribution.full_clean()
     contribution.save()
+    if has_monthly_instalments(locked_account):
+        reservation = reserve_instalment(contribution_id=contribution.pk)
+        contribution.checkout_expires_at = reservation.expires_at
+        contribution.save(update_fields=['checkout_expires_at'])
+    elif locked_account.agreement_schema_version == 2:
+        from .independent_payment_selectors import optional_checkout_deadline
+        contribution.checkout_expires_at = optional_checkout_deadline(locked_account,
+            contribution.checkout_expires_at, at=timezone.now())
+        contribution.save(update_fields=["checkout_expires_at"])
     return contribution
 
 
 def preview_in_store_cash_contribution(*, scheme_account, amount):
     if not in_store_cash_contributions_are_enabled():
         raise ValidationError("In-store cash contribution recording is disabled.")
+    scheme_account = SchemeAccount.objects.get(pk=scheme_account.pk)
     if scheme_account.savings_mode not in {
         SchemeAccount.SavingsMode.GOLD,
         SchemeAccount.SavingsMode.SILVER,
+        SchemeAccount.SavingsMode.INR_CREDIT,
     }:
         raise ValidationError(
             "In-store cash can be recorded only against a gold or silver scheme."
         )
-    ensure_payment_initiation_allowed(metal_grade=scheme_account.metal_grade)
+    ensure_payment_initiation_allowed(metal_grade=scheme_account.metal_grade, savings_mode=scheme_account.savings_mode)
     normalized_amount, period = validate_contribution_allowed(scheme_account, amount)
+    if scheme_account.savings_mode == SchemeAccount.SavingsMode.INR_CREDIT:
+        return InStoreCashContributionPreview(scheme_account, normalized_amount, period, None, None)
     scheme_rate = get_current_scheme_rate(scheme_account.metal_grade)
     if scheme_rate is None:
         raise ValidationError(
@@ -1046,6 +1200,7 @@ def record_in_store_cash_contribution(
         raise ValidationError({"audit_reason": "Enter a reason for recording the cash."})
 
     with transaction.atomic():
+        SchemeAccount.objects.select_for_update().get(pk=scheme_account.pk)
         existing = (
             InStoreCashReceipt.objects.select_related(
                 "contribution",
@@ -1075,15 +1230,19 @@ def record_in_store_cash_contribution(
             .select_related("customer", "metal_grade")
             .get(pk=scheme_account.pk)
         )
+        from .closure_selectors import require_no_accepted_closure
+        require_no_accepted_closure(account)
         if account.savings_mode not in {
             SchemeAccount.SavingsMode.GOLD,
             SchemeAccount.SavingsMode.SILVER,
+            SchemeAccount.SavingsMode.INR_CREDIT,
         }:
             raise ValidationError(
                 "In-store cash can be recorded only against a gold or silver scheme."
             )
-        MetalGrade.objects.select_for_update().get(pk=account.metal_grade_id)
-        ensure_payment_initiation_allowed(metal_grade=account.metal_grade, lock=True)
+        if account.metal_grade_id:
+            MetalGrade.objects.select_for_update().get(pk=account.metal_grade_id)
+        ensure_payment_initiation_allowed(metal_grade=account.metal_grade, lock=True, savings_mode=account.savings_mode)
         if Contribution.objects.filter(
             scheme_account=account,
             status=Contribution.Status.PENDING,
@@ -1093,9 +1252,10 @@ def record_in_store_cash_contribution(
                 "This scheme has a pending Razorpay order. Reconcile or complete it "
                 "before recording in-store cash."
             )
-        normalized_amount, period = validate_contribution_allowed(account, amount)
         now = timezone.now()
-        scheme_rate = (
+        normalized_amount, period = validate_contribution_allowed(account, amount, _server_instant=now)
+        inr_credit = account.savings_mode == SchemeAccount.SavingsMode.INR_CREDIT
+        scheme_rate = None if inr_credit else (
             SchemeRate.objects.select_for_update()
             .filter(
                 metal_grade=account.metal_grade,
@@ -1104,9 +1264,9 @@ def record_in_store_cash_contribution(
             .order_by("-effective_from", "-published_at", "-pk")
             .first()
         )
-        if scheme_rate is None:
+        if not inr_credit and scheme_rate is None:
             raise ValidationError("The current Scheme Rate has not been published.")
-        if scheme_rate.pk != expected_scheme_rate_id:
+        if (scheme_rate.pk if scheme_rate else None) != expected_scheme_rate_id:
             raise ValidationError(
                 "The Scheme Rate changed after preview. Review the updated rate "
                 "before confirming cash receipt."
@@ -1122,12 +1282,12 @@ def record_in_store_cash_contribution(
             amount=normalized_amount,
             contribution_period=period,
             frequency_rule_snapshot=account.frequency_rule_snapshot,
-            status=Contribution.Status.PAID_UNALLOCATED,
+            status=Contribution.Status.PAID if inr_credit else Contribution.Status.PAID_UNALLOCATED,
             payment_gateway="in_store_cash",
             payment_channel=PaymentChannel.IN_STORE_CASH,
             gateway_reference=receipt_reference,
             scheme_rate=scheme_rate,
-            rate_locked_at=now,
+            rate_locked_at=None if inr_credit else now,
             paid_at=now,
         )
         contribution.full_clean()
@@ -1144,6 +1304,12 @@ def record_in_store_cash_contribution(
         )
         receipt.full_clean()
         receipt.save()
+        if has_monthly_instalments(account):
+            reserve_instalment(contribution_id=contribution.pk)
+            attribute_cash_instalment(contribution_id=contribution.pk)
+        if account.savings_mode == SchemeAccount.SavingsMode.INR_CREDIT:
+            from .inr_principal import record_cash_inr_principal
+            record_cash_inr_principal(cash_receipt_id=receipt.pk)
         record_audit_event(
             action=AuditEvent.Action.IN_STORE_CASH_RECEIPT,
             actor=received_by,
@@ -1155,8 +1321,8 @@ def record_in_store_cash_contribution(
                 "receipt_reference": receipt_reference,
                 "paper_receipt_number": paper_receipt_number,
                 "amount_inr": str(normalized_amount),
-                "metal_grade": account.metal_grade.code,
-                "rate_per_gram": str(scheme_rate.rate_per_gram),
+                "metal_grade": account.metal_grade.code if account.metal_grade_id else None,
+                "rate_per_gram": str(scheme_rate.rate_per_gram) if scheme_rate else None,
             },
         )
 
@@ -1182,11 +1348,20 @@ def confirm_contribution(
         .get(pk=contribution_id)
     )
 
+    from .plan_policies import require_current_payment_workflow
+    require_current_payment_workflow(contribution.scheme_account)
+
+    if payment_gateway == "razorpay":
+        from .payment_refund_resolutions import require_payment_not_refund_resolved
+        require_payment_not_refund_resolved(gateway_mode=contribution.gateway_mode, payment_id=gateway_reference)
+
     if contribution.status in SUCCESSFUL_PAYMENT_STATUSES:
         if (
             contribution.payment_gateway == payment_gateway
             and contribution.gateway_reference == gateway_reference
         ):
+            if has_monthly_instalments(contribution.scheme_account):
+                note_verified_instalment(contribution_id=contribution.pk)
             return contribution
         raise ValidationError("This contribution has already been confirmed.")
     if contribution.status == Contribution.Status.FAILED:
@@ -1225,6 +1400,8 @@ def confirm_contribution(
             "paid_at",
         ]
     )
+    if has_monthly_instalments(contribution.scheme_account):
+        note_verified_instalment(contribution_id=contribution.pk)
     return contribution
 
 
@@ -1289,7 +1466,6 @@ def reconcile_abandoned_razorpay_contribution(
         raise ValidationError(
             "The Razorpay order is not old enough for abandonment review."
         )
-
     if not contribution.razorpay_checkout_expired:
         raise ValidationError("Checkout must expire before abandonment reconciliation.")
 
@@ -1316,6 +1492,7 @@ def reconcile_abandoned_razorpay_contribution(
         )
 
     with transaction.atomic():
+        SchemeAccount.objects.select_for_update().get(pk=contribution.scheme_account_id)
         locked = (
             Contribution.objects.select_for_update()
             .select_related("scheme_account")
@@ -1337,7 +1514,7 @@ def reconcile_abandoned_razorpay_contribution(
             locked.full_clean()
             locked.save(update_fields=["status"])
 
-        record_audit_event(
+        reconciliation_audit = record_audit_event(
             action=AuditEvent.Action.PAYMENT_ORDER_RECONCILIATION,
             actor=performed_by,
             reason=normalized_reason,
@@ -1358,6 +1535,8 @@ def reconcile_abandoned_razorpay_contribution(
                 "provider_payment_statuses": list(inspection.payment_statuses),
             },
         )
+        if untouched and has_monthly_instalments(locked.scheme_account):
+            release_reconciled_instalment(contribution_id=locked.pk, audit_id=reconciliation_audit.pk)
     return RazorpayOrderReconciliationResult(
         contribution=locked,
         inspection=inspection,
@@ -1495,6 +1674,14 @@ def retry_metal_allocation(*, contribution, performed_by=None, reason=""):
 
 
 def _apply_contribution_entitlement(contribution):
+    from .plan_policies import require_current_payment_workflow
+    require_current_payment_workflow(contribution.scheme_account)
+    if (contribution.scheme_account.savings_mode == SchemeAccount.SavingsMode.INR_CREDIT
+        and contribution.payment_channel == PaymentChannel.IN_STORE_CASH):
+        from .inr_principal import record_cash_inr_principal
+        receipt = InStoreCashReceipt.objects.get(contribution=contribution)
+        record_cash_inr_principal(cash_receipt_id=receipt.pk)
+        return contribution
     if contribution.scheme_account.savings_mode in {
         SchemeAccount.SavingsMode.GOLD,
         SchemeAccount.SavingsMode.SILVER,
@@ -1512,10 +1699,113 @@ def _apply_contribution_entitlement(contribution):
 def initiate_razorpay_contribution(
     *, scheme_account, amount, contribution_date=None, gateway=None, submission_key=None, expected_latest_id=None
 ):
+    gateway = gateway or get_payment_gateway()
+    if gateway.name != "razorpay":
+        raise ImproperlyConfigured("The Razorpay payment gateway is not configured.")
+    if getattr(gateway, "mode", None) not in GatewayMode.values:
+        raise ImproperlyConfigured("The Razorpay payment mode is not configured.")
+
+    # Always reload immutable contract evidence rather than trusting a caller's cached object.
+    scheme_account = SchemeAccount.objects.get(pk=scheme_account.pk)
+    if scheme_account.agreement_schema_version == 2 and not has_monthly_instalments(scheme_account):
+        from .independent_payment_selectors import resumable_optional_contribution
+        if gateway.mode != GatewayMode.LIVE:
+            raise ValidationError("Independent optional checkout requires Live Razorpay.")
+        with transaction.atomic():
+            account = SchemeAccount.objects.select_for_update().get(pk=scheme_account.pk)
+            contribution = resumable_optional_contribution(account)
+            normalized_amount, _ = validate_contribution_allowed(account, amount, contribution_date,
+                exclude_contribution_id=contribution.pk if contribution else None)
+            if contribution is not None:
+                if contribution.amount != normalized_amount:
+                    raise ValidationError("The pending optional checkout has a different amount; reconcile it first.")
+            else:
+                contribution = initiate_contribution(scheme_account=account, amount=normalized_amount,
+                    payment_gateway=gateway.name, gateway_mode=gateway.mode, contribution_date=contribution_date)
+        return _create_razorpay_order(contribution=contribution, gateway=gateway)
+    if has_monthly_instalments(scheme_account):
+        if gateway.mode != GatewayMode.LIVE:
+            raise ValidationError('Monthly real instalments require the live payment mode.')
+        with transaction.atomic():
+            account = SchemeAccount.objects.select_for_update().get(pk=scheme_account.pk)
+            ensure_payment_initiation_allowed(metal_grade=account.metal_grade, lock=True, savings_mode=account.savings_mode)
+            contribution = resumable_instalment_contribution(account)
+            normalized_amount, _ = validate_contribution_allowed(account, amount, contribution_date,
+                exclude_contribution_id=contribution.pk if contribution else None)
+            if contribution is not None:
+                if contribution.amount != normalized_amount or contribution.gateway_mode != gateway.mode:
+                    raise ValidationError('The reserved checkout does not match the agreed amount/payment mode.')
+            else:
+                contribution = initiate_contribution(scheme_account=account, amount=normalized_amount,
+                    payment_gateway=gateway.name, gateway_mode=gateway.mode, contribution_date=contribution_date)
+        return _create_razorpay_order(contribution=contribution, gateway=gateway)
+
     from .checkout_services import initiate_checkout
     return initiate_checkout(scheme_account=scheme_account, amount=amount,
         contribution_date=contribution_date, gateway=gateway or get_payment_gateway(),
         submission_key=submission_key, expected_latest_id=expected_latest_id)
+
+
+def _create_razorpay_order(*, contribution, gateway):
+    from .closure_selectors import require_no_accepted_closure
+    from .plan_policies import require_current_payment_workflow
+    require_no_accepted_closure(contribution.scheme_account)
+    require_current_payment_workflow(contribution.scheme_account)
+    order_error = None
+    monthly = has_monthly_instalments(contribution.scheme_account)
+    if not monthly and contribution.scheme_account.agreement_schema_version != 2:
+        raise ValidationError("Legacy checkout must use its durable submission service.")
+    if contribution.scheme_account.agreement_schema_version == 2 and not monthly:
+        from .optional_orders import create_optional_order
+        return create_optional_order(contribution=contribution, gateway=gateway)
+    order_started = begin_instalment_order_request(contribution_id=contribution.pk) if monthly else False
+    with transaction.atomic():
+        SchemeAccount.objects.select_for_update().get(pk=contribution.scheme_account_id)
+        contribution = (
+            Contribution.objects.select_for_update()
+            .select_related("scheme_account")
+            .get(pk=contribution.pk)
+        )
+        require_no_accepted_closure(contribution.scheme_account)
+        require_current_payment_workflow(contribution.scheme_account)
+        if monthly:
+            if order_started:
+                current_instalment_period(contribution.scheme_account, exclude_contribution_id=contribution.pk)
+                if contribution.razorpay_checkout_expired or not InstalmentReservation.objects.filter(
+                    contribution=contribution, state="ORDERING",
+                ).exists():
+                    raise ValidationError('The reserved order needs review before proceeding.')
+            else:
+                resumable = resumable_instalment_contribution(contribution.scheme_account)
+                if resumable is None or resumable.pk != contribution.pk:
+                    raise ValidationError('This checkout no longer holds a payable period reservation.')
+        ensure_payment_initiation_allowed(
+            metal_grade=contribution.scheme_account.metal_grade,
+            lock=True,
+            savings_mode=contribution.scheme_account.savings_mode,
+        )
+        if not contribution.scheme_rate_id:
+            _lock_current_scheme_rate(contribution)
+            contribution.full_clean()
+            contribution.save(update_fields=["scheme_rate", "rate_locked_at"])
+        if contribution.gateway_order_id:
+            return contribution
+        try:
+            order = gateway.create_order(contribution)
+        except PaymentGatewayError as error:
+            contribution.status = Contribution.Status.FAILED
+            contribution.full_clean()
+            contribution.save(update_fields=["status"])
+            order_error = error
+        else:
+            contribution.gateway_order_id = order.order_id
+            contribution.full_clean()
+            contribution.save(update_fields=["gateway_order_id"])
+            if monthly:
+                complete_instalment_order_request(contribution_id=contribution.pk)
+    if order_error is not None:
+        raise order_error
+    return contribution
 
 
 def confirm_razorpay_contribution(
@@ -1538,9 +1828,25 @@ def confirm_razorpay_contribution(
         )
     if not contribution.gateway_order_id or callback_order_id != contribution.gateway_order_id:
         raise ValidationError("The Razorpay order does not match this contribution.")
+    if contribution.scheme_account.savings_mode == SchemeAccount.SavingsMode.INR_CREDIT:
+        from .inr_api_payments import confirm_api_principal
+        from .plan_policies import require_current_payment_workflow
+        require_current_payment_workflow(contribution.scheme_account)
+        if contribution.gateway_mode != GatewayMode.LIVE:
+            raise ValidationError("INR purchase credit requires a Live Razorpay capture.")
+        if contribution.status not in {Contribution.Status.PENDING, Contribution.Status.PAID}:
+            raise ValidationError("This INR contribution requires manual reconciliation.")
+        inspection = gateway.verify_captured_payment(order_id=contribution.gateway_order_id,
+            payment_id=payment_id, signature=signature, expected_amount=contribution.amount)
+        if inspection.payment_id != payment_id:
+            raise ValidationError("The inspected payment does not match the callback.")
+        return confirm_api_principal(contribution_id=contribution.pk, inspection=inspection,
+            observed_at=timezone.now(), signature=signature)
     if contribution.status in SUCCESSFUL_PAYMENT_STATUSES:
         if contribution.gateway_reference != payment_id:
             raise ValidationError("This contribution has already been confirmed.")
+        if has_monthly_instalments(contribution.scheme_account):
+            note_verified_instalment(contribution_id=contribution.pk)
         return _apply_contribution_entitlement(contribution)
     if contribution.status == Contribution.Status.ABANDONED:
         raise ValidationError(
@@ -1636,6 +1942,35 @@ def _extract_webhook_payment(payload):
     return payment, payment_id, order_id
 
 
+def _complete_captured_webhook(*, contribution, event, payment_id, body):
+    monthly = has_monthly_instalments(contribution.scheme_account)
+    inr_credit = contribution.scheme_account.savings_mode == SchemeAccount.SavingsMode.INR_CREDIT
+    # Preserve legacy confirmation/retry transaction boundaries. Monthly funds and
+    # qualification evidence must commit together under the agreement lock.
+    with transaction.atomic() if monthly or inr_credit else nullcontext():
+        if monthly or inr_credit:
+            SchemeAccount.objects.select_for_update().get(pk=contribution.scheme_account_id)
+        contribution = confirm_contribution(contribution_id=contribution.pk,
+            payment_gateway='razorpay', gateway_reference=payment_id, verified=True)
+        contribution = _apply_contribution_entitlement(contribution)
+        with transaction.atomic():
+            event.status = PaymentWebhookEvent.Status.PROCESSED
+            event.contribution = contribution
+            event.failure_code = ""
+            event.error = ""
+            event.processed_at = timezone.now()
+            event.save(update_fields=["status", 'contribution', 'failure_code', 'error', 'processed_at'])
+            if inr_credit:
+                from .inr_principal import record_captured_inr_principal
+                record_captured_inr_principal(event_id=event.pk, body=body)
+            elif monthly:
+                attribute_razorpay_instalment(event_id=event.pk, body=body)
+            _record_webhook_attempt(event=event, source=WebhookProcessingAttempt.Source.PROVIDER_DELIVERY,
+                outcome=WebhookProcessingAttempt.Outcome.PROCESSED,
+                reason='Processed a signed captured-payment webhook.')
+    return event
+
+
 def process_razorpay_webhook(*, gateway_mode, event_id, body, payload):
     if gateway_mode not in GatewayMode.values:
         raise ValidationError("The Razorpay webhook mode is invalid.")
@@ -1659,6 +1994,16 @@ def process_razorpay_webhook(*, gateway_mode, event_id, body, payload):
         PaymentWebhookEvent.Status.IGNORED,
         PaymentWebhookEvent.Status.REVIEW_REQUIRED,
     }:
+        if (event.status == PaymentWebhookEvent.Status.PROCESSED and event.contribution_id
+            and event.contribution.scheme_account.savings_mode == SchemeAccount.SavingsMode.INR_CREDIT):
+            from .plan_policies import require_current_payment_workflow
+            from .inr_principal import record_captured_inr_principal
+            require_current_payment_workflow(event.contribution.scheme_account)
+            record_captured_inr_principal(event_id=event.pk, body=body)
+        elif (event.status == PaymentWebhookEvent.Status.PROCESSED and event.contribution_id
+            and has_monthly_instalments(event.contribution.scheme_account)):
+            # A provider retry after API recovery can supply the original signed timing.
+            attribute_razorpay_instalment(event_id=event.pk, body=body)
         _record_webhook_attempt(
             event=event,
             source=WebhookProcessingAttempt.Source.PROVIDER_DELIVERY,
@@ -1717,6 +2062,10 @@ def process_razorpay_webhook(*, gateway_mode, event_id, body, payload):
                 "PAYMENT_DETAILS_MISMATCH",
                 "Razorpay webhook payment details do not match the local contribution.",
             )
+        from .payment_refund_selectors import is_resolved_capture_event
+        if is_resolved_capture_event(event):
+            raise _WebhookReviewRequired("REFUNDED_PAYMENT_REPLAY",
+                "This exact captured-payment evidence has a retained full-refund resolution; no credit or new reservation is created.")
         if contribution.status == Contribution.Status.ABANDONED:
             raise _WebhookReviewRequired(
                 "LATE_CAPTURE_ABANDONED",
@@ -1725,43 +2074,30 @@ def process_razorpay_webhook(*, gateway_mode, event_id, body, payload):
             )
 
         try:
-            contribution = confirm_contribution(
-                contribution_id=contribution.pk,
-                payment_gateway="razorpay",
-                gateway_reference=payment_id,
-                verified=True,
-            )
-            contribution = _apply_contribution_entitlement(contribution)
+            return _complete_captured_webhook(contribution=contribution, event=event,
+                payment_id=payment_id, body=body)
         except ValidationError as error:
+            if Contribution.objects.filter(pk=contribution.pk, status=Contribution.Status.ABANDONED).exists():
+                raise _WebhookReviewRequired("LATE_CAPTURE_ABANDONED",
+                    'An abandoned contribution received a late capture; owner reconciliation is required.') from None
+            if (has_monthly_instalments(contribution.scheme_account)
+                and Contribution.objects.filter(pk=contribution.pk, status__in=SUCCESSFUL_PAYMENT_STATUSES)
+                    .exclude(gateway_reference=payment_id).exists()):
+                raise _WebhookReviewRequired("DUPLICATE_CAPTURE_REVIEW",
+                    'A different captured payment was reported for an already-confirmed instalment. Preserve the original credit and reconcile the additional payment separately.') from None
             raise _WebhookReviewRequired(
                 "CONTRIBUTION_CONFIRMATION_REJECTED",
                 str(error).strip(),
             ) from None
 
-        with transaction.atomic():
-            event.status = PaymentWebhookEvent.Status.PROCESSED
-            event.contribution = contribution
-            event.failure_code = ""
-            event.error = ""
-            event.processed_at = timezone.now()
-            event.save(
-                update_fields=[
-                    "status",
-                    "contribution",
-                    "failure_code",
-                    "error",
-                    "processed_at",
-                ]
-            )
-            _record_webhook_attempt(
-                event=event,
-                source=WebhookProcessingAttempt.Source.PROVIDER_DELIVERY,
-                outcome=WebhookProcessingAttempt.Outcome.PROCESSED,
-                reason="Processed a signed captured-payment webhook.",
-            )
-        return event
     except _WebhookReviewRequired as error:
         with transaction.atomic():
+            if event.contribution_id:
+                SchemeAccount.objects.select_for_update().get(pk=event.contribution.scheme_account_id)
+            from .payment_refund_selectors import is_resolved_capture_event
+            if error.code == "LATE_CAPTURE_ABANDONED" and is_resolved_capture_event(event):
+                error = _WebhookReviewRequired("REFUNDED_PAYMENT_REPLAY",
+                    "The exact payment already has retained refund resolution; preserve its history without re-crediting.")
             event.status = PaymentWebhookEvent.Status.REVIEW_REQUIRED
             event.failure_code = error.code
             event.error = error.detail[:1000]
@@ -1777,6 +2113,9 @@ def process_razorpay_webhook(*, gateway_mode, event_id, body, payload):
                     "processed_at",
                 ]
             )
+            if (error.code == "LATE_CAPTURE_ABANDONED" and event.contribution_id
+                and has_monthly_instalments(event.contribution.scheme_account)):
+                note_late_instalment_capture(event_id=event.pk)
             _record_webhook_attempt(
                 event=event,
                 source=WebhookProcessingAttempt.Source.PROVIDER_DELIVERY,
@@ -1824,6 +2163,28 @@ def _classify_webhook_recovery(*, event, contribution, inspection):
             "MANUAL_REVIEW_REQUIRED",
             "No mode-matched local contribution exists for this Razorpay order.",
         )
+    if event is None or event.contribution_id not in (None, contribution.pk):
+        return ("MANUAL_REVIEW_REQUIRED", "Capture event is linked to a different contribution.")
+    if contribution.scheme_account.savings_mode == SchemeAccount.SavingsMode.INR_CREDIT:
+        from .inr_api_payments import validate_inspection
+        from .inr_selectors import validate_inr_contract, validate_principal_receipt
+        from .plan_policies import require_current_payment_workflow
+        try:
+            if event is None or event.contribution_id not in (None, contribution.pk):
+                raise ValidationError("Capture event is linked to a different contribution.")
+            require_current_payment_workflow(contribution.scheme_account)
+            validate_inr_contract(contribution.scheme_account)
+            validate_inspection(contribution, inspection)
+            receipt = getattr(contribution, "inr_principal_receipt", None)
+            if receipt:
+                validate_principal_receipt(receipt)
+            elif (contribution.scheme_account.inr_settlements.exists()
+                  or contribution.scheme_account.status not in {"ACTIVE", "REDEMPTION_ELIGIBLE", "CLOSURE_PENDING"}):
+                raise ValidationError("Late funds require disposition review.")
+        except ValidationError:
+            return ("MANUAL_REVIEW_REQUIRED", "INR contract, runtime or principal evidence requires reconciliation.")
+    if event is None or inspection is None:
+        return ("MANUAL_REVIEW_REQUIRED", "Matching provider evidence is required.")
     expected_amount = int(contribution.amount * 100)
     if (
         inspection.payment_id != event.gateway_reference
@@ -1867,6 +2228,7 @@ def reconcile_razorpay_webhook(
     performed_by,
     reason,
 ):
+    performed_by = get_user_model().objects.filter(pk=getattr(performed_by, "pk", None)).first()
     _validate_owner(performed_by)
     normalized_reason = reason.strip()
     if not normalized_reason:
@@ -1926,7 +2288,7 @@ def reconcile_razorpay_webhook(
             actor=performed_by,
             reason=normalized_reason,
             error_code="PROVIDER_INSPECTION_FAILED",
-            detail=str(error),
+            detail="Provider payment inspection failed; retain the case for investigation.",
         )
         raise
 
@@ -1944,6 +2306,7 @@ def reconcile_razorpay_webhook(
         contribution=contribution,
         inspection=inspection,
     )
+    observed_at = timezone.now()
     snapshot = _payment_inspection_snapshot(inspection)
     attempt_outcome = {
         "ELIGIBLE_FOR_RECOVERY": WebhookProcessingAttempt.Outcome.ELIGIBLE_FOR_RECOVERY,
@@ -1970,12 +2333,15 @@ def reconcile_razorpay_webhook(
         )
 
     with transaction.atomic():
+        SchemeAccount.objects.select_for_update().get(pk=contribution.scheme_account_id)
         locked_event = PaymentWebhookEvent.objects.select_for_update().get(pk=event.pk)
         locked_contribution = (
             Contribution.objects.select_for_update()
             .select_related("scheme_account")
             .get(pk=contribution.pk)
         )
+        performed_by = get_user_model().objects.filter(pk=performed_by.pk).first()
+        _validate_owner(performed_by)
         locked_outcome, locked_detail = _classify_webhook_recovery(
             event=locked_event,
             contribution=locked_contribution,
@@ -1985,7 +2351,12 @@ def reconcile_razorpay_webhook(
             raise ValidationError(
                 "The webhook or contribution changed during recovery; inspect it again."
             )
-        if locked_outcome == "ELIGIBLE_FOR_RECOVERY":
+        if locked_contribution.scheme_account.savings_mode == SchemeAccount.SavingsMode.INR_CREDIT:
+            from .inr_api_payments import confirm_api_principal
+            locked_contribution = confirm_api_principal(contribution_id=locked_contribution.pk,
+                inspection=inspection, observed_at=observed_at, actor=performed_by,
+                event=locked_event, reason=normalized_reason)
+        elif locked_outcome == "ELIGIBLE_FOR_RECOVERY":
             locked_contribution = confirm_contribution(
                 contribution_id=locked_contribution.pk,
                 payment_gateway="razorpay",
@@ -2215,6 +2586,8 @@ def complete_redemption(
 @transaction.atomic
 def reverse_redemption(*, redemption, processed_by, reason):
     _validate_owner(processed_by)
+    if Redemption.objects.filter(pk=redemption.pk, scheme_account__configuration_snapshot__isnull=False).exists():
+        raise ValidationError('Use the configured full-settlement correction workflow; payments must remain blocked.')
     normalized_reason = reason.strip()
     if not normalized_reason:
         raise ValidationError({"reason": "Enter a reason for the reversal."})
@@ -2288,6 +2661,8 @@ def reverse_in_store_cash_contribution(
         .select_related("scheme_account", "metal_allocation")
         .get(pk=contribution.pk)
     )
+    from .plan_policies import require_current_payment_workflow
+    require_current_payment_workflow(account)
     if locked.payment_channel != PaymentChannel.IN_STORE_CASH:
         raise ValidationError("Only an in-store cash contribution can be corrected.")
     if locked.status == Contribution.Status.REVERSED:
@@ -2339,6 +2714,11 @@ def reverse_in_store_cash_contribution(
     locked.status = Contribution.Status.REVERSED
     locked.full_clean()
     locked.save(update_fields=["status"])
+    if has_monthly_instalments(account):
+        reverse_cash_instalment(contribution_id=locked.pk)
+    if account.savings_mode == SchemeAccount.SavingsMode.INR_CREDIT:
+        from .inr_principal import record_cash_inr_correction
+        record_cash_inr_correction(cash_reversal_id=reversal.pk, actor=processed_by)
     record_audit_event(
         action=AuditEvent.Action.IN_STORE_CASH_REVERSAL,
         actor=processed_by,

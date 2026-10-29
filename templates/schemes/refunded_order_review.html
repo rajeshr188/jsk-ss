@@ -1,0 +1,23 @@
+{% extends '_base.html' %}
+{% block title %}Refunded order review | Jai Sri Krishna Jewellery{% endblock %}
+{% block content %}
+{% include 'schemes/includes/customer_context.html' with customer=contribution.scheme_account.customer scheme_account=contribution.scheme_account %}
+<div class="page-header"><div><p class="page-eyebrow">Owner reconciliation · Step 2</p><h1>Review a refunded order</h1><p class="page-subtitle">Account for every provider attempt before retiring a never-credited order.</p></div><div class="page-actions"><a class="btn btn-outline-dark" href="{% url 'schemes:refund_history' %}">Refund review history</a><a class="btn btn-outline-dark" href="{% url 'schemes:exception_queue' %}">Exception queue</a></div></div>
+<section class="card card-body mb-4"><h2 class="h4">Local order</h2><p class="text-break">{{ contribution.gateway_order_id|default:'Order identity unavailable' }} · Live</p><p>Contribution #{{ contribution.pk }} · {{ contribution.get_status_display }} · ₹{{ contribution.amount|floatformat:2 }}</p><p class="mb-0">Retirement preserves this order’s history, rate and deadline. It creates no money, grams, benefit or qualifying instalment, and does not close the agreement. Other holds and collection rules still apply.</p></section>
+{% if retirement %}<section class="card card-body mb-4"><h2 class="h4">Retained order retirement #{{ retirement.pk }}</h2><p>{{ retirement.closed_at|date:'d M Y, g:i A' }} · {{ retirement.actor_label }}</p><p>{{ retirement.reason }}</p><p>Provider order: {{ retirement.evidence.provider.order.status }} · {{ retirement.evidence.provider.order.attempts }} accounted-for attempt{{ retirement.evidence.provider.order.attempts|pluralize }}.</p>
+{% if retirement_error %}<p class="alert alert-danger" role="alert">{{ retirement_error }}</p>{% else %}<p class="alert alert-success">The retirement evidence is valid. New or contradictory captures can still require investigation; review the linked history below.</p>{% endif %}</section>{% endif %}
+{% if comparison %}<section class="card card-body mb-4" aria-labelledby="order-comparison"><h2 class="h4" id="order-comparison">Fresh all-attempt comparison</h2><p>{{ comparison.reviewed_at|date:'d M Y, g:i A' }} · reviewed by you. Confirmation independently checks again.</p><dl class="row"><dt class="col-sm-4">Provider order</dt><dd class="col-sm-8 text-break">{{ comparison.order.id }}</dd><dt class="col-sm-4">Amount</dt><dd class="col-sm-8">₹{{ comparison.order.amount|floatformat:2 }} INR</dd><dt class="col-sm-4">State / attempts</dt><dd class="col-sm-8">{{ comparison.order.status }} · {{ comparison.order.attempts }} fully accounted for</dd></dl>
+<h3 class="h5">Every provider attempt in this comparison</h3>
+<ul class="list-group list-group-flush">{% for payment in comparison.payments %}<li class="list-group-item px-0">
+<dl class="row gx-0 mb-0"><dt class="col-sm-4">Payment</dt><dd class="col-sm-8 text-break">{{ payment.payment_id }}</dd>
+<dt class="col-sm-4">State</dt><dd class="col-sm-8">{{ payment.status }}</dd>
+<dt class="col-sm-4">Amount</dt><dd class="col-sm-8">&#8377;{{ payment.amount|floatformat:2 }} INR</dd>
+<dt class="col-sm-4">Refunded</dt><dd class="col-sm-8">&#8377;{{ payment.refunded|floatformat:2 }} INR</dd></dl>
+</li>{% endfor %}</ul></section>{% endif %}
+{% if not retirement %}
+{% if not can_inspect_order %}<div class="alert alert-warning">This contribution is not a never-credited order awaiting retirement. A legitimate credit must be preserved; use the appropriate settlement/correction procedure if it needs disposition.</div>{% endif %}
+{% include 'schemes/includes/refund_review_form.html' with can_inspect=can_inspect_order can_apply=comparison inspect_label='Inspect all order attempts' apply_label='Confirm order retirement' %}
+{% endif %}
+<section class="card card-body mb-4"><h2 class="h4">Linked capture history</h2><p>{{ capture_count }} capture event{{ capture_count|pluralize }}; latest 20 shown. Every linked event is checked by the retirement service.</p><ul class="list-group list-group-flush">{% for event in capture_events %}<li class="list-group-item px-0"><a class="text-break" href="{% url 'schemes:payment_refund_review' event.pk %}">{{ event.gateway_reference|default:'Unidentified payment' }} · event #{{ event.pk }}</a><br>{{ event.get_status_display }} · {{ event.received_at|date:'d M Y, g:i A' }}</li>{% empty %}<li class="list-group-item px-0">No captured-payment event has been matched. Investigate the original order identity; do not assume a refund.</li>{% endfor %}</ul></section>
+<p><a href="{% url 'schemes:plan_manual' %}#capture-refund-review">Read the owner refund procedure</a></p>
+{% endblock %}

@@ -1,0 +1,1 @@
+{% if closure.status == 'SETTLED' and closure.scheme_account.savings_mode == 'INR_CREDIT' %}Full INR settlement completed{% else %}{{ closure.get_status_display }}{% endif %}

@@ -2,17 +2,33 @@ name: CI
 
 on:
   push:
+    branches: [main]
   pull_request:
+  workflow_dispatch:
+
+# One PR run per revision; feature pushes no longer duplicate the PR run.
+# Never interrupt a running main release/image publication with a newer push.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
 
+env:
+  DJANGO_SECRET_KEY: ci-only-synthetic-test-key-for-isolated-github-actions-56d2f84a7e31b902
+  DJANGO_DEBUG: "True"
+  DATABASE_URL: postgresql://jsk_ci:jsk_ci@127.0.0.1:5432/jsk_ci
+  PAYMENT_GATEWAY: mock
+  METAL_RATE_PROVIDER: mock
+
 jobs:
-  django:
+  checks:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:16
+        # Match the managed production database verified during release rehearsal.
+        image: postgres:18.6
         env:
           POSTGRES_DB: jsk_ci
           POSTGRES_USER: jsk_ci
@@ -24,12 +40,6 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-    env:
-      DJANGO_SECRET_KEY: q7N4xP9mK2vR8cT5yH1jF6dG3aZ0uE7iL4wQ9sB2nM8pV5kC1rX6tY3oA7eD9fU
-      DJANGO_DEBUG: "True"
-      DATABASE_URL: postgresql://jsk_ci:jsk_ci@127.0.0.1:5432/jsk_ci
-      PAYMENT_GATEWAY: mock
-      METAL_RATE_PROVIDER: mock
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -48,8 +58,11 @@ jobs:
         run: uv run python manage.py makemigrations --check --dry-run
       - name: Run application checks
         run: uv run python manage.py check
-      - name: Run tests
-        run: uv run python manage.py test
+      - name: Discover authoritative complete test inventory
+        run: >-
+          uv run python manage.py test
+          --testrunner django_project.ci_runner.CiRunner
+          --ci-plan-only --ci-shards 4 --ci-report-dir .ci-reports --noinput
       - name: Run production deployment checks
         run: uv run python manage.py check --deploy --fail-level ERROR
         env:
@@ -81,6 +94,94 @@ jobs:
         run: uv run python manage.py collectstatic --noinput
         env:
           DJANGO_DEBUG: "False"
+      - name: Save authoritative inventory
+        if: ${{ always() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ci-plan
+          path: .ci-reports/plan.json
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 7
+
+  tests:
+    name: tests (${{ matrix.shard }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        shard: [0, 1, 2, 3]
+    services:
+      postgres:
+        # Match the managed production database verified during release rehearsal.
+        image: postgres:18.6
+        env:
+          POSTGRES_DB: jsk_ci
+          POSTGRES_USER: jsk_ci
+          POSTGRES_PASSWORD: jsk_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U jsk_ci -d jsk_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install uv and Python
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "0.12.5"
+          python-version: "3.12"
+          enable-cache: true
+      - name: Install dependencies
+        run: uv sync --frozen
+      - name: Apply migrations
+        run: uv run python manage.py migrate --noinput
+      - name: Run complete assigned classes serially and record timings
+        run: >-
+          uv run python manage.py test
+          --testrunner django_project.ci_runner.CiRunner
+          --ci-shard ${{ matrix.shard }} --ci-shards 4
+          --ci-report-dir .ci-reports --parallel 1 --durations 30 --timing --noinput
+      - name: Save test inventory and duration evidence even on failure
+        if: ${{ always() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ci-test-shard-${{ matrix.shard }}
+          path: .ci-reports/shard-${{ matrix.shard }}.json
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 7
+
+  # Preserve the existing branch-protection check name. A skipped/failed shard,
+  # stale report or incomplete inventory must never turn this gate green.
+  django:
+    if: ${{ always() }}
+    needs: [checks, tests]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require all validation and test jobs to succeed
+        env:
+          CHECKS_RESULT: ${{ needs.checks.result }}
+          TESTS_RESULT: ${{ needs.tests.result }}
+        run: |
+          test "$CHECKS_RESULT" = success
+          test "$TESTS_RESULT" = success
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Download inventory and execution reports
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: ci-*
+          path: .ci-reports
+          merge-multiple: true
+      - name: Verify complete coverage and display slowest tests
+        run: python -m django_project.ci_inventory .ci-reports --revision "$GITHUB_SHA"
 
   container:
     if: ${{ github.event_name != 'push' || github.ref != 'refs/heads/main' }}

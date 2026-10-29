@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.management.base import BaseCommand, CommandError
 from django.db.models import F, Q
 from django.utils import timezone
@@ -15,6 +16,9 @@ class Command(BaseCommand):
             status=SchemeEnrolmentRequest.Status.PENDING_OWNER_REVIEW,
         )
         checks = {
+            "unversioned_independent_requests": SchemeEnrolmentRequest.objects.filter(
+                request_schema_version=1, configuration_snapshot__policy_schema_version=2,
+            ).count(),
             "enrolled_missing_account": SchemeEnrolmentRequest.objects.filter(
                 status=SchemeEnrolmentRequest.Status.ENROLLED,
                 scheme_account__isnull=True,
@@ -30,7 +34,12 @@ class Command(BaseCommand):
             ).exclude(scheme_account__plan=F("plan")).count(),
             "account_grade_mismatches": SchemeEnrolmentRequest.objects.filter(
                 scheme_account__isnull=False,
-            ).exclude(scheme_account__metal_grade=F("metal_grade")).count(),
+            ).filter(
+                Q(metal_grade__isnull=True, scheme_account__metal_grade__isnull=False)
+                | Q(metal_grade__isnull=False, scheme_account__metal_grade__isnull=True)
+                | (Q(metal_grade__isnull=False, scheme_account__metal_grade__isnull=False)
+                   & ~Q(scheme_account__metal_grade=F("metal_grade")))
+            ).count(),
             "customer_role_mismatches": SchemeEnrolmentRequest.objects.exclude(
                 customer__user__role="CUSTOMER",
             ).count(),
@@ -75,6 +84,15 @@ class Command(BaseCommand):
                 status=SchemeEnrolmentRequest.Status.EXPIRED,
             ).count(),
         }
+        from schemes.enrolment_contracts import validate_request_terms
+        checks["independent_term_mismatches"] = 0
+        for request in SchemeEnrolmentRequest.objects.filter(request_schema_version=2).select_related(
+            "configuration_snapshot", "plan_revision_snapshot", "metal_grade", "scheme_account"
+        ).iterator():
+            try:
+                validate_request_terms(request)
+            except (ValidationError, ObjectDoesNotExist):
+                checks["independent_term_mismatches"] += 1
         status = "ok" if not any(checks.values()) else "error"
         counts = " ".join(
             f"{name}={value}" for name, value in {**operational, **checks}.items()

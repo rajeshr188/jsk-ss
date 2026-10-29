@@ -24,6 +24,11 @@
     </form>
   </div>
   <div class="col-lg-5">
+    {% if form.independent_terms %}
+    {% include 'schemes/includes/independent_request_terms.html' with terms=form.independent_terms %}
+    {% else %}
+    {% include 'account/includes/application_offer.html' %}
+    {% endif %}
     <div class="card">
       <div class="card-body p-4">
         <h2 class="h4">What happens next</h2>

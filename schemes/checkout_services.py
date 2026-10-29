@@ -53,6 +53,9 @@ def initiate_checkout(*, scheme_account, amount, contribution_date=None, gateway
     created_new = False
     with transaction.atomic(durable=True):
         account = SchemeAccount.objects.select_for_update().get(pk=scheme_account.pk)
+        from .instalments import has_monthly_instalments
+        if account.agreement_schema_version != 1 or has_monthly_instalments(account):
+            raise ValidationError("Configured checkout must use its retained reservation workflow.")
         amount = validate_contribution_amount(account, amount)
         if int(amount * 100) < 100:
             raise PaymentGatewayValidationError("Razorpay requires a minimum payment amount of INR 1.00.")

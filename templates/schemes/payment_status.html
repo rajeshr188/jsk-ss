@@ -2,7 +2,7 @@
 {% block title %}Payment status | Jai Sri Krishna Jewellery{% endblock %}
 {% block content %}
 <div class="auth-shell"><div class="card auth-card">
-  <p class="page-eyebrow">{{ contribution.scheme_account.plan.name }}</p>
+  <p class="page-eyebrow">{{ contribution.scheme_account.display_plan_name }}</p>
   <h1>Payment status</h1>
 {% include 'schemes/includes/payment_status_panel.html' %}
 </div></div>

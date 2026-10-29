@@ -1,6 +1,7 @@
 import io
 from datetime import date, timedelta
 from decimal import Decimal
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.core import mail
@@ -247,6 +248,18 @@ class SchemeEnrolmentRequestTests(TestCase):
                 agreed_months=12,
                 reason="Terms reviewed at showroom.",
             )
+
+    def test_conversion_passes_reviewed_selection_without_fixing_a_legacy_preference(self):
+        from schemes.services import enroll_customer
+        request = self.submit().enrolment_request
+        with patch("schemes.services.enroll_customer", wraps=enroll_customer) as enroll:
+            account, _ = enroll_customer_from_request(enrolment_request=request, actor=self.owner,
+                current_terms_confirmed=True, start_date=timezone.localdate(), agreed_months=12, reason="Terms reviewed")
+        self.assertEqual(enroll.call_args.kwargs["selected_contribution_amount"], request.requested_contribution_amount)
+        self.assertTrue(enroll.call_args.kwargs["selected_amount_confirmed"])
+        self.assertIsNone(enroll.call_args.kwargs["expected_configuration_id"])
+        self.assertEqual(account.amount_rule_snapshot, "VARIABLE")
+        self.assertIsNone(account.fixed_amount_snapshot)
 
     def test_owner_conversion_is_atomic_and_idempotent(self):
         request = self.submit().enrolment_request

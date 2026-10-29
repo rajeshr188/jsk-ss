@@ -1,0 +1,5 @@
+{% load workspace %}
+{% configured_policy_terms configuration as policy_terms %}
+<dl class="row">
+  {% for label, value in policy_terms %}<dt class="col-sm-4">{{ label }}</dt><dd class="col-sm-8">{{ value }}</dd>{% endfor %}
+</dl>

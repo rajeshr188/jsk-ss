@@ -1,0 +1,57 @@
+{% extends '_base.html' %}
+{% block title %}Review instalment period | Jai Sri Krishna Jewellery{% endblock %}
+{% block content %}
+<p><a href="{% url 'schemes:instalment_review_queue' %}">All instalment periods</a></p>
+<h1>Review period {{ period.number }}</h1>
+<p>{{ period.scheme_account.scheme_number }} · {{ period.scheme_account.customer.full_name }}<br>
+{{ period.starts_on }} to before {{ period.ends_before }} (India time) · Agreed payment ₹{{ period.amount }}</p>
+<div class="alert alert-warning" role="alert">
+  This review cannot create a payment, release an uncertain order, change a rate or date, grant eligibility or waive an instalment.
+  Timing acceptance requires existing verified evidence within the original deadline. Contradictory evidence remains blocked.
+  An outage hold stops new payments pending a separately approved agreement remedy; it does not reject incoming verified captures or mark the customer late.
+</div>
+{% if outage_held %}<div class="alert alert-warning">This agreement has an unresolved outage hold. Closure requires the separate acknowledged resolution workflow below. There is no automatic grace or payment credit.</div>{% endif %}
+<section class="card mb-4"><div class="card-body">
+  {% if capture_exceptions %}
+  <h2 class="h4">Unresolved captures for this agreement (latest 50)</h2>
+  <p>Further payment initiation and timing acceptance are blocked. An investigation note does not clear these events. A second payment is not a second instalment credit; do not overwrite the original receipt, rate or allocation. Refund completion must be verified separately, not asserted here.</p>
+  <ul>{% for event in capture_exceptions %}<li>{{ event.gateway_reference }} · {{ event.failure_code|default:'Processing pending' }} · {{ event.received_at }} — <a href="{% url 'schemes:webhook_recovery' event.pk %}">Inspect provider reconciliation</a></li>{% endfor %}</ul>
+  {% endif %}
+  <h2 class="h4">Period investigation / outage</h2>
+  {% include 'schemes/includes/instalment_review_form.html' with form=period_form %}
+</div></section>
+{% for row in rows %}
+<section class="card mb-4"><div class="card-body">
+  <h2 class="h4">Payment {{ row.claim.contribution_id }} — {{ row.claim.get_state_display }}</h2>
+  {% if row.claim.state == 'ORDERING' %}<p><a class="btn btn-outline-primary" href="{% url 'schemes:instalment_order_recovery' row.claim.pk %}">Investigate lost order response</a></p>{% endif %}
+  <p>Financial status: {{ row.claim.contribution.get_status_display }} · {{ row.claim.contribution.get_payment_channel_display }}<br>
+  Original checkout deadline: {{ row.claim.expires_at }}. Review does not change this deadline.</p>
+  <details class="mb-3"><summary>Payment evidence (latest 50 decisions)</summary>
+  <ul>{% for decision in row.decisions %}<li>Decision {{ decision.pk }} / sequence {{ decision.sequence }}: {{ decision.state }} — {{ decision.reason_code }}<br>
+  {{ decision.earliest_at|default:'Unknown' }} to {{ decision.latest_at|default:'Unknown' }}
+  {% if decision.order_recovery %}<p>Recovered order {{ decision.order_recovery.gateway_order_id }}; provider status observed: {{ decision.order_recovery.provider_status }} at {{ decision.order_recovery.observed_at }}.<br>
+  {{ decision.order_recovery.actor_label }} · {{ decision.order_recovery.evidence_reference }} · {{ decision.order_recovery.reason }}.<br>
+  Identity recovery is not payment confirmation. Original checkout remains reconciliation-only.</p>{% endif %}</li>{% endfor %}</ul>
+  </details>
+  {% include 'schemes/includes/instalment_review_form.html' with form=row.form %}
+</div></section>
+{% empty %}<p>No payment was reserved for this period. An outage report never substitutes for payment.</p>{% endfor %}
+<h2 class="h4">Owner review history (latest 50)</h2>
+{% for review in reviews %}
+<article class="card mb-2"><div class="card-body text-break">
+  <h3 class="h6">{{ review.get_action_display }} — {{ review.created_at }}</h3>
+  <p>{{ review.actor_label }} · Reference: {{ review.evidence_reference }}</p>
+  <p>{{ review.reason|linebreaksbr }}</p>
+  {% if review.source_decision_id %}<p>Source decision {{ review.source_decision_id }}; reservation {{ review.reservation_id }}.</p>{% endif %}
+  {% if review.action == 'OUTAGE_HOLD' %}
+    {% if review.outage_resolution %}
+    <p>Resolution: {{ review.outage_resolution.get_outcome_display }} · {{ review.outage_resolution.created_at }} · {{ review.outage_resolution.actor_label }}.</p>
+    <p>{{ review.outage_resolution.reason|linebreaksbr }}<br>Incident reference: {{ review.outage_resolution.evidence_reference }}.<br>
+    Customer acknowledgement: {{ review.outage_resolution.customer_acknowledged_at }} · {{ review.outage_resolution.acknowledgement_reference }}.</p>
+    {% if review.outage_resolution.qualification_decision_id %}<p>Existing qualification decision: {{ review.outage_resolution.qualification_decision_id }}.</p>{% endif %}
+    {% if review.outage_resolution.compensation_period %}<p>Added period {{ review.outage_resolution.compensation_period.number }}: {{ review.outage_resolution.compensation_period.starts_on }} to before {{ review.outage_resolution.compensation_period.ends_before }}.</p>{% endif %}
+    {% else %}<a class="btn btn-outline-primary" href="{% url 'schemes:instalment_outage_resolution' review.pk %}">Review outage resolution</a>{% endif %}
+  {% endif %}
+</div></article>
+{% empty %}<p>No owner review recorded.</p>{% endfor %}
+{% endblock %}

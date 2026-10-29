@@ -621,6 +621,8 @@ if (
     raise ImproperlyConfigured(
         "Customer account deletion requires an approved retention-policy version"
     )
+CONFIGURED_PLANS_ENABLED = env_bool("CONFIGURED_PLANS_ENABLED")
+
 CUSTOMER_ENROLMENT_REQUESTS_ENABLED = env_bool(
     "CUSTOMER_ENROLMENT_REQUESTS_ENABLED"
 )

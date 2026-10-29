@@ -1,6 +1,11 @@
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta
 from decimal import ROUND_HALF_UP, Decimal
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .inr_settlement_selectors import InrSettlementBalance
+    from .statement_selectors import BenefitDocument
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -33,6 +38,29 @@ from .models import (
 
 
 MONEY_QUANTUM = Decimal("0.01")
+
+
+def get_owner_plan_configuration(*, closed=False):
+    return SchemePlan.objects.filter(catalogue_closure__isnull=not closed).annotate(
+        agreement_count=Count("scheme_accounts", distinct=True),
+        offered_grade_count=Count("metal_offerings", filter=Q(metal_offerings__active=True), distinct=True),
+    ).select_related("configuration", "catalogue_closure").prefetch_related("metal_offerings__metal_grade")
+
+
+def get_plan_configurations(*, closed=False):
+    from .models import SchemePlanConfiguration
+    return (SchemePlanConfiguration.objects.filter(catalogue_closure__isnull=not closed).annotate(plan_count=Count("plans"))
+            .select_related("created_by", "catalogue_closure").order_by("name", "family_id", "-version", "pk"))
+
+
+def get_plan_edit_impact(plan):
+    return {
+        "agreements": plan.scheme_accounts.count(),
+        "latest_revision": plan.revisions.first(),
+        "recent_revisions": plan.revisions.all()[:5],
+    }
+
+
 SUCCESSFUL_PAYMENT_STATUSES = (
     Contribution.Status.PAID,
     Contribution.Status.PAID_UNALLOCATED,
@@ -55,6 +83,7 @@ class OwnerLiabilitySummary:
     cash_earned_bonus: Decimal
     cash_projected_bonus: Decimal
     metal_grades: tuple[MetalLiability, ...]
+    inr_purchase_principal: Decimal = Decimal("0.00")
 
     @property
     def cash_redeemable_amount(self):
@@ -118,6 +147,7 @@ class RedemptionEligibilitySummary:
     next_90_days: tuple
     later: tuple
     redeemed: tuple
+    configured: tuple = ()
 
     @property
     def eligible_now_count(self):
@@ -167,10 +197,12 @@ class FinancialExceptionCounts:
     failed_webhooks: int
     mismatched_webhooks: int
     expired_checkouts: int = 0
+    unresolved_optional_orders: int = 0
+    refund_disposition_errors: int = 0
 
     @property
     def total(self):
-        return self.paid_unallocated + self.failed_webhooks + self.expired_checkouts
+        return self.paid_unallocated + self.failed_webhooks + self.expired_checkouts + self.unresolved_optional_orders + self.refund_disposition_errors
 
 
 @dataclass(frozen=True)
@@ -178,6 +210,14 @@ class ContributionReceiptSummary:
     receipt_number: str
     contribution: Contribution
     allocation: MetalAllocation | None
+    principal_amount: Decimal | None = None
+
+
+@dataclass(frozen=True)
+class MetalAcquisitionSummary:
+    paid_amount: Decimal
+    allocated_grams: Decimal
+    average_cost_per_gram: Decimal | None
 
 
 @dataclass(frozen=True)
@@ -196,6 +236,12 @@ class StatementEntry:
     contribution_id: int | None = None
     payment_label: str = ""
     practice_record: bool = False
+    invoice_reference: str = ""
+    settlement_basis: str = ""
+    principal_credit: Decimal | None = None
+    principal_debit: Decimal | None = None
+    benefit_amount: Decimal | None = None
+    detail: str = ""
 
 
 @dataclass(frozen=True)
@@ -206,6 +252,8 @@ class SchemeStatement:
     remaining_entitlement: Decimal
     entitlement_unit: str
     cash_bonus: CashBonusSummary | None = None
+    inr_balance: "InrSettlementBalance | None" = None
+    benefit: "BenefitDocument | None" = None
 
     @property
     def includes_practice_activity(self):
@@ -340,7 +388,9 @@ def get_filtered_owner_payments(*, customer=None, contribution_id=None, filters=
             | Q(scheme_account__customer__customer_number__icontains=value)
             | Q(scheme_account__scheme_number__icontains=value)
             | Q(scheme_account__plan__name__icontains=value)
+            | Q(scheme_account__plan_name_snapshot__icontains=value)
             | Q(scheme_account__plan__code__icontains=value)
+            | Q(scheme_account__plan_code_snapshot__icontains=value)
             | Q(gateway_reference__icontains=value) | Q(gateway_order_id__icontains=value)
             | Q(cash_receipt__paper_receipt_number__icontains=value)
         )
@@ -534,37 +584,48 @@ def get_expired_pending_checkouts(*, at=None):
 
 
 def get_owner_exception_keys(*, oldest_first=False, category="all"):
+    from .payment_refund_selectors import exclude_resolved_capture_events
+    from .independent_payment_selectors import unbound_optional_order_contributions
     allocations = Contribution.objects.filter(status=Contribution.Status.PAID_UNALLOCATED).order_by().annotate(
         queue_kind=Value("allocation"),
         queue_date=Coalesce("allocation_attempted_at", "paid_at", "created_at"),
     ).values("pk", "queue_kind", "queue_date")
-    webhooks = PaymentWebhookEvent.objects.filter(status__in=["FAILED", "REVIEW_REQUIRED"]).order_by().annotate(
+    webhooks = exclude_resolved_capture_events(PaymentWebhookEvent.objects.filter(status__in=["FAILED", "REVIEW_REQUIRED"])).order_by().annotate(
         queue_kind=Value("webhook"), queue_date=Coalesce("processed_at", "received_at"),
     ).values("pk", "queue_kind", "queue_date")
-    checkouts = get_expired_pending_checkouts().order_by().annotate(
+    optional_orders = unbound_optional_order_contributions().order_by().annotate(
+        queue_kind=Value("optional_order"), queue_date=F("optional_order_request__created_at"),
+    ).values("pk", "queue_kind", "queue_date")
+    checkouts = get_expired_pending_checkouts().exclude(pk__in=unbound_optional_order_contributions()).order_by().annotate(
         queue_kind=Value("checkout"), queue_date=F("checkout_expires_at"),
     ).values("pk", "queue_kind", "queue_date")
-    if category == "allocation":
-        webhooks = webhooks.none()
-        checkouts = checkouts.none()
-    elif category == "webhook":
-        allocations = allocations.none()
-        checkouts = checkouts.none()
-    elif category == "checkout":
-        allocations = allocations.none()
-        webhooks = webhooks.none()
-    return allocations.union(webhooks, checkouts, all=True).order_by(
+    groups = {"allocation": allocations, "webhook": webhooks,
+        "checkout": checkouts, "optional_order": optional_orders}
+    selected = groups.get(category)
+    combined = selected if selected is not None else allocations.union(webhooks, checkouts, optional_orders, all=True)
+    return combined.order_by(
         "queue_date" if oldest_first else "-queue_date", "queue_kind", "pk"
     )
 
 
+def get_enrollable_scheme_plans():
+    """Release switch only affects new offers, never existing agreement rights."""
+    from django.conf import settings
+    plans = SchemePlan.objects.filter(active=True, catalogue_closure__isnull=True)
+    if not settings.CONFIGURED_PLANS_ENABLED:
+        return plans.filter(configuration__isnull=True)
+    return plans.filter(Q(configuration__isnull=True) | Q(publication_revision__isnull=False))
+
+
 def get_public_scheme_plans(*, limit=None):
     plans = (
-        SchemePlan.objects.filter(
+        get_enrollable_scheme_plans().filter(
             active=True,
             publicly_listed=True,
-            metal_offerings__active=True,
-        )
+        ).filter(Q(metal_offerings__active=True) | Q(
+            configuration__policy_schema_version=2,
+            configuration__accumulation="INR_PURCHASE_CREDIT",
+        ))
         .prefetch_related("metal_offerings__metal_grade")
         .distinct()
         .order_by("name", "code")
@@ -666,6 +727,8 @@ def get_scheme_rate_history(limit=50):
 
 
 def get_contribution_history(scheme_account):
+    from .models import InstalmentOrderRecovery
+
     return scheme_account.contributions.select_related(
         "scheme_rate__metal_grade",
         "metal_allocation__scheme_rate",
@@ -674,7 +737,8 @@ def get_contribution_history(scheme_account):
         "cash_receipt__received_by",
         "cash_reversal",
         "cash_reversal__processed_by",
-    )
+    ).annotate(order_identity_recovered=Exists(InstalmentOrderRecovery.objects.filter(
+        request_decision__reservation__contribution_id=OuterRef("pk"))))
 
 
 def get_customer_document_payments(user):
@@ -686,11 +750,12 @@ def get_customer_attention_accounts(user):
     return get_customer_scheme_summary(user).annotate(
         workspace_received=Exists(rows.filter(status__in=SUCCESSFUL_PAYMENT_STATUSES)),
         workspace_unresolved=Exists(rows.filter(Q(status="PAID_UNALLOCATED") | Q(status="PENDING", payment_gateway="razorpay"))),
-    ).filter(Q(workspace_received=False) | Q(workspace_unresolved=True)).exclude(status="REDEEMED").order_by("-workspace_unresolved", "start_date", "pk")[:6]
+    ).filter(Q(workspace_received=False) | Q(workspace_unresolved=True)).exclude(status__in=["REDEEMED", "CANCELLED"]).order_by("-workspace_unresolved", "start_date", "pk")[:6]
 
 
 def get_customer_payment_availability(scheme_account):
     """Read-only presentation of initiation rules; services still enforce them."""
+    from .closure_selectors import accepted_closure
     # Local import avoids operations -> selectors -> operations at module load.
     from .operations import OPEN, PaymentAvailability, get_payment_availability
     from .payments import payment_gateway_is_configured
@@ -699,14 +764,47 @@ def get_customer_payment_availability(scheme_account):
     def blocked(code, message):
         return PaymentAvailability(False, code, message)
 
+    if scheme_account.agreement_schema_version == 2:
+        from .independent_payment_selectors import get_independent_payment_availability
+        return get_independent_payment_availability(scheme_account)
+    if scheme_account.status == "CANCELLED":
+        return blocked("CANCELLED", "This unused agreement has been cancelled. Your login and other agreements are unchanged.")
+    if scheme_account.status == "REDEEMED":
+        return blocked("REDEEMED", "This agreement has been fully redeemed. Your login and other agreements are unchanged.")
+    if accepted_closure(scheme_account):
+        return blocked("CLOSURE_PENDING", "Closure has been accepted. Do not pay again. Existing payments and entitlement remain for reconciliation and full settlement; the agreement is not closed yet.")
     if not payment_gateway_is_configured():
         return blocked("UNCONFIGURED", "Online payments are currently unavailable. Contact the showroom for assistance.")
-    today = timezone.localdate()
+    from .instalments import AGREEMENT_TIMEZONE, has_monthly_instalments
+    monthly = has_monthly_instalments(scheme_account)
+    if monthly:
+        from django.core.exceptions import ValidationError
+        from .instalment_selectors import get_monthly_eligibility, current_instalment_period, resumable_instalment_contribution, unresolved_instalment_captures
+        if unresolved_instalment_captures(account_id=scheme_account.pk).exists():
+            return blocked("CAPTURE_REVIEW", "A payment requires showroom reconciliation. Do not make another payment while this review is open.")
+        if settings.PAYMENT_GATEWAY != "razorpay" or settings.RAZORPAY_MODE != "live":
+            return blocked("INSTALMENT_REAL_PAYMENT_REQUIRED", "Only live payments can qualify for this monthly agreement. Contact the showroom.")
+        evaluation = get_monthly_eligibility(scheme_account)
+        if evaluation.state not in ("COLLECTING", "PAYMENT_PENDING"):
+            return blocked("INSTALMENT_" + evaluation.state, evaluation.message)
+        if evaluation.allocation_pending:
+            return blocked("ALLOCATION_PENDING", "A recorded payment is awaiting metal allocation. Contact the showroom before paying again.")
+        try:
+            resumable = resumable_instalment_contribution(scheme_account)
+            if resumable is None:
+                current_instalment_period(scheme_account)
+            elif resumable.gateway_mode != settings.RAZORPAY_MODE:
+                return blocked("MODE_MISMATCH", "The showroom must review an earlier payment attempt before you can continue.")
+        except ValidationError as exc:
+            return blocked("INSTALMENT_UNAVAILABLE", " ".join(exc.messages))
+    today = timezone.localdate(timezone=AGREEMENT_TIMEZONE) if monthly else timezone.localdate()
     if scheme_account.status == SchemeAccount.Status.REDEEMED:
         return blocked("REDEEMED", "This agreement has been redeemed.")
     if today < scheme_account.start_date:
         return blocked("NOT_STARTED", "Contributions become available on the agreement start date.")
-    if is_redemption_eligible(eligible_from=scheme_account.eligible_from, as_of=today) and not scheme_account.allow_post_eligibility_contributions_snapshot:
+    if not monthly and is_redemption_eligible(eligible_from=scheme_account.eligible_from, as_of=today) and not scheme_account.allow_post_eligibility_contributions_snapshot:
+        if scheme_account.configuration_snapshot_id:
+            return blocked("CONFIGURED_SETTLEMENT_UNAVAILABLE", "The recorded calendar date has been reached. Full jewellery settlement requires showroom review and customer confirmation; contact the showroom.")
         return blocked("ELIGIBLE", "Contributions are complete. Contact the showroom to arrange redemption.")
     if scheme_account.savings_mode == SchemeAccount.SavingsMode.CASH:
         if not cash_scheme_activity_is_enabled():
@@ -735,6 +833,12 @@ def get_customer_plan_next_action(scheme_account, availability=None):
     from django.urls import reverse
     availability = availability or get_customer_payment_availability(scheme_account)
     history_url = reverse("schemes:my_scheme_detail", args=[scheme_account.scheme_number])
+    if scheme_account.status == "CANCELLED":
+        return dict(stage="Unused agreement cancelled", message=availability.message,
+            label="View closure history", url=reverse("schemes:closure_workspace", args=[scheme_account.scheme_number]), can_pay=False)
+    if scheme_account.configuration_snapshot_id and scheme_account.status == "REDEEMED":
+        return dict(stage="Full settlement recorded", message="This agreement is closed to new payments. Its financial and closure history remain available.",
+            label="View closure history", url=reverse("schemes:closure_workspace", args=[scheme_account.scheme_number]), can_pay=False)
     contributions = Contribution.objects.filter(scheme_account=scheme_account)
     unresolved = contributions.filter(
         Q(status=Contribution.Status.PAID_UNALLOCATED)
@@ -745,7 +849,8 @@ def get_customer_plan_next_action(scheme_account, availability=None):
     ).first()
     if unresolved is not None:
         from .checkout_selectors import checkout_can_resume
-        if availability.allowed and checkout_can_resume(unresolved):
+        if ((not scheme_account.configuration_snapshot_id or scheme_account.agreement_schema_version == 2)
+                and availability.allowed and checkout_can_resume(unresolved)):
             return dict(stage="Payment checkout ready", message="Continue your existing checkout to complete this contribution.",
                 label="Continue payment", url=reverse("schemes:razorpay_checkout", args=[unresolved.pk]), can_pay=True)
         mode = "Test payment" if unresolved.gateway_mode == GatewayMode.TEST else (
@@ -763,6 +868,9 @@ def get_customer_plan_next_action(scheme_account, availability=None):
         return dict(stage=stage, message=message, label="View payment status",
                     url=(reverse("schemes:payment_status", args=[unresolved.pk]) if unresolved.payment_gateway == "razorpay" else history_url), can_pay=False)
     received = contributions.filter(status__in=SUCCESSFUL_PAYMENT_STATUSES).exists()
+    if availability.code == "CLOSURE_PENDING":
+        return dict(stage="Closure accepted — settlement pending", message=availability.message,
+            label="View closure history", url=reverse("schemes:closure_workspace", args=[scheme_account.scheme_number]), can_pay=False)
     real_received = contributions.filter(status__in=SUCCESSFUL_PAYMENT_STATUSES).filter(
         Q(payment_gateway="in_store_cash") | Q(payment_gateway="razorpay", gateway_mode=GatewayMode.LIVE),
     ).exists()
@@ -821,7 +929,7 @@ def get_customer_request_progress(user, limit=3, attention_only=False):
 
 def get_redemption_history(scheme_account):
     return scheme_account.redemptions.select_related(
-        "processed_by", "reversal", "reversal__processed_by"
+        "processed_by", "reversal", "reversal__processed_by", "configured_settlement"
     )
 
 
@@ -985,6 +1093,7 @@ def get_owner_audit_events():
 
 
 def get_owner_exception_queue(*, keys=None):
+    from .independent_payment_selectors import unbound_optional_order_contributions
     items = []
     unallocated = Contribution.objects.filter(
         status=Contribution.Status.PAID_UNALLOCATED
@@ -1018,6 +1127,8 @@ def get_owner_exception_queue(*, keys=None):
         "contribution__scheme_account",
         "contribution__scheme_account__customer",
     )
+    from .payment_refund_selectors import exclude_resolved_capture_events
+    failed_webhooks = exclude_resolved_capture_events(failed_webhooks)
     if keys is not None:
         failed_webhooks = failed_webhooks.filter(pk__in=[key["pk"] for key in keys if key["queue_kind"] == "webhook"])
     for event in failed_webhooks:
@@ -1042,7 +1153,18 @@ def get_owner_exception_queue(*, keys=None):
                 queue_kind="webhook",
             )
         )
-    checkouts = get_expired_pending_checkouts().select_related("scheme_account", "scheme_account__customer")
+    optional_orders = unbound_optional_order_contributions().select_related(
+        "scheme_account__customer", "optional_order_request")
+    if keys is not None:
+        optional_orders = optional_orders.filter(pk__in=[key["pk"] for key in keys if key["queue_kind"] == "optional_order"])
+    for contribution in optional_orders:
+        items.append(OwnerExceptionItem(
+            category="Optional order identity unresolved",
+            detected_at=contribution.optional_order_request.created_at,
+            detail="An original order request has no retained provider identity. Investigate that request before any replacement payment; elapsed time does not prove non-payment.",
+            contribution=contribution, queue_kind="optional_order",
+        ))
+    checkouts = get_expired_pending_checkouts().exclude(pk__in=unbound_optional_order_contributions()).select_related("scheme_account", "scheme_account__customer")
     if keys is not None:
         checkouts = checkouts.filter(pk__in=[key["pk"] for key in keys if key["queue_kind"] == "checkout"])
     for contribution in checkouts:
@@ -1062,12 +1184,14 @@ def get_owner_exception_queue(*, keys=None):
 
 
 def get_financial_exception_counts():
-    webhook_counts = PaymentWebhookEvent.objects.filter(
+    from .independent_payment_selectors import unbound_optional_order_contributions
+    from .payment_refund_selectors import exclude_resolved_capture_events, refund_disposition_integrity_errors
+    webhook_counts = exclude_resolved_capture_events(PaymentWebhookEvent.objects.filter(
         status__in=[
             PaymentWebhookEvent.Status.FAILED,
             PaymentWebhookEvent.Status.REVIEW_REQUIRED,
         ]
-    ).aggregate(
+    )).aggregate(
         failed=Count("pk"),
         mismatched=Count(
             "pk",
@@ -1083,7 +1207,9 @@ def get_financial_exception_counts():
         ).count(),
         failed_webhooks=webhook_counts["failed"],
         mismatched_webhooks=webhook_counts["mismatched"],
-        expired_checkouts=get_expired_pending_checkouts().count(),
+        expired_checkouts=get_expired_pending_checkouts().exclude(pk__in=unbound_optional_order_contributions()).count(),
+        unresolved_optional_orders=unbound_optional_order_contributions().count(),
+        refund_disposition_errors=refund_disposition_integrity_errors(),
     )
 
 
@@ -1099,14 +1225,30 @@ def get_contribution_receipt_summary(contribution):
         allocation = contribution.metal_allocation
     except MetalAllocation.DoesNotExist:
         allocation = None
+    principal = None
+    if contribution.scheme_account.savings_mode == "INR_CREDIT":
+        from .inr_selectors import get_inr_principal_summary
+        from django.core.exceptions import ValidationError
+        if get_inr_principal_summary(contribution.scheme_account).needs_review:
+            raise ValidationError("Purchase-credit receipt evidence requires reconciliation.")
+        recorded_principal = getattr(contribution, "inr_principal_receipt", None)
+        if recorded_principal is None:
+            raise ValidationError("A verified purchase-credit principal receipt is required.")
+        principal = recorded_principal.amount
     return ContributionReceiptSummary(
         receipt_number=contribution_receipt_number(contribution),
         contribution=contribution,
         allocation=allocation,
+        principal_amount=principal,
     )
 
 
 def get_scheme_statement(scheme_account):
+    if scheme_account.savings_mode == "INR_CREDIT":
+        from .statement_selectors import inr_statement
+        return inr_statement(scheme_account)
+    from .statement_selectors import validate_metal_document_history
+    validate_metal_document_history(scheme_account)
     entries = []
     contributions = get_contribution_history(scheme_account).filter(
         status__in=RECEIPT_PAYMENT_STATUSES
@@ -1160,6 +1302,11 @@ def get_scheme_statement(scheme_account):
             )
 
     for redemption in get_redemption_history(scheme_account):
+        configured = getattr(redemption, "configured_settlement", None)
+        settlement_details = dict(
+            invoice_reference=redemption.external_reference if configured else "",
+            settlement_basis=configured.get_basis_display() if configured else "",
+        )
         entries.append(
             StatementEntry(
                 occurred_at=redemption.completed_at,
@@ -1168,6 +1315,7 @@ def get_scheme_statement(scheme_account):
                 status="Reversed" if hasattr(redemption, "reversal") else "Completed",
                 redemption=redemption.entitlement_amount,
                 entitlement_unit=redemption.entitlement_unit,
+                **settlement_details,
             )
         )
         if hasattr(redemption, "reversal"):
@@ -1179,6 +1327,7 @@ def get_scheme_statement(scheme_account):
                     status="Restored",
                     restoration=redemption.entitlement_amount,
                     entitlement_unit=redemption.entitlement_unit,
+                    **settlement_details,
                 )
             )
 
@@ -1190,6 +1339,7 @@ def get_scheme_statement(scheme_account):
     else:
         remaining_entitlement = get_metal_balance(scheme_account)
         entitlement_unit = f"g {scheme_account.entitlement_name}"
+    from .statement_selectors import benefit_document
     return SchemeStatement(
         scheme_account=scheme_account,
         generated_at=timezone.now(),
@@ -1197,6 +1347,7 @@ def get_scheme_statement(scheme_account):
         remaining_entitlement=remaining_entitlement,
         entitlement_unit=entitlement_unit,
         cash_bonus=cash_bonus,
+        benefit=benefit_document(scheme_account),
     )
 
 
@@ -1333,13 +1484,39 @@ def get_metal_balance(scheme_account):
     return allocated - redeemed
 
 
+def get_metal_acquisition_summary(scheme_account):
+    """Historical paid INR per recorded gram, separate from remaining entitlement.
+
+    Use the same PAID, exact-grade allocation basis as the metal balance. A cash
+    correction leaves its original allocation as evidence but marks its payment
+    reversed, so it contributes neither amount nor grams here. Redemptions and
+    their returns do not rewrite acquisition history. Divide six-decimal stored
+    quantities before rounding the final INR/g display, never average quoted rates.
+    """
+    if scheme_account.savings_mode not in {"GOLD", "SILVER"} or not scheme_account.metal_grade_id:
+        return None
+    totals = MetalAllocation.objects.filter(
+        contribution__scheme_account=scheme_account,
+        contribution__status=Contribution.Status.PAID,
+        metal_grade_id=scheme_account.metal_grade_id,
+    ).aggregate(paid=Sum("contribution__amount"), grams=Sum("quantity"))
+    paid = totals["paid"] or Decimal("0.00")
+    grams = totals["grams"] or Decimal("0.000000")
+    average = (paid / grams).quantize(MONEY_QUANTUM, rounding=ROUND_HALF_UP) if grams > 0 else None
+    return MetalAcquisitionSummary(paid, grams, average)
+
+
 def get_outstanding_entitlement(scheme_account):
+    if scheme_account.savings_mode == "INR_CREDIT":
+        from .inr_settlement_selectors import inr_settlement_balance
+        return inr_settlement_balance(scheme_account).outstanding
     if scheme_account.savings_mode == SchemeAccount.SavingsMode.CASH:
         return get_cash_bonus_summary(scheme_account).redeemable_amount
     return get_metal_balance(scheme_account)
 
 
 def get_owner_liability_summary():
+    from .inr_selectors import get_inr_recorded_principal_total
     cash_summaries = (
         get_cash_bonus_summary(account)
         for account in SchemeAccount.objects.filter(
@@ -1394,6 +1571,7 @@ def get_owner_liability_summary():
         cash_earned_bonus=cash_earned_bonus,
         cash_projected_bonus=cash_projected_bonus,
         metal_grades=grade_liabilities,
+        inr_purchase_principal=get_inr_recorded_principal_total(),
     )
 
 
@@ -1456,7 +1634,7 @@ def get_owner_activity_summary(as_of=None):
     return OwnerActivitySummary(
         customer_count=Customer.objects.count(),
         active_account_count=SchemeAccount.objects.exclude(
-            status=SchemeAccount.Status.REDEEMED
+            status__in=[SchemeAccount.Status.REDEEMED, SchemeAccount.Status.CANCELLED]
         ).count(),
         contribution_count_today=contribution_counts["today"],
         contribution_count_month=contribution_counts["month"],
@@ -1464,13 +1642,29 @@ def get_owner_activity_summary(as_of=None):
     )
 
 
+def get_owner_settlement_review_count(*, as_of=None):
+    """Calendar-due legacy agreements, not approval of a settlement or benefit.
+
+    Configured agreements have a separate policy projection and their settlement
+    service is still gated. Their original dates must not enter this legacy queue.
+    """
+    return SchemeAccount.objects.filter(
+        configuration_snapshot__isnull=True,
+        eligible_from__lte=as_of or timezone.localdate(),
+    ).exclude(status=SchemeAccount.Status.REDEEMED).count()
+
+
 def get_redemption_eligibility_summary(as_of=None):
     as_of = as_of or timezone.localdate()
     open_accounts = list(
-        SchemeAccount.objects.exclude(status=SchemeAccount.Status.REDEEMED)
-        .select_related("customer", "plan", "metal_grade")
+        SchemeAccount.objects.exclude(status__in=[SchemeAccount.Status.REDEEMED, SchemeAccount.Status.CANCELLED])
+        .select_related("customer", "plan", "metal_grade", "configuration_snapshot")
         .order_by("eligible_from", "scheme_number")
     )
+    # Configured settlement is not released. Never place its original date into
+    # legacy date-only redemption buckets or offer the legacy redemption action.
+    configured = tuple(account for account in open_accounts if account.configuration_snapshot_id)
+    open_accounts = [account for account in open_accounts if not account.configuration_snapshot_id]
     redeemed = tuple(
         SchemeAccount.objects.filter(status=SchemeAccount.Status.REDEEMED)
         .select_related("customer", "plan", "metal_grade")
@@ -1478,6 +1672,7 @@ def get_redemption_eligibility_summary(as_of=None):
     )
     return RedemptionEligibilitySummary(
         as_of=as_of,
+        configured=configured,
         eligible_now=tuple(
             account
             for account in open_accounts
@@ -1533,6 +1728,7 @@ def get_upcoming_eligibility_accounts(*, as_of, lead_days):
     target_dates = [as_of + timedelta(days=days) for days in lead_days]
     return SchemeAccount.objects.filter(
         eligible_from__in=target_dates,
+        configuration_snapshot__isnull=True,
     ).exclude(
         status=SchemeAccount.Status.REDEEMED,
     ).select_related(
@@ -1544,6 +1740,41 @@ def get_upcoming_eligibility_accounts(*, as_of, lead_days):
         "eligible_from",
         "scheme_number",
     )
+
+
+def get_upcoming_monthly_completion_accounts(*, as_of, lead_days):
+    """Bound by either possible date floor; current count/holds still need evaluation."""
+    dates = [as_of + timedelta(days=days) for days in lead_days]
+    return SchemeAccount.objects.filter(
+        agreement_schema_version=1,
+        status=SchemeAccount.Status.ACTIVE,
+        configuration_snapshot__instalment_policy="MONTHLY_COMPLETION",
+    ).filter(Q(instalment_periods__ends_before__in=dates) | Q(eligible_from__in=dates)
+    ).select_related("customer__user", "configuration_snapshot", "plan", "metal_grade").distinct().order_by("pk")
+
+
+def eligibility_reminder_terms(account, *, as_of):
+    """Current evidence, not a forecast or historical reconstruction."""
+    from .instalments import has_monthly_instalments
+    from .instalment_selectors import get_monthly_eligibility
+    from .closure_selectors import accepted_closure
+
+    if account.agreement_schema_version == 2:
+        from .independent_reminders import independent_reminder_terms
+        return independent_reminder_terms(account, as_of=as_of)
+    if account.status in (SchemeAccount.Status.REDEEMED, SchemeAccount.Status.CANCELLED) or accepted_closure(account):
+        return None
+    if has_monthly_instalments(account):
+        if account.status != SchemeAccount.Status.ACTIVE:
+            return None
+        result = get_monthly_eligibility(account, as_of=as_of)
+        if result.state == "WAITING_PERIOD_END" and not result.allocation_pending:
+            return SchemeReminder.Kind.UPCOMING_MONTHLY_COMPLETION, result.completion_date
+        return None
+    if account.configuration_snapshot_id:
+        # Other configured families remain gated until their settlement path exists.
+        return None
+    return SchemeReminder.Kind.UPCOMING_ELIGIBILITY, account.eligible_from
 
 
 def get_allocation_exception_contributions():

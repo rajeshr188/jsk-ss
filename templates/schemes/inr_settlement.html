@@ -1,0 +1,36 @@
+{% extends '_base.html' %}
+{% load crispy_forms_tags %}
+{% block title %}INR final settlement{% endblock %}
+{% block content %}
+<h1>INR purchase-credit settlement</h1>
+<p>{{ closure.scheme_account.scheme_number }} · {% include 'schemes/includes/closure_status.html' with closure=closure only %}</p>
+<p><a href="{% url 'schemes:scheme_statement' closure.scheme_account.scheme_number %}">Principal statement</a> · <a href="{% url 'schemes:closure_workspace' closure.scheme_account.scheme_number %}">Closure review</a></p>
+<p><a href="{% url 'schemes:benefit_reapplication' closure.scheme_account.scheme_number %}">Review returned benefit for a replacement invoice</a></p>
+<div class="alert alert-info">One final settlement: agree the complete split, record actual jewellery delivery and each required refund, then close. Saving a proposal does not reduce principal. Benefits are separate from refundable principal. No refund is sent by this screen.</div>
+{% if blocked %}<div class="alert alert-warning" role="alert">{{ blocked }}</div>{% endif %}
+{% if balance %}<dl class="row"><dt class="col-sm-6">Recorded principal (INR)</dt><dd class="col-sm-6">{{ balance.principal_recorded }}</dd><dt class="col-sm-6">Outstanding principal (INR)</dt><dd class="col-sm-6">{{ balance.outstanding }}</dd><dt class="col-sm-6">Pending jewellery / refund (INR)</dt><dd class="col-sm-6">{{ balance.jewellery_pending }} / {{ balance.refund_pending }}</dd></dl>{% endif %}
+{% if not blocked %}
+{% if not current and closure.status == 'ACCEPTED' %}
+<section class="card p-3 mb-3"><h2 class="h5">1. Review the complete split</h2>
+<p>Use the final net invoice amount. Qualification and the exact benefit are checked against the frozen contract. VA discounts require eligible-charge evidence; purchase bonuses do not. A replacement may require a separate benefit reapplication approval.</p>
+<form method="post">{% csrf_token %}<input type="hidden" name="operation" value="preview">{{ preview_form|crispy }}<button class="btn btn-outline-primary" type="submit">Preview without recording fulfilment</button></form></section>
+{% endif %}
+{% if split %}<section class="card p-3 mb-3"><h2 class="h5">2. Confirm the customer's agreed split</h2>
+<dl><dt>Principal to invoice (INR)</dt><dd>{{ split.principal_to_invoice }}</dd><dt>Unused principal refund (INR)</dt><dd>{{ split.principal_refund }}</dd><dt>Separate external top-up (INR)</dt><dd>{{ split.separate_top_up }}</dd>{% if reviewed_benefit != None %}<dt>Verified contracted invoice benefit (INR)</dt><dd>{{ reviewed_benefit }}</dd>{% endif %}</dl>
+<p>This preview expires after ten minutes and is rechecked when saved. Refunds follow their original payment sources; online payments require completed provider-dashboard refund evidence, with no cash substitution.</p>
+<form method="post">{% csrf_token %}<input type="hidden" name="operation" value="propose">{{ proposal_form|crispy }}<button class="btn btn-primary" type="submit">Save agreed proposal only</button></form></section>{% elif proposal_form.is_bound %}{{ proposal_form.errors }}<p>Review a fresh split before resubmitting.</p>{% endif %}
+{% if current and not current.completion %}
+<section class="card p-3 mb-3"><h2 class="h5">3. Record actual fulfilment</h2><p>Agreed invoice: {{ current.invoice_reference|default:'No jewellery invoice' }}. Separately paid top-up: INR {{ current.separate_top_up }}.</p>
+<ul>{% for leg in remaining %}<li>{{ leg.kind_label }}: INR {{ leg.amount }} via {{ leg.method_label }}{% if leg.receipt_id %}, principal receipt {{ leg.receipt_id }}{% endif %}</li>{% empty %}<li>All principal portions have been fulfilled. Review and complete closure below.</li>{% endfor %}</ul>
+{% if remaining %}<p>Choose one complete portion. Amount and route are fixed by the retained proposal. Record only completed deliveries/refunds with customer receipt evidence.</p>
+<form method="post">{% csrf_token %}<input type="hidden" name="operation" value="fulfil"><input type="hidden" name="proposal_id" value="{{ current.pk }}">{{ fulfilment_form|crispy }}<button class="btn btn-primary" type="submit">Record completed fulfilment</button></form>{% endif %}</section>
+<section class="card p-3 mb-3"><h2 class="h5">4. Complete full closure</h2><p>Closure requires zero outstanding principal and all source evidence reconciled. Customer login and other agreements remain unchanged.</p><form method="post">{% csrf_token %}<input type="hidden" name="operation" value="complete"><input type="hidden" name="proposal_id" value="{{ current.pk }}">{{ completion_form|crispy }}<button class="btn btn-primary" type="submit" {% if remaining %}disabled{% endif %}>Close fully fulfilled agreement</button></form></section>
+{% else %}{{ fulfilment_form.errors }}{{ completion_form.errors }}{% endif %}
+{% if current %}<section class="card p-3 mb-3"><h2 class="h5">Correct the current proposal</h2><p>Void only if nothing was fulfilled. Otherwise every actually fulfilled portion must have been returned in full. Retain corrected invoice and top-up refund evidence for jewellery; a refund return needs actual money received back. The original history remains and payments stay blocked.</p>
+<form method="post">{% csrf_token %}<input type="hidden" name="proposal_id" value="{{ current.pk }}">{{ correction_form|crispy }}
+{% for row in return_forms %}<fieldset class="border rounded p-3 mb-3"><legend class="h6">Full return of {{ row.fulfilment.get_kind_display }} #{{ row.fulfilment.pk }} — INR {{ row.fulfilment.amount }}</legend>{{ row|crispy }}</fieldset>{% endfor %}
+{% if correction_reviewed %}<div class="alert alert-warning">Review passed. Confirm actual full-return evidence before applying. Editing the evidence requires a new preview.</div><button class="btn btn-outline-danger" name="operation" value="correct" type="submit">Confirm correction; keep payments blocked</button>{% else %}<button class="btn btn-outline-secondary" name="operation" value="preview_correction" type="submit">Review correction without applying</button>{% endif %}</form></section>{% else %}{{ correction_form.errors }}{% endif %}
+{% endif %}
+<h2 class="h5">Retained proposal history</h2>
+{% for item in history %}<section class="card p-3 mb-2"><h3 class="h6">Proposal #{{ item.pk }}{% if item.retired %} — retired by correction{% elif item.completion %} — completed{% else %} — fulfilment pending{% endif %}</h3><p>Invoice {{ item.invoice_reference|default:'none' }} · principal INR {{ item.principal }} · invoice application INR {{ item.principal_to_invoice }} · refund INR {{ item.principal_refund }}</p><p>Customer authorization: {{ item.authorization_reference }}</p>{% for entry in item.fulfilments.all %}<p>{{ entry.get_kind_display }} #{{ entry.pk }}: INR {{ entry.amount }} via {{ entry.get_method_display }} — {{ entry.external_reference }} — {{ entry.fulfilled_at }}</p>{% endfor %}</section>{% empty %}<p>No proposal recorded.</p>{% endfor %}
+{% endblock %}

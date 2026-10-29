@@ -113,8 +113,7 @@ class CustomerAccountDeletionPublicForm(forms.Form):
 class CustomerAccountDeletionAuthenticatedForm(forms.Form):
     confirm = forms.BooleanField(
         label=(
-            "I understand that my login will be disabled immediately while the "
-            "showroom reviews deletion and any records that must be retained."
+            "I want to delete my account and understand that I will lose login access immediately."
         )
     )
 
@@ -157,14 +156,50 @@ class CustomerDeletionCompletionForm(forms.Form):
     reviewed = forms.BooleanField(label="I reviewed the disposition and external records, and approve the stated purposes, fields and review dates.")
 
 
+class CustomerDeletionSharedRetentionForm(forms.Form):
+    period_start = forms.CharField(
+        required=False, max_length=1500, label="Retention starts from",
+        help_text="Enter once for all categories, or specify an exception below.",
+    )
+    period_or_condition = forms.CharField(
+        required=False, max_length=1500,
+        label="Retention duration or release condition and next action",
+        widget=forms.Textarea(attrs={"rows": 2}),
+        help_text="Use the actual agreed condition; this form does not set a legal retention period.",
+    )
+    review_on = forms.DateField(
+        required=False, widget=forms.DateInput(attrs={"type": "date"}),
+        label="Next review date (within 365 days)",
+        help_text="Applies to every category unless overridden. Review does not automatically delete records.",
+    )
+
+
 class CustomerDeletionRetentionForm(forms.Form):
     category = forms.ChoiceField(choices=RETENTION_CATEGORIES, disabled=True)
     treatment = forms.ChoiceField(choices=[("RETAIN", "Retain for documented purpose"), ("NOT_APPLICABLE", "Not applicable — explain why")])
     purpose = forms.CharField(max_length=1500, widget=forms.Textarea(attrs={"rows": 2}))
     fields = forms.CharField(max_length=1500, label="Minimum fields/records retained, or none with explanation")
-    period_start = forms.CharField(max_length=1500, label="Event/date that starts the retention period")
-    period_or_condition = forms.CharField(max_length=1500, label="Duration or hold-release condition and next action")
-    review_on = forms.DateField(widget=forms.DateInput(attrs={"type": "date"}), label="Next review date (within 365 days)")
+    period_start = forms.CharField(required=False, max_length=1500, label="Different retention start")
+    period_or_condition = forms.CharField(required=False, max_length=1500, label="Different duration or release condition and next action")
+    review_on = forms.DateField(required=False, widget=forms.DateInput(attrs={"type": "date"}), label="Different next review date")
+
+    def __init__(self, *args, shared_retention=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.shared_retention = shared_retention or {}
+
+    @property
+    def category_label(self):
+        return dict(RETENTION_CATEGORIES).get(self.initial.get("category"), "Retention category")
+
+    def clean(self):
+        cleaned = super().clean()
+        for name in ("period_start", "period_or_condition", "review_on"):
+            if name in self.errors:
+                continue
+            cleaned[name] = cleaned.get(name) or self.shared_retention.get(name)
+            if not cleaned[name]:
+                self.add_error(name, "Enter a shared value above or an exception for this category.")
+        return cleaned
 
 
 CustomerDeletionRetentionFormSet = forms.formset_factory(

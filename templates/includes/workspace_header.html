@@ -2,5 +2,8 @@
 <a class="navbar-brand brand-lockup" href="{% url 'schemes:post_login' %}" aria-label="Jai Sri Krishna Jewellery home"><span class="brand-mark" aria-hidden="true">JSK</span><span class="brand-name">Jai Sri Krishna Jewellery</span></a>
 {% if workspace_owner %}<button class="btn btn-outline-light d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#owner-navigation" aria-controls="owner-navigation">Menu</button><a class="btn btn-outline-light d-none d-lg-inline-block ms-auto" href="{% url 'schemes:customer_list' %}">Find customer</a>
 {% else %}<nav class="customer-navigation" aria-label="Customer workspace"><a href="{% url 'schemes:my_schemes' %}">Home</a><a href="{% url 'schemes:customer_plans' %}">My plans</a><a href="{% url 'schemes:customer_applications' %}">Applications</a><a href="{% url 'schemes:customer_documents' %}">Documents</a><a href="{% url 'contact' %}">Help</a></nav>{% endif %}
+<div class="d-flex align-items-center gap-2 ms-auto">
+{% include 'includes/color_mode.html' %}
 {% include 'includes/account_menu.html' %}
+</div>
 </div></nav>{% if workspace_owner %}{% include 'includes/owner_navigation.html' %}{% endif %}

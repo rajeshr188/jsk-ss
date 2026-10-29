@@ -8,23 +8,23 @@
 {% if disposition %}
 <section class="card shadow-sm mb-4" aria-labelledby="disposition-title">
   <div class="card-body">
-    <h2 id="disposition-title" class="h4">Data disposition preview</h2>
-    <p class="text-secondary">Read-only snapshot at {{ disposition.generated_at }}. No records are changed, no provider is contacted and no deletion is approved by viewing this page.</p>
-    <div class="alert alert-info">Zero balances do not mean every record can be erased. Review local and external obligations and record category-specific purposes before completion. Financial history is preserved.</div>
-    {% if deletion_request.status == "CONTAINED" or deletion_request.status == "AWAITING_SETTLEMENT" %}<p><a class="btn btn-outline-danger" href="{% url 'customer_account_deletion_complete' deletion_request.pk %}">Review and approve data disposition</a></p>{% endif %}
+    <h2 id="disposition-title" class="h4">Review before completing deletion</h2>
+    <p class="text-secondary">Checked at {{ disposition.generated_at }}. Financial history is preserved, including customer entitlements.</p>
+    {% if deletion_request.status == "CONTAINED" or deletion_request.status == "AWAITING_SETTLEMENT" %}<p><a class="btn btn-outline-danger" href="{% url 'customer_account_deletion_complete' deletion_request.pk %}">Complete account deletion</a></p>{% endif %}
     {% if deletion_request.status == "COMPLETED_WITH_RETENTION" %}<p><a class="btn btn-outline-primary" href="{% url 'customer_account_deletion_review_retention' deletion_request.pk %}">Review retained records</a></p>{% endif %}
     <h3 class="h5">Review findings</h3>
     <ul>{% for flag in disposition.review_flags %}<li>{{ flag }}</li>{% empty %}<li>No local review flags found. External checks and a documented disposition are still required.</li>{% endfor %}</ul>
-    <h3 class="h5">Outstanding amounts by agreement</h3>
+    <details class="mb-3"><summary class="fw-semibold">Outstanding amounts by agreement</summary>
     <p class="small">INR principal, earned bonus and each metal grade remain separate. Six-decimal grams are shown here for owner reconciliation. These balances include historical test-mode allocations where present; they are not a live-payment-only total.</p>
     <div class="table-responsive">
       <table class="table table-sm align-middle">
         <caption>Current financial-selector balances; no cross-account netting or purity conversion.</caption>
-        <thead><tr><th scope="col">Scheme</th><th scope="col">Status</th><th scope="col">Grade</th><th scope="col">Principal (INR)</th><th scope="col">Earned bonus (INR)</th><th scope="col">Grams</th></tr></thead>
-        <tbody>{% for balance in disposition.account_balances %}<tr><td>{{ balance.scheme_number }}</td><td>{{ balance.status }}</td><td>{{ balance.grade }}</td><td>{{ balance.cash_principal|floatformat:2 }}</td><td>{{ balance.cash_earned_bonus|floatformat:2 }}</td><td>{{ balance.metal_quantity|floatformat:6 }}</td></tr>{% empty %}<tr><td colspan="6">No scheme agreements recorded.</td></tr>{% endfor %}</tbody>
+        <thead><tr><th scope="col">Scheme</th><th scope="col">Status</th><th scope="col">Grade / denomination</th><th scope="col">Legacy cash principal (INR)</th><th scope="col">Legacy earned bonus (INR)</th><th scope="col">Grams</th><th scope="col">Purchase-credit principal (INR)</th><th scope="col">Separate purchase benefit</th></tr></thead>
+        <tbody>{% for balance in disposition.account_balances %}<tr><td>{{ balance.scheme_number }}</td><td>{{ balance.status }}</td><td>{{ balance.grade }}</td><td>{{ balance.cash_principal|floatformat:2 }}</td><td>{{ balance.cash_earned_bonus|floatformat:2 }}</td><td>{{ balance.metal_quantity|floatformat:6 }}</td><td>{% if balance.purchase_credit_principal is None %}Unknown &mdash; reconciliation required{% else %}{{ balance.purchase_credit_principal|floatformat:2 }}{% endif %}</td><td>{% if balance.benefit_pending %}Unfulfilled or under review; retain support identity{% else %}No unfulfilled recorded right identified{% endif %}</td></tr>{% empty %}<tr><td colspan="8">No scheme agreements recorded.</td></tr>{% endfor %}</tbody>
       </table>
     </div>
-    <h3 class="h5">Local data inventory and proposed treatment</h3>
+    </details>
+    <details class="mb-3"><summary class="fw-semibold">Local data inventory and proposed treatment</summary>
     <div class="table-responsive">
       <table class="table align-middle">
         <caption>Counts are related records, not a complete inventory of personal fields or permission to delete them.</caption>
@@ -32,7 +32,8 @@
         <tbody>{% for category, count, treatment in disposition.inventory %}<tr><th scope="row">{{ category }}</th><td>{{ count }}</td><td>{{ treatment }}</td></tr>{% endfor %}</tbody>
       </table>
     </div>
-    <h3 class="h5">External checks — not verified by this application</h3>
+    </details>
+    <h3 class="h5">External checks</h3>
     <ul class="mb-0">{% for check in disposition.external_checks %}<li>{{ check }}</li>{% endfor %}</ul>
   </div>
 </section>

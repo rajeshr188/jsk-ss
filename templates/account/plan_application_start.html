@@ -5,10 +5,12 @@
 <div class="row justify-content-center application-journey"><div class="col-lg-8">
   <div class="page-header"><div><p class="page-eyebrow">Plan application</p><h1>Start with {{ selected_plan.name }}</h1><p class="page-subtitle">Share your contact details and preferences. Verify email next, then complete your address for one showroom review.</p></div></div>
   <ol class="application-steps" aria-label="Application stages"><li aria-current="step">Contact and preferences</li><li>Verify email</li><li>Complete and confirm</li><li>Showroom review</li></ol>
-  {% include 'account/includes/application_offer.html' with plan=selected_plan compact=True %}
+  {% if form.independent_terms %}
+  {% include 'schemes/includes/independent_request_terms.html' with terms=form.independent_terms %}
+  {% else %}{% include 'account/includes/application_offer.html' with plan=selected_plan compact=True %}{% endif %}
   <p class="small"><a href="{% url 'pricing' %}">Change plan</a> · Already a customer? <a href="{% url 'account_login' %}?next={% url 'plan_apply' selected_plan.pk %}">Sign in to apply with your existing details</a>.</p>
   <form method="post" class="card form-card" novalidate>
-    {% csrf_token %}{{ form.offer_digest }}
+    {% csrf_token %}{{ form.offer_digest }}{% if form.offer_token %}{{ form.offer_token }}{% endif %}
     {% if form.errors %}<div class="alert alert-danger" role="alert">Please check the details below. {{ form.non_field_errors }}<a href="{{ request.get_full_path }}">Reload current terms</a></div>{% endif %}
     <fieldset class="form-section"><legend>Contact details</legend><p class="form-section-description">Use the name, email and mobile number the showroom can verify with you.</p>{{ form.full_name|as_crispy_field }}{{ form.email|as_crispy_field }}{{ form.mobile_number|as_crispy_field }}</fieldset>
     <fieldset class="form-section"><legend>Plan preferences</legend>{{ form.metal_grade|as_crispy_field }}{{ form.requested_contribution_amount|as_crispy_field }}{{ form.requested_months|as_crispy_field }}<details class="mb-3"><summary>Add a message (optional)</summary>{{ form.customer_message|as_crispy_field }}</details></fieldset>

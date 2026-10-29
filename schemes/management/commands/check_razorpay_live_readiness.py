@@ -46,14 +46,15 @@ class Command(BaseCommand):
             gateway="razorpay",
             gateway_mode="",
         ).count()
-        failed_live_webhooks = PaymentWebhookEvent.objects.filter(
+        from schemes.payment_refund_selectors import exclude_resolved_capture_events
+        failed_live_webhooks = exclude_resolved_capture_events(PaymentWebhookEvent.objects.filter(
             gateway="razorpay",
             gateway_mode="live",
             status__in=[
                 PaymentWebhookEvent.Status.FAILED,
                 PaymentWebhookEvent.Status.REVIEW_REQUIRED,
             ],
-        ).count()
+        )).count()
         blockers = {
             "configuration_error": bool(configuration_error),
             "pending_other_mode_contributions": pending_other_mode_contributions,

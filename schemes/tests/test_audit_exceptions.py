@@ -21,6 +21,7 @@ from schemes.models import (
     SchemeRate,
 )
 from schemes.tests.grade_helpers import enrolment_grade_kwargs, metal_grade_for
+from schemes.plan_governance import plan_edit_digest
 from schemes.selectors import (
     get_cash_balance,
     get_financial_exception_counts,
@@ -143,6 +144,7 @@ class AuditAndExceptionTests(TestCase):
                 "publicly_listed": "on",
                 "metal_grades": [gold_grade.pk],
                 "audit_reason": "New terms apply to future enrolments only.",
+                "expected_digest": plan_edit_digest(plan),
             },
         )
 

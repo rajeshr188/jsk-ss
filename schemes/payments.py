@@ -78,6 +78,16 @@ class PaymentOrderInspection:
 
 
 @dataclass(frozen=True)
+class PaymentInspection:
+    payment_id: str
+    order_id: str
+    amount_subunits: int
+    currency: str
+    status: str
+    captured: bool
+
+
+@dataclass(frozen=True)
 class PaymentOrderIdentity:
     order_id: str
     receipt: str
@@ -89,16 +99,6 @@ class PaymentOrderIdentity:
     created_at: int
 
 
-@dataclass(frozen=True)
-class PaymentInspection:
-    payment_id: str
-    order_id: str
-    amount_subunits: int
-    currency: str
-    status: str
-    captured: bool
-
-
 class PaymentGateway(ABC):
     name: str
 
@@ -107,9 +107,7 @@ class PaymentGateway(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def verify_payment(
-        self, *, order_id, payment_id, signature, expected_amount
-    ):
+    def verify_payment(self, *, order_id, payment_id, signature, expected_amount):
         raise NotImplementedError
 
     @abstractmethod
@@ -189,8 +187,19 @@ class RazorpayPaymentGateway(PaymentGateway):
         request = getattr(contribution, "checkout_order_request", None)
         receipt = request.receipt if request else f"contribution_{contribution.pk}"
         notes = {"contribution_id": str(contribution.pk)}
+        from .instalments import has_monthly_instalments
         if request:
             notes["request_token"] = str(request.token)
+        elif getattr(contribution, "scheme_account", None) is not None and has_monthly_instalments(contribution.scheme_account):
+            from .instalment_selectors import durable_order_request
+            intent = durable_order_request(contribution)
+            receipt = f"inst_{intent.request_token.hex}"
+            notes["instalment_request"] = str(intent.request_token)
+        elif getattr(contribution, "scheme_account", None) is not None and contribution.scheme_account.agreement_schema_version == 2:
+            from .independent_payment_selectors import optional_order_request
+            intent = optional_order_request(contribution)
+            receipt = f"opt_{intent.request_token.hex}"
+            notes["optional_request"] = str(intent.request_token)
         payload = self._request_json(
             "POST",
             "/orders",
@@ -219,24 +228,7 @@ class RazorpayPaymentGateway(PaymentGateway):
             currency="INR",
         )
 
-    def inspect_order_identity(self, *, order_id):
-        if (not isinstance(order_id, str) or not order_id.startswith("order_")
-                or len(order_id) > 120 or not RAZORPAY_ID_PATTERN.fullmatch(order_id)):
-            raise PaymentGatewayValidationError("The Razorpay order ID is invalid.")
-        order = self._request_json("GET", f"/orders/{order_id}")
-        notes = order.get("notes")
-        if (order.get("id") != order_id or not isinstance(notes, dict)
-                or type(order.get("amount")) is not int or type(order.get("created_at")) is not int
-                or not isinstance(order.get("receipt"), str)):
-            raise PaymentGatewayError("Razorpay returned invalid order identity evidence.")
-        return PaymentOrderIdentity(order_id=order_id, receipt=order["receipt"],
-            contribution_id=notes.get("contribution_id"), request_token=notes.get("request_token"),
-            amount_subunits=order["amount"], currency=order.get("currency"),
-            status=order.get("status"), created_at=order["created_at"])
-
-    def verify_payment(
-        self, *, order_id, payment_id, signature, expected_amount
-    ):
+    def _valid_callback_signature(self, *, order_id, payment_id, signature):
         if not all(
             isinstance(value, str) and value
             for value in (order_id, payment_id, signature)
@@ -251,7 +243,20 @@ class RazorpayPaymentGateway(PaymentGateway):
             f"{order_id}|{payment_id}".encode("utf-8"),
             hashlib.sha256,
         ).hexdigest()
-        if not hmac.compare_digest(expected_signature, signature):
+        return hmac.compare_digest(expected_signature, signature)
+
+    def verify_captured_payment(self, *, order_id, payment_id, signature, expected_amount):
+        """Return exact authenticated capture facts, never browser-supplied evidence."""
+        if not self._valid_callback_signature(order_id=order_id, payment_id=payment_id, signature=signature):
+            raise PaymentGatewayValidationError("Payment signature verification failed.")
+        inspection = self.inspect_payment(payment_id=payment_id)
+        if (inspection.order_id != order_id or inspection.amount_subunits != _amount_to_subunits(expected_amount)
+                or inspection.currency != "INR" or inspection.status != "captured" or inspection.captured is not True):
+            raise PaymentGatewayValidationError("The provider payment is not the expected captured payment.")
+        return inspection
+
+    def verify_payment(self, *, order_id, payment_id, signature, expected_amount):
+        if not self._valid_callback_signature(order_id=order_id, payment_id=payment_id, signature=signature):
             return False
 
         payment = self._request_json("GET", f"/payments/{payment_id}")
@@ -326,6 +331,27 @@ class RazorpayPaymentGateway(PaymentGateway):
             payment_statuses=tuple(statuses),
         )
 
+    def inspect_order_identity(self, *, order_id):
+        """Only a server-authenticated exact lookup; never infer absence from searches."""
+        if not isinstance(order_id, str) or len(order_id) > 120 or not order_id.startswith("order_") or not RAZORPAY_ID_PATTERN.fullmatch(order_id):
+            raise PaymentGatewayValidationError("The Razorpay order ID is invalid.")
+        order = self._request_json("GET", f"/orders/{order_id}")
+        notes = order.get("notes")
+        receipt = str(order.get("receipt", ""))
+        request_note = "request_token" if receipt.startswith("jsk_") else "optional_request" if receipt.startswith("opt_") else "instalment_request"
+        if (order.get("id") != order_id or order.get("entity") != "order"
+            or type(order.get("amount")) is not int or order["amount"] < 100
+            or order.get("currency") != "INR" or not isinstance(order.get("status"), str)
+            or order["status"] not in {"created", "attempted", "paid"}
+            or type(order.get("created_at")) is not int or order["created_at"] <= 0
+            or not isinstance(order.get("receipt"), str) or not 1 <= len(order["receipt"]) <= 40
+            or not isinstance(notes, dict) or not isinstance(notes.get("contribution_id"), str)
+            or not isinstance(notes.get(request_note), str)):
+            raise PaymentGatewayError("Razorpay returned insufficient or invalid order identity evidence.")
+        return PaymentOrderIdentity(order_id=order_id, receipt=order["receipt"],
+            contribution_id=notes["contribution_id"], request_token=notes[request_note],
+            amount_subunits=order["amount"], currency=order["currency"], status=order["status"], created_at=order["created_at"])
+
     def inspect_payment(self, *, payment_id):
         if (
             not isinstance(payment_id, str)
@@ -362,6 +388,11 @@ class RazorpayPaymentGateway(PaymentGateway):
             status=status,
             captured=captured,
         )
+
+    def inspect_payment_refunds(self, *, payment_id):
+        """Read-only evidence; never initiates a refund or clears a local hold."""
+        from .payment_refund_evidence import inspect_payment_refunds
+        return inspect_payment_refunds(gateway=self, payment_id=payment_id)
 
     def _request_json(self, method, path, payload=None):
         encoded_payload = None

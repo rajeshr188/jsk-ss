@@ -14,13 +14,34 @@ from .models import (
     Redemption,
     RedemptionReversal,
     SchemeAccount,
+    SchemeClosureRequest,
+    SchemeClosureEvent,
+    ConfiguredSettlement,
+    ConfiguredSettlementReversal,
     SchemeEnrolmentRequest,
     SchemePlan,
+    SchemePlanConfiguration,
+    PlanCatalogueClosure,
     SchemePlanOffering,
     SchemeReminder,
     SchemeReminderDeliveryAttempt,
     WebhookProcessingAttempt,
 )
+
+
+@admin.register(SchemeClosureRequest, SchemeClosureEvent, ConfiguredSettlement, ConfiguredSettlementReversal, PlanCatalogueClosure)
+class ClosureEvidenceAdmin(admin.ModelAdmin):
+    def get_readonly_fields(self, request, obj=None):
+        return tuple(field.name for field in self.model._meta.fields)
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 @admin.register(MetalGrade)
@@ -79,10 +100,34 @@ class SchemePlanAdmin(admin.ModelAdmin):
     readonly_fields = ("publicly_listed", "created_at", "updated_at")
 
     def get_readonly_fields(self, request, obj=None):
-        fields = list(super().get_readonly_fields(request, obj))
-        if not settings.DEBUG:
-            fields.extend(["cash_bonus_percentage", "cash_bonus_minimum_months"])
-        return fields
+        return [field.name for field in self.model._meta.fields]
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        # Plan mutations belong to the audited owner workflow, not generic admin.
+        return False
+
+
+@admin.register(SchemePlanConfiguration)
+class SchemePlanConfigurationAdmin(admin.ModelAdmin):
+    list_display = ("name", "version", "amount_policy", "created_at", "actor_label")
+
+    def get_readonly_fields(self, request, obj=None):
+        return [field.name for field in self.model._meta.fields]
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 @admin.register(SchemeAccount)

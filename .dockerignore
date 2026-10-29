@@ -17,8 +17,26 @@ __pycache__/
 media/
 staticfiles/
 docs/
+!docs/
+docs/*
+!docs/guides/
+docs/guides/*
+!docs/guides/plan-configuration/
+docs/guides/plan-configuration/*
+!docs/guides/plan-configuration/index.html
+!docs/guides/plan-configuration/assets/
+docs/guides/plan-configuration/assets/*
+!docs/guides/plan-configuration/assets/create-configuration.jpg
+!docs/guides/plan-configuration/assets/configuration-preview.jpg
+!docs/guides/plan-configuration/assets/draft-plan.jpg
+!docs/guides/plan-configuration/assets/publication.jpg
 deploy/
 AGENTS.md
 README.md
 docker-compose.yml
 compose.production.yml
+
+# Disposable CI test inventory and profiling artifacts
+.ci-reports/
+django_project/ci_inventory.py
+django_project/ci_runner.py

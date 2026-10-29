@@ -47,6 +47,9 @@ This is the canonical source for stable business rules.
   Zero balances/counts do not establish the absence of external obligations. Preview
   balances preserve separate agreements, INR principal/bonus and exact metal grades;
   financial facts are never changed by a privacy preview.
+  The owner may enter shared retention start/condition/review terms once, with
+  category-specific overrides. Every saved category still includes its own explicit
+  treatment, purpose, minimum records and resolved terms; missing terms block completion.
 - **AUTH-021:** Completion is atomic and idempotent. Its durable notice is retried
   separately; SMTP acceptance clears the temporary delivery address but does not
   prove receipt. Retention reviews may remove more eligible profile fields but
@@ -57,6 +60,14 @@ This is the canonical source for stable business rules.
   A completed-with-retention outcome must identify the retained categories, purpose,
   next review date, and support route without claiming that provider, backup, or
   statutory transaction evidence was erased.
+  INR purchase-credit principal is distinct from legacy cash principal/bonus and
+  each exact metal grade. Retained benefit rights are separately inventoried; no
+  review or return creates a cash-refund benefit balance. Unknown principal is shown
+  as needing reconciliation, never zero. Invalid principal/disposition/benefit evidence
+  blocks completion or further identity removal. Open principal or an unfulfilled
+  recorded benefit requires showroom name/email retention with a stated purpose.
+  Completed minimization preserves proposal, fulfilment, full-return, award, invoice,
+  reversal and review evidence, including embedded identity requiring justified retention.
 
 - **AUTH-022:** Plan progress is not a public identity lookup or a login credential. A
   separately minted, digest-only, expiring email secret grants a server-side session
@@ -146,6 +157,13 @@ This is the canonical source for stable business rules.
   Silver grade dimensions; new production enrolments are limited to explicitly
   offered metal grades.
 - **SCH-002:** An account snapshots the plan's economic terms at enrolment; later plan edits do not rewrite the agreement.
+- **SCH-002A:** New enrolments also preserve plan name/code and an observed immutable
+  plan revision. Legacy accounts retain migration-time display identity with no
+  invented accepted revision. Individual account snapshots, not the latest offer,
+  remain authoritative for dates, contribution rules and exact-grade entitlement.
+- **SCH-002B:** Owner plan edits require a reason, lock the plan, reject stale edits
+  and atomically append revision/audit evidence. Generic admin cannot edit plans.
+  Availability changes do not pause or close existing agreements.
 - **SCH-003:** Minimum and default durations are at least 12 months; the agreed duration cannot be below the plan minimum.
 - **SCH-004:** Eligibility is the account start date plus agreed calendar months. Eligibility does not itself redeem or close an account.
 - **SCH-005:** A plan appears on the public savings plans page only when it is both active and explicitly marked publicly listed. New and migrated plans default to not publicly listed.
@@ -180,6 +198,22 @@ This is the canonical source for stable business rules.
 - **CON-004:** `FLEXIBLE` permits multiple successful contributions in the same calendar month.
 - **CON-005:** Fixed contributions must exactly equal the snapshotted fixed amount. Variable contributions must remain within snapshotted minimum/maximum boundaries.
 - **CON-006:** Contributions are rejected before the account start date, after redemption, and after eligibility unless the agreement snapshot explicitly permits them.
+
+## Catalogue lifecycle (28 October 2026)
+
+Saved configurations and plan revisions remain retained. Owner-confirmed catalogue
+closure records append the exact target, action, actor, timestamp and reason. Archive
+an unused draft only when it has no active/listed/publication history, applications,
+requests or agreements; otherwise retire the plan. Both actions clear active/listed
+flags, block new intake and hide the item from default catalogue lists. History stays
+available through explicit filters. Existing agreement snapshots, payments, balances,
+benefits and settlement authority do not change. Pending requests remain for a separate
+decision, and cannot convert into a retired plan. No automatic email, refund or
+customer-account closure is implied. Archived configurations cannot supply new draft
+plans or successor versions; any plans still using the version must first be archived
+or retired. No restore or destructive-delete action is offered. Mutation services lock
+the target and recheck usage/stale-review evidence. Migration reversal refuses to drop
+retained catalogue closure records; use compatible forward recovery.
 
 ## Payment and metal rules
 
@@ -284,10 +318,12 @@ This is the canonical source for stable business rules.
 - **PAY-030:** An agreement may have at most one unresolved Razorpay contribution
   (PENDING or PAID_UNALLOCATED), across modes and calendar months. This is a checkout
   coordination rule: FLEXIBLE still permits multiple sequential successful contributions.
-- **PAY-031:** Browser submissions retain a unique identifier and signed agreement,
+- **PAY-031:** Legacy schema-1 browser submissions retain a unique identifier and signed agreement,
   mode and displayed-payment-history context. Repeated submissions and concurrent
   tabs reuse the original contribution. A stale unsubmitted form returns the recorded
   result or requires fresh review; it cannot silently create another contribution.
+  Configured agreements use their separate retained reservation/order workflows;
+  complete browser replay acceptance is required before the gated builder release.
 - **PAY-032:** The contribution, original rate/deadline and order-request evidence
   commit before a single provider create-order call. Lost responses, malformed
   responses and interrupted local binding remain held for reconciliation; they
@@ -315,6 +351,15 @@ This is the canonical source for stable business rules.
 - **METAL-006:** `GOLD_22K_916`, `GOLD_24K_9999`, and `SILVER_999`
   liabilities are independent. Account, rate, allocation, and redemption grades must
   match; base metal alone is not a sufficient financial key.
+- **METAL-007:** Average acquisition cost is a read-only historical INR-per-gram
+  metric for one agreement's exact grade: total paid INR divided by total grams
+  across its recorded `PAID` metal allocations, using the same allocation basis
+  as the balance. Pending/failed/unallocated payments and reversed contributions
+  do not enter either total. Use full stored gram precision and `Decimal`, then
+  `ROUND_HALF_UP` to two INR decimals for display. An empty allocation set has no
+  average. Redemptions and their reversals change remaining entitlement, not the
+  historical acquisition average; this is neither a current market quote nor a
+  calculation of remaining-inventory or taxable cost basis.
 - **RATE-001:** Only a manually published Jai Sri Krishna Jewellery `SchemeRate` for
   the exact account grade may be used for a new allocation.
 - **RATE-002:** A metal contribution must lock its current applicable grade-specific
@@ -373,6 +418,11 @@ authorize new production CASH enrolments or contributions under `SCH-007`.
 - **ELIG-004:** Eligibility forecasts use ordinary calendar-day bands. Post-
   eligibility contributions remain governed only by the agreement's snapshotted
   contribution setting.
+- **ELIG-005:** Metal redemption eligibility is not conditional on twelve successful
+  monthly instalments. ONCE_PER_MONTH is a frequency limit, not compliance tracking
+  or benefit qualification. Redemption still requires positive entitlement. Early
+  discontinuation and unused cancellation are planned separately under ADR-0017;
+  Phase A does not permit bypassing the current date gate.
 - **REM-001:** Scheme reminders are transactional communication derived from existing
   records. Building or delivering a reminder must never change eligibility, account
   status, a contribution, an allocation, a redemption, or any liability.
@@ -381,10 +431,14 @@ authorize new production CASH enrolments or contributions under `SCH-007`.
   create grace, expiry, business-day adjustment, or automatic redemption behavior.
 - **REM-003:** Allocation-exception reminders are owner-only and derive from
   `PAID_UNALLOCATED` contributions. A reminder neither resolves the exception nor
-  replaces the controlled idempotent allocation-retry workflow.
+  replaces the controlled idempotent allocation-retry workflow. Dispatch rechecks
+  the unresolved source, owning agreement and detection date; stale candidates
+  and retries after resolution create no new delivery attempt.
 - **REM-004:** Completed-redemption reminders identify one immutable completed
-  redemption. A redemption reversed before candidate selection is excluded; later
-  reversal does not rewrite or delete already retained communication evidence.
+  redemption. Selection and dispatch exclude reversed redemptions; later reversal
+  does not rewrite or delete already retained communication evidence. Dispatch
+  rechecks event/account/date shape and the current audience setting. INR final
+  settlement uses its own completion-linked notice, never a metal redemption row.
 - **REM-005:** Each event, audience, and normalized recipient has one deterministic
   reminder identity. An email already accepted by the backend is not sent again;
   failed attempts may be retried only to the configured bounded limit.
@@ -399,6 +453,17 @@ authorize new production CASH enrolments or contributions under `SCH-007`.
   externally scheduled management command. Dry-run is read-only, historical-date
   apply requires explicit confirmation, output is aggregate rather than recipient-
   identifying, and each audience may be independently disabled.
+- **REM-009:** Independent INR completion notices require the retained final
+  completion event, validated principal/fulfilment/benefit and closure history,
+  a settled closure and redeemed agreement, and no retired/full-return disposition.
+  Proposals, individual fulfilment legs and even all fulfilled legs without the
+  final closure event are not completion notices. Selection and locked dispatch
+  recheck these rules and the configured-family gates. The existing customer/owner
+  redemption-notification switches also control INR completion notices. Messages
+  separate principal applied to jewellery from actual original-source refunds;
+  they never trigger transfers or imply that benefits/top-ups are paid principal.
+  Later returns suppress unsent/retried notices without deleting historical email
+  evidence. Rollback must retain existing INR-linked reminders and attempts.
 - **RED-001 / FIN-006:** A customer cannot redeem more than the outstanding entitlement.
 - **RED-002:** Before redemption, effective status is derived under ELIG-001 through
   ELIG-004: before `eligible_from` is `ACTIVE / NOT YET ELIGIBLE`; on or after
@@ -414,11 +479,18 @@ authorize new production CASH enrolments or contributions under `SCH-007`.
   `CASH` or `JEWELLERY_PURCHASE`; gold and silver accounts may settle as `METAL` or
   `JEWELLERY_PURCHASE`. Preserving legacy settlement does not reopen CASH enrolment or
   contributions. Metal-to-cash conversion is undefined and rejected.
-- **RED-008:** Partial redemption leaves an eligible account open. Redeeming the exact remaining entitlement changes its stored status to `REDEEMED`.
+- **RED-008 (current implementation; retirement planned):** Partial redemption leaves
+  an eligible account open. Redeeming the exact remaining entitlement changes its
+  stored status to `REDEEMED`. The owner has now approved full-only settlement under
+  ADR-0017 / `FW-PLAN-002`; this rule describes existing code, not a new configurable
+  product option. Historical settlements must remain intact during transition.
 - **RED-009:** Every redemption submission has a unique idempotency key. Replaying the same key and details returns the existing event; changing details with a used key is rejected.
 - **RED-010:** Jewellery-purchase redemption requires an external invoice or sales reference. The MVP records the reference, entitlement settled, and notes but does not manage inventory or invoices.
 - **RED-011:** A redemption correction appends one immutable `RedemptionReversal`; it never edits or deletes the original redemption. Reversed settlements are excluded from outstanding-balance and liability subtraction.
-- **RED-012:** Reversing any settlement restores that denomination's entitlement. If the account was fully redeemed, the stored account status reopens to `ACTIVE`; date-derived eligibility still presents it as redemption eligible.
+- **RED-012:** A legacy settlement reversal restores that denomination's entitlement;
+  a fully redeemed legacy account reopens to `ACTIVE` with date-derived eligibility.
+  Configured B3 reversals instead retain accepted closure and `CLOSURE_PENDING`;
+  payment collection never reopens implicitly.
 - **FIN-007:** INR and each exact metal-grade liability are never combined into a
   single balance.
 - **FIN-008:** All financial calculations use `Decimal` with explicit rounding.
@@ -427,7 +499,657 @@ authorize new production CASH enrolments or contributions under `SCH-007`.
 - **FIN-011:** Payment success is verified server-side.
 - **FIN-012:** Corrections preserve audit history rather than silently rewriting financial records.
 
+## Approved plan-builder target (preparation foundation only implemented)
+
+**24 October calendar-period extension (local, release-gated):** new immutable
+monthly-completion configurations may use `CALENDAR_MONTH` or `ANNIVERSARY`.
+For calendar months, the enrolment month is compulsory even when short; an
+enrolment-day payment can qualify. Periods use Asia/Kolkata and exclude their end:
+30 January to before 1 February, then 1 February to before 1 March. Normal
+eligibility requires both the original agreed duration and required count, and
+cannot precede the final qualifying period end. Preview, forecast, reminder and
+settlement must agree on `max(original_date, final_qualified_period_end)`.
+Count completion blocks extra payments while waiting for duration. Ordinary
+extensions and separately acknowledged outage amendments follow the frozen basis.
+The existing verified timing/deadline review rules still apply: delivery time is
+not payment time, and crossing a boundary does not move a reservation or lose funds.
+Owner controls distinguish obligation, period basis, payment limit, eligibility
+and missed consequence; unsupported combinations remain rejected, not defaulted
+into new financial promises. Migration 0035 leaves all existing agreements and
+configuration evidence unchanged. Earlier anniversary-only notes below record the
+initial implementation sequence; they do not restrict this explicitly approved extension.
+
+These planned rules do not change today's SCH/ELIG/RED behaviour through documentation
+alone. Track the rollout in MVP_PLAN.md; migration 0021 is governance metadata only.
+Migration 0022 adds immutable preparation configurations and nullable pinned draft-plan
+references, with no legacy conversion. New configured plans must remain inactive and
+unlisted; the enrolment service rejects them. Migration 0023 adds nullable configuration
+and increment snapshots plus service wiring for individually fixed amounts. Those rules
+are exercised with synthetic agreements, not enabled through public/owner enrolment. Calendar-metal
+and approved monthly-completion/no-benefit configurations can be prepared. Migration
+0024 adds nullable schedule-policy fields and an empty immutable period table; it does
+not backfill obligations or change historical evidence. Monthly completion means
+customer-fixed amounts, anniversary windows in Asia/Kolkata, zero additional grace,
+no advance/bulk catch-up, and three possible extension periods. Required count equals
+agreed months, with calendar AND count eligibility at the final qualifying period end.
+Uncompleted agreements go to discontinuation review, never forfeiture. Payment
+attribution and real policy eligibility remain unreleased; scenarios grant no rights.
+Migration 0025 adds an empty reservation/evidence ledger, without attributing historical
+payments. Its internal primitives do not collect funds, allocate grams or grant eligibility;
+payment entry-point integration is now wired locally (migration 0026), but configured
+publication/enrolment remains blocked. Synthetic service tests do not authorize activation.
+An occupied period cannot be reused merely because its checkout expires. Verified
+cash reversal appends correction evidence rather than deleting the original credit.
+Razorpay Test/mock activity cannot qualify. Provider creation/event timestamps are a
+conservative timing envelope, not an invented exact capture timestamp; missing,
+inconsistent, expired-deadline or boundary-crossing evidence goes to REVIEW, not a
+missed-payment verdict. Owner investigation is locally implemented, still unreleased;
+bounded contractual outage remedies and exact ambiguous-order identity recovery are
+implemented locally; late/duplicate-capture containment is now wired into new-payment
+guards and owner review. Overall exception acceptance remains unfinished.
+PAID_UNALLOCATED can evidence payment qualification, but never settlement readiness.
+P3's current read-only projection uses validated current evidence, not historical
+ledger replay. It preserves `eligible_from` as the original date and derives a
+completion date only after the required qualifying count; eligibility also waits
+until the final qualifying period ends in Asia/Kolkata. Conditional forecasts assume
+one qualifying payment in each needed remaining window and include only recorded,
+acknowledged outage amendments. A held/uncertain payment does not become a miss.
+Exhaustion produces discontinuation review without forfeiture or automatic closure.
+The projection is not a transactional settlement authorization. Configured agreements
+remain unenrollable and unsettled through public services. Their original dates are
+excluded from legacy redemption buckets and legacy eligibility reminders. P3's
+separate monthly-completion notice uses only a confirmed count and upcoming final
+qualifying-period end, never a forecast. It explicitly promises no redemption,
+closure or benefit, and reports that configured full-only settlement is unavailable.
+Pending allocation, review/hold or uncertain capture evidence suppresses the notice.
+Original dates and retained reminder history never change when completion changes.
+Migration 0030 adds the reminder kind/shape without a financial or historical backfill.
+Delivery refreshes and locks the agreement, rechecks current eligibility, enabled
+audience, lead date and recipient, then appends normal SMTP attempt evidence. A stale
+candidate is skipped without an invented delivery attempt; retries are rechecked.
+Legacy explicit date replay remains supported, but current monthly evidence cannot
+authorize historical monthly dispatch. A correction after an already-sent notice
+cannot retract that email: the notice directs recipients to current agreement status.
+Account locking serializes against financial services; SMTP acceptance and database
+commit are not atomic, so a crash after acceptance can still require duplicate-mail
+investigation. This is not exactly-once delivery and never grants financial authority.
+The owner Today calendar-review count also excludes configured agreements. Direct
+legacy redemption-form GET/POST requests for configured agreements return 404; the
+independent financial-service gate remains in force. A configured calendar date or
+monthly qualifying count is not a promise that settlement is available. Monthly
+extension windows remain distinct from the original date and stop taking additional
+payments once the required count is complete, subject to existing review controls.
+Callback/API recovery without signed timing evidence records AWAITING, not QUALIFIED.
+Before provider order I/O, a durable ORDERING decision commits independently; a lost
+response or local write failure cannot trigger blind order recreation. Success records
+the provider ID and returns the claim to RESERVED atomically. Uncertain intent requires
+explicit review, not a free replacement. Callers must respect the service-owned durable
+transaction boundary rather than enclosing this network workflow in another transaction.
+Migration 0029 records a unique UUID on new ORDERING evidence before provider I/O;
+the same value is sent in the provider receipt and notes. Do not backfill identities
+for old requests. An owner may supply a candidate order ID, but only an authenticated
+Live order read matching UUID, receipt, contribution, amount, INR and creation time
+can bind it to the original contribution. The append-only recovery records the owner,
+reason, evidence reference and provider facts under the agreement lock. A recovered
+checkout cannot resume, even if its original deadline has not passed. This is not
+provider-side cancellation and cannot close an already-open modal. Binding is not
+payment confirmation: capture verification/timing and untouched-order abandonment
+remain separate existing workflows. No extra order, rate/deadline change, money,
+metal, qualification or claim release is created by recovery. A timeout, missing
+match, old intent without correlation, or owner assertion leaves investigation open.
+An already-reviewed unknown-order webhook is not silently retried when identity is
+bound; use explicit provider payment reconciliation and original signed timing evidence.
+The current anniversary period, exact agreed amount and one shared reservation are
+enforced across channels. Approved extension periods remain payable after the original
+calendar date; this is not a new eligibility determination. Reservation deadlines cap
+checkout at the period boundary. RELEASED requires the existing owner/system provider
+reconciliation audit proving an expired untouched order; a later capture becomes
+RELEASED_REVIEW without occupying a replacement's period. It blocks further initiation
+and remains in the provider exception workflow. Failed/ambiguous order creation never
+automatically frees a claim. Owner review cannot manufacture verification or release.
+Every unresolved Live captured webhook for a monthly agreement (including one linked
+by recovered order ID before its contribution link is set) blocks new online/cash
+initiation and owner timing acceptance. The original paid instalment is not erased
+when a second payment arrives. Same-payment redelivery is idempotent; a different
+captured payment for an already-confirmed order is retained as DUPLICATE_CAPTURE_REVIEW,
+without a second credit. Existing in-flight verified captures still reconcile during
+the hold/global pause. Captures after expiry but before abandonment retain the existing
+verified money/metal evidence at the original locked rate, with timing in REVIEW;
+they do not automatically qualify. Abandoned-order captures never overwrite or credit
+the replacement. Owner notes do not certify a refund or clear exceptions. Automated
+refunds/verified refund closure are outside this step; unresolved cases remain held.
+Do not confuse zero ledger-integrity errors with zero unresolved provider events.
+Migration 0027 adds append-only owner notes/outage holds and a typed link from a
+qualification decision to its owner review and original signed timing source. Only
+previously verified same-payment timing wholly inside the original window/deadline
+may resolve missing evidence; contradictory timing cannot be overridden. An outage
+hold blocks new initiation for that agreement, not in-flight capture processing,
+allocation recovery or authorized cash reversal. It awards no payment credit and
+changes no financial record, rate, date or eligibility. Migration 0028 adds explicit
+`OUTAGE_COMPENSATION_V1` amendments, not edits to the original agreement. The separate
+allowance is at most three compensating months per agreement, one per proven
+outage-caused unpaid ended period. These append future original-anchor anniversary
+windows after the three ordinary extension months. Required count, amount, grade,
+original dates and evidence remain unchanged. A 12-month agreement has at most an
+18-month outer payment window, not 18 required instalments or guaranteed eligibility.
+Exceptional incident/restoration evidence, owner reason, and a reference/timestamp
+for actual customer acknowledgement of the exact proposal are mandatory. Routine
+published closing hours do not qualify. No automatic amendment, free credit, bulk
+catch-up, historical rate choice or retroactive legacy obligations are allowed.
+An ended or already-started proposed extra window, exhausted cap, or unresolved funds
+keeps the agreement in review without forfeiture. A hold may otherwise close only
+while its original unpaid window remains open after restoration, or after existing
+qualification for that period. Every closure preserves its hold and requires
+reconciled payment/allocation/webhook state; other holds remain effective. The V1
+owner form records externally retained customer acknowledgement evidence, not online
+customer acceptance or email delivery. P3 eligibility and B settlement remain gated.
+For schema-2 agreements, gated owner review/outage integration uses the validated
+frozen required count, not agreed duration. Compensation appends after the original
+required windows plus only the policy's ordinary replacements: three for count-based
+plans, zero for duration-only benefit schedules. The separate three-period outage
+cap, original calendar/anniversary anchor, exact amount and denomination survive.
+INR reconciliation requires matching principal receipts/corrections; a metal allocation
+is neither required nor permitted in their place. Pending/ambiguous provider evidence
+still prevents hold closure. Timing acceptance does not credit principal twice.
+Benefit-only compensation does not move principal maturity or award/restore a benefit;
+its incident and replacement evidence must feed the later benefit workflow. If the
+frozen policy disallows post-duration contributions, an extra window starting at or
+after that cutoff is refused and the hold remains for separate review. No unusable
+month is promised and no payment right is silently extended. Pure schedule preview
+is not mutation authority: operational readiness still blocks schema-2 review writes.
+An optional amount
+step means integer increments from the configured minimum, not rounding user input.
+This boundary remains until B's full-only settlement and the full configured journey are accepted.
+For configured agreements, the selected amount and operational terms are immutable;
+variable amount increments are measured from the snapshotted minimum. Legacy variable
+preferences do not become fixed, and no old agreement receives a configuration in migration.
+
+- **PLAN-001:** Only an owner can author/reuse a configuration in the initial builder.
+  A published plan pins a validated immutable configuration version. A new version
+  cannot rewrite existing accepted agreements; pending changed offers require confirmation.
+- **PLAN-002:** Plan-fixed, customer-fixed-at-enrolment and variable amounts are distinct.
+  A customer-fixed choice must satisfy the plan's bounds/step and becomes an enforced
+  agreement amount, independent of Razorpay versus in-store cash payment channel.
+- **PLAN-003:** An agreement accumulates one authoritative denomination/grade. Production
+  INR/cash payout variants remain disabled pending separate approval; no mixing of
+  principal, metal, discounts and benefit liabilities.
+- **PLAN-004:** Required instalments are scheduled obligations, not counts of checkout
+  attempts. Due-window/grace/catch-up/extension semantics must be complete before
+  publication. Duplicate callbacks and Test activity cannot fulfil extra real obligations.
+- **PLAN-005:** Calendar, instalment count, both and anytime are distinct policies.
+  Original dates remain evidence; completion forecasts and missed-period consequences
+  are derived from the accepted policy. All payment, status, reminder and settlement
+  paths must agree. Existing accounts gain no invented historical payment obligation.
+- **PLAN-006:** Eligibility, benefit qualification and benefit fulfilment are separate.
+  Missing payments may change completion or disqualify a specified unearned benefit,
+  never erase paid entitlement. Showroom/provider failures require explicit treatment;
+  delayed confirmation is not automatically customer lateness.
+  Schema-2 benefit qualification is a current, unawarded projection of the pinned
+  configuration/revision, reconciled principal and required schedule. Normal principal
+  eligibility alone does not satisfy REQUIRED_SCHEDULE. PRESERVE_ON_COMPLETION allows
+  agreed ordinary replacements; DISQUALIFY_UNEARNED checks original required windows,
+  following only explicitly acknowledged outage-compensation links. An unresolved
+  incident produces review before any missed-payment verdict. Extra windows are not
+  free payments. If the count is complete but a specifically compensating benefit
+  window is unpaid, retain review rather than demand an extra payment or invent credit.
+  A missed benefit does not reduce principal or move a duration-only principal date.
+  Purchase-bonus previews use only uncorrected, verified qualifying INR receipts;
+  they never value metal, include invoice top-ups, compound or call legacy CASH bonus
+  logic. VA qualification supplies no monetary amount without eligible invoice-charge
+  evidence. Pure arithmetic caps the explicit percentage calculation in INR and rounds
+  once to paise with ROUND_HALF_UP; calculation version and rounding identifier are
+  returned for future retained award/fulfilment evidence. Inputs reject floats, invalid
+  precision, negatives and non-finite values; eligible charges cannot exceed the invoice.
+  These reads/calculations create no earned award, discount consumption or financial
+  liability. Closed/accepted-disposition histories require retained lifecycle review;
+  a later changed projection must never erase an already recorded benefit. Award,
+  one-time invoice fulfilment and append-only correction remain separate gated work.
+  The gated retained award foundation (0046) stores one immutable purchase-bonus
+  amount or VA-discount right per agreement with its pinned revision, exact terms,
+  source/qualification/outage proof and calculation/rounding identifiers. A VA right
+  has no monetary amount before invoice-charge evidence. Owner authority is reloaded;
+  signed short-lived previews bind owner/account and apply recomputes under the account
+  lock. Idempotent retries do not stack awards. Records and database uniqueness are
+  retained; reverse migration refuses to discard existing awards. Later source changes,
+  corrections or accepted/closed disposition history flag review while preserving the
+  recorded award, not silently recomputing it, reducing principal or authorizing spend.
+  The standalone award foundation is not automatic awarding or invoice consumption;
+  actual use requires the linked settlement lifecycle below and operational readiness.
+  The gated invoice foundation (0047) links one immutable award consumption to the
+  agreement's actual normal full-principal jewellery handover, never just an unlinked
+  invoice number. Purchase bonus uses its retained amount; VA uses evidenced eligible
+  charges, percentage/cap and the retained rounding rule. Invoice-before-benefit equals
+  benefit plus invoice-after-benefit; INR net invoice must match the principal proposal.
+  Benefits do not create principal, additional grams, top-ups or refundable credit.
+  A purchase-bonus invoice too small for the full benefit and positive principal
+  handover requires review, not forfeiture of an earned remainder or benefit cashout.
+  A complete linked principal return plus corrected invoice/customer/time evidence
+  permits one append-only full benefit reversal. It never erases the award or invoice,
+  restores principal itself, allows partial reversal or automatically makes the award
+  spendable again. Returned rights require review. Owner-attested invoice/charge and
+  physical return evidence is not an inventory system or provider-confirmed refund.
+  The review foundation (0048) retains append-only APPROVE/HOLD decisions for an
+  independent full return, bound to the unchanged award, original qualification,
+  full disposition/return evidence and closure prefix. Approval requires fresh customer
+  authorization; a hold must not claim customer approval. Later decisions supersede
+  rather than erase earlier ones. Fresh owner-bound short-lived previews and locked
+  revalidation reject concurrent/stale decisions. Review neither changes monetary
+  rights/caps nor reopens contributions, grants principal or consumes an invoice.
+  A new closure note makes the latest review stale; source drift requires reconciliation.
+  Atomic replacement integration (0049) replaces the single-invoice-per-award storage
+  restriction with one original invoice and a linear chain: each successor requires
+  the predecessor's complete return and one current approved decision, consumed once.
+  Original invoice evidence stays version 1; version 2 additionally binds predecessor,
+  reversal and approval. A signed replacement preview retains that exact approval.
+  INR proposal creation consumes no approval or principal; actual jewellery handover
+  and invoice benefit consumption are atomic. A superseding hold prevents new
+  fulfilment but permits evidenced void/full-return recovery. A consumed review cannot
+  be reused or superseded; the new invoice needs its own full return and fresh review.
+  Purchase bonus reuses its original amount. VA is calculated from the new invoice's
+  eligible charges under the unchanged right/percentage/cap, not an extra accrued bonus.
+  No benefit is refunded as principal or converted into grams. Historical reviews and
+  returns are validated against retained prefixes; current spending rechecks present
+  sources, closure state and latest approval. All workflow gates remain in force.
+  Rollback must not discard recorded decisions. No standalone public spend path exists.
+  The gated first independent exact-metal settlement now uses closure-scoped eligibility
+  and qualification under the agreement lock. Accepted closure history/customer authority
+  must match; ordinary progress still reports closure pending. It creates or reuses the
+  unchanged qualified VA right and commits full principal, invoice consumption and closure
+  atomically. Early closure grants no unearned completion benefit; benefit-only misses
+  cannot remove principal. Complete return requires linked customer/invoice/time evidence
+  and reverses consumed benefit with principal atomically, leaving the account contained.
+  Prior returned dispositions are not automatically spendable or replacement-ready.
+  The gated independent INR entry separately retains the qualified award/right with
+  the first disposition proposal. Its invoice/refund split uses the invoice after the
+  exact benefit; the proposal reduces no liability and claims no actual handover.
+  Jewellery handover and invoice benefit consumption commit atomically. Refund legs
+  require their own completed-source/customer evidence, and every principal leg must
+  be fulfilled before closure. Complete physical returns link principal and consumed
+  benefit reversals atomically; void retains an unconsumed right. Returned/voided
+  independent dispositions may enter the gated replacement path only with complete
+  return/void evidence, retaining original sources, qualification and normal/early
+  basis. Previously consumed benefits additionally require the explicit approved
+  reapplication chain above; an unconsumed award is retained, not duplicated.
+  Existing optional/calendar/no-benefit foundation proofs remain readable and separate.
+  Both INR and closure diagnostics validate the linked benefit lifecycle. Replacement
+  handling and lifecycle acceptance remain required before release; operational gates
+  stay closed. No separate public spending path or automated provider refund is added.
+- **PLAN-007:** Redemption is full-only for every new supported configuration, including
+  anytime. The server settles the complete available entitlement at internal precision
+  and closes that agreement; customer login/other agreements remain. No reusable wallet.
+  Pending/late/unallocated payments must be resolved or controlled before final closure.
+  For new INR purchase-credit contracts, the approved target is one final settlement
+  applying all principal to jewellery, a permitted principal refund, or both. Showroom
+  fulfilment is manual but recorded and evidenced; no replacement-credit wallet and
+  no automated refund API. Pending refunds remain liabilities and prevent final closure.
+  Source-routing requirements still apply. Benefits are separate, never implicit cash
+  refunds; this policy does not convert exact-grade metal entitlement to cash.
+  INR purchase-credit principal uses a distinct `INR_CREDIT` denomination, never the
+  legacy `CASH` bonus balance. One verified live-capture or actual cash-receipt source
+  may credit principal once. Store its exact amount, reference, contract and verification
+  time; no amount is supplied by an owner adjustment form. Test/mock payments, pending
+  payments, jewellery top-ups and benefit promises do not credit this ledger.
+  A full erroneous cash-entry correction needs its matching completed source reversal;
+  it is not a refund. Neither source status changes nor unresolved source drift silently
+  erase the retained principal/correction history. Reconcile discrepancies explicitly.
+  Verified-capture integration records principal and instalment evidence in the source
+  transaction. A principal receipt may use system:razorpay-capture with no human actor
+  only for a captured-webhook source; cash and manual recording retain a human actor.
+  Recheck the original processed Live body hash, payment/order IDs, exact INR amount
+  and captured state. This consumer does not authenticate signatures; authenticated
+  webhook processing remains upstream. A new event for the same payment adds no second
+  principal receipt. Late/missing timing may require instalment review without losing
+  verified principal. Full cash-entry correction atomically retains source reversal,
+  principal correction and instalment reversal. A browser callback alone is never
+  sufficient principal evidence. A valid callback HMAC plus authenticated exact Live
+  API capture can create a separate immutable minimal observation and principal
+  atomically (0044). Owner API recovery requires preview, fresh exact inspection,
+  a fresh owner/event/attempt-bound web confirmation and unchanged local payment facts.
+  The web review expires after ten minutes; a newer attempt replaces the old review.
+  Apply still independently checks the provider and revalidates under financial locks.
+  Persisted owner authority is rechecked before I/O and before credit. Preserve
+  actor/reason and retained event identity. Neither path fabricates a signed webhook
+  or uses API payment creation time to qualify an instalment: monthly timing remains
+  awaiting evidence until an original signed capture supplies it. Later callbacks,
+  recovery or webhooks retain the first valid receipt source without double credit.
+  Closed/disposed agreements and failed/abandoned sources require review, not an
+  automatic credit. API source evidence participates in INR settlement proofs without
+  rewriting older proofs. This is gross captured principal, not refund availability
+  or settlement reconciliation. Normal collection/readiness gates remain closed.
+  Payment-error refund resolution is a separate boundary in ADR-0017
+  (27 October 2026), now exposed through a private owner review screen. Local inspection foundation
+  (0052) retains typed Live provider observations, historical entitlement checks and
+  immutable owner/binding evidence. It changes no holds or financial state; partial,
+  pending, failed, inconsistent and incomplete refunds cannot qualify as full refunds.
+  A manually refunded, never-credited exact payment needs authenticated full-refund
+  evidence, append-only scoped resolution and replay/race protection before its hold
+  may be resolved.
+  Owner notes, zero current balance or a refund on another payment do not suffice.
+  The internal exact-payment resolution service (0053) now binds a fresh owner-confirmed
+  inspection to immutable evidence and prevents subsequent credit of that payment.
+  A delayed webhook is retained for review; other legitimate payments retain their
+  original credit. This does not release a pending attempt, qualify an instalment or
+  settle an agreement. Shared hold predicates now omit only validated exact Live
+  captured-payment evidence (same payment, order, payload hash and compatible link).
+  Changed payloads, other payments/modes/types and invalid proof remain held. Original
+  webhook statuses/processing attempts are retained, not rewritten as processed.
+  Migration 0054 separately retains all-attempt refunded-order retirement evidence.
+  Owner-bound review and fresh GET-only reinspection must show a stable paid order,
+  complete attempt count, only failed/full-refunded payments, and exact full-refund
+  resolutions with no historical entitlement for every refunded payment. Created,
+  authorized, incompletely listed or inconsistent attempts cannot release an order.
+  Under the agreement lock, a never-credited pending/failed/abandoned contribution is
+  explicitly retired as ABANDONED; its monthly reservation receives an append-only
+  RELEASED decision referencing this distinct proof. This is not untouched-order
+  reconciliation, payment qualification, a new deadline/rate, or agreement closure.
+  Existing replacement claims and real principal remain unchanged. Exact capture
+  replay cannot reopen the released claim; contradictory capture creates review again.
+  Settlement/benefit evidence adds refund references only when present, preserving old
+  proof formats and hashes; zero entitlement still cannot become a settlement or an
+  unused-agreement cancellation merely because an order was retired. The private UI
+  separates payment inspection/resolution from all-attempt order inspection/retirement.
+  GET reads retained evidence only; explicit CSRF-protected POST performs inspection
+  or confirmation. Signed reviews are owner-, route- and time-bound; Apply independently
+  checks fresh provider facts. Original events and retained history remain accessible
+  after resolution. Provider error payloads are not displayed. Operator acceptance
+  and configured-plan release gates remain pending.
+  One immutable INR disposition assigns all recorded principal to an evidenced invoice
+  and/or original-source refund legs. Invoice application consumes earliest verified
+  uncorrected receipts first (verification time, then receipt ID); remaining amounts
+  retain their source identities. One invoice cannot serve two such dispositions.
+  Proposals reserve disposition but reduce no liability. Append-only jewellery handover
+  and refund fulfilments reduce only their exact leg amounts, not arbitrary partial
+  withdrawals. External invoice top-ups are receipt evidence, never scheme principal.
+  Online-source refunds require manual provider-dashboard completion references and
+  customer receipt evidence; original cash receipts may use evidenced cash return.
+  No unapproved fallback refund route is inferred. These records attest showroom
+  fulfilment; the app does not independently verify a bank credit or call refund APIs.
+  Full closure requires every leg fulfilled and unchanged reconciled source/closure
+  evidence. Late payments or changed evidence hold completion for review. Proposal,
+  fulfilment and completion terms cannot be edited/deleted. A proposal may be retired
+  only by linked immutable resolution evidence: VOID before any fulfilment, or FULL_RETURN
+  covering every fulfilled portion, in one transaction. A partial/pending disposition
+  needs returns of every portion actually fulfilled, not invented returns for unpaid legs.
+  Completed dispositions require a linked REVERSE event; pending dispositions use a NOTE.
+  Jewellery return needs customer confirmation and invoice correction evidence; any
+  separately paid top-up must have its external refund evidenced, never credited as
+  scheme principal. Returned refunds require actual cash received/bank credit evidence.
+  Mere promises, cancellation notes or edited receipt amounts restore no liability.
+  Original gross fulfilment/completion history survives; full returns restore precisely
+  the discharged principal. The agreement remains CLOSURE_PENDING and closure ACCEPTED,
+  blocking contributions. A replacement full disposition requires a fresh signed preview,
+  customer authorization and new invoice/transaction references, linked to its retired
+  predecessor. Only one current disposition is permitted; the retirement flag is a
+  checked projection, not financial source evidence. No partial redemption, staged-return
+  operation, replacement-credit wallet or provider refund API is introduced.
+  Independent replacement evidence retains the exact resolved predecessor chain.
+  Original sources/reviews must be unchanged; correction does not reopen contributions
+  or re-earn a previously unearned benefit as dates pass. Fresh customer authorization
+  must not recycle a prior settlement/return authorization; invoice references must
+  be new. Principal-only returns and unconsumed INR rights are supported internally.
+  Any consumed benefit invoice, even with a full reversal, requires explicit current
+  reapplication approval and atomic consumption in its one linked successor invoice.
+  Customer returns do not reset original online-payment refund capacity. Retain all
+  gross provider refunds across generations; a proposed further refund must fit the
+  original captured amount after those refunds. Otherwise hold the disposition for
+  separately approved route reconciliation, never silently substitute cash. This
+  recorded-history cap is not verification of provider-side availability.
+- **PLAN-008:** Historical partial events remain immutable. Before full-only cutover,
+  inventory remaining balances and any existing contractual partial-redemption promises;
+  resolve conflicts explicitly without invented consent or deleting financial history.
+- **PLAN-009:** Only complete, implemented, compatible configurations can publish. A
+  draft/preset is not automatically an approved public offer. Future customer proposals
+  remain nonfinancial and owner-reviewed; customer rule authoring is deferred.
+  Builder-v1 design compatibility is validated separately from operational readiness
+  (`plan_policies.py`). A design-valid typed contract does not create financial rights
+  or override missing workflow/INR approval blockers, even with the release flag on.
+  Existing persisted configuration evidence is projected read-only, never rewritten.
+  Policy schema 2 persists independent duration/count/benefit terms but is preparation-
+  only even when the release flag is on. Schema 1 keeps its exact historical evidence;
+  new immutable versions do not reinterpret agreements or downgrade their schema.
+  Owners may prepare schema-2 versions in a separate grouped editor and review a
+  no-write preview. The same model/policy validation runs again at save through the
+  owner service; invalid combinations are not silently normalized. Server-controlled
+  schema, provenance, zero grace, no catch-up and full-only settlement cannot be
+  submitted as overrides. New versions append to a single locked predecessor;
+  existing configurations/plans/agreements remain untouched. This preparation editor
+  does not publish schema-2 offers or enable any financial workflow. A separate draft
+  action may pin the version to an inactive, unlisted named plan and audited revision.
+  Independent draft duration columns equal the policy's duration (or both null for
+  COUNT/ANYTIME); frequency retains the selected period ceiling. INR drafts have no
+  offered grades; exact-metal drafts require them. Identity/notes/grade edits cannot
+  replace the policy or enable publication. Existing rows/revisions are unchanged;
+  migration reversal must not discard independent drafts or substitute legacy terms.
+  Independent agreement-term resolution reloads the pinned policy and exact grade;
+  a variable amount preference does not become a fixed instalment. Duration and
+  required count stay independent. A duration floor is not completed eligibility;
+  count-only/anytime never receive an invented twelve-month date. Read-only integrity
+  validation is separate from runtime permission. INR principal recording must reject
+  frozen amount/frequency/date/denomination drift as well as mismatched revision evidence.
+  Agreement storage version 1 preserves the legacy twelve-month minimum and non-null
+  eligibility date. Version 2 pins an explicit eligibility policy and independent
+  required count. Its agreed_months means duration only; eligible_from is its duration
+  floor, not proof of completed count or benefit qualification. COUNT and ANYTIME have
+  null duration/date; ANYTIME has no required count. Required-for-benefit DURATION may
+  retain a schedule count without making that count a principal-redemption condition.
+  ONCE_PER_PERIOD records the independent policy ceiling; it is never silently stored
+  as FLEXIBLE. Model/service activation guards stay closed until integrated workflows
+  exist. Migration does not infer consent or convert pre-existing schema-2 agreements.
+  Independent customer payment presentation reuses its own admission/resumption
+  checks behind operational readiness; INR uses global pause/hours without a metal
+  rate. A read-only eligible status does not persist maturity, authorize settlement
+  or award benefits. A stale creation form cannot create a second order; only a
+  checked, unexpired and reconciled checkout may be continued. The legacy metal/
+  duration preview cannot reinterpret an independent policy.
+  Prospective schema-2 required windows use required_count, never duration_months.
+  Calendar windows start on enrolment day then month boundaries; anniversary windows
+  always clamp from the original start anchor. Ordinary replacement windows apply
+  only to EXTEND_THEN_REVIEW. Benefit-only duration schedules have no replacements;
+  optional monthly ceilings have no required windows. Constructing these windows is
+  not persisted obligation, verified attribution, eligibility or benefit qualification.
+  Outage compensation remains separate acknowledged evidence, never automatic padding.
+  Internal schema-2 schedule persistence validates the entire frozen contract, locks
+  the account, inserts all periods atomically and returns an exact existing schedule
+  unchanged. It refuses optional obligations, partial/corrupt repairs and first-time
+  creation after any contribution or on a non-active account. Reservation capacity
+  uses the frozen required count, not duration. Receipt/capture attribution retains
+  source, timing, idempotency and reversal evidence; it creates neither INR principal
+  nor metal allocation and does not grant redemption or benefit qualification.
+  Independent eligibility progress is a current-time read of the frozen contract,
+  real-source principal and append-only qualification evidence. COUNT completes
+  immediately when its final payment is verified and conclusively attributed;
+  DURATION_AND_COUNT waits for both its duration floor and the final qualifying
+  period end. ANYTIME requires positive verified principal, not an invented date.
+  DURATION with a benefit schedule does not require that count for principal
+  eligibility or postpone its date after a missed benefit instalment. Rule progress,
+  positive principal, financial/outage holds and pending benefit review are separate.
+  Source corrections remove qualification/credit without deleting evidence; exhausted
+  windows lead to review, never principal forfeiture. Future/historical as-of dates
+  cannot manufacture verification rights. Closed/accepted-disposition histories are
+  not fresh spendable entitlements. This read changes no dates, statuses or benefits
+  and does not replace locked settlement proof or operational readiness. Schema-2
+  date notices use separate current-evidence selection and family-specific content,
+  behind both configured-plan and operational-policy readiness gates. DURATION needs
+  positive verified principal and no unresolved hold; DURATION_AND_COUNT additionally
+  needs the full verified count and the later duration/final-period boundary. Dispatch
+  rechecks under the account lock; stale, closed, corrected, held or replayed evidence
+  cannot send. Count-only/anytime have no invented scheduled maturity forecast.
+  A notice grants neither settlement permission nor an award; benefit-only schedule
+  compliance remains separate from principal maturity. Existing legacy reminders
+  keep their original rules and identities.
+  Shared policy facts describe obligation, period basis, payment ceiling, duration,
+  count, missed-payment outcome and conditional benefits separately. Agreement reads
+  reload and validate the pinned contract/revision; current offer edits cannot change
+  the display. Invalid evidence shows reconciliation rather than replacement terms.
+  INR cards link to validated principal statements instead of reporting grams or a
+  misleading zero balance. Displayed progress never opens payment/settlement gates.
+  Public/model enrolment, payment entry, owner instalment review and outage resolution
+  remain blocked for schema 2 pending complete release acceptance. Gated integrations
+  and synthetic regression tests do not activate these workflows. Tests use synthetic
+  stored contracts; they are not permission to bypass model/service activation guards.
+  The 0037 INR principal services are internal foundations, not activated payment or
+  settlement workflows. Existing contribution confirmation, redemption and closure
+  entry points reject the future denomination; no legacy cash workflow is reused.
+- **PLAN-010:** Configured publication requires an immutable reviewed revision matching
+  the current offer and an enabled release gate. Withdraw before editing a published
+  offer; policy changes use a new version/draft. Neither withdrawal nor disabling
+  `CONFIGURED_PLANS_ENABLED` changes existing agreements, payments or closure rights.
+  New configured enrolment requires current offer confirmation and freezes that revision;
+  monthly instalment periods are created in the same transaction. No contribution,
+  rate lock, allocation or eligibility credit is created by publication/enrolment.
+  Schema-2 owner-enrolment orchestration uses the locked offer's exact published
+  revision and typed configuration, not the legacy plan duration/frequency columns.
+  INR purchase credit rejects a metal grade or legacy CASH denomination. Required
+  count and duration remain distinct; an explicit duration must match the policy,
+  and count-only/anytime have no invented date. Owner authority, exact current offer
+  digest/configuration and explicit boolean confirmation remain required. Account,
+  full required schedule and enrolment audit commit or roll back together. This
+  internal integration does not remove operational publication/model gates.
+  Version-2 existing-customer interest requests pin configuration, publication revision and reviewed
+  offer digest, separately retaining duration, required count and denomination.
+  They create no account, contribution, rate lock, principal receipt or allocation.
+  Signed forms bind the displayed offer/disclosure version; conversion rechecks the
+  persisted current offer under lock and rejects substitution. INR requests have no
+  metal grade; count-only/anytime requests have no invented duration. Duplicate
+  pending INR requests are excluded even with a null grade. Conversion, schedule,
+  linked decision and audit are atomic/idempotent. Messages use frozen terms, not
+  current-plan defaults. Schema-1 requests retain their old rules. Migration 0045
+  refuses unversioned independent requests and refuses reversal while version-2
+  evidence exists. These gated form/service paths still require full release acceptance.
+  Separate registration-first PlanApplication confirmations also carry an explicit
+  schema version. Each version-2 confirmation pins its publication revision and
+  independent configuration/denomination/amount/duration/count/benefit evidence.
+  Old confirmations are never rewritten when an applicant reviews a changed offer;
+  explicit reconfirmation appends a new record, including a change of denomination.
+  Contact, email verification and completion create no identity or financial account.
+  Owner approval rechecks the persisted current offer and latest confirmed terms,
+  then commits identity, exact agreement, schedule, audit and invitation together.
+  Strict owner attestations, verified private progress access and the existing
+  identity/financial release gates still apply. Messages and review history use
+  recorded terms, not current-plan defaults. Accounts migration 0009 preserves
+  schema-1 JSON and refuses unversioned independent consent or reversal while
+  version-2 evidence exists. Diagnostics validate nullable INR/no-duration links and
+  the confirmed agreement provenance; none of this grants payment or benefit rights.
+  Schema-2 new-payment admission uses the frozen independent contract and server time,
+  never a caller-selected historical month. Accounting month is not an anniversary
+  window. Required counts remain independent of duration; optional ceilings create no
+  obligations. Cash uses its server receipt instant within half-open India-local
+  calendar/original-anniversary windows. Active payment claims and uncorrected paid
+  sources consume the ceiling; a full evidenced correction retains history and frees
+  only that payment opportunity. Cash mutations serialize on the agreement.
+  INR payment initiation respects the environment kill switch, global pause and
+  business-hour schedule without requiring a metal rate or obeying a gold-only pause.
+  Actual INR cash source, receipt, principal, schedule evidence and audit commit
+  atomically; no grams or legacy cash bonus are created. Required-monthly online
+  initiation retains durable order intent and cannot blindly retry a lost response.
+  Optional schema-2 online initiation uses separate immutable request/binding records,
+  never artificial instalment obligations. Commit the UUID/amount/rate/deadline intent
+  before provider I/O. A lost, invalid or locally unrecorded response blocks retries
+  and cash; elapsed time or FAILED alone cannot release it. At most one outstanding
+  optional checkout is admitted per agreement, including flexible plans. A normally
+  bound checkout can resume only with the same amount and unchanged deadline/rate,
+  while current payment/closure/privacy controls permit it. Optional period ceilings
+  and a disallow-post-duration boundary cap the original checkout deadline.
+  Exact recovery requires an active owner and authenticated Live order identity
+  matching request UUID/receipt, contribution, exact INR amount and creation time.
+  Recovery records immutable actor/reason/evidence, retains the old deadline/rate,
+  creates no principal or metal and is reconciliation-only, never resumed checkout.
+  The owner exception queue exposes unbound optional requests before expiry and
+  even after a local FAILED status. Its recovery form accepts only a candidate order
+  and investigation references; the service verifies identity and rechecks persisted
+  owner authority after provider I/O. GET performs no provider request. Unresolved
+  identities count as financial exceptions without duplicate expired-checkout alerts.
+  Only existing provider-backed untouched-order abandonment can permit replacement;
+  later captured funds remain in the exception workflow. Pauses/expiry during order I/O
+  retain the returned identity but refuse checkout. No automatic retry, cancellation,
+  refund or absence inference is introduced. All paths still require operational
+  readiness; service integration does not activate configured plans. Callback/API
+  principal reconciliation and complete matrix acceptance remain separate gates.
+
+P4 supersedes the earlier unconditional preparation-only gate with the above default-off
+controlled gate. Earlier B/P checkpoints describe their implementation boundaries, not
+permission to bypass the new publication workflow or to activate production.
+
 ## Audit and exception rules
+
+### Configured closure lifecycle — B1/B2/B3 local preparation
+
+Operational distinction: the owner closes a customer's **agreement**, not the reusable
+plan or customer login. A genuinely never-used agreement is cancelled without redemption.
+An agreement with some, but not all, required instalments paid can undergo customer-
+authorized **early full jewellery settlement** of its entire actual accumulated metal.
+For example, three paid instalments of twelve do not grant the unpaid nine instalments
+or a maturity benefit. They also do not require a partial redemption: all three payments'
+available metal is settled and the agreement closes. These are local configured-contract
+capabilities, not a retroactive change to existing production/legacy agreements.
+
+- **B3 full settlement:** configured exact-grade, no-benefit contracts only. Both normal
+  and early closure require accepted closure, resolved verified/allocated real payments,
+  a positive server-derived full balance, invoice, reason and actual customer
+  confirmation/fulfilment evidence. Preserve all six internal decimals. A signed preview
+  is owner/request-bound, expires after ten minutes for new mutations and is invalidated
+  by changed financial/review facts. Replay cannot change the original details.
+- Normal calendar settlement uses the recorded date; normal monthly settlement requires
+  the required qualifying payment count and final qualifying period end as well. Early
+  closure preserves paid entitlement without inventing qualification, discounts or fees.
+  Pending/unallocated, Test/mock, failed/abandoned attempts and unresolved provider,
+  monthly-timing or outage evidence block settlement. Expiry is not provider cancellation.
+- Immutable configured proof links closure events to existing Redemption/Reversal financial
+  sources. Settlement marks SETTLED/REDEEMED; controlled reversal restores the full exact
+  grade to ACCEPTED/CLOSURE_PENDING. It never reopens payments or changes customer login.
+  Re-settlement requires fresh proof. No legacy cutover or publication/enrolment bypass.
+
+- B1 supports configured agreements only. Legacy agreements require the separate
+  contractual/history cutover before gaining closure rights. Configured publication
+  and enrolment remain blocked; these services do not activate a plan.
+- A direct request belongs to the authenticated active customer. Owner-assisted
+  requests require a reason and retained reference to actual customer authorization.
+  Source, actor label, reason, reference and request time are retained unchanged.
+- The lifecycle is PENDING -> ACCEPTED, WITHDRAWN or REJECTED. Owner review notes
+  append evidence without changing state. Customer withdrawal and owner rejection
+  are allowed only while pending; owner-assisted withdrawal requires authorization.
+  ACCEPTED permits further owner notes, not silent withdrawal/rejection/reopening.
+- Pending intent alone leaves existing contribution rules in force. Acceptance
+  blocks new online/cash initiation, provider-order creation and checkout resumption
+  under the shared agreement lock. It changes no agreement date, amount, grade,
+  payment, allocation, redemption or liability. Replaying an existing cash receipt
+  is recovery/idempotency, not a new cash contribution.
+- Existing captures, provider reconciliation, allocation recovery and authorized
+  cash corrections continue after acceptance. Already-open provider modals cannot
+  be recalled by a local request. Expired/abandoned orders can still capture; their
+  history must not be deleted or treated as proof that no future funds can arrive.
+- Request state is a checked projection of append-only sequenced closure events.
+  One open request per agreement, idempotency keys and valid state/action shapes
+  have database constraints. Services lock the agreement before request rows and
+  reject stale decisions. Accepted evidence continues blocking initiation if the
+  projection is corrupted; integrity errors require investigation, not manual edits.
+- Accepted closure suppresses completion reminders at selection and locked delivery,
+  but leaves allocation-exception communication available. Historical mail survives.
+- Payment-review counts are investigation aids, never an unused/settleable verdict.
+  Even zero balance/history does not automatically invoke cancellation. B3 full-only
+  settlement/reversal and legacy cutover remain separate from request acceptance.
+  Customer login and other agreements remain active; no request claims jewellery
+  delivery, refund, benefit, forfeiture or completed closure.
+
+- **B2 unused cancellation:** an active owner separately confirms an ACCEPTED configured
+  closure with a mandatory reason and stale-sequence/idempotency checks. The account lock
+  serializes this operation with payment initiation and review. Any contribution record
+  (all channels/modes/statuses), redemption, instalment reservation, period investigation
+  or outage resolution prevents unused cancellation. Even reversed/failed/abandoned
+  histories require separate disposition; zero current balance is insufficient. Empty
+  scheduled periods and ordinary closure notes are not financial use.
+- Append the typed CANCEL event with actor, timestamp, reason and original request link,
+  then atomically project both request and agreement to CANCELLED. This is not REDEEMED
+  and creates no financial rows, refund, entitlement, fee or benefit. No rows are deleted,
+  original terms are retained, and customer login/other agreements are unchanged.
+  No undo/reopen is supplied; another saving cycle needs a new agreement. Cancelled
+  agreements are excluded from active/payment/reminder/eligibility projections and cannot
+  acquire new instalment investigations. Integrity checks detect missing cancellation
+  evidence, status disagreement and financial/review history after cancellation.
+- B2 does not authorize personal-data erasure or change the separate privacy-retention
+  workflow. That workflow remains conservative about agreement history; any future
+  relaxation needs its own disposition review. No new legacy cancellation right or
+  configured-plan activation is introduced by these local services.
 
 - **AUD-001:** Customer enrolment, scheme-plan change, Scheme Rate publication, redemption, redemption reversal, and owner-triggered allocation retry retain an actor label, timestamp, reason, target, and action details in an immutable audit event.
 - **AUD-002:** System-service actions may retain a stable system actor label when no authenticated user initiated them. Owner UI actions always reference the authenticated owner as actor.
@@ -468,6 +1190,14 @@ authorize new production CASH enrolments or contributions under `SCH-007`.
   and exports. Indicative current metal exposure is not exported as booked cash
   liability.
 - **DOC-007:** MVP documents are on-demand printable HTML acknowledgements, not tax invoices or archived legal snapshots.
+- **DOC-008:** INR purchase-credit statements show original receipts/corrections,
+  proposals, actual principal handover/refund, full returns and historical completion
+  separately. A proposal discharges nothing; top-ups and purchase benefits are excluded
+  from principal. Showroom refund evidence is not presented as API-verified delivery.
+  Retained benefit history never adds to INR principal or exact-grade grams; full return
+  and approval alone do not reapply it. Customer documents omit private review reasons
+  and authority references. Invalid principal/disposition proofs produce a non-cacheable
+  review response, not an invented balance. Reads cannot activate or settle a plan.
 
 ## Catalogue boundaries
 
@@ -624,4 +1354,6 @@ decimal places is rejected rather than silently rounded. Cash bonus calculations
 `ROUND_HALF_UP` to 2 decimal places. Metal quantities, allocation calculations, and
 owner metal-redemption entry use 6 decimal places; excess input precision is rejected.
 Customer-facing gram values render to 3 decimal places without changing the stored
-quantity. Scheme Rates use 4 decimal places and grade fineness metadata uses 6.
+quantity. Full-settlement confirmation and its retained settlement evidence explicitly
+show all 6 decimals so the customer-authorized full quantity does not hide a remainder.
+Scheme Rates use 4 decimal places and grade fineness metadata uses 6.

@@ -12,6 +12,13 @@
   </div>
 </div>
 
+{% if eligibility.configured %}
+<section class="card p-3 mb-4">
+  <h2 class="h5">Configured agreements — settlement unavailable</h2>
+  <p>These agreements are excluded from the legacy calendar-only buckets below. Original dates alone do not confirm monthly completion.</p>
+  <ul>{% for account in eligibility.configured %}<li>{{ account.scheme_number }} — {{ account.effective_status_label }}</li>{% endfor %}</ul>
+</section>
+{% endif %}
 {% for title, description, accounts in eligibility_groups %}
 <section class="mb-5">
   <div class="d-flex align-items-baseline gap-2 mb-2">

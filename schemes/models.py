@@ -94,6 +94,163 @@ class MetalGrade(models.Model):
         return self.display_name
 
 
+class SchemePlanConfiguration(models.Model):
+    """Immutable typed policy versions; publication and accepted agreements are separate."""
+
+    class AmountPolicy(models.TextChoices):
+        PLAN_FIXED = "PLAN_FIXED", "Amount fixed by the showroom"
+        CUSTOMER_FIXED = "CUSTOMER_FIXED", "Customer chooses once at enrolment"
+        VARIABLE = "VARIABLE", "Variable amount within limits"
+
+    family_id = models.UUIDField(default=uuid.uuid4, editable=False)
+    version = models.PositiveIntegerField(default=1, editable=False)
+    policy_schema_version = models.PositiveSmallIntegerField(default=1, editable=False)
+    previous = models.OneToOneField(
+        "self", null=True, blank=True, on_delete=models.PROTECT, related_name="successor",
+    )
+    name = models.CharField(max_length=120)
+    amount_policy = models.CharField(max_length=20, choices=AmountPolicy.choices)
+    minimum_amount = models.DecimalField(max_digits=14, decimal_places=2)
+    maximum_amount = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True)
+    fixed_amount = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True)
+    amount_step = models.DecimalField(
+        max_digits=14, decimal_places=2, null=True, blank=True,
+        help_text="Optional increment from the minimum, e.g. minimum 500 and step 100 permits 500, 600, 700.",
+    )
+    frequency_rule = models.CharField(max_length=20, choices=[
+        ("ONCE_PER_MONTH", "At most once per calendar month"), ("FLEXIBLE", "Flexible frequency"),
+        ("ONCE_PER_PERIOD", "At most one qualifying contribution per selected monthly period"),
+    ])
+    minimum_months = models.PositiveSmallIntegerField(default=12, null=True, blank=True, validators=[MinValueValidator(12)])
+    default_months = models.PositiveSmallIntegerField(default=12, null=True, blank=True, validators=[MinValueValidator(12)])
+    duration_months = models.PositiveSmallIntegerField(null=True, blank=True, validators=[MinValueValidator(1)])
+    required_count = models.PositiveSmallIntegerField(null=True, blank=True, validators=[MinValueValidator(1)])
+    allow_contributions_after_eligibility = models.BooleanField(default=False)
+    # Explicit typed dimensions; persisted compatibility is distinct from runtime support.
+    accumulation = models.CharField(max_length=20, default="EXACT_METAL", choices=[("EXACT_METAL", "One exact metal grade"), ("INR_PURCHASE_CREDIT", "INR jewellery purchase credit")])
+    instalment_policy = models.CharField(max_length=20, default="NONE", choices=[("NONE", "No mandatory instalments"), ("MONTHLY_COMPLETION", "Required monthly completion")])
+    eligibility_policy = models.CharField(max_length=20, default="CALENDAR", choices=[("CALENDAR", "Agreed calendar duration"), ("CALENDAR_AND_COUNT", "Calendar duration and qualifying instalments"), ("COUNT", "Qualifying instalment count only"), ("ANYTIME", "Anytime full settlement")])
+    missed_payment_policy = models.CharField(max_length=32, default="NONE", choices=[("NONE", "No mandatory-payment penalty"), ("EXTEND_THEN_REVIEW", "Extend, then discontinuation review"), ("LOSE_UNEARNED_BENEFIT", "Loss of specified unearned benefit")])
+    period_basis = models.CharField(max_length=20, null=True, blank=True, choices=[("ANNIVERSARY", "Agreement-anniversary month (India time)"), ("CALENDAR_MONTH", "Calendar month, including enrolment month (India time)")])
+    grace_days = models.PositiveSmallIntegerField(null=True, blank=True)
+    catch_up_policy = models.CharField(max_length=20, null=True, blank=True, choices=[("NONE", "No bulk catch-up or advance instalments")])
+    max_extension_months = models.PositiveSmallIntegerField(null=True, blank=True)
+    benefit_policy = models.CharField(max_length=20, default="NONE", choices=[("NONE", "No bonus or discount"), ("INR_PURCHASE_BONUS", "INR jewellery purchase bonus"), ("VA_DISCOUNT", "Value-addition discount")])
+    benefit_percentage = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    benefit_cap_inr = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True)
+    benefit_qualification = models.CharField(max_length=24, default="NONE", choices=[("NONE", "No benefit"), ("NORMAL_ELIGIBILITY", "Normal eligibility"), ("REQUIRED_SCHEDULE", "Required schedule")])
+    benefit_on_miss = models.CharField(max_length=24, default="NONE", choices=[("NONE", "No benefit consequence"), ("PRESERVE_ON_COMPLETION", "Preserve on extended completion"), ("DISQUALIFY_UNEARNED", "Disqualify unearned benefit")])
+    eligible_charge_definition = models.TextField(blank=True, default="")
+    settlement_policy = models.CharField(max_length=20, default="FULL_ONLY", choices=[("FULL_ONLY", "Full jewellery settlement and agreement closure")])
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    actor_label = models.CharField(max_length=254)
+    reason = models.TextField()
+
+    class Meta:
+        ordering = ["name", "-version"]
+        constraints = [
+            models.UniqueConstraint(fields=["family_id", "version"], name="plan_config_family_version_unique"),
+            models.CheckConstraint(condition=(models.Q(version=1, previous__isnull=True) | models.Q(version__gt=1, previous__isnull=False)), name="plan_config_version_shape"),
+            models.CheckConstraint(condition=models.Q(minimum_amount__gt=0), name="plan_config_min_positive"),
+            models.CheckConstraint(condition=(models.Q(maximum_amount__isnull=True) | models.Q(maximum_amount__gte=models.F("minimum_amount"))), name="plan_config_max_gte_min"),
+            models.CheckConstraint(condition=(models.Q(amount_step__isnull=True) | models.Q(amount_step__gt=0)), name="plan_config_step_positive"),
+            models.CheckConstraint(condition=(
+                models.Q(amount_policy="PLAN_FIXED", fixed_amount__isnull=False, fixed_amount__gt=0, minimum_amount=models.F("fixed_amount"), maximum_amount=models.F("fixed_amount"), maximum_amount__isnull=False, amount_step__isnull=True)
+                | models.Q(amount_policy__in=["CUSTOMER_FIXED", "VARIABLE"], fixed_amount__isnull=True)
+            ), name="plan_config_amount_shape"),
+            models.CheckConstraint(condition=(
+                models.Q(policy_schema_version=1, minimum_months__isnull=False, default_months__isnull=False,
+                         minimum_months__gte=12, default_months__gte=models.F("minimum_months"),
+                         duration_months__isnull=True, required_count__isnull=True,
+                         benefit_percentage__isnull=True, benefit_cap_inr__isnull=True,
+                         benefit_qualification="NONE", benefit_on_miss="NONE", eligible_charge_definition="")
+                | models.Q(policy_schema_version=2, minimum_months__isnull=True, default_months__isnull=True)
+            ), name="plan_config_schema_shape"),
+            models.CheckConstraint(condition=(
+                models.Q(policy_schema_version=1, accumulation="EXACT_METAL", benefit_policy="NONE", settlement_policy="FULL_ONLY")
+                & (
+                    models.Q(instalment_policy="NONE", eligibility_policy="CALENDAR", missed_payment_policy="NONE",
+                             frequency_rule__in=["ONCE_PER_MONTH", "FLEXIBLE"], period_basis__isnull=True,
+                             grace_days__isnull=True, catch_up_policy__isnull=True, max_extension_months__isnull=True)
+                    | models.Q(instalment_policy="MONTHLY_COMPLETION", eligibility_policy="CALENDAR_AND_COUNT",
+                               missed_payment_policy="EXTEND_THEN_REVIEW", amount_policy="CUSTOMER_FIXED",
+                               frequency_rule="ONCE_PER_PERIOD", allow_contributions_after_eligibility=False,
+                               period_basis__in=["ANNIVERSARY", "CALENDAR_MONTH"], period_basis__isnull=False,
+                               grace_days=0, grace_days__isnull=False, catch_up_policy="NONE", catch_up_policy__isnull=False,
+                               max_extension_months=3, max_extension_months__isnull=False)
+                )
+                | models.Q(policy_schema_version=2, accumulation__in=["EXACT_METAL", "INR_PURCHASE_CREDIT"],
+                           settlement_policy="FULL_ONLY", grace_days=0, grace_days__isnull=False,
+                           catch_up_policy="NONE", catch_up_policy__isnull=False)
+            ), name="plan_config_supported_family"),
+            models.CheckConstraint(condition=(
+                models.Q(policy_schema_version=1)
+                | ((models.Q(eligibility_policy__in=["CALENDAR", "CALENDAR_AND_COUNT"],
+                             duration_months__isnull=False, duration_months__gte=1)
+                    | models.Q(eligibility_policy__in=["COUNT", "ANYTIME"], duration_months__isnull=True))
+                   & (models.Q(frequency_rule="FLEXIBLE", period_basis__isnull=True)
+                      | models.Q(frequency_rule="ONCE_PER_PERIOD", period_basis__isnull=False,
+                                 period_basis__in=["CALENDAR_MONTH", "ANNIVERSARY"])))
+            ), name="plan_config_v2_period_duration"),
+            models.CheckConstraint(condition=(
+                models.Q(policy_schema_version=1)
+                | models.Q(instalment_policy="NONE", eligibility_policy__in=["CALENDAR", "ANYTIME"],
+                           required_count__isnull=True, missed_payment_policy="NONE",
+                           max_extension_months__isnull=True, benefit_on_miss="NONE")
+                | (models.Q(instalment_policy="MONTHLY_COMPLETION", amount_policy__in=["PLAN_FIXED", "CUSTOMER_FIXED"],
+                            frequency_rule="ONCE_PER_PERIOD", required_count__isnull=False, required_count__gte=1)
+                   & (models.Q(eligibility_policy__in=["COUNT", "CALENDAR_AND_COUNT"],
+                               missed_payment_policy="EXTEND_THEN_REVIEW", max_extension_months=3,
+                               max_extension_months__isnull=False, allow_contributions_after_eligibility=False)
+                      | models.Q(eligibility_policy="CALENDAR", missed_payment_policy="LOSE_UNEARNED_BENEFIT",
+                                 max_extension_months__isnull=True, benefit_policy__in=["INR_PURCHASE_BONUS", "VA_DISCOUNT"],
+                                 benefit_on_miss="DISQUALIFY_UNEARNED")))
+            ), name="plan_config_v2_obligations"),
+            models.CheckConstraint(condition=(
+                models.Q(policy_schema_version=1)
+                | models.Q(benefit_policy="NONE", benefit_percentage__isnull=True, benefit_cap_inr__isnull=True,
+                           benefit_qualification="NONE", benefit_on_miss="NONE", eligible_charge_definition="")
+                | (models.Q(benefit_percentage__isnull=False, benefit_percentage__gt=0, benefit_percentage__lte=100,
+                            benefit_cap_inr__isnull=False, benefit_cap_inr__gt=0)
+                   & (models.Q(benefit_policy="INR_PURCHASE_BONUS", accumulation="INR_PURCHASE_CREDIT", eligible_charge_definition="")
+                      | (models.Q(benefit_policy="VA_DISCOUNT") & ~models.Q(eligible_charge_definition="")))
+                   & (models.Q(instalment_policy="NONE", benefit_qualification="NORMAL_ELIGIBILITY", benefit_on_miss="NONE")
+                      | models.Q(instalment_policy="MONTHLY_COMPLETION", benefit_qualification="REQUIRED_SCHEDULE",
+                                 benefit_on_miss__in=["PRESERVE_ON_COMPLETION", "DISQUALIFY_UNEARNED"])))
+            ), name="plan_config_v2_benefits"),
+            models.CheckConstraint(condition=models.Q(benefit_cap_inr__isnull=True) | models.Q(
+                benefit_cap_inr__lte=Decimal("999999999999.99")
+            ), name="plan_config_benefit_cap_finite"),
+            models.CheckConstraint(condition=~models.Q(actor_label="") & ~models.Q(reason=""), name="plan_config_evidence_required"),
+        ]
+
+    def clean(self):
+        super().clean()
+        if self.policy_schema_version == 2:
+            from .plan_policies import policy_from_configuration, validate_plan_policy
+
+            validate_plan_policy(policy_from_configuration(self))
+        if self.previous_id:
+            previous = type(self).objects.get(pk=self.previous_id)
+            if self.family_id != previous.family_id or self.version != previous.version + 1:
+                raise ValidationError("A new version must immediately follow its previous family version.")
+            if self.policy_schema_version < previous.policy_schema_version:
+                raise ValidationError("A configuration cannot downgrade its policy schema.")
+
+    def save(self, *args, **kwargs):
+        if self.pk and type(self).objects.filter(pk=self.pk).exists():
+            raise ValidationError("Configuration versions are immutable; create a new version.")
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Configuration versions cannot be deleted.")
+
+    def __str__(self):
+        return f"{self.name} / v{self.version}"
+
+
 class SchemePlan(models.Model):
     class AmountRule(models.TextChoices):
         FIXED = "FIXED", "Fixed"
@@ -102,15 +259,23 @@ class SchemePlan(models.Model):
     class FrequencyRule(models.TextChoices):
         ONCE_PER_MONTH = "ONCE_PER_MONTH", "Once per month"
         FLEXIBLE = "FLEXIBLE", "Flexible"
+        ONCE_PER_PERIOD = "ONCE_PER_PERIOD", "Once per agreed period"
 
     name = models.CharField(max_length=120)
     code = models.CharField(max_length=30, unique=True)
     description = models.TextField(blank=True)
+    configuration = models.ForeignKey(
+        SchemePlanConfiguration, null=True, blank=True, on_delete=models.PROTECT, related_name="plans",
+    )
+    publication_revision = models.ForeignKey(
+        "SchemePlanRevision", null=True, blank=True, on_delete=models.PROTECT,
+        related_name="published_plans", editable=False,
+    )
     minimum_months = models.PositiveSmallIntegerField(
-        default=12, validators=[MinValueValidator(12)]
+        default=12, null=True, blank=True, validators=[MinValueValidator(1)]
     )
     default_months = models.PositiveSmallIntegerField(
-        default=12, validators=[MinValueValidator(12)]
+        default=12, null=True, blank=True, validators=[MinValueValidator(1)]
     )
     amount_rule = models.CharField(max_length=10, choices=AmountRule.choices)
     frequency_rule = models.CharField(max_length=20, choices=FrequencyRule.choices)
@@ -149,12 +314,24 @@ class SchemePlan(models.Model):
         ordering = ["name"]
         constraints = [
             models.CheckConstraint(
-                condition=models.Q(minimum_months__gte=12),
-                name="plan_minimum_months_gte_12",
+                condition=(models.Q(configuration__isnull=True)
+                           | models.Q(active=False, publicly_listed=False)
+                           | models.Q(active=True, publication_revision__isnull=False)),
+                name="configured_plan_publication_required",
             ),
             models.CheckConstraint(
-                condition=models.Q(default_months__gte=models.F("minimum_months")),
-                name="plan_default_months_gte_minimum",
+                condition=(
+                    models.Q(minimum_months__isnull=False, default_months__isnull=False,
+                        minimum_months__gte=1, default_months__gte=models.F("minimum_months"))
+                    & (models.Q(configuration__isnull=False) | models.Q(minimum_months__gte=12))
+                    | models.Q(configuration__isnull=False, minimum_months__isnull=True, default_months__isnull=True)
+                ),
+                name="plan_duration_shape",
+            ),
+            models.CheckConstraint(
+                condition=(models.Q(frequency_rule__in=["FLEXIBLE", "ONCE_PER_MONTH"])
+                    | models.Q(configuration__isnull=False, frequency_rule="ONCE_PER_PERIOD")),
+                name="plan_frequency_shape",
             ),
             models.CheckConstraint(
                 condition=models.Q(minimum_contribution__gt=0),
@@ -189,7 +366,23 @@ class SchemePlan(models.Model):
 
     def clean(self):
         errors = {}
-        if self.default_months < self.minimum_months:
+        if self.configuration_id:
+            from .plan_configuration import configuration_draft_values
+            if self.active or self.publicly_listed:
+                from .plan_publication import validate_publication_evidence
+                try:
+                    validate_publication_evidence(self)
+                except ValidationError as error:
+                    errors["active"] = error.messages
+            for field, value in configuration_draft_values(self.configuration).items():
+                if getattr(self, field) != value:
+                    errors[field] = "This value is pinned to an immutable configuration version."
+            if (self.pk and self.configuration.accumulation == "INR_PURCHASE_CREDIT"
+                    and self.metal_offerings.filter(active=True).exists()):
+                errors["configuration"] = "INR purchase credit cannot offer metal grades."
+        elif self.minimum_months is None or self.minimum_months < 12 or self.default_months is None:
+            errors["minimum_months"] = "Existing-style plans require a duration of at least twelve months."
+        if self.default_months is not None and self.minimum_months is not None and self.default_months < self.minimum_months:
             errors["default_months"] = "Default duration cannot be below the minimum."
         if self.amount_rule == self.AmountRule.FIXED:
             if not self.fixed_contribution_amount or self.fixed_contribution_amount <= 0:
@@ -224,6 +417,76 @@ class SchemePlan(models.Model):
         return f"{self.name} ({self.code})"
 
 
+class SchemePlanRevision(models.Model):
+    """Observed plan terms, not a replacement for a customer's agreement snapshot."""
+
+    plan = models.ForeignKey(SchemePlan, on_delete=models.PROTECT, related_name="revisions")
+    number = models.PositiveIntegerField()
+    terms = models.JSONField()
+    recorded_at = models.DateTimeField(auto_now_add=True)
+    actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True)
+    actor_label = models.CharField(max_length=254)
+    reason = models.TextField()
+
+    class Meta:
+        ordering = ["-number"]
+        constraints = [
+            models.UniqueConstraint(fields=["plan", "number"], name="plan_revision_number_unique"),
+            models.CheckConstraint(condition=models.Q(number__gte=1), name="plan_revision_number_positive"),
+            models.CheckConstraint(condition=~models.Q(actor_label="") & ~models.Q(reason=""), name="plan_revision_evidence_required"),
+        ]
+
+    def save(self, *args, **kwargs):
+        if self.pk and type(self).objects.filter(pk=self.pk).exists():
+            raise ValidationError("Plan revisions are immutable.")
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Plan revisions are immutable.")
+
+    def __str__(self):
+        return f"{self.plan_id} / revision {self.number}"
+
+
+class PlanCatalogueClosure(models.Model):
+    """One-way catalogue housekeeping; never an agreement closure or deletion."""
+
+    class Action(models.TextChoices):
+        ARCHIVE_CONFIGURATION = "ARCHIVE_CONFIGURATION", "Configuration archived"
+        ARCHIVE_DRAFT = "ARCHIVE_DRAFT", "Draft archived"
+        RETIRE_PLAN = "RETIRE_PLAN", "Plan retired"
+
+    configuration = models.OneToOneField(SchemePlanConfiguration, null=True, blank=True,
+        on_delete=models.PROTECT, related_name="catalogue_closure")
+    plan = models.OneToOneField(SchemePlan, null=True, blank=True,
+        on_delete=models.PROTECT, related_name="catalogue_closure")
+    action = models.CharField(max_length=24, choices=Action.choices)
+    actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    actor_label = models.CharField(max_length=254)
+    reason = models.TextField()
+    recorded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(condition=(
+                models.Q(configuration__isnull=False, plan__isnull=True, action="ARCHIVE_CONFIGURATION")
+                | models.Q(configuration__isnull=True, plan__isnull=False,
+                    action__in=["ARCHIVE_DRAFT", "RETIRE_PLAN"])
+            ), name="catalogue_closure_target_action"),
+            models.CheckConstraint(condition=~models.Q(actor_label="") & ~models.Q(reason=""),
+                name="catalogue_closure_evidence"),
+        ]
+
+    def save(self, *args, **kwargs):
+        if self.pk and type(self).objects.filter(pk=self.pk).exists():
+            raise ValidationError("Catalogue closure records are immutable.")
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Catalogue closure records cannot be deleted.")
+
+
 class SchemePlanOffering(models.Model):
     plan = models.ForeignKey(
         SchemePlan,
@@ -255,6 +518,7 @@ class SchemePlanOffering(models.Model):
 class SchemeAccount(models.Model):
     class SavingsMode(models.TextChoices):
         CASH = "CASH", "Cash Savings"
+        INR_CREDIT = "INR_CREDIT", "INR jewellery purchase credit"
         GOLD = "GOLD", "Gold Savings"
         SILVER = "SILVER", "Silver Savings"
 
@@ -262,13 +526,29 @@ class SchemeAccount(models.Model):
         ACTIVE = "ACTIVE", "Active"
         REDEMPTION_ELIGIBLE = "REDEMPTION_ELIGIBLE", "Redemption eligible"
         REDEEMED = "REDEEMED", "Redeemed"
+        CANCELLED = "CANCELLED", "Cancelled unused agreement"
+        CLOSURE_PENDING = "CLOSURE_PENDING", "Closure accepted — settlement pending"
 
     scheme_number = models.CharField(max_length=24, unique=True)
     customer = models.ForeignKey(Customer, on_delete=models.PROTECT, related_name="scheme_accounts")
     plan = models.ForeignKey(SchemePlan, on_delete=models.PROTECT, related_name="scheme_accounts")
+    plan_name_snapshot = models.CharField(max_length=120, blank=True, default="")
+    plan_code_snapshot = models.CharField(max_length=30, blank=True, default="")
+    plan_revision = models.ForeignKey(
+        SchemePlanRevision, on_delete=models.PROTECT, related_name="scheme_accounts",
+        null=True, blank=True,
+    )
+    configuration_snapshot = models.ForeignKey(
+        SchemePlanConfiguration, on_delete=models.PROTECT, related_name="agreements",
+        null=True, blank=True,
+    )
+    contribution_step_snapshot = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True)
+    agreement_schema_version = models.PositiveSmallIntegerField(default=1, editable=False)
+    eligibility_policy_snapshot = models.CharField(max_length=24, blank=True, default="", editable=False)
+    required_count_snapshot = models.PositiveSmallIntegerField(null=True, blank=True, editable=False)
     start_date = models.DateField()
-    agreed_months = models.PositiveSmallIntegerField(validators=[MinValueValidator(12)])
-    eligible_from = models.DateField()
+    agreed_months = models.PositiveSmallIntegerField(null=True, blank=True, validators=[MinValueValidator(1)])
+    eligible_from = models.DateField(null=True, blank=True)
     savings_mode = models.CharField(max_length=10, choices=SavingsMode.choices)
     metal_grade = models.ForeignKey(
         MetalGrade,
@@ -307,9 +587,25 @@ class SchemeAccount(models.Model):
         ordering = ["-start_date", "scheme_number"]
         constraints = [
             models.CheckConstraint(
-                condition=models.Q(agreed_months__gte=12),
-                name="account_agreed_months_gte_12",
+                condition=(
+                    models.Q(agreement_schema_version=1, agreed_months__isnull=False, agreed_months__gte=12,
+                             eligible_from__isnull=False, eligibility_policy_snapshot="", required_count_snapshot__isnull=True)
+                    | (models.Q(agreement_schema_version=2, configuration_snapshot__isnull=False, plan_revision__isnull=False)
+                       & (models.Q(eligibility_policy_snapshot="DURATION", agreed_months__isnull=False,
+                                   agreed_months__gte=1, eligible_from__isnull=False)
+                          | models.Q(eligibility_policy_snapshot="DURATION_AND_COUNT", agreed_months__isnull=False,
+                                     agreed_months__gte=1, eligible_from__isnull=False, required_count_snapshot__isnull=False)
+                          | models.Q(eligibility_policy_snapshot="COUNT", agreed_months__isnull=True,
+                                     eligible_from__isnull=True, required_count_snapshot__isnull=False)
+                          | models.Q(eligibility_policy_snapshot="ANYTIME", agreed_months__isnull=True,
+                                     eligible_from__isnull=True, required_count_snapshot__isnull=True)))
+                ), name="account_eligibility_shape",
             ),
+            models.CheckConstraint(condition=models.Q(required_count_snapshot__isnull=True) | models.Q(
+                required_count_snapshot__gte=1), name="account_required_count_positive"),
+            models.CheckConstraint(condition=models.Q(agreement_schema_version=2,
+                frequency_rule_snapshot__in=["FLEXIBLE", "ONCE_PER_PERIOD"]) | models.Q(agreement_schema_version=1,
+                frequency_rule_snapshot__in=["FLEXIBLE", "ONCE_PER_MONTH"]), name="account_frequency_shape"),
             models.CheckConstraint(
                 condition=models.Q(minimum_amount_snapshot__gt=Decimal("0")),
                 name="account_minimum_amount_positive",
@@ -334,7 +630,7 @@ class SchemeAccount(models.Model):
             ),
             models.CheckConstraint(
                 condition=(
-                    models.Q(savings_mode="CASH", metal_grade__isnull=True)
+                    models.Q(savings_mode__in=["CASH", "INR_CREDIT"], metal_grade__isnull=True)
                     | models.Q(
                         savings_mode__in=["GOLD", "SILVER"],
                         metal_grade__isnull=False,
@@ -342,11 +638,46 @@ class SchemeAccount(models.Model):
                 ),
                 name="account_metal_grade_required",
             ),
+            models.CheckConstraint(
+                condition=(models.Q(plan_revision__isnull=True)
+                           | (~models.Q(plan_name_snapshot="") & ~models.Q(plan_code_snapshot=""))),
+                name="account_revision_identity_required",
+            ),
+            models.CheckConstraint(condition=(
+                models.Q(configuration_snapshot__isnull=True, contribution_step_snapshot__isnull=True)
+                | (models.Q(configuration_snapshot__isnull=False, plan_revision__isnull=False,
+                            savings_mode__in=["GOLD", "SILVER", "INR_CREDIT"], cash_bonus_percentage_snapshot=0)
+                   & (models.Q(contribution_step_snapshot__isnull=True) | models.Q(contribution_step_snapshot__gt=0))
+                   & (models.Q(amount_rule_snapshot="VARIABLE", fixed_amount_snapshot__isnull=True)
+                      | models.Q(amount_rule_snapshot="FIXED", fixed_amount_snapshot__isnull=False,
+                                 fixed_amount_snapshot__gt=0, minimum_amount_snapshot=models.F("fixed_amount_snapshot"),
+                                 maximum_amount_snapshot=models.F("fixed_amount_snapshot"), maximum_amount_snapshot__isnull=False,
+                                 contribution_step_snapshot__isnull=True)))
+            ), name="account_configuration_shape"),
+            models.CheckConstraint(condition=(~models.Q(savings_mode="INR_CREDIT") | models.Q(
+                configuration_snapshot__isnull=False, plan_revision__isnull=False,
+                metal_grade__isnull=True, cash_bonus_percentage_snapshot=0,
+            )), name="account_inr_credit_contract"),
+            models.CheckConstraint(
+                condition=~models.Q(status="CANCELLED") | models.Q(configuration_snapshot__isnull=False),
+                name="cancelled_account_configured",
+            ),
+            models.CheckConstraint(
+                condition=~models.Q(status="CLOSURE_PENDING") | models.Q(configuration_snapshot__isnull=False),
+                name="pending_closure_configured",
+            ),
         ]
 
     def clean(self):
         super().clean()
         errors = {}
+        from .plan_configuration import validate_agreement_configuration
+        if self.configuration_snapshot_id:
+            from .plan_policies import require_operational_configuration
+            require_operational_configuration(self.configuration_snapshot)
+        validate_agreement_configuration(self)
+        if self.plan_revision_id and self.plan_revision.plan_id != self.plan_id:
+            errors["plan_revision"] = "The recorded revision must belong to this agreement's plan."
         if self.savings_mode == self.SavingsMode.CASH:
             if self.metal_grade_id is not None:
                 errors["metal_grade"] = "Cash accounts cannot have a metal grade."
@@ -364,6 +695,33 @@ class SchemeAccount(models.Model):
 
     def save(self, *args, **kwargs):
         update_fields = kwargs.get("update_fields")
+        stored_status = type(self).objects.filter(pk=self.pk).values_list("status", flat=True).first() if self.pk else None
+        if (self.status == "CANCELLED" or stored_status == "CANCELLED") and self.status != stored_status:
+            raise ValidationError("Use the unused-agreement cancellation service; cancellation cannot be reopened.")
+        if self.configuration_snapshot_id and self.status != stored_status and (
+            self.status in ("REDEEMED", "CLOSURE_PENDING") or stored_status in ("REDEEMED", "CLOSURE_PENDING")
+        ):
+            raise ValidationError("Use the configured full-settlement or controlled reversal service.")
+        if self.pk:
+            stored = type(self).objects.filter(pk=self.pk).first()
+            if stored and (stored.configuration_snapshot_id or self.configuration_snapshot_id):
+                from .plan_configuration import AGREEMENT_CONFIGURATION_FIELDS
+                protected = (*AGREEMENT_CONFIGURATION_FIELDS,
+                             "start_date", "agreed_months", "eligible_from", "cash_bonus_policy_version_snapshot")
+                if any(getattr(stored, field) != getattr(self, field) for field in protected):
+                    raise ValidationError("Configured agreement terms are immutable.")
+        if self.configuration_snapshot_id:
+            from .plan_configuration import validate_agreement_configuration
+            from .plan_policies import require_operational_configuration
+            require_operational_configuration(self.configuration_snapshot)
+            validate_agreement_configuration(self)
+        identity_fields = ("plan_id", "plan_name_snapshot", "plan_code_snapshot", "plan_revision_id")
+        if self.pk and (update_fields is None or set(update_fields).intersection(
+            {*identity_fields, "plan", "plan_revision"}
+        )):
+            stored_identity = type(self).objects.filter(pk=self.pk).values(*identity_fields).first()
+            if stored_identity and any(stored_identity[field] != getattr(self, field) for field in identity_fields):
+                raise ValidationError("An enrolled account's plan identity and revision are immutable.")
         protected_fields_are_written = update_fields is None or bool(
             {"savings_mode", "metal_grade"}.intersection(update_fields)
         )
@@ -384,9 +742,37 @@ class SchemeAccount(models.Model):
         return super().save(*args, **kwargs)
 
     @property
+    def display_plan_name(self):
+        return self.plan_name_snapshot or self.plan.name
+
+    @property
+    def display_plan_code(self):
+        return self.plan_code_snapshot or self.plan.code
+
+    @property
+    def independent_eligibility(self):
+        """Read-only independent progress, never settlement authorization."""
+        from .agreement_eligibility import get_independent_eligibility
+        return get_independent_eligibility(self) if self.agreement_schema_version == 2 else None
+
+    @property
+    def monthly_eligibility(self):
+        if self.agreement_schema_version == 2:
+            raise ValidationError("Use independent eligibility for this agreement; the legacy monthly projection does not apply.")
+        from .instalments import has_monthly_instalments
+        from .instalment_selectors import get_monthly_eligibility
+        return get_monthly_eligibility(self) if has_monthly_instalments(self) else None
+
+    @property
     def effective_status(self):
-        if self.status == self.Status.REDEEMED:
-            return self.Status.REDEEMED
+        if self.status in (self.Status.REDEEMED, self.Status.CANCELLED, self.Status.CLOSURE_PENDING):
+            return self.status
+        if self.agreement_schema_version == 2:
+            return (self.Status.REDEMPTION_ELIGIBLE if self.independent_eligibility.policy_eligible
+                    else self.Status.ACTIVE)
+        monthly = self.monthly_eligibility
+        if monthly is not None:
+            return self.Status.REDEMPTION_ELIGIBLE if monthly.policy_eligible else self.Status.ACTIVE
         if is_redemption_eligible(
             eligible_from=self.eligible_from,
             as_of=timezone.localdate(),
@@ -396,6 +782,30 @@ class SchemeAccount(models.Model):
 
     @property
     def effective_status_label(self):
+        if self.agreement_schema_version == 2:
+            progress = self.independent_eligibility
+            return {
+                "ELIGIBLE": "Requirements met — settlement review",
+                "CANCELLED": "Unused agreement cancelled", "CLOSED": "Agreement closed",
+                "CLOSURE_PENDING": "Closure / settlement review", "REVIEW": "Evidence needs review",
+                "PAYMENT_PENDING": "Payment confirmation pending", "NOT_STARTED": "Not started",
+                "NO_ENTITLEMENT": "No verified principal", "WAITING_DURATION": "Awaiting duration date",
+                "WAITING_PERIOD_END": "Awaiting duration / period end", "COLLECTING": "Qualifying payments pending",
+                "DISCONTINUATION_REVIEW": "Discontinuation review",
+            }.get(progress.state, "Agreement review")
+        if self.status == self.Status.CANCELLED:
+            return self.Status.CANCELLED.label
+        if self.status == self.Status.REDEEMED:
+            return self.Status.REDEEMED.label
+        from .closure_selectors import accepted_closure
+        if accepted_closure(self):
+            return "Closure accepted — settlement pending"
+        if self.status != self.Status.REDEEMED:
+            monthly = self.monthly_eligibility
+            if monthly is not None:
+                return "Requirements met — showroom settlement review" if monthly.policy_eligible else "Monthly completion — " + monthly.state.replace("_", " ").lower()
+            if self.configuration_snapshot_id and self.effective_status == self.Status.REDEMPTION_ELIGIBLE:
+                return "Calendar date reached — showroom settlement review"
         if self.effective_status == self.Status.ACTIVE:
             return "Active — not yet eligible"
         return self.Status(self.effective_status).label
@@ -408,6 +818,137 @@ class SchemeAccount(models.Model):
 
     def __str__(self):
         return f"{self.scheme_number} — {self.customer.full_name}"
+
+
+class SchemeClosureRequest(models.Model):
+    """Closure intent and checked lifecycle projection, never a settlement record."""
+    class Status(models.TextChoices):
+        PENDING = "PENDING", "Awaiting owner review"
+        ACCEPTED = "ACCEPTED", "Accepted — awaiting resolution and settlement"
+        WITHDRAWN = "WITHDRAWN", "Withdrawn before acceptance"
+        REJECTED = "REJECTED", "Rejected before acceptance"
+        CANCELLED = "CANCELLED", "Unused agreement cancelled"
+        SETTLED = "SETTLED", "Full jewellery settlement completed"
+
+    class Source(models.TextChoices):
+        CUSTOMER = "CUSTOMER", "Customer request"
+        OWNER_ASSISTED = "OWNER_ASSISTED", "Owner assisted with customer authorization"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    scheme_account = models.ForeignKey(SchemeAccount, on_delete=models.PROTECT, related_name="closure_requests")
+    source = models.CharField(max_length=20, choices=Source.choices)
+    status = models.CharField(max_length=12, choices=Status.choices, default=Status.PENDING)
+    requested_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    actor_label = models.CharField(max_length=254)
+    reason = models.TextField()
+    authorization_reference = models.CharField(max_length=254, blank=True)
+    requested_at = models.DateTimeField(default=timezone.now)
+    idempotency_key = models.UUIDField(unique=True)
+
+    class Meta:
+        ordering = ["-requested_at", "pk"]
+        constraints = [
+            models.UniqueConstraint(fields=["scheme_account"], condition=models.Q(status__in=["PENDING", "ACCEPTED"]), name="closure_one_open_per_account"),
+            models.CheckConstraint(condition=models.Q(status__in=["PENDING", "ACCEPTED", "WITHDRAWN", "REJECTED", "CANCELLED", "SETTLED"]), name="closure_status_valid"),
+            models.CheckConstraint(condition=(models.Q(source="CUSTOMER", authorization_reference="") | (models.Q(source="OWNER_ASSISTED") & ~models.Q(authorization_reference=""))), name="closure_authorization_shape"),
+            models.CheckConstraint(condition=~models.Q(reason="") & ~models.Q(actor_label=""), name="closure_actor_reason_required"),
+        ]
+
+    def save(self, *args, **kwargs):
+        if self.pk and type(self).objects.filter(pk=self.pk).exists():
+            raise ValidationError("Use the closure service; request evidence is immutable.")
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Closure request history must be retained.")
+
+
+class SchemeClosureEvent(models.Model):
+    class Action(models.TextChoices):
+        REQUESTED = "REQUESTED", "Requested"
+        NOTE = "NOTE", "Owner review note"
+        ACCEPT = "ACCEPT", "Accepted for resolution and settlement"
+        WITHDRAW = "WITHDRAW", "Withdrawn"
+        REJECT = "REJECT", "Rejected"
+        CANCEL = "CANCEL", "Unused agreement cancelled"
+        SETTLE = "SETTLE", "Full jewellery settlement"
+        REVERSE = "REVERSE", "Settlement reversed — closure remains accepted"
+
+    request = models.ForeignKey(SchemeClosureRequest, on_delete=models.PROTECT, related_name="events")
+    sequence = models.PositiveIntegerField()
+    action = models.CharField(max_length=12, choices=Action.choices)
+    resulting_status = models.CharField(max_length=12, choices=SchemeClosureRequest.Status.choices)
+    actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    actor_label = models.CharField(max_length=254)
+    reason = models.TextField()
+    authorization_reference = models.CharField(max_length=254, blank=True)
+    idempotency_key = models.UUIDField(unique=True)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ["sequence", "pk"]
+        constraints = [
+            models.UniqueConstraint(fields=["request", "sequence"], name="closure_event_sequence_unique"),
+            models.CheckConstraint(condition=models.Q(sequence__gte=1), name="closure_event_sequence_positive"),
+            models.CheckConstraint(condition=~models.Q(actor_label="") & ~models.Q(reason=""), name="closure_event_actor_reason"),
+            models.CheckConstraint(condition=(
+                models.Q(action="REQUESTED", resulting_status="PENDING", sequence=1)
+                | models.Q(action="NOTE", resulting_status__in=["PENDING", "ACCEPTED"], sequence__gt=1)
+                | models.Q(action="ACCEPT", resulting_status="ACCEPTED", sequence__gt=1)
+                | models.Q(action="WITHDRAW", resulting_status="WITHDRAWN", sequence__gt=1)
+                | models.Q(action="REJECT", resulting_status="REJECTED", sequence__gt=1)
+                | models.Q(action="CANCEL", resulting_status="CANCELLED", sequence__gt=1)
+                | models.Q(action="SETTLE", resulting_status="SETTLED", sequence__gt=1)
+                | models.Q(action="REVERSE", resulting_status="ACCEPTED", sequence__gt=1)
+            ), name="closure_event_action_shape"),
+        ]
+
+    def save(self, *args, **kwargs):
+        if self.pk and type(self).objects.filter(pk=self.pk).exists():
+            raise ValidationError("Closure events are append-only.")
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Closure events must be retained.")
+
+
+class ConfiguredSettlement(models.Model):
+    """Immutable authorization/proof; Redemption remains the financial source."""
+    closure = models.ForeignKey(SchemeClosureRequest, on_delete=models.PROTECT, related_name="settlements")
+    event = models.OneToOneField(SchemeClosureEvent, on_delete=models.PROTECT, related_name="settlement")
+    redemption = models.OneToOneField("Redemption", on_delete=models.PROTECT, related_name="configured_settlement")
+    basis = models.CharField(max_length=10, choices=[("NORMAL", "Policy eligible"), ("EARLY", "Customer-authorized early closure")])
+    authorization_reference = models.CharField(max_length=254)
+    evidence = models.JSONField()
+    evidence_digest = models.CharField(max_length=64)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(condition=models.Q(basis__in=["NORMAL", "EARLY"]), name="configured_settlement_basis"),
+            models.CheckConstraint(condition=~models.Q(authorization_reference="") & ~models.Q(evidence_digest=""), name="configured_settlement_proof"),
+        ]
+
+    def save(self, *args, **kwargs):
+        if self.pk and type(self).objects.filter(pk=self.pk).exists():
+            raise ValidationError("Configured settlement evidence is immutable.")
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Configured settlement evidence must be retained.")
+
+
+class ConfiguredSettlementReversal(models.Model):
+    settlement = models.OneToOneField(ConfiguredSettlement, on_delete=models.PROTECT, related_name="correction")
+    event = models.OneToOneField(SchemeClosureEvent, on_delete=models.PROTECT, related_name="settlement_correction")
+    reversal = models.OneToOneField("RedemptionReversal", on_delete=models.PROTECT, related_name="configured_correction")
+
+    def save(self, *args, **kwargs):
+        if self.pk and type(self).objects.filter(pk=self.pk).exists():
+            raise ValidationError("Configured settlement corrections are immutable.")
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Configured settlement corrections must be retained.")
 
 
 class SchemeEnrolmentRequest(models.Model):
@@ -425,6 +966,9 @@ class SchemeEnrolmentRequest(models.Model):
         Status.ENROLLED,
     }
     SNAPSHOT_FIELDS = (
+        "request_schema_version", "plan_revision_snapshot_id", "offer_digest",
+        "savings_mode_snapshot", "eligibility_policy_snapshot", "required_count_snapshot",
+        "configuration_snapshot_id",
         "customer_id",
         "plan_id",
         "metal_grade_id",
@@ -447,6 +991,14 @@ class SchemeEnrolmentRequest(models.Model):
     )
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    request_schema_version = models.PositiveSmallIntegerField(default=1)
+    plan_revision_snapshot = models.ForeignKey(
+        SchemePlanRevision, null=True, blank=True, on_delete=models.PROTECT, related_name="enrolment_requests",
+    )
+    offer_digest = models.CharField(max_length=64, blank=True)
+    savings_mode_snapshot = models.CharField(max_length=10, blank=True)
+    eligibility_policy_snapshot = models.CharField(max_length=24, blank=True)
+    required_count_snapshot = models.PositiveSmallIntegerField(null=True, blank=True)
     customer = models.ForeignKey(
         Customer,
         on_delete=models.PROTECT,
@@ -461,15 +1013,19 @@ class SchemeEnrolmentRequest(models.Model):
         MetalGrade,
         on_delete=models.PROTECT,
         related_name="enrolment_requests",
+        null=True, blank=True,
     )
     plan_name_snapshot = models.CharField(max_length=120)
     plan_code_snapshot = models.CharField(max_length=30)
+    configuration_snapshot = models.ForeignKey(
+        SchemePlanConfiguration, null=True, blank=True, on_delete=models.PROTECT, related_name="enrolment_requests",
+    )
     requested_contribution_amount = models.DecimalField(
         max_digits=14,
         decimal_places=2,
     )
     requested_months = models.PositiveSmallIntegerField(
-        validators=[MinValueValidator(12)],
+        null=True, blank=True, validators=[MinValueValidator(1)],
     )
     customer_message = models.TextField(blank=True)
     amount_rule_snapshot = models.CharField(
@@ -496,8 +1052,8 @@ class SchemeEnrolmentRequest(models.Model):
         null=True,
         blank=True,
     )
-    minimum_months_snapshot = models.PositiveSmallIntegerField()
-    default_months_snapshot = models.PositiveSmallIntegerField()
+    minimum_months_snapshot = models.PositiveSmallIntegerField(null=True, blank=True)
+    default_months_snapshot = models.PositiveSmallIntegerField(null=True, blank=True)
     allow_post_eligibility_contributions_snapshot = models.BooleanField()
     disclosure_version = models.CharField(max_length=30)
     disclosure_accepted_at = models.DateTimeField()
@@ -533,17 +1089,39 @@ class SchemeEnrolmentRequest(models.Model):
             models.UniqueConstraint(
                 fields=["customer", "plan", "metal_grade"],
                 condition=models.Q(status="PENDING_OWNER_REVIEW"),
+                nulls_distinct=False,
                 name="enrol_request_unique_pending_offering",
             ),
             models.CheckConstraint(
-                condition=models.Q(requested_months__gte=12),
+                condition=models.Q(request_schema_version=2) | models.Q(requested_months__gte=12),
                 name="enrol_request_months_gte_12",
             ),
             models.CheckConstraint(
-                condition=models.Q(
+                condition=models.Q(request_schema_version=2) | models.Q(
                     requested_months__gte=models.F("minimum_months_snapshot")
                 ),
                 name="enrol_request_months_gte_minimum",
+            ),
+            models.CheckConstraint(
+                condition=(models.Q(request_schema_version=1, metal_grade__isnull=False,
+                    requested_months__isnull=False, minimum_months_snapshot__isnull=False,
+                    default_months_snapshot__isnull=False, plan_revision_snapshot__isnull=True,
+                    offer_digest="", savings_mode_snapshot="", eligibility_policy_snapshot="", required_count_snapshot__isnull=True)
+                | (models.Q(request_schema_version=2, configuration_snapshot__isnull=False,
+                    plan_revision_snapshot__isnull=False) & ~models.Q(offer_digest="")
+                    & (models.Q(savings_mode_snapshot="INR_CREDIT", metal_grade__isnull=True)
+                       | models.Q(savings_mode_snapshot__in=["GOLD", "SILVER"], metal_grade__isnull=False))
+                    & (models.Q(eligibility_policy_snapshot__in=["DURATION", "DURATION_AND_COUNT"],
+                        requested_months__isnull=False, requested_months__gte=1,
+                        minimum_months_snapshot=models.F("requested_months"), minimum_months_snapshot__isnull=False,
+                        default_months_snapshot=models.F("requested_months"), default_months_snapshot__isnull=False)
+                       | models.Q(eligibility_policy_snapshot__in=["COUNT", "ANYTIME"], requested_months__isnull=True,
+                           minimum_months_snapshot__isnull=True, default_months_snapshot__isnull=True))
+                    & (models.Q(eligibility_policy_snapshot__in=["COUNT", "DURATION_AND_COUNT"],
+                        required_count_snapshot__isnull=False, required_count_snapshot__gte=1)
+                       | models.Q(eligibility_policy_snapshot="DURATION")
+                       | models.Q(eligibility_policy_snapshot="ANYTIME", required_count_snapshot__isnull=True)))),
+                name="enrol_request_versioned_terms",
             ),
             models.CheckConstraint(
                 condition=models.Q(minimum_contribution_snapshot__gt=Decimal("0")),
@@ -664,12 +1242,31 @@ class SchemeEnrolmentRequest(models.Model):
         return self.status
 
     @property
+    def entitlement_name(self):
+        return "INR jewellery purchase credit" if self.savings_mode_snapshot == "INR_CREDIT" else self.metal_grade.display_name
+
+    @property
+    def independent_terms(self):
+        if self.request_schema_version != 2:
+            return ()
+        from .enrolment_contracts import policy_description
+        return policy_description(self.configuration_snapshot)
+
+    @property
     def effective_status_label(self):
         return self.Status(self.effective_status).label
 
     def clean(self):
         super().clean()
         errors = {}
+        if self.request_schema_version == 2:
+            from .enrolment_contracts import validate_request_terms
+            validate_request_terms(self)
+            if self._state.adding:
+                from .plan_publication import require_configured_offer
+                require_configured_offer(self.plan)
+        elif self.configuration_snapshot_id and self.configuration_snapshot.policy_schema_version == 2:
+            raise ValidationError("Independent offers require versioned request terms.")
         if self.metal_grade_id and self.plan_id:
             if self.metal_grade.metal not in {
                 SchemeAccount.SavingsMode.GOLD,
@@ -730,6 +1327,419 @@ class PaymentChannel(models.TextChoices):
     RAZORPAY = "RAZORPAY", "Razorpay online"
     IN_STORE_CASH = "IN_STORE_CASH", "In-store cash"
     MOCK = "MOCK", "Mock payment"
+
+
+class SchemeInstalmentPeriod(models.Model):
+    """Frozen scheduled windows, not proof of payment, eligibility or liability."""
+
+    scheme_account = models.ForeignKey(SchemeAccount, on_delete=models.PROTECT, related_name="instalment_periods")
+    number = models.PositiveIntegerField()
+    starts_on = models.DateField()
+    ends_before = models.DateField(help_text="Exclusive end in Asia/Kolkata; the next period starts on this date.")
+    amount = models.DecimalField(max_digits=14, decimal_places=2)
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    actor_label = models.CharField(max_length=254)
+    reason = models.TextField()
+
+    class Meta:
+        ordering = ["scheme_account_id", "number"]
+        constraints = [
+            models.UniqueConstraint(fields=["scheme_account", "number"], name="inst_period_account_number"),
+            models.UniqueConstraint(fields=["scheme_account", "starts_on"], name="inst_period_account_start"),
+            models.CheckConstraint(condition=models.Q(number__gt=0, amount__gt=0, ends_before__gt=models.F("starts_on")), name="inst_period_valid_window"),
+            models.CheckConstraint(condition=~models.Q(actor_label="") & ~models.Q(reason=""), name="inst_period_evidence_required"),
+        ]
+
+    def clean(self):
+        super().clean()
+        if self.scheme_account_id:
+            from .instalments import effective_account_windows
+            windows = effective_account_windows(self.scheme_account)
+            if not self.number or not 1 <= self.number <= len(windows):
+                raise ValidationError("The period number is outside the agreed schedule.")
+            expected = windows[self.number - 1]
+            if (self.starts_on, self.ends_before, self.amount) != (expected.starts_on, expected.ends_before, expected.amount):
+                raise ValidationError("Period dates and amount must match the recorded agreement.")
+
+    def save(self, *args, **kwargs):
+        if self.pk and type(self).objects.filter(pk=self.pk).exists():
+            raise ValidationError("Scheduled periods are immutable; corrections require an explicit workflow.")
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Scheduled periods cannot be deleted.")
+
+
+class InstalmentReservation(models.Model):
+    """Exclusive period claim. State is a projection of append-only decisions."""
+
+    class State(models.TextChoices):
+        RESERVED = "RESERVED", "Reserved"
+        ORDERING = "ORDERING", "Provider order request started"
+        AWAITING = "AWAITING", "Verified payment awaiting timing evidence"
+        QUALIFIED = "QUALIFIED", "Payment qualified"
+        REVIEW = "REVIEW", "Timing review required"
+        REVERSED = "REVERSED", "Cash entry reversed"
+        RELEASED = "RELEASED", "Provider-reconciled release"
+        RELEASED_REVIEW = "RELEASED_REVIEW", "Late capture after release"
+
+    period = models.ForeignKey(SchemeInstalmentPeriod, on_delete=models.PROTECT, related_name="reservations")
+    contribution = models.OneToOneField("Contribution", on_delete=models.PROTECT, related_name="instalment_reservation")
+    reserved_at = models.DateTimeField()
+    expires_at = models.DateTimeField(help_text="Checkout deadline, not permission to release the period claim.")
+    state = models.CharField(max_length=20, choices=State.choices, default=State.RESERVED)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["period"], condition=~models.Q(state__in=["REVERSED", "RELEASED", "RELEASED_REVIEW"]), name="inst_one_occupied_period"),
+            models.CheckConstraint(condition=models.Q(state__in=["RESERVED", "ORDERING", "AWAITING", "QUALIFIED", "REVIEW", "REVERSED", "RELEASED", "RELEASED_REVIEW"]), name="inst_reservation_state_valid"),
+            models.CheckConstraint(condition=models.Q(expires_at__gt=models.F("reserved_at")), name="inst_reservation_time_valid"),
+        ]
+
+    def clean(self):
+        super().clean()
+        if self.period_id and self.contribution_id:
+            if (self.period.scheme_account_id, self.period.amount) != (self.contribution.scheme_account_id, self.contribution.amount):
+                raise ValidationError("The reservation must match the agreement and scheduled amount.")
+
+    def save(self, *args, **kwargs):
+        if self.pk and type(self).objects.filter(pk=self.pk).exists():
+            raise ValidationError("Reservation transitions require the instalment service and decision evidence.")
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Instalment reservations cannot be deleted.")
+
+
+class InstalmentPaymentDecision(models.Model):
+    """Qualification/correction evidence; never an additional money or metal entry."""
+
+    reservation = models.ForeignKey(InstalmentReservation, on_delete=models.PROTECT, related_name="decisions")
+    sequence = models.PositiveIntegerField()
+    state = models.CharField(max_length=20, choices=InstalmentReservation.State.choices)
+    reason_code = models.CharField(max_length=40)
+    request_token = models.UUIDField(null=True, blank=True, unique=True, editable=False)
+    actor_label = models.CharField(max_length=254)
+    created_at = models.DateTimeField(auto_now_add=True)
+    earliest_at = models.DateTimeField(null=True, blank=True)
+    latest_at = models.DateTimeField(null=True, blank=True)
+    webhook_event = models.ForeignKey("PaymentWebhookEvent", on_delete=models.PROTECT, null=True, blank=True)
+    cash_receipt = models.ForeignKey("InStoreCashReceipt", on_delete=models.PROTECT, null=True, blank=True)
+    cash_reversal = models.ForeignKey("InStoreCashContributionReversal", on_delete=models.PROTECT, null=True, blank=True)
+    reconciliation_audit = models.ForeignKey("AuditEvent", on_delete=models.PROTECT, null=True, blank=True)
+    owner_review = models.OneToOneField("InstalmentReview", on_delete=models.PROTECT, null=True, blank=True, related_name="qualification_decision")
+    refund_order_closure = models.OneToOneField("RefundedPaymentOrderClosure", on_delete=models.PROTECT, null=True, blank=True, related_name="release_decision")
+
+    class Meta:
+        ordering = ["reservation_id", "sequence"]
+        constraints = [
+            models.CheckConstraint(condition=models.Q(request_token__isnull=True) | models.Q(state="ORDERING"), name="inst_request_token_intent_only"),
+            models.UniqueConstraint(fields=["reservation", "sequence"], name="inst_decision_sequence_unique"),
+            models.UniqueConstraint(fields=["reservation", "webhook_event"], name="inst_decision_webhook_unique"),
+            models.UniqueConstraint(fields=["reservation", "cash_receipt"], name="inst_decision_cash_unique"),
+            models.UniqueConstraint(fields=["reservation", "cash_reversal"], name="inst_decision_reversal_unique"),
+            models.UniqueConstraint(fields=["reservation", "reconciliation_audit"], name="inst_decision_release_unique"),
+            models.CheckConstraint(condition=models.Q(sequence__gt=0) & ~models.Q(reason_code="") & ~models.Q(actor_label=""), name="inst_decision_evidence_required"),
+            models.CheckConstraint(condition=(models.Q(refund_order_closure__isnull=True) & ((models.Q(owner_review__isnull=True) & (
+                models.Q(state="RESERVED", sequence=1, webhook_event__isnull=True, cash_receipt__isnull=True, cash_reversal__isnull=True, reconciliation_audit__isnull=True)
+                | models.Q(state="RESERVED", sequence__gt=1, reason_code__in=["PROVIDER_ORDER_RECORDED", "PROVIDER_ORDER_RECOVERED"], webhook_event__isnull=True, cash_receipt__isnull=True, cash_reversal__isnull=True, reconciliation_audit__isnull=True)
+                | models.Q(state="ORDERING", webhook_event__isnull=True, cash_receipt__isnull=True, cash_reversal__isnull=True, reconciliation_audit__isnull=True)
+                | models.Q(state="AWAITING", webhook_event__isnull=True, cash_receipt__isnull=True, cash_reversal__isnull=True, reconciliation_audit__isnull=True)
+                | (models.Q(state__in=["QUALIFIED", "REVIEW"], cash_reversal__isnull=True, reconciliation_audit__isnull=True) & (
+                    models.Q(webhook_event__isnull=False, cash_receipt__isnull=True)
+                    | models.Q(webhook_event__isnull=True, cash_receipt__isnull=False)))
+                | models.Q(state="REVERSED", cash_reversal__isnull=False, cash_receipt__isnull=True, webhook_event__isnull=True, reconciliation_audit__isnull=True)
+                | models.Q(state="RELEASED", reconciliation_audit__isnull=False, cash_reversal__isnull=True, cash_receipt__isnull=True, webhook_event__isnull=True)
+                | models.Q(state="RELEASED_REVIEW", reconciliation_audit__isnull=True, cash_reversal__isnull=True, cash_receipt__isnull=True, webhook_event__isnull=False)
+            )) | models.Q(state="QUALIFIED", reason_code="OWNER_VERIFIED_TIMING", owner_review__isnull=False,
+                webhook_event__isnull=True, cash_receipt__isnull=True, cash_reversal__isnull=True,
+                reconciliation_audit__isnull=True))) | models.Q(state="RELEASED", reason_code="FULL_REFUND_ORDER_RECONCILED",
+                refund_order_closure__isnull=False, owner_review__isnull=True, webhook_event__isnull=True,
+                cash_receipt__isnull=True, cash_reversal__isnull=True, reconciliation_audit__isnull=True), name="inst_decision_source_valid"),
+            models.CheckConstraint(condition=(
+                ~models.Q(state="QUALIFIED")
+                | models.Q(earliest_at__isnull=False, latest_at__isnull=False, latest_at__gte=models.F("earliest_at"))
+            ), name="inst_qualified_time_required"),
+        ]
+
+    def save(self, *args, **kwargs):
+        if self.pk and type(self).objects.filter(pk=self.pk).exists():
+            raise ValidationError("Instalment payment decisions are append-only.")
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Instalment payment decisions cannot be deleted.")
+
+
+class OptionalPaymentOrderRequest(models.Model):
+    """Durable optional-payment intent, independent of instalment obligations."""
+    contribution = models.OneToOneField("Contribution", on_delete=models.PROTECT, related_name="optional_order_request")
+    request_token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    amount_subunits = models.PositiveBigIntegerField()
+    checkout_expires_at = models.DateTimeField()
+    scheme_rate = models.ForeignKey("SchemeRate", null=True, blank=True, on_delete=models.PROTECT)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.CheckConstraint(condition=models.Q(amount_subunits__gte=100), name="optional_order_amount_positive")]
+
+    def clean(self):
+        super().clean()
+        from .agreement_contracts import validate_independent_account_terms
+        c = self.contribution
+        terms = validate_independent_account_terms(c.scheme_account)
+        if (terms.policy.obligation != "OPTIONAL" or c.payment_gateway != "razorpay"
+                or c.payment_channel != "RAZORPAY" or c.gateway_mode != "live"
+                or self.amount_subunits != c.amount * 100
+                or self.checkout_expires_at != c.checkout_expires_at or self.scheme_rate_id != c.scheme_rate_id):
+            raise ValidationError("Optional order intent must match its frozen Live contribution.")
+
+    def save(self, *args, **kwargs):
+        if self.pk and type(self).objects.filter(pk=self.pk).exists():
+            raise ValidationError("Optional order requests are immutable.")
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Optional order requests cannot be deleted.")
+
+
+class OptionalPaymentOrderBinding(models.Model):
+    """Append-only response/recovery identity; never proof of payment or refund."""
+    request = models.OneToOneField(OptionalPaymentOrderRequest, on_delete=models.PROTECT, related_name="binding")
+    gateway_order_id = models.CharField(max_length=120, unique=True)
+    recovered = models.BooleanField(default=False)
+    provider_created_at = models.DateTimeField(null=True, blank=True)
+    provider_status = models.CharField(max_length=12, blank=True)
+    observed_at = models.DateTimeField(default=timezone.now)
+    actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True)
+    actor_label = models.CharField(max_length=254)
+    reason = models.TextField(max_length=2000)
+    evidence_reference = models.CharField(max_length=254, blank=True)
+    idempotency_key = models.UUIDField(unique=True, default=uuid.uuid4)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(condition=~models.Q(gateway_order_id="") & ~models.Q(actor_label="")
+                & ~models.Q(reason=""), name="optional_binding_evidence"),
+            models.CheckConstraint(condition=(models.Q(recovered=False, actor__isnull=True,
+                actor_label="system:razorpay-order", provider_created_at__isnull=True, provider_status="", evidence_reference="")
+                | (models.Q(recovered=True, actor__isnull=False, provider_created_at__isnull=False,
+                    provider_status__in=["created", "attempted", "paid"], observed_at__gte=models.F("provider_created_at"))
+                   & ~models.Q(evidence_reference=""))), name="optional_binding_source_shape"),
+        ]
+
+    def clean(self):
+        super().clean()
+        from .payments import RAZORPAY_ID_PATTERN
+        intent = self.request
+        intent.full_clean()
+        if (not self.gateway_order_id.startswith("order_") or not RAZORPAY_ID_PATTERN.fullmatch(self.gateway_order_id)
+                or self.gateway_order_id != intent.contribution.gateway_order_id
+                or self.observed_at < intent.created_at
+                or (self.recovered and (self.provider_created_at is None
+                    or self.provider_created_at < intent.created_at.replace(microsecond=0)))):
+            raise ValidationError("Optional order binding must retain its original request and provider identity.")
+
+    def save(self, *args, **kwargs):
+        if self.pk and type(self).objects.filter(pk=self.pk).exists():
+            raise ValidationError("Optional order bindings are immutable.")
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Optional order bindings cannot be deleted.")
+
+
+class InstalmentOrderRecovery(models.Model):
+    """Authenticated provider identity recovery, NOT payment verification or release."""
+
+    request_decision = models.OneToOneField(InstalmentPaymentDecision, on_delete=models.PROTECT, related_name="request_recovery")
+    decision = models.OneToOneField(InstalmentPaymentDecision, on_delete=models.PROTECT, related_name="order_recovery")
+    gateway_order_id = models.CharField(max_length=120, unique=True)
+    receipt = models.CharField(max_length=40)
+    provider_status = models.CharField(max_length=12, choices=[("created", "Created"), ("attempted", "Attempted"), ("paid", "Paid")])
+    provider_created_at = models.DateTimeField()
+    amount_subunits = models.PositiveBigIntegerField()
+    currency = models.CharField(max_length=3, default="INR")
+    observed_at = models.DateTimeField()
+    actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    actor_label = models.CharField(max_length=254)
+    reason = models.TextField(max_length=2000)
+    evidence_reference = models.CharField(max_length=254)
+    idempotency_key = models.UUIDField(unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(condition=models.Q(amount_subunits__gte=100, currency="INR",
+                provider_status__in=["created", "attempted", "paid"], observed_at__gte=models.F("provider_created_at")), name="inst_order_recovery_facts"),
+            models.CheckConstraint(condition=~models.Q(actor_label="") & ~models.Q(reason="")
+                & ~models.Q(evidence_reference="") & ~models.Q(receipt="") & ~models.Q(gateway_order_id=""), name="inst_order_recovery_evidence"),
+        ]
+
+    def clean(self):
+        super().clean()
+        if self.request_decision_id and self.decision_id:
+            source, result = self.request_decision, self.decision
+            contribution = source.reservation.contribution
+            if (source.state != "ORDERING" or source.request_token is None
+                or result.state != "RESERVED" or result.reason_code != "PROVIDER_ORDER_RECOVERED"
+                or result.reservation_id != source.reservation_id or result.sequence != source.sequence + 1
+                or self.receipt != f"inst_{source.request_token.hex}"
+                or self.gateway_order_id != contribution.gateway_order_id
+                or self.amount_subunits != contribution.amount * 100
+                or contribution.gateway_mode != "live" or contribution.payment_gateway != "razorpay"
+                or self.provider_created_at < source.created_at.replace(microsecond=0)):
+                raise ValidationError("Recovered order identity must match its original durable Live request and decision.")
+
+    def save(self, *args, **kwargs):
+        if self.pk and type(self).objects.filter(pk=self.pk).exists():
+            raise ValidationError("Order recovery evidence is append-only.")
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Order recovery evidence cannot be deleted.")
+
+
+class InstalmentReview(models.Model):
+    """Append-only owner investigation, never an override of money or agreed terms."""
+
+    class Action(models.TextChoices):
+        NOTE = "NOTE", "Record investigation note"
+        OUTAGE_HOLD = "OUTAGE_HOLD", "Record outage requiring agreement review"
+        ACCEPT_TIMING = "ACCEPT_TIMING", "Accept existing verified timing evidence"
+
+    period = models.ForeignKey(SchemeInstalmentPeriod, on_delete=models.PROTECT, related_name="reviews")
+    reservation = models.ForeignKey(InstalmentReservation, on_delete=models.PROTECT, null=True, blank=True, related_name="reviews")
+    source_decision = models.ForeignKey(InstalmentPaymentDecision, on_delete=models.PROTECT, null=True, blank=True, related_name="reviews")
+    sequence = models.PositiveIntegerField()
+    action = models.CharField(max_length=20, choices=Action.choices)
+    actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    actor_label = models.CharField(max_length=254)
+    reason = models.TextField(max_length=2000)
+    evidence_reference = models.CharField(max_length=254, help_text="Internal incident/support reference; never a password, token or raw payload.")
+    idempotency_key = models.UUIDField(unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["period_id", "sequence"]
+        constraints = [
+            models.UniqueConstraint(fields=["period", "sequence"], name="inst_review_sequence_unique"),
+            models.CheckConstraint(condition=models.Q(sequence__gt=0) & ~models.Q(actor_label="") & ~models.Q(reason="") & ~models.Q(evidence_reference=""), name="inst_review_evidence_required"),
+            models.CheckConstraint(condition=(
+                models.Q(action="ACCEPT_TIMING", reservation__isnull=False, source_decision__isnull=False)
+                | models.Q(action="NOTE", source_decision__isnull=True)
+                | models.Q(action="OUTAGE_HOLD", reservation__isnull=True, source_decision__isnull=True)
+            ), name="inst_review_action_shape"),
+        ]
+
+    def clean(self):
+        super().clean()
+        if self.reservation_id and self.reservation.period_id != self.period_id:
+            raise ValidationError("The review must belong to the reservation's recorded period.")
+        if self.source_decision_id and self.source_decision.reservation_id != self.reservation_id:
+            raise ValidationError("Timing evidence must belong to the reviewed reservation.")
+
+    def save(self, *args, **kwargs):
+        if self.pk and type(self).objects.filter(pk=self.pk).exists():
+            raise ValidationError("Instalment reviews are append-only; record a follow-up instead.")
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Instalment reviews cannot be deleted.")
+
+
+class InstalmentOutageResolution(models.Model):
+    """Explicit acknowledged amendment/closure; the original hold and terms survive."""
+
+    class Outcome(models.TextChoices):
+        COMPENSATE = "COMPENSATE", "Append one compensating month on the agreed period basis"
+        RESTORED = "RESTORED", "Restored within the original payable window"
+        QUALIFIED = "QUALIFIED", "Original period already has a qualifying payment"
+
+    hold = models.OneToOneField(InstalmentReview, on_delete=models.PROTECT, related_name="outage_resolution")
+    period = models.ForeignKey(SchemeInstalmentPeriod, on_delete=models.PROTECT, related_name="outage_resolutions")
+    scheme_account = models.ForeignKey(SchemeAccount, on_delete=models.PROTECT, related_name="outage_resolutions")
+    outcome = models.CharField(max_length=20, choices=Outcome.choices)
+    policy_version = models.CharField(max_length=30, default="OUTAGE_COMPENSATION_V1", editable=False)
+    compensation_number = models.PositiveSmallIntegerField(null=True, blank=True)
+    compensation_period = models.OneToOneField(SchemeInstalmentPeriod, on_delete=models.PROTECT,
+        null=True, blank=True, related_name="outage_amendment")
+    qualification_decision = models.ForeignKey(InstalmentPaymentDecision, on_delete=models.PROTECT,
+        null=True, blank=True, related_name="outage_resolutions")
+    incident_started_at = models.DateTimeField()
+    service_restored_at = models.DateTimeField()
+    customer_acknowledged_at = models.DateTimeField()
+    acknowledgement_reference = models.CharField(max_length=254)
+    actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    actor_label = models.CharField(max_length=254)
+    reason = models.TextField(max_length=2000)
+    evidence_reference = models.CharField(max_length=254)
+    idempotency_key = models.UUIDField(unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["scheme_account_id", "created_at", "pk"]
+        constraints = [
+            models.UniqueConstraint(fields=["scheme_account", "compensation_number"], name="outage_account_comp_unique"),
+            models.UniqueConstraint(fields=["period"], condition=models.Q(outcome="COMPENSATE"), name="outage_period_comp_unique"),
+            models.CheckConstraint(condition=(
+                models.Q(outcome="COMPENSATE", compensation_number__isnull=False,
+                    compensation_number__gte=1, compensation_number__lte=3, compensation_period__isnull=False)
+                | models.Q(outcome__in=["RESTORED", "QUALIFIED"], compensation_number__isnull=True, compensation_period__isnull=True)
+            ), name="outage_resolution_shape"),
+            models.CheckConstraint(condition=(
+                models.Q(outcome="QUALIFIED", qualification_decision__isnull=False)
+                | (~models.Q(outcome="QUALIFIED") & models.Q(qualification_decision__isnull=True))
+            ), name="outage_resolution_proof"),
+            models.CheckConstraint(condition=models.Q(policy_version="OUTAGE_COMPENSATION_V1")
+                & ~models.Q(actor_label="") & ~models.Q(reason="") & ~models.Q(evidence_reference="")
+                & ~models.Q(acknowledgement_reference=""), name="outage_resolution_evidence"),
+            models.CheckConstraint(condition=models.Q(service_restored_at__gt=models.F("incident_started_at"),
+                customer_acknowledged_at__gte=models.F("service_restored_at")), name="outage_resolution_time_order"),
+        ]
+
+    def clean(self):
+        super().clean()
+        if self.hold_id and (self.hold.action != "OUTAGE_HOLD" or self.hold.period_id != self.period_id):
+            raise ValidationError("Resolve an outage hold for this exact affected period.")
+        if any(not value.strip() for value in (self.actor_label, self.reason, self.evidence_reference, self.acknowledgement_reference)):
+            raise ValidationError("Outage resolution evidence must not be blank.")
+        if self.hold_id and self.customer_acknowledged_at and self.customer_acknowledged_at < self.hold.created_at:
+            raise ValidationError("Customer acknowledgement must follow the recorded outage review.")
+        if self.created_at and self.customer_acknowledged_at and self.customer_acknowledged_at > self.created_at:
+            raise ValidationError("Customer acknowledgement cannot postdate the recorded resolution.")
+        if self.period_id and self.period.scheme_account_id != self.scheme_account_id:
+            raise ValidationError("Outage evidence must belong to the same agreement.")
+        if self.qualification_decision_id and (
+            self.qualification_decision.state != "QUALIFIED"
+            or self.qualification_decision.reservation.period_id != self.period_id
+        ):
+            raise ValidationError("Closure must link existing qualification evidence for this affected period.")
+        if self.compensation_period_id:
+            from .instalments import compensation_window
+            window = compensation_window(self.scheme_account, self.compensation_number)
+            p = self.compensation_period
+            if (p.scheme_account_id, p.number, p.starts_on, p.ends_before, p.amount) != (
+                self.scheme_account_id, window.number, window.starts_on, window.ends_before, window.amount
+            ):
+                raise ValidationError("Compensation must append the next window on the original agreed period basis.")
+
+    def save(self, *args, **kwargs):
+        if self.pk and type(self).objects.filter(pk=self.pk).exists():
+            raise ValidationError("Outage resolutions are immutable acknowledged evidence.")
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Outage resolutions cannot be deleted.")
 
 
 class Contribution(models.Model):
@@ -948,6 +1958,352 @@ class Contribution(models.Model):
         return f"{self.scheme_account.scheme_number} — ₹{self.amount} — {self.status}"
 
 
+class InrPaymentCaptureEvidence(models.Model):
+    """Minimal authenticated API observation; not signed provider capture timing."""
+    contribution = models.OneToOneField(Contribution, on_delete=models.PROTECT, related_name="inr_api_capture")
+    payment_id = models.CharField(max_length=120, unique=True)
+    order_id = models.CharField(max_length=120)
+    amount_subunits = models.PositiveBigIntegerField()
+    gateway_mode = models.CharField(max_length=10, default="live")
+    currency = models.CharField(max_length=3, default="INR")
+    status = models.CharField(max_length=20, default="captured")
+    captured = models.BooleanField(default=True)
+    observed_at = models.DateTimeField()
+    source = models.CharField(max_length=20, choices=[("CALLBACK", "Verified callback"), ("OWNER_RECOVERY", "Owner API recovery")])
+    recovery_event = models.ForeignKey("PaymentWebhookEvent", null=True, blank=True, on_delete=models.PROTECT)
+    actor = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT)
+    actor_label = models.CharField(max_length=254)
+    reason = models.TextField()
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(condition=models.Q(amount_subunits__gte=100, gateway_mode="live", currency="INR", status="captured", captured=True), name="inr_api_capture_valid"),
+            models.CheckConstraint(condition=(models.Q(source="CALLBACK", actor__isnull=True, recovery_event__isnull=True, actor_label="system:razorpay-callback")
+                | models.Q(source="OWNER_RECOVERY", actor__isnull=False, recovery_event__isnull=False)), name="inr_api_actor_shape"),
+            models.CheckConstraint(condition=~models.Q(payment_id="") & ~models.Q(order_id="") & ~models.Q(actor_label="") & ~models.Q(reason=""), name="inr_api_evidence_required"),
+        ]
+
+    def clean(self):
+        super().clean()
+        from .inr_selectors import validate_api_capture
+        validate_api_capture(self)
+
+    def save(self, *args, **kwargs):
+        if self.pk and type(self).objects.filter(pk=self.pk).exists():
+            raise ValidationError("API capture evidence is immutable.")
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("API capture evidence must be retained.")
+
+
+class InrPrincipalReceipt(models.Model):
+    """Verified purchase-credit principal, never legacy CASH or a metal allocation."""
+    scheme_account = models.ForeignKey(SchemeAccount, on_delete=models.PROTECT, related_name="inr_principal_receipts")
+    configuration = models.ForeignKey(SchemePlanConfiguration, on_delete=models.PROTECT)
+    contribution = models.OneToOneField(Contribution, on_delete=models.PROTECT, related_name="inr_principal_receipt")
+    amount = models.DecimalField(max_digits=14, decimal_places=2)
+    source_reference = models.CharField(max_length=120)
+    verified_at = models.DateTimeField()
+    cash_receipt = models.OneToOneField("InStoreCashReceipt", null=True, blank=True, on_delete=models.PROTECT)
+    webhook_event = models.OneToOneField("PaymentWebhookEvent", null=True, blank=True, on_delete=models.PROTECT)
+    api_capture = models.OneToOneField(InrPaymentCaptureEvidence, null=True, blank=True, on_delete=models.PROTECT)
+    recorded_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT)
+    actor_label = models.CharField(max_length=254)
+    reason = models.TextField()
+    idempotency_key = models.UUIDField(unique=True)
+    recorded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(condition=models.Q(amount__gt=0, amount__lte=Decimal("999999999999.99")), name="inr_principal_amount_valid"),
+            models.CheckConstraint(condition=(models.Q(cash_receipt__isnull=False, webhook_event__isnull=True, api_capture__isnull=True)
+                | models.Q(cash_receipt__isnull=True, webhook_event__isnull=False, api_capture__isnull=True)
+                | models.Q(cash_receipt__isnull=True, webhook_event__isnull=True, api_capture__isnull=False)), name="inr_principal_one_source"),
+            models.CheckConstraint(condition=~models.Q(source_reference="") & ~models.Q(actor_label="") & ~models.Q(reason=""), name="inr_principal_evidence_required"),
+            models.CheckConstraint(condition=(models.Q(recorded_by__isnull=False)
+                | models.Q(cash_receipt__isnull=True, webhook_event__isnull=False, api_capture__isnull=True,
+                           actor_label="system:razorpay-capture")
+                | models.Q(cash_receipt__isnull=True, webhook_event__isnull=True, api_capture__isnull=False,
+                           actor_label="system:razorpay-callback")), name="inr_principal_actor_shape"),
+        ]
+
+    def clean(self):
+        super().clean()
+        from .inr_selectors import validate_principal_receipt
+        validate_principal_receipt(self)
+
+    def save(self, *args, **kwargs):
+        if self.pk and type(self).objects.filter(pk=self.pk).exists():
+            raise ValidationError("INR principal receipts are immutable; retain correction evidence.")
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("INR principal receipts must be retained.")
+
+
+class InrPrincipalCorrection(models.Model):
+    """Full erroneous cash-receipt correction, not a refund or a partial withdrawal."""
+    receipt = models.OneToOneField(InrPrincipalReceipt, on_delete=models.PROTECT, related_name="correction")
+    cash_reversal = models.OneToOneField("InStoreCashContributionReversal", on_delete=models.PROTECT)
+    recorded_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    actor_label = models.CharField(max_length=254)
+    reason = models.TextField()
+    idempotency_key = models.UUIDField(unique=True)
+    recorded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.CheckConstraint(condition=~models.Q(actor_label="") & ~models.Q(reason=""), name="inr_correction_evidence_required")]
+
+    def clean(self):
+        super().clean()
+        from .inr_selectors import validate_principal_correction
+        validate_principal_correction(self)
+
+    def save(self, *args, **kwargs):
+        if self.pk and type(self).objects.filter(pk=self.pk).exists():
+            raise ValidationError("INR principal corrections are append-only.")
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("INR principal corrections must be retained.")
+
+
+class InrSettlementProposal(models.Model):
+    """Immutable full-principal terms; retirement is a checked service projection."""
+    scheme_account = models.ForeignKey(SchemeAccount, on_delete=models.PROTECT, related_name="inr_settlements")
+    closure = models.ForeignKey(SchemeClosureRequest, on_delete=models.PROTECT, related_name="inr_proposals")
+    previous = models.OneToOneField("self", null=True, blank=True, on_delete=models.PROTECT, related_name="replacement")
+    retired = models.BooleanField(default=False, editable=False)
+    principal = models.DecimalField(max_digits=14, decimal_places=2)
+    invoice_payable = models.DecimalField(max_digits=14, decimal_places=2)
+    principal_to_invoice = models.DecimalField(max_digits=14, decimal_places=2)
+    principal_refund = models.DecimalField(max_digits=14, decimal_places=2)
+    separate_top_up = models.DecimalField(max_digits=14, decimal_places=2)
+    invoice_reference = models.CharField(max_length=120, unique=True, null=True, blank=True)
+    authorization_reference = models.CharField(max_length=254)
+    basis = models.CharField(max_length=10, choices=[("NORMAL", "Policy eligible"), ("EARLY", "Authorized early exit")])
+    evidence = models.JSONField()
+    evidence_digest = models.CharField(max_length=64)
+    recorded_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    actor_label = models.CharField(max_length=254)
+    reason = models.TextField()
+    idempotency_key = models.UUIDField(unique=True)
+    recorded_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["scheme_account"], condition=models.Q(retired=False), name="inr_one_current_disposition"),
+            models.UniqueConstraint(fields=["scheme_account"], condition=models.Q(previous__isnull=True), name="inr_one_disposition_root"),
+            models.CheckConstraint(condition=models.Q(principal__gt=0, principal__lte=Decimal("999999999999.99"),
+                invoice_payable__gte=0, invoice_payable__lte=Decimal("999999999999.99"),
+                principal_to_invoice__gte=0, principal_refund__gte=0, separate_top_up__gte=0), name="inr_settlement_amount_bounds"),
+            models.CheckConstraint(condition=models.Q(principal=models.F("principal_to_invoice") + models.F("principal_refund"),
+                invoice_payable=models.F("principal_to_invoice") + models.F("separate_top_up"))
+                & (models.Q(principal_refund=0) | models.Q(separate_top_up=0)), name="inr_settlement_conserves_value"),
+            models.CheckConstraint(condition=(models.Q(invoice_payable=0, invoice_reference__isnull=True)
+                | (models.Q(invoice_payable__gt=0, invoice_reference__isnull=False) & ~models.Q(invoice_reference=""))), name="inr_settlement_invoice_shape"),
+            models.CheckConstraint(condition=models.Q(basis__in=["NORMAL", "EARLY"]) & ~models.Q(authorization_reference="")
+                & ~models.Q(actor_label="") & ~models.Q(reason="") & ~models.Q(evidence_digest=""), name="inr_settlement_proof_required"),
+        ]
+
+    def clean(self):
+        super().clean()
+        from .inr_settlement_selectors import validate_inr_proposal
+        validate_inr_proposal(self)
+
+    def save(self, *args, **kwargs):
+        if self.pk and type(self).objects.filter(pk=self.pk).exists():
+            raise ValidationError("INR settlement proposals are immutable; corrections require separate review.")
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("INR settlement evidence must be retained.")
+
+
+class InrSettlementFulfilment(models.Model):
+    """Actual manual discharge of one exact leg; never a promise to pay later."""
+    proposal = models.ForeignKey(InrSettlementProposal, on_delete=models.PROTECT, related_name="fulfilments")
+    kind = models.CharField(max_length=12, choices=[("JEWELLERY", "Jewellery handed over"), ("REFUND", "Principal returned")])
+    receipt = models.ForeignKey(InrPrincipalReceipt, null=True, blank=True, on_delete=models.PROTECT)
+    amount = models.DecimalField(max_digits=14, decimal_places=2)
+    method = models.CharField(max_length=24, choices=[("SHOWROOM", "Showroom jewellery handover"),
+        ("CASH_RETURN", "Original cash payment returned"), ("PROVIDER_DASHBOARD", "Manual original-source provider refund")])
+    external_reference = models.CharField(max_length=120)
+    customer_receipt_reference = models.CharField(max_length=254)
+    top_up_reference = models.CharField(max_length=120, blank=True)
+    fulfilled_at = models.DateTimeField()
+    recorded_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    actor_label = models.CharField(max_length=254)
+    reason = models.TextField()
+    idempotency_key = models.UUIDField(unique=True)
+    recorded_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["proposal", "receipt"], name="inr_refund_leg_once_per_proposal"),
+            models.UniqueConstraint(fields=["proposal"], condition=models.Q(kind="JEWELLERY"), name="inr_one_jewellery_fulfilment"),
+            models.UniqueConstraint(fields=["method", "external_reference"], name="inr_fulfilment_reference_unique"),
+            models.CheckConstraint(condition=models.Q(amount__gt=0, amount__lte=Decimal("999999999999.99")), name="inr_fulfilment_amount_valid"),
+            models.CheckConstraint(condition=(models.Q(kind="JEWELLERY", receipt__isnull=True, method="SHOWROOM")
+                | models.Q(kind="REFUND", receipt__isnull=False, method__in=["CASH_RETURN", "PROVIDER_DASHBOARD"], top_up_reference="")), name="inr_fulfilment_source_shape"),
+            models.CheckConstraint(condition=~models.Q(external_reference="") & ~models.Q(customer_receipt_reference="")
+                & ~models.Q(actor_label="") & ~models.Q(reason=""), name="inr_fulfilment_evidence_required"),
+        ]
+
+    def clean(self):
+        super().clean()
+        from .inr_settlement_selectors import validate_inr_fulfilment
+        validate_inr_fulfilment(self)
+
+    def save(self, *args, **kwargs):
+        if self.pk and type(self).objects.filter(pk=self.pk).exists():
+            raise ValidationError("INR fulfilment evidence is append-only.")
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("INR fulfilment evidence must be retained.")
+
+
+class InrSettlementCompletion(models.Model):
+    proposal = models.OneToOneField(InrSettlementProposal, on_delete=models.PROTECT, related_name="completion")
+    event = models.OneToOneField(SchemeClosureEvent, on_delete=models.PROTECT, related_name="inr_completion")
+
+    def clean(self):
+        super().clean()
+        from .inr_settlement_selectors import validate_inr_completion
+        validate_inr_completion(self)
+
+    def save(self, *args, **kwargs):
+        if self.pk and type(self).objects.filter(pk=self.pk).exists():
+            raise ValidationError("INR completion evidence is immutable.")
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("INR completion evidence must be retained.")
+
+
+class InrSettlementResolution(models.Model):
+    """Append-only retirement proof: unused proposal void or full physical return."""
+    proposal = models.OneToOneField(InrSettlementProposal, on_delete=models.PROTECT, related_name="resolution")
+    event = models.OneToOneField(SchemeClosureEvent, on_delete=models.PROTECT, related_name="inr_resolution")
+    kind = models.CharField(max_length=12, choices=[("VOID", "No fulfilment occurred"), ("FULL_RETURN", "All fulfilled portions returned")])
+    evidence = models.JSONField()
+    evidence_digest = models.CharField(max_length=64)
+
+    class Meta:
+        constraints = [models.CheckConstraint(condition=models.Q(kind__in=["VOID", "FULL_RETURN"])
+            & ~models.Q(evidence_digest=""), name="inr_resolution_proof_required")]
+
+    def save(self, *args, **kwargs):
+        if self.pk and type(self).objects.filter(pk=self.pk).exists():
+            raise ValidationError("INR resolution evidence is immutable.")
+        # Full proof includes child returns: the service validates it after inserting
+        # the complete set, in the same transaction, before retiring the proposal.
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("INR resolution evidence must be retained.")
+
+
+class InrFulfilmentReturn(models.Model):
+    resolution = models.ForeignKey(InrSettlementResolution, on_delete=models.PROTECT, related_name="returns")
+    fulfilment = models.OneToOneField(InrSettlementFulfilment, on_delete=models.PROTECT, related_name="physical_return")
+    amount = models.DecimalField(max_digits=14, decimal_places=2)
+    method = models.CharField(max_length=16, choices=[("GOODS_RETURN", "Jewellery returned"),
+        ("CASH_RECEIPT", "Refund money received back in cash"), ("BANK_CREDIT", "Refund money credited back")])
+    external_reference = models.CharField(max_length=120)
+    customer_confirmation = models.CharField(max_length=254)
+    invoice_correction_reference = models.CharField(max_length=120, blank=True)
+    top_up_refund_reference = models.CharField(max_length=120, blank=True)
+    returned_at = models.DateTimeField()
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(condition=models.Q(amount__gt=0, amount__lte=Decimal("999999999999.99")), name="inr_return_amount_valid"),
+            models.CheckConstraint(condition=models.Q(method__in=["GOODS_RETURN", "CASH_RECEIPT", "BANK_CREDIT"])
+                & ~models.Q(external_reference="") & ~models.Q(customer_confirmation=""), name="inr_return_evidence_required"),
+            models.UniqueConstraint(fields=["method", "external_reference"], name="inr_return_reference_unique"),
+        ]
+
+    def clean(self):
+        super().clean()
+        from .inr_correction_selectors import validate_inr_return
+        validate_inr_return(self)
+
+    def save(self, *args, **kwargs):
+        if self.pk and type(self).objects.filter(pk=self.pk).exists():
+            raise ValidationError("Physical return records are immutable.")
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Physical return evidence must be retained.")
+
+
+class SchemeBenefitAward(models.Model):
+    """Retained purchase benefit/right, not principal or invoice fulfilment."""
+    scheme_account = models.OneToOneField(SchemeAccount, on_delete=models.PROTECT, related_name="benefit_award")
+    configuration = models.ForeignKey(SchemePlanConfiguration, on_delete=models.PROTECT)
+    revision = models.ForeignKey(SchemePlanRevision, on_delete=models.PROTECT)
+    kind = models.CharField(max_length=24, choices=[("INR_PURCHASE_BONUS", "INR purchase bonus"),
+        ("VA_DISCOUNT", "Invoice VA discount right")])
+    qualifying_principal = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True)
+    amount = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True)
+    percentage = models.DecimalField(max_digits=5, decimal_places=2)
+    cap_inr = models.DecimalField(max_digits=14, decimal_places=2)
+    eligible_charge_definition = models.TextField(blank=True)
+    calculation_version = models.CharField(max_length=40)
+    rounding_rule = models.CharField(max_length=40)
+    evidence = models.JSONField()
+    evidence_digest = models.CharField(max_length=64)
+    recorded_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    actor_label = models.CharField(max_length=254)
+    reason = models.TextField()
+    idempotency_key = models.UUIDField(unique=True)
+    recorded_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(condition=(models.Q(kind="INR_PURCHASE_BONUS", qualifying_principal__isnull=False,
+                qualifying_principal__gt=0, qualifying_principal__lte=Decimal("999999999999.99"),
+                amount__isnull=False, amount__gte=0, amount__lte=models.F("cap_inr"), eligible_charge_definition="")
+                | (models.Q(kind="VA_DISCOUNT", qualifying_principal__isnull=True, amount__isnull=True)
+                   & ~models.Q(eligible_charge_definition=""))), name="benefit_award_shape_valid"),
+            models.CheckConstraint(condition=models.Q(percentage__gt=0, percentage__lte=100,
+                cap_inr__gt=0, cap_inr__lte=Decimal("999999999999.99")), name="benefit_award_parameters_valid"),
+            models.CheckConstraint(condition=~models.Q(actor_label="") & ~models.Q(reason="")
+                & ~models.Q(evidence_digest="") & ~models.Q(calculation_version="") & ~models.Q(rounding_rule=""),
+                name="benefit_award_evidence_required"),
+        ]
+
+    def clean(self):
+        super().clean()
+        from .benefit_award_selectors import validate_benefit_award
+        validate_benefit_award(self)
+
+    def save(self, *args, **kwargs):
+        if self.pk and type(self).objects.filter(pk=self.pk).exists():
+            raise ValidationError("Benefit awards are immutable; retain linked correction evidence.")
+        from .plan_policies import require_operational_configuration
+        from .benefit_award_selectors import benefit_award_evidence
+        require_operational_configuration(self.scheme_account.configuration_snapshot)
+        self.full_clean()
+        closure = (SchemeClosureRequest.objects.get(pk=self.evidence["closure"], scheme_account=self.scheme_account)
+            if self.evidence.get("closure") else None)
+        if self.evidence != benefit_award_evidence(self.scheme_account, closure=closure):
+            raise ValidationError("Benefit qualification changed; reload the locked award preview.")
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Benefit awards must be retained, not deleted.")
+
 class RazorpayCheckoutSubmission(models.Model):
     """A retained browser submission, including aliases from concurrent tabs."""
 
@@ -1010,6 +2366,158 @@ class RazorpayOrderRecovery(models.Model):
 
     def delete(self, *args, **kwargs):
         raise ValidationError("Order recovery evidence cannot be deleted.")
+
+
+class BenefitInvoiceFulfilment(models.Model):
+    """One actual invoice application, linked to recorded full principal handover."""
+    award = models.ForeignKey(SchemeBenefitAward, on_delete=models.PROTECT, related_name="invoice_fulfilments")
+    previous = models.OneToOneField("self", null=True, blank=True, on_delete=models.PROTECT, related_name="replacement")
+    reapplication_decision = models.OneToOneField("BenefitReapplicationDecision", null=True, blank=True,
+        on_delete=models.PROTECT, related_name="consumption")
+    inr_fulfilment = models.OneToOneField(InrSettlementFulfilment, null=True, blank=True, on_delete=models.PROTECT)
+    metal_settlement = models.OneToOneField(ConfiguredSettlement, null=True, blank=True, on_delete=models.PROTECT)
+    invoice_reference = models.CharField(max_length=120)
+    invoice_before_benefit = models.DecimalField(max_digits=14, decimal_places=2)
+    eligible_charges = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True)
+    benefit_amount = models.DecimalField(max_digits=14, decimal_places=2)
+    invoice_after_benefit = models.DecimalField(max_digits=14, decimal_places=2)
+    invoice_evidence_reference = models.CharField(max_length=254)
+    eligible_charge_reference = models.CharField(max_length=254, blank=True)
+    customer_receipt_reference = models.CharField(max_length=254)
+    fulfilled_at = models.DateTimeField()
+    evidence = models.JSONField()
+    evidence_digest = models.CharField(max_length=64)
+    recorded_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    actor_label = models.CharField(max_length=254)
+    reason = models.TextField()
+    idempotency_key = models.UUIDField(unique=True)
+    recorded_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(models.functions.Lower("invoice_reference"), name="benefit_invoice_once_ci"),
+            models.UniqueConstraint(fields=["award"], condition=models.Q(previous__isnull=True), name="benefit_invoice_one_root"),
+            models.CheckConstraint(condition=(models.Q(previous__isnull=True, reapplication_decision__isnull=True)
+                | models.Q(previous__isnull=False, reapplication_decision__isnull=False)), name="benefit_invoice_reapp_shape"),
+            models.CheckConstraint(condition=(models.Q(inr_fulfilment__isnull=False, metal_settlement__isnull=True)
+                | models.Q(inr_fulfilment__isnull=True, metal_settlement__isnull=False)), name="benefit_invoice_one_source"),
+            models.CheckConstraint(condition=models.Q(invoice_before_benefit__gt=0,
+                invoice_before_benefit__lte=Decimal("999999999999.99"), benefit_amount__gte=0,
+                invoice_after_benefit__gt=0, invoice_before_benefit=models.F("benefit_amount") + models.F("invoice_after_benefit"))
+                & (models.Q(eligible_charges__isnull=True, eligible_charge_reference="")
+                   | (models.Q(eligible_charges__isnull=False, eligible_charges__gte=0,
+                        eligible_charges__lte=models.F("invoice_before_benefit")) & ~models.Q(eligible_charge_reference=""))),
+                name="benefit_invoice_amount_shape"),
+            models.CheckConstraint(condition=~models.Q(invoice_reference="") & ~models.Q(invoice_evidence_reference="")
+                & ~models.Q(customer_receipt_reference="") & ~models.Q(evidence_digest="")
+                & ~models.Q(actor_label="") & ~models.Q(reason=""), name="benefit_invoice_evidence_required"),
+        ]
+
+    def clean(self):
+        super().clean()
+        from .benefit_fulfilment_selectors import validate_benefit_fulfilment
+        validate_benefit_fulfilment(self)
+
+    def save(self, *args, **kwargs):
+        if self.pk and type(self).objects.filter(pk=self.pk).exists():
+            raise ValidationError("Benefit invoice fulfilment is immutable.")
+        from .plan_policies import require_operational_configuration
+        from .benefit_fulfilment_selectors import validate_benefit_fulfilment
+        require_operational_configuration(self.award.scheme_account.configuration_snapshot)
+        self.full_clean()
+        validate_benefit_fulfilment(self, current=True)
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Benefit invoice fulfilment must be retained.")
+
+
+class BenefitInvoiceReversal(models.Model):
+    """Full linked invoice correction; never restores spendable benefit or principal."""
+    fulfilment = models.OneToOneField(BenefitInvoiceFulfilment, on_delete=models.PROTECT, related_name="reversal")
+    inr_return = models.OneToOneField(InrFulfilmentReturn, null=True, blank=True, on_delete=models.PROTECT)
+    metal_reversal = models.OneToOneField(ConfiguredSettlementReversal, null=True, blank=True, on_delete=models.PROTECT)
+    amount = models.DecimalField(max_digits=14, decimal_places=2)
+    invoice_correction_reference = models.CharField(max_length=120)
+    customer_confirmation = models.CharField(max_length=254)
+    returned_at = models.DateTimeField()
+    recorded_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    actor_label = models.CharField(max_length=254)
+    reason = models.TextField()
+    idempotency_key = models.UUIDField(unique=True)
+    recorded_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(condition=(models.Q(inr_return__isnull=False, metal_reversal__isnull=True)
+                | models.Q(inr_return__isnull=True, metal_reversal__isnull=False)), name="benefit_return_one_source"),
+            models.CheckConstraint(condition=models.Q(amount__gte=0, amount__lte=Decimal("999999999999.99"))
+                & ~models.Q(invoice_correction_reference="") & ~models.Q(customer_confirmation="")
+                & ~models.Q(actor_label="") & ~models.Q(reason=""), name="benefit_return_evidence_required"),
+        ]
+
+    def clean(self):
+        super().clean()
+        from .benefit_fulfilment_selectors import validate_benefit_reversal
+        validate_benefit_reversal(self, current=self._state.adding)
+
+    def save(self, *args, **kwargs):
+        if self.pk and type(self).objects.filter(pk=self.pk).exists():
+            raise ValidationError("Benefit reversals are append-only.")
+        from .plan_policies import require_operational_configuration
+        require_operational_configuration(self.fulfilment.award.scheme_account.configuration_snapshot)
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Benefit reversal evidence must be retained.")
+
+
+class BenefitReapplicationDecision(models.Model):
+    """Append-only review of a returned right; never another invoice consumption."""
+    reversal = models.ForeignKey(BenefitInvoiceReversal, on_delete=models.PROTECT, related_name="reapplication_decisions")
+    previous = models.OneToOneField("self", null=True, blank=True, on_delete=models.PROTECT, related_name="successor")
+    sequence = models.PositiveIntegerField()
+    outcome = models.CharField(max_length=8, choices=[("APPROVE", "Approve reapplication review"), ("HOLD", "Hold for review")])
+    authorization_reference = models.CharField(max_length=254, blank=True)
+    evidence = models.JSONField()
+    evidence_digest = models.CharField(max_length=64)
+    recorded_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    actor_label = models.CharField(max_length=254)
+    reason = models.TextField()
+    idempotency_key = models.UUIDField(unique=True)
+    recorded_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["reversal", "sequence"], name="benefit_reapp_sequence_unique"),
+            models.UniqueConstraint(fields=["reversal"], condition=models.Q(previous__isnull=True), name="benefit_reapp_one_root"),
+            models.CheckConstraint(condition=(models.Q(sequence=1, previous__isnull=True)
+                | models.Q(sequence__gt=1, previous__isnull=False)), name="benefit_reapp_chain_shape"),
+            models.CheckConstraint(condition=((models.Q(outcome="APPROVE") & ~models.Q(authorization_reference=""))
+                | models.Q(outcome="HOLD", authorization_reference="")), name="benefit_reapp_decision_shape"),
+            models.CheckConstraint(condition=~models.Q(evidence_digest="") & ~models.Q(actor_label="")
+                & ~models.Q(reason=""), name="benefit_reapp_evidence_required"),
+        ]
+
+    def clean(self):
+        super().clean()
+        from .benefit_reapplication_selectors import validate_reapplication_decision
+        validate_reapplication_decision(self)
+
+    def save(self, *args, **kwargs):
+        if self.pk and type(self).objects.filter(pk=self.pk).exists():
+            raise ValidationError("Benefit reapplication decisions are append-only.")
+        from .plan_policies import require_operational_configuration
+        from .benefit_reapplication_selectors import decision_evidence
+        require_operational_configuration(self.reversal.fulfilment.award.scheme_account.configuration_snapshot)
+        self.full_clean()
+        if self.evidence != decision_evidence(self.reversal, self.outcome, self.authorization_reference):
+            raise ValidationError("Reapplication review evidence changed; reload the preview.")
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Benefit reapplication decisions must be retained.")
 
 
 class InStoreCashReceipt(models.Model):
@@ -1137,6 +2645,120 @@ class PaymentWebhookEvent(models.Model):
 
     def __str__(self):
         return f"{self.gateway} — {self.event_type} — {self.status}"
+
+
+class PaymentRefundObservation(models.Model):
+    """Authenticated inspection only. This record NEVER resolves a payment hold."""
+    contribution = models.ForeignKey(Contribution, on_delete=models.PROTECT, related_name="refund_observations")
+    webhook_event = models.ForeignKey(PaymentWebhookEvent, on_delete=models.PROTECT, related_name="refund_observations")
+    gateway_mode = models.CharField(max_length=10, default="live")
+    payment_id = models.CharField(max_length=120)
+    order_id = models.CharField(max_length=120)
+    amount_subunits = models.PositiveBigIntegerField()
+    currency = models.CharField(max_length=3, default="INR")
+    provider_snapshot = models.JSONField()
+    local_snapshot = models.JSONField()
+    evidence_sha256 = models.CharField(max_length=64)
+    fully_refunded = models.BooleanField()
+    no_entitlement = models.BooleanField()
+    actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    actor_label = models.CharField(max_length=254)
+    reason = models.TextField()
+    observed_at = models.DateTimeField()
+
+    class Meta:
+        ordering = ["-observed_at", "-pk"]
+        constraints = [
+            models.CheckConstraint(condition=models.Q(gateway_mode="live", currency="INR", amount_subunits__gte=100), name="refund_obs_payment_shape"),
+            models.CheckConstraint(condition=(~models.Q(payment_id="") & ~models.Q(order_id="")
+                & ~models.Q(actor_label="") & ~models.Q(reason="") & ~models.Q(evidence_sha256="")), name="refund_obs_evidence_required"),
+        ]
+        indexes = [models.Index(fields=["gateway_mode", "payment_id", "observed_at"], name="refund_obs_payment_time_idx")]
+
+    def clean(self):
+        super().clean()
+        from .payment_refund_observations import validate_observation
+        validate_observation(self)
+
+    def save(self, *args, **kwargs):
+        if self.pk and type(self).objects.filter(pk=self.pk).exists():
+            raise ValidationError("Refund observations are immutable; inspect again.")
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Refund inspection evidence must be retained.")
+
+
+class PaymentErrorRefundResolution(models.Model):
+    """Full refund of a never-credited payment; not agreement/order settlement."""
+    reviewed_observation = models.OneToOneField(PaymentRefundObservation, on_delete=models.PROTECT, related_name="reviewed_resolution")
+    applied_observation = models.OneToOneField(PaymentRefundObservation, on_delete=models.PROTECT, related_name="applied_resolution")
+    contribution = models.ForeignKey(Contribution, on_delete=models.PROTECT, related_name="payment_refund_resolutions")
+    webhook_event = models.ForeignKey(PaymentWebhookEvent, on_delete=models.PROTECT, related_name="payment_refund_resolutions")
+    gateway_mode = models.CharField(max_length=10, default="live")
+    payment_id = models.CharField(max_length=120)
+    order_id = models.CharField(max_length=120)
+    actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    actor_label = models.CharField(max_length=254)
+    reason = models.TextField()
+    resolved_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["gateway_mode", "payment_id"], name="refund_resolution_payment_unique"),
+            models.CheckConstraint(condition=models.Q(gateway_mode="live"), name="refund_resolution_live_only"),
+            models.CheckConstraint(condition=(~models.Q(payment_id="") & ~models.Q(order_id="")
+                & ~models.Q(actor_label="") & ~models.Q(reason="")), name="refund_resolution_evidence"),
+            models.CheckConstraint(condition=~models.Q(reviewed_observation=models.F("applied_observation")), name="refund_resolution_fresh_read"),
+        ]
+
+    def clean(self):
+        super().clean()
+        from .payment_refund_resolutions import validate_resolution
+        validate_resolution(self)
+
+    def save(self, *args, **kwargs):
+        if self.pk and type(self).objects.filter(pk=self.pk).exists():
+            raise ValidationError("Payment refund resolutions are immutable.")
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Payment refund resolutions must be retained.")
+
+
+class RefundedPaymentOrderClosure(models.Model):
+    """Retired provider attempt, not a customer agreement or financial settlement."""
+    contribution = models.OneToOneField(Contribution, on_delete=models.PROTECT, related_name="refunded_order_closure")
+    evidence = models.JSONField()
+    evidence_sha256 = models.CharField(max_length=64)
+    actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    actor_label = models.CharField(max_length=254)
+    reason = models.TextField()
+    reviewed_at = models.DateTimeField()
+    closed_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(condition=~models.Q(actor_label="") & ~models.Q(reason="")
+                & ~models.Q(evidence_sha256=""), name="refunded_order_evidence_required"),
+            models.CheckConstraint(condition=models.Q(closed_at__gte=models.F("reviewed_at")), name="refunded_order_review_before_apply"),
+        ]
+
+    def clean(self):
+        super().clean()
+        from .refunded_orders import validate_refunded_order_closure
+        validate_refunded_order_closure(self, creating=self._state.adding)
+
+    def save(self, *args, **kwargs):
+        if self.pk and type(self).objects.filter(pk=self.pk).exists():
+            raise ValidationError("Refunded-order closure evidence is immutable.")
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Refunded-order closure evidence must be retained.")
 
 
 class WebhookProcessingAttempt(models.Model):
@@ -1531,6 +3153,8 @@ class Redemption(models.Model):
             return
         mode = self.scheme_account.savings_mode
         errors = {}
+        if mode == SchemeAccount.SavingsMode.INR_CREDIT:
+            raise ValidationError("INR purchase-credit settlement must not use legacy cash or metal redemption records.")
         if mode == SchemeAccount.SavingsMode.CASH:
             if self.metal_grade_id is not None:
                 errors["metal_grade"] = "Cash redemptions cannot have a metal grade."
@@ -1711,9 +3335,14 @@ class InStoreCashContributionReversal(models.Model):
 
 class SchemeReminder(models.Model):
     class Kind(models.TextChoices):
+        COMPLETED_INR_SETTLEMENT = "COMPLETED_INR_SETTLEMENT", "Completed INR settlement"
         UPCOMING_ELIGIBILITY = (
             "UPCOMING_ELIGIBILITY",
             "Upcoming eligibility",
+        )
+        UPCOMING_MONTHLY_COMPLETION = (
+            "UPCOMING_MONTHLY_COMPLETION",
+            "Upcoming monthly completion",
         )
         ALLOCATION_EXCEPTION = (
             "ALLOCATION_EXCEPTION",
@@ -1751,6 +3380,10 @@ class SchemeReminder(models.Model):
         null=True,
         blank=True,
     )
+    inr_completion = models.ForeignKey(
+        InrSettlementCompletion, on_delete=models.PROTECT, related_name="reminders",
+        null=True, blank=True,
+    )
     event_date = models.DateField()
     eligibility_lead_days = models.PositiveSmallIntegerField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -1762,8 +3395,10 @@ class SchemeReminder(models.Model):
                 condition=models.Q(
                     kind__in=[
                         "UPCOMING_ELIGIBILITY",
+                        "UPCOMING_MONTHLY_COMPLETION",
                         "ALLOCATION_EXCEPTION",
                         "COMPLETED_REDEMPTION",
+                        "COMPLETED_INR_SETTLEMENT",
                     ]
                 ),
                 name="scheme_reminder_kind_valid",
@@ -1775,21 +3410,29 @@ class SchemeReminder(models.Model):
             models.CheckConstraint(
                 condition=(
                     models.Q(
-                        kind="UPCOMING_ELIGIBILITY",
+                        kind__in=["UPCOMING_ELIGIBILITY", "UPCOMING_MONTHLY_COMPLETION"],
                         contribution__isnull=True,
                         redemption__isnull=True,
                         eligibility_lead_days__isnull=False,
+                        inr_completion__isnull=True,
                     )
                     | models.Q(
                         kind="ALLOCATION_EXCEPTION",
+                        inr_completion__isnull=True,
                         contribution__isnull=False,
                         redemption__isnull=True,
                         eligibility_lead_days__isnull=True,
                     )
                     | models.Q(
                         kind="COMPLETED_REDEMPTION",
+                        inr_completion__isnull=True,
                         contribution__isnull=True,
                         redemption__isnull=False,
+                        eligibility_lead_days__isnull=True,
+                    )
+                    | models.Q(
+                        kind="COMPLETED_INR_SETTLEMENT", inr_completion__isnull=False,
+                        contribution__isnull=True, redemption__isnull=True,
                         eligibility_lead_days__isnull=True,
                     )
                 ),
@@ -1806,6 +3449,12 @@ class SchemeReminder(models.Model):
     def clean(self):
         super().clean()
         errors = {}
+        if self.inr_completion_id:
+            completion = self.inr_completion
+            if completion.proposal.scheme_account_id != self.scheme_account_id:
+                errors["inr_completion"] = "The completion must belong to this agreement."
+            if self.event_date != timezone.localdate(completion.event.created_at):
+                errors["event_date"] = "Retain the India-local final completion date."
         if self.contribution_id:
             if self.contribution.scheme_account_id != self.scheme_account_id:
                 errors["contribution"] = (
@@ -1821,6 +3470,19 @@ class SchemeReminder(models.Model):
                 errors["event_date"] = (
                     "An eligibility reminder must retain the contractual eligibility date."
                 )
+        if self.kind == self.Kind.UPCOMING_MONTHLY_COMPLETION:
+            from .instalments import has_monthly_instalments
+            # Structural validation only: later reversals/holds must not invalidate
+            # immutable historical notification evidence. Delivery rechecks policy.
+            if not has_monthly_instalments(self.scheme_account):
+                errors["kind"] = "Monthly completion requires a recorded monthly agreement."
+            periods = self.scheme_account.instalment_periods
+            has_boundary = periods.filter(ends_before=self.event_date).exists() if self.event_date else False
+            if self.event_date == self.scheme_account.eligible_from:
+                has_boundary = periods.filter(ends_before__lte=self.event_date).exists()
+            if (not self.event_date or self.event_date < self.scheme_account.eligible_from or not has_boundary):
+                errors["event_date"] = "Monthly completion must retain the later of minimum duration and a recorded qualifying-period end."
+        if self.kind in (self.Kind.UPCOMING_ELIGIBILITY, self.Kind.UPCOMING_MONTHLY_COMPLETION):
             if not self.eligibility_lead_days:
                 errors["eligibility_lead_days"] = (
                     "An upcoming eligibility reminder requires a positive lead time."

@@ -26,3 +26,6 @@ deploy/secrets/
 
 # Screencast
 Lithium_Demo_2025.mp4
+
+# Disposable CI test inventory and profiling artifacts
+.ci-reports/
