@@ -97,8 +97,13 @@ Production was inspected read-only: PostgreSQL 18.6; release `d0e5dd1`; 15 custo
 13 agreements, no pending Razorpay or paid-unallocated records, passing financial
 and live-readiness checks, healthy web and 8.7 GB free disk. These counts are a
 preparation snapshot; capture fresh separate liabilities under pause at rollout.
-The nominated recovery point **29 October 2026 10:00 AM IST** is not independently
-verified in Linode. Exact deployment approval and recovery-point confirmation remain.
+The owner subsequently confirmed recovery point **29 October 2026 10:00 AM IST**
+and approved this exact deployment. Production rollout passed all 39 migrations,
+20-model original-field hash comparison, unchanged separate liabilities, current
+application integrity and public HTTPS health; see PRODUCTION_DEPLOYMENT.md for
+the complete record. Configured intake remains false and both timers were restored.
+The only failing diagnostic was three overdue deletion reviews, reproduced by the
+previous image with all structural counters zero; this remains owner operational work.
 Recover forward with compatible code; do not run the old pre-builder image over
 new configured histories or reverse migrations to discard records.
 

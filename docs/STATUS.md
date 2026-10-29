@@ -2,7 +2,7 @@
 
 ## Current milestone
 
-**29 October 2026 - builder release merged; exact published-image rehearsal passed.**
+**29 October 2026 - builder release deployed; configured intake remains disabled.**
 Normal CI `40799459905` passed on `46c7fd8`: all **1,492 tests** exactly once,
 four successful 373-case PostgreSQL shards, complete inventory verification,
 migration/drift/application/deployment/static checks and container build/critical
@@ -29,16 +29,41 @@ complete retained-history dump/restore, history-loss downgrade refusal, forward
 reapplication and Gunicorn live/ready checks passed. The upgrade regression passed
 one test in 60.027s. See TESTING.md for liabilities, hashes and latency limits.
 
-Read-only production checks found release `d0e5dd1`, healthy web, zero pending
-Razorpay orders, passing financial/live-readiness checks and 8.7 GB free disk.
-Keep configured intake explicitly off for initial deployment. Recovery is forward
-with compatible code and retained database history; the pre-builder image is not
-approved over new configured records. The owner allowed selecting yesterday or this
-morning; **29 October 2026 10:00 AM IST** is nominated, not independently confirmed
-as an available Linode recovery point. Confirm availability and exact rollout
-approval before production mutation. No build, migration, flag update or real
-transaction ran on Linode. Synthetic rehearsal containers and their database volume
-were removed; ignored evidence logs remain locally.
+The owner confirmed **29 October 2026 10:00 AM IST** recovery-point availability
+and approved the exact digest rollout with configured intake disabled. On
+`172.235.9.77`, the operator stopped both timers/services, automation recorded an
+audited payment pause, stopped web and captured the baseline. All **39 migrations**
+through schemes.0057 applied successfully, including the deployed-checkout merge.
+Hashes of all original fields/rows across **20 existing scheme models** matched
+before migration, afterward and again on the running release. Counts remain
+**15 customers, 13 agreements, zero pending Razorpay orders**. Liabilities remain
+**22K gold 2.576623 g; 24K gold 0.329272 g; silver 0.000000 g; legacy cash principal
+and earned bonus INR 0.00**. New INR purchase-credit liability is zero.
+
+Web is healthy on `8f3ba5a`; Caddy validated/recreated, public live/ready and homepage
+returned 200, private owner plans/configuration/manual routes redirect anonymous
+visitors to login. All builder, financial, grade, live-payment, cash, authentication,
+registration/enrolment and Google integrity checks passed. No pending migrations or
+recent web error markers were found. Prior payment controls were restored through
+the audited service; all grades are OPEN. **CONFIGURED_PLANS_ENABLED=False** and
+zero configured offers/agreements remain. Existing registration/enrolment flags
+were preserved. Capacity: 358 MiB available RAM, 8.2 GB free disk (65% used).
+
+The deletion diagnostic reports **three overdue owner reviews**, with structural
+error counters zero. The previous image produces the identical result against the
+same retained records: existing operational backlog, not a migration regression.
+Do not silently clear these reviews. The initial Python HTTP client received a
+Cloudflare 403; normal-browser-user-agent public checks and origin checks passed.
+Existing HSTS scope/preload warnings remain unchanged.
+
+The operator restarted both timers; both are active with future runs scheduled and
+service result/exit status success/0. New configured intake activation remains a
+separate decision. Recovery is forward with compatible code and retained
+history; the pre-builder image is not approved over new configured records.
+Protected host evidence is under `/home/deploy/jsk-rollouts/20261029-8f3ba5a`;
+environment backup is mode 600 inside a mode-700 directory; the temporary candidate
+environment copy was removed after deployment. Synthetic rehearsal
+containers/database volume were removed; ignored local logs remain.
 This separate evidence branch collects the final image/rollout record without
 changing the merged application candidate. Separate staging remains deferred under
 FW-PROD-009; the accepted isolated exact-image rehearsal remains required.

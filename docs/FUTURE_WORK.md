@@ -681,6 +681,11 @@ outcome by itself. Source: [official HTMX documentation](https://htmx.org/docs/)
   destruction or blanket statutory period is approved. Public Play release remains
   blocked on the remaining public-path, provider and recovery evidence recorded in
   [Mobile release readiness](MOBILE_RELEASE_READINESS.md#account-deletion-and-retention-design-gate).
+  **29 October operational follow-up:** production's deletion check reports three
+  overdue owner reviews; structural/containment/completion counters are clean.
+  Both `d0e5dd1` and deployed builder `8f3ba5a` report the identical backlog.
+  Review the retained cases through the owner workflow and record real dispositions
+  or next-review dates; do not clear them merely to make the diagnostic pass.
   Never cascade-delete `CustomUser`, `Customer`, or
   financial records.
   Standalone/unapproved applicant minimization and ambiguous email-matched historical

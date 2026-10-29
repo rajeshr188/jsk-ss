@@ -7,7 +7,7 @@ explicit Razorpay Test/Live modes, and manually published Scheme Rate build. Dev
 
 ## Production-readiness boundary
 
-### Builder v1 merged candidate - 29 October 2026; not deployed
+### Builder v1 production rollout - 29 October 2026; configured intake disabled
 
 PR #77 merged as `8f3ba5ad0000a3645f69eddf63607436f91720a8` after reviewed-head CI
 `40799459905` passed all 1,492 tests and build/security checks. The merge tree equals
@@ -18,7 +18,7 @@ downgrade, forward reapplication and application live/ready rehearsal passed (TE
 The dated foundation sections below retain their historical
 implementation boundaries; the current release state is tracked in MVP_PLAN.md.
 
-Keep `CONFIGURED_PLANS_ENABLED=False` explicitly in the candidate production file.
+Keep `CONFIGURED_PLANS_ENABLED=False` explicitly in the production file.
 This switch governs new configured publication/enrolment, not existing agreement
 payment/settlement rights. Do not run migrations or enable offers from this merge
 record alone. The selected recovery strategy is forward with compatible application
@@ -27,21 +27,56 @@ new configured records; never reverse migrations or restore an older database me
 to erase subsequent financial activity. Restoring a managed recovery point requires
 incident review and reconciliation of changes after that point.
 
-Read-only host inspection confirmed `/opt/jsk/app` on `172.235.9.77` is healthy at
+Before rollout, `/opt/jsk/app` on `172.235.9.77` was healthy at
 release `d0e5dd1897debb054d99647d6ea16575d08b1a48`, image
 `ghcr.io/rajeshr188/jsk-savings@sha256:00caf93dfa3933cc662f39745c4a3bd823768b523a73163d71bb60c474e0ec6d`.
-It has PostgreSQL 18.6, zero pending Razorpay orders and 8.7 GB free disk. These
-are preliminary observations, not a substitute for paused rollout baselines.
+It uses PostgreSQL 18.6. The prior image is retained for evidence; it is not a
+compatible rollback authorization over new configured records.
 
-The owner allowed choosing yesterday or this morning: **29 October 2026 10:00 AM
-IST** is nominated. Its actual availability has not been verified with Linode.
-Confirm availability and obtain explicit approval for the exact digest-pinned
-rollout. Then pause intake/payments, reconcile open orders, record separate liability
-baselines and inspect the candidate migration plan. Pull the approved image, apply
-the reviewed migration graph, recreate web, verify health/integrity and recreate
-Caddy as required. Keep configured intake false throughout this deployment; verify
-unchanged existing rights before resuming payments. New configured offer activation
-is a subsequent controlled decision. No build runs on the 1 GB serving Linode.
+The owner confirmed **29 October 2026 10:00 AM IST** is available and approved this
+exact digest-pinned rollout with configured intake disabled. This is owner-confirmed
+provider evidence, not an independent backup-console inspection by the agent.
+Deployment checks passed with the existing HSTS scope/preload warnings. The operator
+stopped both timer/service pairs through sudo; automation recorded the owner-approved
+payment pause through the audited service, confirmed zero pending orders, stopped
+web and captured original-field hashes across 20 existing scheme models. All **39
+migrations** applied successfully through schemes.0057, including accounts.0009 and
+both merge nodes. Original hashes, counts and separate liabilities matched afterward
+and again against the running candidate. No existing financial record was rewritten.
+
+| Production baseline retained | Value |
+| --- | ---: |
+| Customers / agreements | 15 / 13 |
+| Pending Razorpay orders | 0 |
+| Legacy cash principal / earned bonus | INR 0.00 / INR 0.00 |
+| 22K gold / 24K gold | 2.576623 g / 0.329272 g |
+| Silver | 0.000000 g |
+| New INR purchase-credit liability | INR 0.00 |
+
+Web runs the exact digest above and is healthy; no pending migrations remain.
+Caddy validated and was recreated. Public live/ready/homepage returned HTTP 200
+with the expected release; anonymous owner plans/configurations/manual routes return
+302 to login. All plan/configuration/agreement, instalment, benefit, INR, closure,
+optional-order, financial, live-readiness, graded-metal, in-store-cash and auth/email
+checks passed. Registration/enrolment/Google integrity checks also passed. The
+original payment controls were restored through the audited service: all grades OPEN.
+Configured intake is false with zero configured offers/agreements. Existing intake
+flags were preserved. Both timers are active again, future runs scheduled, last
+service Result=success and ExecMainStatus=0. No new build or live transaction was used
+for acceptance. Final capacity: 358 MiB available RAM and 8.2 GB disk free (65% used).
+
+One operational exception remains: deletion checks report **three overdue owner
+reviews**, all structural counters zero. The old image's same read-only check returns
+the identical backlog; review these through the owner workflow rather than clearing
+them to obtain a green command. An initial Python-client public health request was
+rejected by Cloudflare; normal-browser-user-agent public and direct-origin probes
+passed. No Cloudflare policy was weakened.
+
+Protected host evidence is `/home/deploy/jsk-rollouts/20261029-8f3ba5a` (mode 700):
+`migration-plan.txt`, `migrate.log`, original/running baseline hashes, control snapshot
+and original environment backup (mode 600). The temporary candidate environment copy
+was removed. Do not publish environment files. New configured offer activation is
+a subsequent controlled decision. No build runs on the 1 GB serving Linode.
 The accepted local exact-image rehearsal applies; separate staging remains deferred
 under FW-PROD-009. No new real payment/refund or duplicate inbox/device ceremony is
 required merely to repeat already accepted unchanged workflows.
