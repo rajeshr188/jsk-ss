@@ -2,6 +2,31 @@
 
 ## Current milestone
 
+**30 October 2026 - read-only production application/deletion backlog audit.**
+The Applications inbox has four attention records, all standalone registrations:
+one email-verified request awaiting an owner decision, and three unverified requests
+from September with expired verification links. None is linked to an approved login
+or a plan journey/agreement. Fourteen other intake records have recorded decisions.
+The current owner UI can approve/reject the verified request or resend verification;
+it lacks an explicit audited expiry action for the three stale unverified requests.
+Rejection is deliberately restricted to verified applications. Do not invent new
+applications, send unnecessary email, delete rows or directly relabel statuses to
+clear the badge. Follow-up is tracked as FW-AUTH-006.
+
+Three deletion reviews are overdue: one AWAITING_SETTLEMENT with two open legacy
+agreements/one contribution record; one CONTAINED with one open legacy agreement
+and no contributions; one COMPLETED_WITH_RETENTION with no agreements/contributions
+and an already-minimized login. Recorded balances are zero; no pending provider
+payments, financial/allocation exceptions, unresolved webhooks, pending enrolments
+or ambiguous email-matched registrations were found. Logins remain disabled.
+The completed case needs retained-record review, not another deletion. The two
+open cases need a real category/external-obligation review, then justified hold or
+completion with necessary financial/contact retention. Open agreements require
+showroom name/email retention with a stated purpose; privacy minimization does not
+require pretending those agreements were redeemed. The unused-cancellation service
+supports configured agreements only; these legacy agreements must not be forced
+through it or rewritten. No request, deadline, identity or financial record changed.
+
 **30 October 2026 - requested four-offer range is prepared, all unpublished.**
 Owner requested generating the recommended range for independent review/publication.
 Reused plan **4 / Flexible Gold Savings (22K)** and configuration **2/v1** unchanged.
