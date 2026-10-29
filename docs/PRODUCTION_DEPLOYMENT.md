@@ -7,6 +7,77 @@ explicit Razorpay Test/Live modes, and manually published Scheme Rate build. Dev
 
 ## Production-readiness boundary
 
+### Unpublished Flexible 22K preparation - 30 October 2026
+
+No deployment was required. On release `b20241a`, owner-authorized preparation
+through `create_configuration_version` and `create_configured_plan_draft` saved
+configuration **2/v1**, plan **4 / FLEX22K-ANYTIME**. Active/listed remain false,
+publication revision null, no linked agreement. The configuration uses exact
+GOLD_22K_916 grams, optional variable contributions, anytime full settlement,
+no instalment/duration obligation or benefit, and permits further contributions
+before closure under existing guards. Proposed INR 150-100,000 bounds copy the
+existing `fsp` offer and await review; this is not new public-term approval.
+
+The existing configuration author's active administrator account passed the
+normal owner-service authorization; the retained reason explicitly identifies
+delegated operator preparation under the owner's instruction. No direct SQL
+write, flag/publication change, customer message, rate, payment or enrolment ran.
+Existing rows across all 53 scheme models were compared within the transaction;
+no existing row changed. Only preparation/configuration/audit/offering records
+were appended, with 22K as the sole active grade. Original public offer IDs 3/2/1,
+14 agreements and separate liabilities remain. Configuration, agreement and
+financial checks pass; `/plans/4/` returns 404. Read-only structured offer facts
+confirm positive verified entitlement, customer authorization and full-only
+showroom settlement without voluntary conversion to cash.
+
+Private preparation evidence is
+`/home/deploy/jsk-rollouts/20261030-flex22k-draft/prepared.json` (directory 700/file 600).
+Review under owner plans and configuration 2; publication requires a subsequent
+explicit decision. Immutable policy revisions preserve earlier agreements.
+
+### Denomination-aware presentation rollout - 29 October 2026
+
+PR #78 merged as `b20241ab961b24a6d7ca98e94cbf1c6ed1e67c3e` with the same
+tree as successful PR head `216ba56`. Main CI `40884955268` passed and published:
+
+`ghcr.io/rajeshr188/jsk-savings@sha256:c8f60b76ef601889b9ee10d440b00721556451a6194acc21a9f98a8f7f3cd86b`
+
+This is now the healthy release on `172.235.9.77`. An exact-image local PostgreSQL
+18.6 rehearsal passed before rollout (TESTING.md). The compatible retained rollback
+is release `8f3ba5ad0000a3645f69eddf63607436f91720a8`, image digest
+`e9c126344938846b0e991644958265804317417636305447e364d99d10b75834`.
+No migration file, Compose file or Caddy configuration differs between these two
+releases. Candidate preflight confirmed zero pending migrations and orders.
+
+Retained a private environment backup and read-only snapshots; pulled the exact
+digest without building on the serving host. Changed only APP_IMAGE/APP_RELEASE,
+validated Compose and recreated web using `--no-build --pull never --no-deps`.
+Waited for health, validated Caddy and recreated it. The first immediate origin
+probe refused TCP while Caddy started, so the safeguard restored the prior
+compatible image and confirmed its HTTPS health. Retried with bounded curl
+connection-refused retries; origin/public live and ready then passed on the new
+release. Retain `--retry-connrefused` (with bounded retries/timeouts) for probes
+immediately after proxy recreation; do not weaken certificate verification.
+
+Configuration intake remains enabled. Other environment values, publication,
+accepted agreements and payment controls are unchanged. Fifty scheme-model
+snapshots/counts and separate liabilities match before/after: 15 customers,
+14 agreements, zero pending Razorpay; 22K 2.576623 g, 24K 0.329272 g, silver
+0.000000 g, legacy cash principal/earned bonus INR 0.00. All 14 contract/payment/
+liability integrity commands pass, including zero outstanding INR principal.
+Both reminder and checkout-reconciliation timers remain active, last service
+Result=success / ExecMainStatus=0. Public home/plans/detail/how-it-works/terms/
+refund pages return 200. Final available RAM 369 MiB; disk 7.8 GB free (67% used).
+
+Host-only evidence is `/home/deploy/jsk-rollouts/20261029-b20241a-presentation`:
+baseline/candidate/after hashes, prepared/deployed image identity, public probes,
+14 check outputs and original environment backup. Directory mode 700, files 600;
+do not publish the environment or retained financial snapshots. No database was
+restored; the previously owner-confirmed recovery point remains historical backup
+evidence, not a newly inspected provider timestamp. No financial mutation or new
+offer launch was part of this presentation rollout. Continue operating observation
+and owner commercial-copy/CMS review before offering another product.
+
 ### First configured enrolment acceptance - 29 October 2026
 
 After the owner completed the customer journey, read-only checks verified agreement
