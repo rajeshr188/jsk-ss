@@ -2,6 +2,15 @@
 
 ## Owner builder v1 release contract (approved 24 October 2026)
 
+**Owner plan management follow-up - 30 October 2026:** approved customer-facing
+names are applied: **Monthly Gold Savings (22K)** remains published; **Flexible
+Gold Savings (22K)** remains an unpublished draft. Existing agreement snapshots
+and economic terms are unchanged. New local `FW-UX-007` owner detail workspace
+shows plan-scoped agreements/customers, applications, rules, visibility and revision
+history; CI/review/deployment are still required. Existing legacy plans remain
+active pending an explicit replacement/cutover decision; retirement will not migrate
+or close their agreements. This work adds no benefit formula or financial workflow.
+
 **Current product step - 30 October 2026:** owner authorized preparing one new
 offer after accepting the deployed presentation. **Plan 4 / FLEX22K-ANYTIME** and
 configuration **2/v1** now exist in production, inactive/unlisted and without a

@@ -341,6 +341,20 @@ scope: ADR-0017. These approved design items are not implemented by migration 00
 
 ## Browser workflow audit — 22 October 2026
 
+- **FW-UX-007 — Owner plan details and usage:** Requested 30 October. Local
+  implementation on `agent/owner-plan-details`; no model, migration or new framework.
+  - [x] Link each current or retired plan row to a private read-only workspace.
+  - [x] Separate plan terms/publication from accepted agreement names and rules;
+    show actual public/enrolment availability and the existing controlled actions.
+  - [x] Add scoped, paginated agreements, distinct enrolled customers, both intake
+    sources and revision history. Keep applicant counts separate from enrolments.
+  - [x] Owner/superuser authorization, GET-only/no-store, retained-history/no-write
+    and bounded query regression coverage; verification recorded in TESTING.md.
+  - [ ] Accept owner visual review, hosted CI and the exact-image deployment.
+  Approved names were applied via existing services. Legacy retirement remains an
+  explicit owner cutover after replacement review/publication; no automatic closure,
+  migration of agreements or deletion is part of this item.
+
 The owner requested a fresh customer/owner browser review and an HTMX assessment.
 This audits the committed local candidate, not the deployed production experience.
 Chrome inspection used 1440x1000 desktop and 390x844 mobile viewports, synthetic

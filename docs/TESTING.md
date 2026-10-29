@@ -1,5 +1,43 @@
 # Testing
 
+## Owner plan workspace and approved names - 30 October 2026
+
+Feature `agent/owner-plan-details` adds only private reads/routes/templates and
+documentation. Local isolated PostgreSQL regression passed **51 tests in 69.734s**:
+owner workspace, plan governance, catalogue retirement and public offer modules.
+After refining draft/withdrawn and last-publication wording, **20 focused workspace
+and handbook tests passed in 4.611s**. Django checks and migration-drift checks pass.
+The first focused run exposed a duplicate mobile in synthetic application fixtures;
+unique fixture numbers corrected it before the green regression. No production
+validation was relaxed.
+
+Coverage includes owner-only access and staff/customer refusal, GET-only/no-store,
+missing IDs, safe section fallback, scoped/distinct customer counts, accepted
+agreement names after rename, retired-history access, no-write snapshots for all
+five sections, exact-grade/INR draft and release-state rendering, both scoped intake
+sources without private tokens, history pagination and one-query list projections.
+Logs remain ignored `.uv-cache/owner-plan-workspace-regression.log` and
+`.uv-cache/owner-plan-workspace-final.log`.
+
+Native Chrome reviewed synthetic static snapshots at desktop 1600px in light/dark
+and emulated 390x844 in light mode: overview actions/counts, wrapping section
+navigation, agreement table overflow and distinct enrolled-customer rows. Fixture
+grade/name wording was made generic rather than suggesting 22K for a 24K legacy
+fixture. Application/history sections are covered by rendered tests, not claimed
+as a separate visual audit. A stale preview-helper catalogue digest was fixed by
+reloading its edited plan; successful export took 4.290s. The disposable preview
+database was removed (verified zero matching databases), the loopback static server
+was stopped and the separate Chrome tab closed, preserving the production tab.
+No real data, external payment, outbound message or browser security change was used.
+This is not a physical Android or owner acceptance result. Hosted CI is still required.
+
+The owner separately approved both real display names. Existing production services
+updated the unpublished flexible draft and transactionally withdrew/renamed/
+republished the monthly offer. Economic/final visibility terms and 49 other scheme
+models match, including existing agreement snapshots. No pending monthly application
+existed. Configuration/agreement checks and public listing/detail name probes pass.
+No plan was retired; production data evidence is in PRODUCTION_DEPLOYMENT.md.
+
 ## FW-UX-006 exact-image and production verification - 29 October 2026
 
 Main run `40884955268` succeeded, including all four test shards, inventory gate

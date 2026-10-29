@@ -1,0 +1,80 @@
+{% extends '_base.html' %}
+{% load workspace %}
+{% block title %}{{ plan.name }} | Owner plans | Jai Sri Krishna Jewellery{% endblock %}
+{% block content %}
+<a class="d-inline-block py-2 mb-2" href="{% url 'schemes:plan_list' %}{% if plan.catalogue_closure %}?status=closed{% endif %}">&larr; All scheme plans</a>
+<div class="page-header">
+  <div><p class="page-eyebrow">Owner plan workspace · {{ plan.code }}</p><h1>{{ plan.name }}</h1><p class="page-subtitle">Offer terms, enrolled customers and retained agreement history.</p></div>
+  <div class="page-actions">
+    {% if publicly_available %}<a class="btn btn-outline-dark" href="{% url 'plan_detail' plan.pk %}">Public plan page</a>{% endif %}
+    {% if not plan.catalogue_closure %}
+      {% if plan.configuration_id %}<a class="btn btn-outline-dark" href="{% url 'schemes:configured_plan_publication' plan.pk %}">Publication review</a>{% endif %}
+      {% if not plan.configuration_id or not plan.active %}<a class="btn btn-outline-dark" href="{% url 'schemes:plan_edit' plan.pk %}">Edit{% if plan.configuration_id %} draft{% endif %}</a>{% endif %}
+      <a class="btn btn-outline-dark" href="{% url 'schemes:plan_catalogue_close' plan.pk %}">Archive / retire review</a>
+    {% else %}<a class="btn btn-outline-dark" href="{% url 'schemes:plan_catalogue_close' plan.pk %}">Retirement record</a>{% endif %}
+  </div>
+</div>
+{% if plan.catalogue_closure %}<div class="alert alert-secondary"><strong>{{ plan.catalogue_closure.get_action_display }}.</strong> {{ plan.catalogue_closure.recorded_at|date:'d M Y, g:i A' }}. {{ plan.catalogue_closure.reason }} Existing agreements retain their accepted terms and payment/settlement rights.</div>{% endif %}
+<div class="row g-3 mb-4">
+  <div class="col-6 col-lg-3"><div class="card h-100"><div class="card-body"><div class="small text-secondary">Agreements created</div><div class="h3 mb-1">{{ counts.agreements }}</div><a href="?section=agreements">View agreements</a></div></div></div>
+  <div class="col-6 col-lg-3"><div class="card h-100"><div class="card-body"><div class="small text-secondary">Customers enrolled</div><div class="h3 mb-1">{{ counts.customers }}</div><a href="?section=customers">View customers</a></div></div></div>
+  <div class="col-6 col-lg-3"><div class="card h-100"><div class="card-body"><div class="small text-secondary">Open agreements</div><div class="h3 mb-1">{{ counts.open_agreements }}</div><div class="small text-secondary">Includes settlement pending</div></div></div></div>
+  <div class="col-6 col-lg-3"><div class="card h-100"><div class="card-body"><div class="small text-secondary">Customer requests awaiting review</div><div class="h3 mb-1">{{ counts.pending_requests }}</div><a href="?section=applications">View applications and requests</a></div></div></div>
+</div>
+<nav class="nav nav-pills flex-wrap gap-2 mb-4" aria-label="Plan sections">
+  <a class="nav-link{% if section == 'overview' %} active{% endif %}" href="?section=overview"{% if section == 'overview' %} aria-current="page"{% endif %}>Overview</a>
+  <a class="nav-link{% if section == 'agreements' %} active{% endif %}" href="?section=agreements"{% if section == 'agreements' %} aria-current="page"{% endif %}>Agreements</a>
+  <a class="nav-link{% if section == 'customers' %} active{% endif %}" href="?section=customers"{% if section == 'customers' %} aria-current="page"{% endif %}>Customers</a>
+  <a class="nav-link{% if section == 'applications' %} active{% endif %}" href="?section=applications"{% if section == 'applications' %} aria-current="page"{% endif %}>Applications</a>
+  <a class="nav-link{% if section == 'history' %} active{% endif %}" href="?section=history"{% if section == 'history' %} aria-current="page"{% endif %}>Revision history</a>
+</nav>
+{% if section == 'overview' %}
+<div class="row g-4">
+  <section class="col-lg-7" aria-labelledby="plan-terms"><div class="card h-100"><div class="card-body p-3 p-lg-4">
+    <h2 class="h4" id="plan-terms">Current offer terms</h2>
+    <p>These are this offer's current terms. Each enrolled agreement retains its recorded name, revision and rules.</p>
+    <dl>
+      <dt>Contribution amount</dt><dd>{{ plan.get_amount_rule_display }} · {% if plan.fixed_contribution_amount %}₹{{ plan.fixed_contribution_amount|inr }}{% else %}₹{{ plan.minimum_contribution|inr }}{% if plan.maximum_contribution %}–₹{{ plan.maximum_contribution|inr }}{% else %} or more{% endif %}{% endif %}</dd>
+      <dt>Offered accumulation</dt><dd>{% if plan.configuration.accumulation == 'INR_PURCHASE_CREDIT' %}INR jewellery purchase credit; no metal grams{% else %}{% for offering in plan.metal_offerings.all %}{% if offering.active %}<div>{{ offering.metal_grade.display_name }}</div>{% endif %}{% endfor %}Each agreement uses one recorded exact grade.{% endif %}</dd>
+      {% if plan.configuration_id %}<dt>Immutable configuration</dt><dd><a href="{% url 'schemes:plan_configuration_detail' plan.configuration_id %}">{{ plan.configuration }}</a></dd>{% else %}<dt>Legacy schedule</dt><dd>{{ plan.get_frequency_rule_display }} · {{ plan.default_months }} months standard, {{ plan.minimum_months }} months minimum</dd>{% endif %}
+    </dl>
+    {% include 'schemes/includes/configured_offer_rules.html' %}
+  </div></div></section>
+  <section class="col-lg-5" aria-labelledby="plan-availability"><div class="card mb-4"><div class="card-body p-3 p-lg-4">
+    <h2 class="h4" id="plan-availability">Visibility and enrolment</h2>
+    <dl>
+      <dt>Catalogue status</dt><dd>{% if plan.catalogue_closure %}{{ plan.catalogue_closure.get_action_display }}{% elif plan.configuration_id %}{% if plan.active %}Published offer{% elif plan.publication_revision_id %}Withdrawn offer{% else %}Unpublished draft{% endif %}{% elif plan.active %}Active legacy offer{% else %}Inactive legacy offer{% endif %}</dd>
+      <dt>Public savings plans page</dt><dd>{% if publicly_available %}Visible{% else %}Hidden{% endif %}</dd>
+      <dt>New agreement enrolment</dt><dd>{% if enrolment_available %}Offer available; normal customer approval still applies{% else %}Unavailable{% endif %}</dd>
+      {% if plan.configuration_id %}<dt>Configured-plan intake</dt><dd>{% if configured_plans_enabled %}Enabled{% else %}Disabled{% endif %}</dd>{% endif %}
+      <dt>Last published revision</dt><dd>{% if plan.publication_revision_id %}{{ plan.publication_revision.number }}{% else %}Not recorded{% endif %}</dd>
+      <dt>Created / last edited</dt><dd>{{ plan.created_at|date:'d M Y' }} / {{ plan.updated_at|date:'d M Y, g:i A' }}</dd>
+    </dl>
+    {% if plan.description %}<h3 class="h6">Owner description / notes</h3><div class="text-break">{{ plan.description|linebreaksbr }}</div>{% endif %}
+  </div></div>
+  <div class="card"><div class="card-body p-3 p-lg-4"><h2 class="h5">Retirement preserves agreements</h2><p>Retirement stops new applications and enrolments and removes the offer from public lists. It does not cancel customers' agreements, remove balances or change their accepted payment and settlement rights.</p><p class="mb-0">Review pending applications before retiring. They remain in history and cannot be converted using a retired offer; changed terms need a separately reviewed offer. Retirement is permanent; create a separate offer for future use.</p></div></div></section>
+</div>
+{% elif section == 'agreements' %}
+<h2 class="h4">Agreements created under this plan</h2>
+<p>Each row is a separate agreement; a customer may have more than one. {{ counts.redeemed }} redeemed; {{ counts.cancelled }} cancelled unused. Status is the stored lifecycle state; open the statement for current eligibility and settlement details.</p>
+<div class="table-responsive" tabindex="0" role="region" aria-label="Plan agreements"><table class="table align-middle">
+  <caption>Agreements retain their accepted offer name and revision even after the current plan is renamed or retired.</caption>
+  <thead><tr><th scope="col">Agreement</th><th scope="col">Customer</th><th scope="col">Accepted offer</th><th scope="col">Accumulation</th><th scope="col">Started</th><th scope="col">Stored status</th></tr></thead>
+  <tbody>{% for account in page_obj %}<tr><th scope="row"><a href="{% url 'schemes:scheme_statement' account.scheme_number %}">{{ account.scheme_number }}</a></th><td><a href="{% url 'schemes:customer_detail' account.customer_id %}">{{ account.customer.full_name }}</a><div class="small">{{ account.customer.customer_number }}</div></td><td>{{ account.display_plan_name }}<div class="small">{% if account.plan_revision_id %}Revision {{ account.plan_revision.number }}{% else %}Legacy recorded terms{% endif %}</div></td><td>{% if account.metal_grade_id %}{{ account.metal_grade.display_name }}{% else %}{{ account.get_savings_mode_display }}{% endif %}</td><td>{{ account.start_date|date:'d M Y' }}</td><td>{{ account.get_status_display }}</td></tr>{% empty %}<tr><td colspan="6" class="py-4">No agreements have been created under this plan.</td></tr>{% endfor %}</tbody>
+</table></div>{% include 'schemes/includes/pagination.html' %}
+{% elif section == 'customers' %}
+<h2 class="h4">Customers enrolled in this plan</h2><p>Each customer appears once. Counts include this plan's agreements only; applicants without an agreement are shown under Applications.</p>
+<div class="table-responsive" tabindex="0" role="region" aria-label="Plan customers"><table class="table align-middle"><thead><tr><th scope="col">Customer</th><th scope="col">Customer number</th><th scope="col">Agreements in this plan</th><th scope="col">Open agreements</th></tr></thead><tbody>{% for customer in page_obj %}<tr><th scope="row"><a href="{% url 'schemes:customer_detail' customer.pk %}">{{ customer.full_name }}</a></th><td>{{ customer.customer_number }}</td><td>{{ customer.plan_agreement_count }}</td><td>{{ customer.plan_open_count }}</td></tr>{% empty %}<tr><td colspan="4" class="py-4">No customers are enrolled in this plan yet.</td></tr>{% endfor %}</tbody></table></div>{% include 'schemes/includes/pagination.html' %}
+{% elif section == 'applications' %}
+<h2 class="h4">Applications and enrolment requests</h2><p>These are separate intake records, not a count of enrolled customers. Opening this page does not approve an application or create an agreement.</p>
+<h3 class="h5 mt-4">Existing-customer enrolment requests ({{ counts.requests }})</h3>
+<div class="list-group">{% for item in request_page %}<a class="list-group-item list-group-item-action" href="{% url 'schemes:owner_enrolment_request_detail' item.pk %}"><strong>{{ item.customer.full_name }}</strong> · {{ item.get_status_display }}<span class="d-block small">{{ item.created_at|date:'d M Y' }} · requested ₹{{ item.requested_contribution_amount|inr }}{% if item.scheme_account_id %} · {{ item.scheme_account.scheme_number }}{% endif %}</span></a>{% empty %}<div class="card card-body">No customer enrolment requests for this plan.</div>{% endfor %}</div>
+{% include 'schemes/includes/pagination.html' with page_obj=request_page page_param='request_page' %}
+<h3 class="h5 mt-4">New-customer plan applications ({{ counts.applications }})</h3>
+<div class="list-group">{% for item in application_page %}<a class="list-group-item list-group-item-action" href="{% url 'customer_registration_detail' item.registration_id %}"><strong>{{ item.registration.full_name }}</strong> · {{ item.registration.get_status_display }}<span class="d-block small">{{ item.registration.submitted_at|date:'d M Y' }} · requested ₹{{ item.requested_amount|inr }}{% if item.scheme_account_id %} · agreement {{ item.scheme_account.scheme_number }}{% else %} · no agreement created{% endif %}</span></a>{% empty %}<div class="card card-body">No new-customer plan applications for this plan.</div>{% endfor %}</div>
+{% include 'schemes/includes/pagination.html' with page_obj=application_page page_param='application_page' %}
+{% elif section == 'history' %}
+<h2 class="h4">Recorded offer revisions</h2><p>Earlier observed legacy revisions are not proof of historical customer acceptance. Each agreement's retained terms and acceptance evidence govern its rights.</p>
+<div class="list-group">{% for revision in page_obj %}<article class="list-group-item p-3"><h3 class="h5">Revision {{ revision.number }} · {{ revision.terms.name }}</h3><p class="small">{{ revision.recorded_at|date:'d M Y, g:i A' }} · {{ revision.actor_label }} · {{ revision.agreement_count }} linked agreement{{ revision.agreement_count|pluralize }}{% if revision.pk == plan.publication_revision_id %} · publication record{% endif %}</p><p class="text-break mb-0">{{ revision.reason }}</p></article>{% empty %}<div class="card card-body">No observed revisions have been recorded. Opening this page does not create one.</div>{% endfor %}</div>{% include 'schemes/includes/pagination.html' %}
+{% endif %}
+{% endblock %}

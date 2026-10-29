@@ -116,6 +116,7 @@ urlpatterns = [
         name="customer_invitation_resend",
     ),
     path("owner/plans/", views.plan_list, name="plan_list"),
+    path("owner/plans/<int:plan_id>/", views.owner_plan_detail, name="owner_plan_detail"),
     path("owner/plans/<int:plan_id>/close-catalogue/", catalogue_close, name="plan_catalogue_close"),
     path("owner/plan-configurations/<int:configuration_id>/archive/", catalogue_close, name="configuration_archive"),
     path("owner/plan-manual/", manual_views.plan_manual, name="plan_manual"),

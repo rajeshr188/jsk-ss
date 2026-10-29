@@ -7,6 +7,27 @@ explicit Razorpay Test/Live modes, and manually published Scheme Rate build. Dev
 
 ## Production-readiness boundary
 
+### Owner-approved offer names - 30 October 2026
+
+No code deployment was needed. The owner explicitly selected both names. Existing
+audited services renamed plan 4 to **Flexible Gold Savings (22K)**, retaining its
+inactive/unlisted draft state, and plan 3 to **Monthly Gold Savings (22K)**.
+The monthly withdrawal/edit/republication occurred in one outer transaction, so
+no intermediate offer state was exposed. Last publication is revision **5 / ID 7**.
+No pending monthly application existed before the change. All economic fields and
+the final publication states compare equal except for the approved display name;
+all other 49 scheme-model snapshots, including accepted agreements, match.
+Configuration and agreement checks pass. Old agreements retain their original name.
+
+Private evidence is `/home/deploy/jsk-rollouts/20261030-plan-names/renamed.json`
+(directory 700, file 600). Legacy `fsp` (10 agreements/9 customers) and `FMS-001`
+(3 agreements/3 customers) remain active/listed. Neither has pending requests or
+in-progress applications at this observation. Retiring them was discussed, not
+authorized/applied. First review/publish the flexible replacement and agree the
+cutover; use the existing archive/retire review with a fresh usage digest/reason.
+Do not close or migrate their customers' agreements as part of catalogue retirement.
+The new owner detail route remains a local feature until separately released.
+
 ### Unpublished Flexible 22K preparation - 30 October 2026
 
 No deployment was required. On release `b20241a`, owner-authorized preparation

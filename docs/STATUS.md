@@ -2,6 +2,36 @@
 
 ## Current milestone
 
+**30 October 2026 - approved clearer names applied; owner plan workspace prepared.**
+Owner explicitly selected **Flexible Gold Savings (22K)** and **Monthly Gold
+Savings (22K)**. On production `b20241a`, existing validated services renamed
+draft plan 4 (still inactive/unlisted) and transactionally withdrew/renamed/
+republished plan 3. Monthly publication revision is now **5 / ID 7**. No economic
+term or final visibility state changed; all other 49 scheme-model snapshots,
+including existing agreement name/term snapshots, match. No pending monthly
+applications existed. Configuration/agreement checks pass. Host-only evidence:
+`/home/deploy/jsk-rollouts/20261030-plan-names/renamed.json` (700 directory/600 file).
+
+Legacy plan 1 has 10 agreements / 9 customers; legacy plan 2 has 3 agreements /
+3 customers. Both currently have zero pending requests/in-progress applications.
+Neither was retired: recommended cutover is review/publish the replacement
+flexible offer, then explicitly retire superseded offers. Retirement stops new
+intake, not payments or settlement under existing agreement terms.
+
+Local feature `agent/owner-plan-details` adds an owner-only GET workspace linked
+from each plan row. Overview shows recorded rules, configuration and actual public/
+enrolment availability. Paginated sections show separate agreements, distinct
+enrolled customers with plan-scoped counts, both application sources and immutable
+revision history. Archived/retired plans remain accessible. Names in agreement
+rows come from accepted snapshots; stored status is not presented as effective
+eligibility. Private responses are non-cacheable; GET appends no audit/revision
+or financial record. Existing mutation/retirement services are unchanged. Regression
+passed 51 tests; final workspace/manual checks passed 20 tests. Native Chrome
+reviewed desktop light/dark and 390x844 light-mode synthetic layouts; the temporary
+server/tab and database were cleaned up. See TESTING.md. Owner acceptance and
+hosted CI/deployment remain; the new page is not deployed yet.
+The branch includes the documentation-only parent changes from open PR #79.
+
 **30 October 2026 - Flexible 22K offer prepared for owner review, unpublished.**
 Owner authorized the next recommendation. Used the existing explicit services on
 the deployed `b20241a` application to create configuration **2/v1** and plan **4**,

@@ -163,6 +163,13 @@ This is the canonical source for stable business rules.
   Illustration GETs do not emit application analytics or retain assumptions in
   financial records. A new benefit formula requires its own financial workflow.
 
+- **UX-012:** The owner plan workspace is a private, non-cacheable GET-only read.
+  Agreement/customer/application queries and counts are scoped to the selected
+  plan; enrolled customers are distinct customers with agreements, not applicants.
+  Retired/archived offers retain readable history. Current names/publication do not
+  rewrite accepted agreement snapshots or turn stored status into eligibility.
+  Reads must not append revisions, change intake or mutate financial records.
+
 - **SCH-001:** Historical liabilities remain separated into `CASH` and exact Gold or
   Silver grade dimensions; new production enrolments are limited to explicitly
   offered metal grades.

@@ -1416,6 +1416,32 @@ def configured_plan_publication(request, plan_id):
 
 
 @owner_required
+@require_GET
+@never_cache
+def owner_plan_detail(request, plan_id):
+    from .plan_workspace_selectors import (
+        get_owner_plan_workspace, get_plan_agreements, get_plan_customers,
+        get_plan_requests, get_plan_applications, get_plan_revisions,
+    )
+    context = get_owner_plan_workspace(plan_id)
+    if context is None:
+        raise Http404
+    section = request.GET.get("section", "overview")
+    if section not in {"overview", "agreements", "customers", "applications", "history"}:
+        section = "overview"
+    context["section"] = section
+    context["configured_plans_enabled"] = settings.CONFIGURED_PLANS_ENABLED
+    readers = {"agreements": get_plan_agreements, "customers": get_plan_customers,
+               "history": get_plan_revisions}
+    if section in readers:
+        context["page_obj"] = Paginator(readers[section](plan_id), 20).get_page(request.GET.get("page"))
+    if section == "applications":
+        context["request_page"] = Paginator(get_plan_requests(plan_id), 20).get_page(request.GET.get("request_page"))
+        context["application_page"] = Paginator(get_plan_applications(plan_id), 20).get_page(request.GET.get("application_page"))
+    return render(request, "schemes/owner_plan_detail.html", context)
+
+
+@owner_required
 def plan_list(request):
     from .selectors import get_owner_plan_configuration
     closed = request.GET.get("status") == "closed"
