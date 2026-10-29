@@ -2,6 +2,15 @@
 
 ## Owner builder v1 release contract (approved 24 October 2026)
 
+**Current engineering item - 29 October 2026:** owner authorized `FW-UX-006` while
+the first published offer is observed. Local branch `agent/denomination-aware-offers`
+now contains denomination-aware shared copy, comparable facts, public per-offer
+explanations and GET-only Decimal illustrations derived from recorded policy.
+No plan rules, agreements or production settings changed. Automated evidence is
+in TESTING.md; visual review could not complete because Computer Use could not
+verify Chrome's URL. Owner copy/visual acceptance, hosted CI and deployment remain.
+Do not treat this as approval to list INR offers or advertise a gold-value VA waiver.
+
 **Current acceptance checkpoint - 29 October 2026:** the owner's test-customer
 enrolment is verified. Agreement **JSK-958ABDE4 / ID 14** is ACTIVE, pinned to offer
 revision **2** and configuration **1/v1**: INR 5,000 fixed, GOLD_22K_916, 12-month
@@ -61,6 +70,7 @@ the older dated implementation/evidence sections, which remain historical eviden
 | Done | Approved activation and publication of only the reviewed offer | Global configured intake enabled; plan 3 listed with immutable revision 2/audit 118. The two legacy offers, financial history and rights are unchanged. No other configured offer exists. |
 | Done | First customer enrolment and frozen-contract verification | JSK-958ABDE4, revision 2/configuration 1/v1, correct amount/grade/count/duration/periods and consent; one audit, no financial side effects. Customer reports enrolment success; inbox delivery not independently rechecked. |
 | Now | Observe operation before adding another offer/workstream | Recommend seven calendar days, 29 October-5 November. Record application/review friction and misunderstandings, not invented conversion uplift. Handle actual payments through existing verification/escalation procedures; no payment is required solely for this check. No automatic review was scheduled. |
+| Owner-authorized engineering follow-up | FW-UX-006, local presentation candidate during observation | Shared denomination copy, comparable facts, worked examples and one per-offer application action implemented. Finish visual/copy review, CI and deployment before claiming production acceptance. Observation is a recommendation, not a prohibition on authorized engineering. |
 | Separate owner operations | Promptly triage the three overdue deletion reviews | Inspect retained requests, balances/holds and next action individually; no bulk closure, erased history or silent balance change. A discovered financial/privacy hold is handled on its own evidence. |
 
 **Conditional gates, not a blanket new release:** before any INR purchase-credit

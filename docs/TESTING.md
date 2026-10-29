@@ -1,5 +1,42 @@
 # Testing
 
+## FW-UX-006 local offer presentation - 29 October 2026
+
+On `agent/denomination-aware-offers`, an isolated local PostgreSQL 17 test database
+(random name, never the production URL) passed **89 tests in 63.132s**:
+`pages.test_offers`, `pages.tests`, `pages.test_funnel`, `pages.test_business`,
+`schemes.tests.test_independent_publication`, `accounts.test_independent_applications`.
+The **10** `schemes.tests.test_plan_manual` access/response tests passed separately
+in **0.197s**. Django checks passed and `makemigrations --check --dry-run` found no
+changes. Both test databases were disposed of by the runner; SMTP was in-memory,
+media filesystem-only and production/provider credentials were excluded.
+After adding the stored metal-quantity upper-bound guard and finishing the handbook,
+all **25** offer/handbook tests passed again, including zero and out-of-range
+allocation examples. This supplement does not replace hosted full CI.
+
+Coverage includes metal/INR/legacy facts; duration/count/both/anytime/benefit-linked
+families; fixed versus chosen amounts and increments; forbidden grades, malformed,
+non-finite, out-of-range and markup inputs; capped purchase bonus; charges-based
+VA discount distinct from gold-value waiver; six-decimal arithmetic/three-decimal
+display including sub-0.001g and zero-allocation assumptions; silver separation;
+role/intake/publication/withdrawal visibility; one application CTA; clean canonical
+URL; and read-only GETs with unchanged scheme-model rows/no application analytics.
+Existing application, funnel privacy, business metadata and publication/enrolment
+integration regressions pass. No financial calculation/contract service was changed.
+
+The first 72-case run found one stale fixture used for withdrawal. Reloading the
+published plan fixed the fixture; the intermediate 87-case run and final expanded
+89-case run passed. This was not a bypass of stale-offer protection.
+
+A disposable four-offer synthetic preview reached `127.0.0.1:8771`, with writes
+blocked and real mail/payment credentials excluded. **No visual acceptance is
+claimed:** Computer Use stopped because it could not confidently determine Chrome's
+current URL for policy enforcement. No further app input or alternate browser
+automation was attempted. The loopback preview was stopped and its database removed.
+Mobile/desktop, keyboard and light/dark visual checks, owner copy/CMS review,
+hosted CI and reviewed deployment remain pending. This is local evidence only;
+the previously accepted production enrolment/release remains unchanged.
+
 ## Green optimized CI and final merge review - 29 October 2026
 
 Run [40799459905](https://github.com/rajeshr188/jsk-ss/actions/runs/40799459905)

@@ -2,6 +2,38 @@
 
 ## Current milestone
 
+**29 October 2026 - FW-UX-006 presentation implementation prepared locally.**
+Owner selected denomination-aware presentation as the next engineering item while
+the accepted first offer remains under observation. Work is isolated on
+`agent/denomination-aware-offers`; completed research/activation/enrolment evidence
+was saved separately as `ed6e5c8`. No production change or additional offer launch.
+
+Public home/comparison/how-it-works, About fallback/CMS wrapper, terms/refund/privacy
+copy now distinguish exact-grade grams from INR principal and purchase-only benefits.
+Removed blanket date-only eligibility and universal minimum-duration assertions;
+legacy rights remain explicit. Shared About enrolment prose no longer claims signup
+is closed. Cards expose comparable structured facts and link to a gated public
+`/plans/<id>/` explanation with complete policy, exclusions and one application CTA.
+
+Illustrations are GET-only, policy-bounded Decimal reads: one contribution, an
+explicitly hypothetical rate/allowed grade for metal, or INR principal with no rate
+or grams. Six-decimal quantity arithmetic/three-decimal display and existing capped
+purchase-bonus/percentage-of-charges calculations are reused. Examples confer no
+eligibility, award, payment authority, rate lock or spendable cash. Charges/taxes,
+qualification and original-source final refunds are explained separately. No new
+VA-waiver formula, model, migration, dependency or financial workflow was added.
+
+Final regression passed **89 tests in 63.132s**, including silver/legacy/canonical
+cases; **10 handbook tests** passed in 0.197s. Django checks and migration drift
+checks pass. A stale fixture was corrected before the successful runs; see TESTING.md.
+Desktop/mobile visual acceptance is **not complete**: Computer Use stopped because
+it could not establish Chrome's current URL confidently enough to enforce policy.
+No further app input was issued. The synthetic GET-only loopback preview was
+stopped and its disposable database removed. Owner copy/visual approval, hosted CI
+and reviewed deployment remain pending; INR/publication readiness is not marked
+accepted by this engineering change alone. Review CMS-authored marketing content
+alongside these shared templates before listing an INR offer.
+
 **29 October 2026 - first configured enrolment verified; controlled acceptance complete.**
 The owner reported successfully enrolling as the test customer. Read-only production
 verification finds exactly one configured agreement: **JSK-958ABDE4 / ID 14**, ACTIVE,

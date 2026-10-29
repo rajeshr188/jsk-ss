@@ -34,6 +34,10 @@ no automation or additional payment is scheduled/required. This does not reduce 
 scope. Triage three overdue deletion reviews separately as owner operations;
 retain balances/holds and review individually, never bulk-complete.
 
+The owner subsequently authorized **FW-UX-006 as the next engineering item during
+observation**. Its local presentation candidate does not launch another offer or
+alter production. Copy/visual acceptance, hosted CI and deployment are still open.
+
 First offer is now published: plan 3 `MC22K-5000-12M`, configuration 1/v1, 22K only,
 INR 5,000 fixed, 12 months AND 12 qualifying calendar-month payments, no benefit,
 full-only settlement. Active/listed with one verified agreement; financial checks pass.
@@ -308,17 +312,23 @@ scope: ADR-0017. These approved design items are not implemented by migration 00
   Current shared homepage lead/plans introduction assume all payments create grams.
   A correctly described metal offer does not require this broader INR-copy change.
   Existing configuration-specific facts are not proof all shared prose is correct.
-  - [ ] Audit shared copy against each denomination; eliminate metal-only assertions
+  Local implementation prepared on `agent/denomination-aware-offers` (29 October).
+  Published plan data and existing contract/payment services remain unchanged.
+  - [x] Audit shared template copy against each denomination; eliminate metal-only assertions
     from INR paths and contradictory withdrawal/benefit promises before INR listing.
-  - [ ] After first-offer acceptance, standardize comparable facts: accumulation,
+  - [x] After first-offer acceptance, standardize comparable facts: accumulation,
     amount, obligation/period, eligibility, conditional benefit, exclusions and early exit.
     Preserve plan-first application, protected progress and secure returning-customer pay.
-  - [ ] Add read-only worked illustrations using authoritative policy/Decimal reads;
+  - [x] Add read-only worked illustrations using authoritative policy/Decimal reads;
     label hypothetical rate assumptions and separate principal, grams, benefit/cap,
     making charges and taxes. Do not value metal into spendable INR or create a lock.
   - [ ] Verify applicable family/role/flag paths, mobile/keyboard/errors and accepted
     terms; obtain copy approval through `FW-UX-002`. Measure actual outcomes through
     `FW-UX-001`, without treating visual polish or synthetic tests as conversion uplift.
+    Automated family/role/flag/error and no-write checks pass; visual acceptance
+    remains pending after the browser URL safety stop. Review CMS-authored copy too.
+  - [ ] Obtain hosted CI and reviewed deployment acceptance; no production changes
+    or INR-offer launch are part of the local implementation evidence.
   Keep existing Bootstrap/Django/services/selectors. Do not add product reservations,
   new benefit formulas (`FW-PLAN-009`), unrestricted signup or customer policy authoring.
 

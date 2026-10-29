@@ -162,10 +162,10 @@ class PublicPageTests(TestCase):
         response = self.client.get(reverse("how_it_works"))
 
         self.assertContains(response, "Five clear stages")
-        self.assertContains(response, "Request access")
+        self.assertContains(response, "Choose an offer")
         self.assertContains(response, "An online request is the beginning")
-        self.assertContains(response, "See the rate first")
-        self.assertContains(response, "Credit the exact grade")
+        self.assertContains(response, "Metal: see the rate first")
+        self.assertContains(response, "INR credit: retain rupees")
         self.assertContains(response, "A contribution does not reserve or purchase")
         self.assertContains(response, f'href="{reverse("pricing")}"')
         self.assertContains(response, f'href="{reverse("customer_registration")}"')
@@ -337,7 +337,8 @@ class PublicPricingPageTests(TestCase):
 
         self.assertContains(response, "Choose how you want to save")
         self.assertContains(response, "Making charges, wastage/value addition and taxes")
-        self.assertContains(response, "accumulated metal toward jewellery")
+        self.assertContains(response, "Metal offers:")
+        self.assertContains(response, "INR purchase-credit offers, when listed:")
         self.assertNotContains(response, "Cash-plan bonus")
 
 

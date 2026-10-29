@@ -1,11 +1,11 @@
 {% extends '_base.html' %}
-{% block title %}Gold and silver savings plans | Jai Sri Krishna Jewellery{% endblock %}
+{% block title %}Jewellery savings plans | Jai Sri Krishna Jewellery{% endblock %}
 {% block meta_description %}Compare jewellery savings plans, choose your contribution amount and apply with Jai Sri Krishna Jewellery in Vellore.{% endblock %}
 {% block content %}
 <header class="offer-header mb-3 mb-lg-4">
   <p class="page-eyebrow">Jewellery savings in Vellore</p>
   <h1>Choose how you want to save</h1>
-  <p class="text-secondary mb-2">Contribute in rupees, build a recorded quantity of gold or silver, and choose jewellery at our showroom under your agreed terms.</p>
+  <p class="text-secondary mb-2">Compare what accumulates, your payment commitment and when you can settle. Each listed offer records either exact-grade metal grams or INR jewellery purchase credit under its own terms.</p>
   {% if not user.is_authenticated %}<p class="small mb-0">Already a customer? <a href="{% url 'account_login' %}">Sign in</a>.</p>{% endif %}
 </header>
 <div class="row g-3 g-lg-4">
@@ -21,8 +21,9 @@
     <p>Applying is a non-binding request. It does not create a savings agreement.</p>
     <ul class="mb-3">
       <li>The showroom verifies your details and confirms the current terms before creating your agreement. Payment starts after enrolment.</li>
-      <li>Each verified payment credits your enrolled metal grade at the rate locked before payment.</li>
-      <li>Once eligible, use your accumulated metal toward jewellery or an eligible matching-metal coin at our showroom. This plan does not provide voluntary cash withdrawals.</li>
+      <li><strong>Metal offers:</strong> verified contributions record your agreed gold or silver grade at the rate locked for payment. No voluntary metal-to-cash conversion.</li>
+      <li><strong>INR purchase-credit offers, when listed:</strong> verified contributions record INR principal, not grams. A conditional purchase-only benefit must be expressly included in that offer.</li>
+      <li>Configured agreements close through one final full settlement at the showroom. An INR agreement may include an original-source refund of unused paid principal; it is not a cash-withdrawal account. Existing agreements retain their recorded rights.</li>
       <li>Making charges, wastage/value addition and taxes are confirmed at purchase; they are not included in the displayed contribution amount unless expressly stated in your terms.</li>
     </ul>
     <div class="d-flex flex-wrap gap-3"><a href="{% url 'how_it_works' %}">How it works</a><a href="{% url 'terms' %}">Terms and conditions</a><a href="{% url 'cancellation_refund' %}">Cancellation and refunds</a><a href="{% url 'contact' %}">Talk to the showroom</a></div>

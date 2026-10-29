@@ -16,6 +16,7 @@ from .views import (
     offline_page,
     pwa_manifest,
     plan_apply,
+    plan_detail,
     ready_health,
     service_worker,
 )
@@ -32,6 +33,7 @@ urlpatterns = [
     path("our-story/", OurStoryPageView.as_view(), name="our_story"),
     path("contact/", ContactPageView.as_view(), name="contact"),
     path("plans/", PricingPageView.as_view(), name="pricing"),
+    path("plans/<int:plan_id>/", plan_detail, name="plan_detail"),
     path("plans/<int:plan_id>/apply/", plan_apply, name="plan_apply"),
     path("terms/", TermsPageView.as_view(), name="terms"),
     path("privacy/", PrivacyPageView.as_view(), name="privacy"),
