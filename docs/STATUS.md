@@ -2,6 +2,291 @@
 
 ## Current milestone
 
+**29 October 2026 - PR #78 CI policy-copy regression identified and corrected.**
+Hosted run `40865018323` on `25f0b3b` failed one of the 376 tests in shard 3:
+the governance policy test still required date-only early-discontinuation wording.
+The other three test shards, application checks and container job passed; the
+required aggregate failed as a consequence of shard 3. Reproduced the exact
+failure locally before changing the test. The corrected assertion covers normal
+eligibility conditions, agreements longer than twelve months and rejection of a
+blanket twelve-month cutoff on both terms and refund pages. Financial services,
+policy copy and CI coverage are unchanged. Local verification and a fresh hosted
+run are tracked in TESTING.md; this does not mark hosted CI or release accepted.
+
+**29 October 2026 - FW-UX-006 local visual and copy review completed.**
+The user authorized local desktop/mobile review. The in-app browser host was
+unavailable, but a fresh native Chrome observation established the current URL.
+Opened the synthetic loopback preview in a separate tab, preserving the production
+edit tab. No safety setting was changed and no production form was submitted.
+
+Reviewed desktop comparison/details at the 1600px browser width, mobile layouts at
+390px (including 390x844) and narrow 320px, light/dark themes, opaque theme dropdown,
+mobile navigation, keyboard focus/Tab/Enter, valid metal/INR examples, invalid
+amount messaging and the final application action. Corrected findings: precise
+offered-grade labels, aligned card actions, visible duration/missed-payment facts
+in the detail summary, dark outline-button state colours and narrow-header overlap.
+The mobile illustration anchor also clears the sticky header. Changes are display
+projections/CSS only; accepted configurations and financial services are unchanged.
+
+Observed INR example: principal INR 5,000.25, separately illustrated capped 5%
+purchase-only benefit INR 250.01. Observed metal example: INR 3,333.33 / assumed
+INR 14,667 per gram displays 0.227 g with the six-decimal/three-decimal explanation.
+Invalid INR zero shows an error and suppresses results. A read-only database check
+confirmed zero preview agreements, contributions, allocations, rates, principal
+receipts and webhooks after the browser interactions. These are fictional offers,
+not approved additions to the live catalogue or observed customer conversion.
+
+The combined **99-test** local regression passed in **76.500s**, with Django checks
+and no migration drift. Final **15 offer tests** passed in **7.421s**. The preview
+tab/server were closed and its disposable database removed; see TESTING.md.
+This completes the engineering visual/copy audit, superseding the earlier failed
+automation attempt below. It is browser emulation, not a new physical Android
+acceptance or formal accessibility certification. Owner commercial-copy/CMS
+acceptance, hosted CI and reviewed deployment remain open; production is unchanged.
+
+**29 October 2026 - FW-UX-006 presentation implementation prepared locally.**
+Owner selected denomination-aware presentation as the next engineering item while
+the accepted first offer remains under observation. Work is isolated on
+`agent/denomination-aware-offers`; completed research/activation/enrolment evidence
+was saved separately as `ed6e5c8`. No production change or additional offer launch.
+
+Public home/comparison/how-it-works, About fallback/CMS wrapper, terms/refund/privacy
+copy now distinguish exact-grade grams from INR principal and purchase-only benefits.
+Removed blanket date-only eligibility and universal minimum-duration assertions;
+legacy rights remain explicit. Shared About enrolment prose no longer claims signup
+is closed. Cards expose comparable structured facts and link to a gated public
+`/plans/<id>/` explanation with complete policy, exclusions and one application CTA.
+
+Illustrations are GET-only, policy-bounded Decimal reads: one contribution, an
+explicitly hypothetical rate/allowed grade for metal, or INR principal with no rate
+or grams. Six-decimal quantity arithmetic/three-decimal display and existing capped
+purchase-bonus/percentage-of-charges calculations are reused. Examples confer no
+eligibility, award, payment authority, rate lock or spendable cash. Charges/taxes,
+qualification and original-source final refunds are explained separately. No new
+VA-waiver formula, model, migration, dependency or financial workflow was added.
+
+Final regression passed **89 tests in 63.132s**, including silver/legacy/canonical
+cases; **10 handbook tests** passed in 0.197s. Django checks and migration drift
+checks pass. A stale fixture was corrected before the successful runs; see TESTING.md.
+Desktop/mobile visual acceptance is **not complete**: Computer Use stopped because
+it could not establish Chrome's current URL confidently enough to enforce policy.
+No further app input was issued. The synthetic GET-only loopback preview was
+stopped and its disposable database removed. Owner copy/visual approval, hosted CI
+and reviewed deployment remain pending; INR/publication readiness is not marked
+accepted by this engineering change alone. Review CMS-authored marketing content
+alongside these shared templates before listing an INR offer.
+
+**29 October 2026 - first configured enrolment verified; controlled acceptance complete.**
+The owner reported successfully enrolling as the test customer. Read-only production
+verification finds exactly one configured agreement: **JSK-958ABDE4 / ID 14**, ACTIVE,
+plan **MC22K-5000-12M**, immutable offer revision **2**, configuration **1/v1**,
+agreement schema **2**. Fixed amount **INR 5,000**, exact grade **GOLD_22K_916**,
+required count **12**, duration **12 months**, calendar-month/once-per-period rule,
+no post-cutoff collection and the frozen independent contract all validate.
+
+The existing-customer request is ENROLLED, with matching schema-2/revision evidence,
+disclosure version `2026-09-04`, retained customer acceptance at **15:42:20 IST**,
+owner decision at **15:43:28 IST**, and exactly one enrolment audit. No identity,
+email address, secret or raw consent payload is copied into this documentation.
+The customer's receipt/approval email inbox was not independently rechecked here.
+
+Start date is **29 October 2026**. There are **15** valid immutable periods:
+12 original qualifying windows plus three ordinary replacement windows, all at
+INR 5,000. The first is **29 October through 31 October 2026** (exclusive end
+1 November); the twelfth ends before **1 October 2027**. The duration floor is
+**29 October 2027**, so twelve payments alone do not permit earlier normal closure.
+If missed payments require replacements, the final qualifying period and other
+eligibility/authorization checks still apply. Current progress is NO_ENTITLEMENT,
+zero qualified payments, not eligible; dates do not create an entitlement.
+
+Comparison with publication baseline shows only **one new SchemeAccount**, **one
+new SchemeEnrolmentRequest** and **15 new SchemeInstalmentPeriod** records. All
+other 43 compared scheme-model snapshots, legacy offers and liabilities are
+unchanged. Total agreements **14** (13 legacy, one configured); the new agreement
+has zero contributions, metal allocations, provider webhooks, principal/cash
+receipts or redemptions. Plan configuration/agreement, schedule/payment ledger,
+enrolment request, financial exception, graded-rate and live Razorpay checks pass.
+Evidence is retained under the existing protected host directory as
+`first-enrolment.json`, `first-enrolment-baseline-comparison.json` and eight check
+outputs. No production mutation was performed by this verification.
+
+**Next is bounded operating observation**, not another enrolment/payment ceremony.
+Recommend seven calendar days (29 October-5 November) before reviewing friction
+and choosing the next single improvement; this is an observation recommendation,
+not a new financial rule or a scheduled automation. Real payments are optional
+customer decisions handled through existing verified workflows. `FW-UX-006` remains
+the next presentation improvement before public INR offers. Separate overdue
+deletion reviews still require owner attention. This completes the initial
+activation/enrolment checkpoint, not every deferred backlog or future variant.
+
+**29 October 2026 - approved configured intake enabled; first offer published.**
+The owner approved the prepared offer unchanged ("i approve it as it is"), including
+controlled intake activation and publication. On the existing release `8f3ba5a` /
+digest `e9c126344938846b0e991644958265804317417636305447e364d99d10b75834`,
+set only `CONFIGURED_PLANS_ENABLED=True` in the Linode production environment,
+recreated web without building/pulling, waited for healthy, validated/recreated
+Caddy and checked certificate-validated origin/public live/ready responses.
+
+Published plan **3 / MC22K-5000-12M / 22K Monthly Jewellery Savings** through the
+authenticated owner's existing publication form. Immutable offer revision **2**
+(ID **2**) and `SCHEME_CHANGE` audit **118** record publication at **29 October
+2026 15:32:25 IST**. Configuration **1/v1** and all approved terms remain unchanged:
+INR 5,000 fixed; GOLD_22K_916 only; 12 months AND 12 qualifying calendar-month
+payments; joining month counts; no extra grace/advance/bulk catch-up; three ordinary
+replacements then review; separate acknowledged outage relief; no benefit;
+full-only settlement and no post-cutoff collection. Public `/plans/` returns 200
+and includes this offer, monthly terms and its application CTA.
+
+All **46** compared scheme-model record snapshots, legacy offer fields and separate
+liabilities match before activation and after publication. Existing plans remain
+active/listed with 10 and 3 agreements; total agreements **13**, configured
+agreements **0**. Gold remains **2.576623 g 22K / 0.329272 g 24K**; silver and
+INR purchase-credit/legacy cash liabilities remain zero. Plan configuration,
+agreement, financial exception, graded-rate, live Razorpay, INR principal and payment
+operation checks pass. All grades remain OPEN with zero pending orders. Both
+checkout-reconciliation and scheme-reminder timers remain active; their services
+report Result=success / ExecMainStatus=0. One Python-client public TLS handshake
+timed out; subsequent certificate-validated IPv4 curl live/ready probes passed,
+without changing TLS, DNS or application security settings.
+
+Protected host evidence: `/home/deploy/jsk-rollouts/20261029T100052Z-configured-intake`
+(mode 700; environment backup mode 600). No application code/migration, real
+customer enrolment, payment, refund or customer message was created by activation.
+**Next: one genuine customer application and owner-approved enrolment**, checking
+the frozen revision/configuration, amount, grade, monthly periods/count/dates and
+consent without requiring payment. No customer has been selected or enrolled by
+automation. The earlier disabled/draft checkpoints below are historical.
+
+**29 October 2026 - first real configured offer prepared, inactive and unlisted.**
+Using the authenticated production owner interface, inspected the empty configuration
+catalogue, reviewed the server-generated independent-policy preview and saved
+configuration **1 / v1** (family `2fdc420f-6129-423a-926f-191a38ae3e48`). Created
+draft plan **3**, **22K Monthly Jewellery Savings**, code `MC22K-5000-12M`, offering
+only `GOLD_22K_916`. The owner plans screen confirms preparation-only/unlisted,
+zero agreements for the draft, and existing plans still active/listed with their
+10 and 3 agreements. No existing offer was edited or retired.
+
+Proposed review terms: showroom-fixed INR 5,000; 12-month duration AND 12 qualifying
+calendar-month payments, including the joining month; at most one qualifying
+payment per period; zero extra grace/no bulk catch-up or advance payments; three
+ordinary replacement periods then review, preserving paid entitlement. Outage
+compensation stays separate and customer-acknowledged. No bonus/VA discount or
+post-cutoff contributions. Full-only exact-grade jewellery settlement; early exit
+needs authorization/reconciliation, with no voluntary metal-to-cash payout.
+These are proposed draft terms, not owner publication/activation approval. Internal
+notes and both audit reasons explicitly retain that boundary.
+
+The live owner guide confirmed configured intake disabled. No environment change,
+publication, enrolment, payment, refund, rate publication or customer message was
+performed. Next is owner acceptance/amendment of the concrete offer and its
+customer-facing terms, followed by separately approved controlled activation.
+Policy changes require a successor immutable configuration, not an edit to v1.
+
+Read-only host verification confirms release `8f3ba5a`, configured intake false,
+plan 3 inactive/unlisted, only GOLD_22K_916 offered, zero draft agreements and 13
+total agreements. The publication selector reports only the disabled release gate.
+Financial exceptions pass with paid/unallocated, failed/mismatched webhooks,
+expired checkouts, unresolved optional orders and refund-disposition errors all zero.
+Origin certificate-validated live/ready probes pass; public apex readiness returns
+200 and www returns its existing 301 redirect. Containers remain healthy, with
+394 MiB available RAM during diagnosis.
+
+The browser briefly showed HTTP 502 and then 525 while opening the read-only
+publication page. No corresponding web crash/error was found; Caddy recorded a
+successful 200 review response in 0.266s. After one safe GET reload, the actual
+owner publication page loaded successfully and showed only the disabled intake
+gate, with Publish disabled. Root cause of the transient transport failure is
+unproven; recurrence needs investigation, not an assumed application fix. No TLS,
+proxy, DNS, restart or security-setting change was made.
+
+**29 October 2026 - competitor research documented; controlled activation stays next.**
+Owner requested preserving the public-market audit and reconciling it with the
+deployed builder rather than starting every suggested improvement. MVP_PLAN.md now
+records official sources/limits, core-versus-exact compatibility, benefit-basis
+arithmetic, presentation/onboarding observations and the recommended sequence.
+FUTURE_WORK.md tracks denomination-aware presentation as `FW-UX-006` and selected
+financial-policy extensions as conditional `FW-PLAN-009`, reusing `FW-PRICE-002`
+for early-exit tiers. No new ADR: this is research/sequencing, not an accepted new
+financial contract or architecture change.
+
+Next remains one owner-reviewed supported configuration/inactive draft, explicit
+activation approval, publication of only that offer and one genuine enrolment
+without requiring payment. Recommend a 22K exact-metal/no-new-benefit offer for the
+first operating sample; owner must confirm actual terms. INR/benefit engineering
+is not removed from scope or labelled unfinished. Shared metal-only public copy
+must be corrected before public INR listing; another benefit formula must be
+implemented before its promise is advertised. These conditional gates do not
+reopen completed CI/device/image acceptance for accurate supported metal offers.
+Three overdue deletion reviews remain prompt, separate owner operations. The
+research produced no competitor account/payment, code, database, environment or
+production change. Configured intake remains disabled per the deployment record.
+
+**29 October 2026 - builder release deployed; configured intake remains disabled.**
+Normal CI `40799459905` passed on `46c7fd8`: all **1,492 tests** exactly once,
+four successful 373-case PostgreSQL shards, complete inventory verification,
+migration/drift/application/deployment/static checks and container build/critical
+scan. Downloaded reports were independently reverified. Total hosted job span was
+62m39s (06:46:57-07:49:36 IST); the previous serial base suite was about four hours.
+Different application revisions/runner conditions mean this is an operational
+comparison, not a controlled benchmark. Profiles retain the observed shard imbalance
+for later tuning without dropping tests.
+
+Final release review found no additional merge-blocking issue in the reviewed
+publication/default-off intake, owner/customer scoping, frozen-contract/source
+confirmation, full-only settlement and original-source refund/actual-fulfilment
+boundaries. Branch protection remained enforced, required checks were green and no
+review thread was unresolved. Marked ready and merged the exact tested head as
+**8f3ba5ad0000a3645f69eddf63607436f91720a8**. The merge tree matches `46c7fd8`;
+no new application change was inserted after CI. Local main was fast-forwarded.
+The PR review/body and merge message retain the green CI and separate rollout boundary.
+
+Main run **40818256991** passed all four shards, aggregate inventory verification,
+checks, publication and the published-image critical scan. The approved-tree image is
+`ghcr.io/rajeshr188/jsk-savings@sha256:e9c126344938846b0e991644958265804317417636305447e364d99d10b75834`.
+Its revision label matches `8f3ba5a`. Isolated PostgreSQL 18.6 exact-image upgrade,
+complete retained-history dump/restore, history-loss downgrade refusal, forward
+reapplication and Gunicorn live/ready checks passed. The upgrade regression passed
+one test in 60.027s. See TESTING.md for liabilities, hashes and latency limits.
+
+The owner confirmed **29 October 2026 10:00 AM IST** recovery-point availability
+and approved the exact digest rollout with configured intake disabled. On
+`172.235.9.77`, the operator stopped both timers/services, automation recorded an
+audited payment pause, stopped web and captured the baseline. All **39 migrations**
+through schemes.0057 applied successfully, including the deployed-checkout merge.
+Hashes of all original fields/rows across **20 existing scheme models** matched
+before migration, afterward and again on the running release. Counts remain
+**15 customers, 13 agreements, zero pending Razorpay orders**. Liabilities remain
+**22K gold 2.576623 g; 24K gold 0.329272 g; silver 0.000000 g; legacy cash principal
+and earned bonus INR 0.00**. New INR purchase-credit liability is zero.
+
+Web is healthy on `8f3ba5a`; Caddy validated/recreated, public live/ready and homepage
+returned 200, private owner plans/configuration/manual routes redirect anonymous
+visitors to login. All builder, financial, grade, live-payment, cash, authentication,
+registration/enrolment and Google integrity checks passed. No pending migrations or
+recent web error markers were found. Prior payment controls were restored through
+the audited service; all grades are OPEN. **CONFIGURED_PLANS_ENABLED=False** and
+zero configured offers/agreements remain. Existing registration/enrolment flags
+were preserved. Capacity: 358 MiB available RAM, 8.2 GB free disk (65% used).
+
+The deletion diagnostic reports **three overdue owner reviews**, with structural
+error counters zero. The previous image produces the identical result against the
+same retained records: existing operational backlog, not a migration regression.
+Do not silently clear these reviews. The initial Python HTTP client received a
+Cloudflare 403; normal-browser-user-agent public checks and origin checks passed.
+Existing HSTS scope/preload warnings remain unchanged.
+
+The operator restarted both timers; both are active with future runs scheduled and
+service result/exit status success/0. New configured intake activation remains a
+separate decision. Recovery is forward with compatible code and retained
+history; the pre-builder image is not approved over new configured records.
+Protected host evidence is under `/home/deploy/jsk-rollouts/20261029-8f3ba5a`;
+environment backup is mode 600 inside a mode-700 directory; the temporary candidate
+environment copy was removed after deployment. Synthetic rehearsal
+containers/database volume were removed; ignored local logs remain.
+This separate evidence branch collects the final image/rollout record without
+changing the merged application candidate. Separate staging remains deferred under
+FW-PROD-009; the accepted isolated exact-image rehearsal remains required.
+
 **29 October 2026 - first optimized CI failures reproduced and locally fixed.**
 Run `40786013227` on `fb59370` completed all four 373-case shards. Shards 0/3,
 application/migration/deployment/static checks and the container build/scan passed.

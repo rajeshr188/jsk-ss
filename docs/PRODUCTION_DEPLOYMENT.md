@@ -7,6 +7,170 @@ explicit Razorpay Test/Live modes, and manually published Scheme Rate build. Dev
 
 ## Production-readiness boundary
 
+### First configured enrolment acceptance - 29 October 2026
+
+After the owner completed the customer journey, read-only checks verified agreement
+**JSK-958ABDE4 / ID 14**, ACTIVE, against plan **MC22K-5000-12M**, immutable offer
+revision **2** and configuration **1/v1**, agreement schema 2. The accepted contract
+has fixed **INR 5,000**, **GOLD_22K_916**, **12** qualifying calendar-month payments
+AND **12** months minimum. Matching disclosure consent (`2026-09-04`), retained owner
+decision and one enrolment audit validate. This records retained consent, not a claim
+that every public policy revision date was changed by this release.
+
+All **15** frozen periods validate: 12 originals plus three ordinary replacements.
+First period **29 October-31 October 2026**, exclusive end 1 November. Duration
+floor **29 October 2027**; completing the original payment windows earlier does
+not override that floor. Current progress is NO_ENTITLEMENT, zero qualifying
+payments, not eligible. Enrolment itself is not a rate lock, payment or allocation.
+
+Compared with the publication baseline, only SchemeAccount (13 to 14),
+SchemeEnrolmentRequest (4 to 5) and SchemeInstalmentPeriod (0 to 15) changed. The
+other **43** compared model snapshots, legacy offers and separate liabilities
+match. The new agreement has zero contributions, allocations, payment webhooks,
+INR/cash receipts and redemptions. Configuration/agreement, instalment schedule/
+payment ledger, enrolment request, financial exception, graded-rate and live
+Razorpay commands all pass. The schedule command's historical
+`payment_attribution=not_released` label is not an activation verdict: its scope is
+period integrity; the separate payment-ledger command reports the live intake
+flag and zero integrity errors. No feature flag or financial record was changed
+by these read-only checks.
+
+Protected evidence in the activation directory below:
+`first-enrolment.json`, `first-enrolment-baseline-comparison.json`, and
+`first-enrolment-check_*.txt`. Customer reports enrolment success; email inbox
+delivery was not independently rechecked. Controlled activation/enrolment acceptance
+is complete. Recommend initial observation through **5 November 2026**, then review
+operator/customer friction. This schedules no job and requires no new payment.
+Preserve this production agreement through the normal lifecycle even though the
+owner calls the customer journey a test; no record deletion or silent backdating.
+
+### Configured intake activation and first offer publication - 29 October 2026
+
+**Current runtime state: `CONFIGURED_PLANS_ENABLED=True`.** The owner approved the
+prepared offer unchanged and explicitly authorized intake/publication. This
+supersedes the disabled-first deployment instruction in the historical checkpoint
+below; it is not approval to publish other drafts or enrol an unspecified customer.
+
+Kept release `8f3ba5ad0000a3645f69eddf63607436f91720a8` and digest
+`e9c126344938846b0e991644958265804317417636305447e364d99d10b75834` on
+`172.235.9.77`. Verified the sole configured draft, zero configured agreements,
+environment/image identity and the disabled flag as the sole publication blocker.
+Captured protected baseline hashes/environment, changed only the intake flag,
+validated Compose, recreated web using `--no-build --pull never --no-deps`, waited
+for healthy, validated Caddy and recreated Caddy. No build, pull or migration ran.
+Certificate-validated origin/public live/ready checks return the expected release.
+
+Through the authenticated owner's **Review and publish** form, published only
+**plan 3 / MC22K-5000-12M / 22K Monthly Jewellery Savings**, retaining configuration
+**1/v1**. The confirmed audit reason records the owner's exact approval and all
+contract boundaries. Immutable **publication revision 2 (ID 2)** and **SCHEME_CHANGE
+audit 118** were appended at **29 October 2026 15:32:25 IST**. Plan 3 is active/listed;
+public `/plans/` returns 200 with the fixed INR 5,000 offer, 22K grade, required
+monthly terms and application CTA. Existing plans remain unchanged.
+
+All **46** compared scheme-model record hashes/counts, all legacy offer fields and
+separate liabilities match before activation and after publication: **13 legacy
+agreements, zero configured agreements**, 22K **2.576623 g**, 24K **0.329272 g**,
+silver **0.000000 g**, zero legacy cash/bonus and INR purchase-credit liability.
+Plan configuration/agreement, financial exceptions, graded rates, live Razorpay,
+INR principal and payment-operation checks pass. All grades remain OPEN; pending
+orders remain zero. Both checkout-reconciliation and reminder timers remain active;
+their services report Result=success / ExecMainStatus=0. One Python-client public
+TLS timeout was followed by passing certificate-validated IPv4 curl health probes;
+no security/DNS setting was changed. Activation/publication created no customer agreement, payment,
+refund, rate, allocation or customer message.
+
+Evidence is retained only on the host at
+`/home/deploy/jsk-rollouts/20261029T100052Z-configured-intake` (mode 700): baseline,
+after-enable/after-publication snapshots, public listing, revision/audit evidence,
+check outputs and environment-before backup (mode 600). Never publish its environment
+backup. Next: one genuine customer application and approved enrolment, checking its
+frozen contract without payment. Do not invent a production test customer.
+
+If intake needs suspension, disable `CONFIGURED_PLANS_ENABLED` and recreate web
+on this compatible image, then validate/recreate Caddy and verify health. The flag
+hides configured offers from public/intake selectors without changing their stored
+publication status or existing agreements' payment/settlement rights; withdraw a
+specific offer through its audited publication workflow if needed.
+Preserve appended history; do not reverse migrations or restore old data to undo
+publication. The pre-builder image remains unsuitable over configured records.
+
+### Builder v1 production rollout - 29 October 2026; configured intake disabled
+
+PR #77 merged as `8f3ba5ad0000a3645f69eddf63607436f91720a8` after reviewed-head CI
+`40799459905` passed all 1,492 tests and build/security checks. The merge tree equals
+tested head `46c7fd8`. Main CI `40818256991` passed and published
+`ghcr.io/rajeshr188/jsk-savings@sha256:e9c126344938846b0e991644958265804317417636305447e364d99d10b75834`.
+The exact-image PostgreSQL 18.6 upgrade, complete retained-history restore, guarded
+downgrade, forward reapplication and application live/ready rehearsal passed (TESTING.md).
+The dated foundation sections below retain their historical
+implementation boundaries; the current release state is tracked in MVP_PLAN.md.
+
+During that initial disabled-first rollout, `CONFIGURED_PLANS_ENABLED=False` was
+explicitly retained in the production file; the later approved activation above
+records the current value.
+This switch governs new configured publication/enrolment, not existing agreement
+payment/settlement rights. Do not run migrations or enable offers from this merge
+record alone. The selected recovery strategy is forward with compatible application
+code and retained database history. The old pre-builder image is not approved over
+new configured records; never reverse migrations or restore an older database merely
+to erase subsequent financial activity. Restoring a managed recovery point requires
+incident review and reconciliation of changes after that point.
+
+Before rollout, `/opt/jsk/app` on `172.235.9.77` was healthy at
+release `d0e5dd1897debb054d99647d6ea16575d08b1a48`, image
+`ghcr.io/rajeshr188/jsk-savings@sha256:00caf93dfa3933cc662f39745c4a3bd823768b523a73163d71bb60c474e0ec6d`.
+It uses PostgreSQL 18.6. The prior image is retained for evidence; it is not a
+compatible rollback authorization over new configured records.
+
+The owner confirmed **29 October 2026 10:00 AM IST** is available and approved this
+exact digest-pinned rollout with configured intake disabled. This is owner-confirmed
+provider evidence, not an independent backup-console inspection by the agent.
+Deployment checks passed with the existing HSTS scope/preload warnings. The operator
+stopped both timer/service pairs through sudo; automation recorded the owner-approved
+payment pause through the audited service, confirmed zero pending orders, stopped
+web and captured original-field hashes across 20 existing scheme models. All **39
+migrations** applied successfully through schemes.0057, including accounts.0009 and
+both merge nodes. Original hashes, counts and separate liabilities matched afterward
+and again against the running candidate. No existing financial record was rewritten.
+
+| Production baseline retained | Value |
+| --- | ---: |
+| Customers / agreements | 15 / 13 |
+| Pending Razorpay orders | 0 |
+| Legacy cash principal / earned bonus | INR 0.00 / INR 0.00 |
+| 22K gold / 24K gold | 2.576623 g / 0.329272 g |
+| Silver | 0.000000 g |
+| New INR purchase-credit liability | INR 0.00 |
+
+Web runs the exact digest above and is healthy; no pending migrations remain.
+Caddy validated and was recreated. Public live/ready/homepage returned HTTP 200
+with the expected release; anonymous owner plans/configurations/manual routes return
+302 to login. All plan/configuration/agreement, instalment, benefit, INR, closure,
+optional-order, financial, live-readiness, graded-metal, in-store-cash and auth/email
+checks passed. Registration/enrolment/Google integrity checks also passed. The
+original payment controls were restored through the audited service: all grades OPEN.
+Configured intake is false with zero configured offers/agreements. Existing intake
+flags were preserved. Both timers are active again, future runs scheduled, last
+service Result=success and ExecMainStatus=0. No new build or live transaction was used
+for acceptance. Final capacity: 358 MiB available RAM and 8.2 GB disk free (65% used).
+
+One operational exception remains: deletion checks report **three overdue owner
+reviews**, all structural counters zero. The old image's same read-only check returns
+the identical backlog; review these through the owner workflow rather than clearing
+them to obtain a green command. An initial Python-client public health request was
+rejected by Cloudflare; normal-browser-user-agent public and direct-origin probes
+passed. No Cloudflare policy was weakened.
+
+Protected host evidence is `/home/deploy/jsk-rollouts/20261029-8f3ba5a` (mode 700):
+`migration-plan.txt`, `migrate.log`, original/running baseline hashes, control snapshot
+and original environment backup (mode 600). The temporary candidate environment copy
+was removed. Do not publish environment files. New configured offer activation is
+a subsequent controlled decision. No build runs on the 1 GB serving Linode.
+The accepted local exact-image rehearsal applies; separate staging remains deferred
+under FW-PROD-009. No new real payment/refund or duplicate inbox/device ceremony is
+required merely to repeat already accepted unchanged workflows.
+
 ### Captured-payment comparison and refund handoff (27 October 2026; local acceptance)
 
 From **Exception queue → Review recovery**, use **Check provider** and compare the
@@ -4725,7 +4889,8 @@ separate `PUBLIC_BLOG_ENABLED=True` activation remain future controlled work.
 The target full-production checklist remains below. Live acceptance does not mark
 owner-deferred controls complete:
 
-- [ ] The exact image passed CI, scanning, staging, and production deploy checks.
+- [ ] The exact image passed CI, scanning, the approved isolated rehearsal (separate
+      staging only when required by the release plan), and production deploy checks.
 - [ ] Production uses `DJANGO_DEBUG=False`, explicit hosts/origins, HTTPS, secure
       cookies, staged HSTS, and verified proxy-header behavior.
 - [ ] Database TLS/private access, backups, PITR, RPO/RTO, and an isolated restore

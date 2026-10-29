@@ -1,5 +1,207 @@
 # Testing
 
+## PR #78 hosted CI policy-copy fix - 29 October 2026
+
+Run `40865018323` on `25f0b3b` reported one failing governance assertion in
+shard 3 (376 tests). The other three shards, checks and container job passed;
+the required `django` aggregate failed because shard 3 failed. The exact test
+was reproduced on isolated local PostgreSQL before editing: **1 test, 1 failure
+in 1.232s**. The earlier 99-test presentation selection did not include this
+governance module.
+
+The assertion required "before its recorded eligibility date", although the
+approved presentation now covers duration, qualifying count, both and anytime
+eligibility. Updated the test to require "before its normal eligibility conditions
+are met" on both terms and refund pages, explicitly cover agreements longer
+than twelve months, and reject date-only wording and "within 12 months".
+No production template, financial service, test inventory or CI workflow changed.
+
+Post-fix local regression passed **62 tests in 36.429s** across
+`schemes.tests.test_plan_governance`, `pages.test_offers` and `pages.tests`.
+Django checks passed and no migration drift was detected. The runner used a
+disposable loopback PostgreSQL database, mock payments and in-memory email.
+Ignored logs: `.uv-cache/offer-ci-failure-repro.log` and
+`.uv-cache/offer-ci-governance-fix.log`. A fresh full hosted run is still required
+on the pushed fix; local success does not approve merging or deployment.
+
+## FW-UX-006 visual review follow-up - 29 October 2026
+
+The user authorized the local review. In-app browser host was unavailable; fresh
+native Chrome state established the URL and allowed the existing Computer Use
+workflow. A separate loopback tab preserved the production edit form. No safety
+configuration, production record, payment provider or outbound mail was touched.
+The earlier safety interruption below is historical, not the current QA state.
+
+Inspected desktop comparison and detail pages at a 1600px browser width, mobile
+390px including 390x844, and narrow 320px. Verified light/dark surfaces, opaque
+mode menu, mobile navigation, field wrapping, focus visibility, Tab/Enter form
+submission, error text, stacked results and application/compare links. Corrected
+the observed dark outline-button states, 320px brand overlap, grade specificity,
+card action alignment and detail-summary duration/missed-payment visibility.
+Retested those views after refreshing assets/restarting the disposable preview.
+
+Observed examples: INR 5,000.25 stays INR principal, with a separate hypothetical
+5% capped benefit of INR 250.01; INR 3,333.33 at assumed 14,667/g displays 0.227 g
+with explicit rounding/assumption boundaries. Zero INR gives a readable error and
+no result. The local database read after UI requests confirmed zero agreements,
+contributions, allocations, rates, INR receipts and webhooks. Four preview offers
+are fictional and do not approve or publish any new production product.
+
+Combined local run of the six regression modules and owner handbook passed **99
+tests in 76.500s**. Django checks passed; no migration drift. Final **15 focused
+offer tests passed in 7.421s**, covering exact silver labels and duration/missed-payment
+facts before the collapsed policy. The preview tab/server were closed and the
+disposable database was removed after review. Raw logs remain ignored `.uv-cache/denomination-offers-visual-fixes.log`
+and `.uv-cache/denomination-offers-final-summary.log`.
+
+This completes engineering browser/copy review, not owner commercial-copy/CMS
+acceptance, physical Android verification, a formal accessibility audit, hosted CI
+or production acceptance. Keep those distinctions when recording release status.
+
+## FW-UX-006 local offer presentation - 29 October 2026
+
+On `agent/denomination-aware-offers`, an isolated local PostgreSQL 17 test database
+(random name, never the production URL) passed **89 tests in 63.132s**:
+`pages.test_offers`, `pages.tests`, `pages.test_funnel`, `pages.test_business`,
+`schemes.tests.test_independent_publication`, `accounts.test_independent_applications`.
+The **10** `schemes.tests.test_plan_manual` access/response tests passed separately
+in **0.197s**. Django checks passed and `makemigrations --check --dry-run` found no
+changes. Both test databases were disposed of by the runner; SMTP was in-memory,
+media filesystem-only and production/provider credentials were excluded.
+After adding the stored metal-quantity upper-bound guard and finishing the handbook,
+all **25** offer/handbook tests passed again, including zero and out-of-range
+allocation examples. This supplement does not replace hosted full CI.
+
+Coverage includes metal/INR/legacy facts; duration/count/both/anytime/benefit-linked
+families; fixed versus chosen amounts and increments; forbidden grades, malformed,
+non-finite, out-of-range and markup inputs; capped purchase bonus; charges-based
+VA discount distinct from gold-value waiver; six-decimal arithmetic/three-decimal
+display including sub-0.001g and zero-allocation assumptions; silver separation;
+role/intake/publication/withdrawal visibility; one application CTA; clean canonical
+URL; and read-only GETs with unchanged scheme-model rows/no application analytics.
+Existing application, funnel privacy, business metadata and publication/enrolment
+integration regressions pass. No financial calculation/contract service was changed.
+
+The first 72-case run found one stale fixture used for withdrawal. Reloading the
+published plan fixed the fixture; the intermediate 87-case run and final expanded
+89-case run passed. This was not a bypass of stale-offer protection.
+
+A disposable four-offer synthetic preview reached `127.0.0.1:8771`, with writes
+blocked and real mail/payment credentials excluded. **No visual acceptance is
+claimed:** Computer Use stopped because it could not confidently determine Chrome's
+current URL for policy enforcement. No further app input or alternate browser
+automation was attempted. The loopback preview was stopped and its database removed.
+Mobile/desktop, keyboard and light/dark visual checks, owner copy/CMS review,
+hosted CI and reviewed deployment remain pending. This is local evidence only;
+the previously accepted production enrolment/release remains unchanged.
+
+## Green optimized CI and final merge review - 29 October 2026
+
+Run [40799459905](https://github.com/rajeshr188/jsk-ss/actions/runs/40799459905)
+passed on application head `46c7fd83c672d10a587a6c0cc5401f35866b6814`.
+All four test jobs, checks, aggregate required Django gate and container build/
+critical scan succeeded. PR-only image publication was correctly skipped.
+The downloaded authoritative plan and reports were independently verified through
+`verify_reports`: **1,492 tests, each exactly once, no missing/duplicate IDs, every
+report successful**. Plan fingerprint: `0ef47b82d9688bebc052d08b0eef0f109637e6b1c77917ae5c116e5b31ab3fcd`.
+Downloaded plan-file SHA-256: `c1a7f9b7acb9b9d751b231f94c8582ca18726dc2a7d3f4a6112ed811a759b6f2`.
+Raw local artifacts are ignored `.uv-cache/ci-run-40799459905`; the source inventory
+can be reconstructed from the recorded commit and CI runner. No business data or
+credentials are part of these reports.
+
+| Shard | Tests | Suite seconds | Result |
+| --- | ---: | ---: | --- |
+| 0 | 373 | 2,440.372 | Passed |
+| 1 | 373 | 1,804.285 | Passed |
+| 2 | 373 | 1,278.436 | Passed |
+| 3 | 373 | 3,636.609 | Passed |
+
+The successful hosted run spanned 62m39s, 29 October 2026 06:46:57-07:49:36 IST.
+The earlier serial base run used 14,359.871s for 1,473 tests. The new source has
+1,492 tests and different runner conditions; this is useful observed feedback-time
+improvement, not an isolated performance benchmark. Remaining uneven class costs
+are visible in artifacts and may be tuned later without changing coverage or
+transaction semantics. FW-CI-001's first successful optimized-run acceptance is met.
+
+Release review verified default-off configured intake and separate existing rights,
+owner/customer scope, immutable contract/source evidence, full-only settlements,
+original-source refund/fulfilment requirements and retained-history recovery guards.
+No new merge-blocking finding was identified in that scope. Existing laptop operator,
+four-email and representative Android acceptance remain recorded; this is not an
+independent human review or a new production/payment test. Required protected checks
+`django` and `container` passed, base was current and no review thread was unresolved.
+PR #77 was marked ready and merged with expected-head protection into
+`8f3ba5ad0000a3645f69eddf63607436f91720a8`. A local full-tree diff against `46c7fd8`
+was empty. The tested application tree was preserved.
+
+Main CI [40818256991](https://github.com/rajeshr188/jsk-ss/actions/runs/40818256991)
+passed all four test shards, aggregate inventory verification, checks, publication
+and published-image critical scan. Its exact image was then rehearsed independently
+as recorded below. This evidence-only branch does not change the application image.
+
+### Published-image rehearsal - 29 October 2026
+
+- Release: `8f3ba5ad0000a3645f69eddf63607436f91720a8`.
+- Image: `ghcr.io/rajeshr188/jsk-savings@sha256:e9c126344938846b0e991644958265804317417636305447e364d99d10b75834`.
+- Local image ID: `sha256:af607c9271371aabf8baf253b2895a61070614bc1e83538b0209dfe42535b134`;
+  created `2026-10-29T05:21:38.011912959Z`; OCI revision matches the release.
+- PostgreSQL 18.6, isolated network namespace without external connectivity or
+  published ports; synthetic data and locmem email only. App CPU limit one,
+  memory limit 768 MB; database limit 512 MB. No build on the serving Linode.
+- Committed tests mounted read-only into the production image; application code
+  remained the published image. Test files matched the merge commit.
+
+`builder_restore_rehearsal.py` seeded six synthetic agreements: INR and exact-grade
+financial histories with benefit invoice return/reapplication/replacement chains,
+four never-credited payment-refund/order histories, and retained catalogue closures.
+`pg_dump -Fc` and `pg_restore --exit-on-error` restored to a separate database.
+All ordered scheme-model row/column hashes matched; separate outstanding liabilities
+remained **INR 500.00** and **22K gold 0.050000 g**. Other four accounts remained zero.
+Returned benefit awards intentionally stayed held for review: the diagnostic
+`benefit_awards status=error` is expected fixture evidence, not a hidden passing
+financial condition. Principal, closures, reapplications, financial exceptions and
+graded-metal checks passed with the expected retained states.
+
+The graph downgrade refused at 0056. Independent guards for 0047/0048/0049/0050/
+0052/0053/0054/0056 refused history loss. Reapplying current graph leaves preserved
+all hashes and liabilities. The separate deployed-checkout-to-builder regression
+passed **one test in 60.027s**, including unchanged legacy paid contribution,
+allocation, checkout and webhook evidence. After the drills, Gunicorn booted from
+the image against the restored database with read-only filesystem, dropped
+capabilities and no-new-privileges; live/ready both returned HTTP 200 and exact
+release. A final retained-history verification passed. Temporary app/database
+containers and the synthetic database volume were removed.
+
+Read-only retained-history profiling used three samples per case, with fixed delay
+injected per SQL query. This is bounded synthetic evidence, not a production SLA.
+
+| Liability/history | Queries per read | No delay median | 1.5 ms/query median | 10 ms/query median |
+| --- | ---: | ---: | ---: | ---: |
+| INR, two returns | 482 | 0.906 s | 1.799 s | 6.158 s |
+| Gold, two returns | 266 | 0.394 s | 0.995 s | 3.348 s |
+
+The high retained-history query counts remain a performance limitation; larger
+histories/concurrency need monitoring and future profiling. Profiling caused no
+financial writes. Harness SHA-256:
+`9066e754d9b6d02a824f6f81bd9200769e36e707589c5937b5c6097aa251b0e5`.
+Synthetic manifest SHA-256:
+`366c0a5687c2de8c1473562cc0aa7d06e81453cb6ec04379c57c5744f60f6f54`.
+Ignored local evidence: `.uv-cache/builder-image-rehearsal/final-8f3ba5a`.
+
+Production was inspected read-only: PostgreSQL 18.6; release `d0e5dd1`; 15 customers,
+13 agreements, no pending Razorpay or paid-unallocated records, passing financial
+and live-readiness checks, healthy web and 8.7 GB free disk. These counts are a
+preparation snapshot; capture fresh separate liabilities under pause at rollout.
+The owner subsequently confirmed recovery point **29 October 2026 10:00 AM IST**
+and approved this exact deployment. Production rollout passed all 39 migrations,
+20-model original-field hash comparison, unchanged separate liabilities, current
+application integrity and public HTTPS health; see PRODUCTION_DEPLOYMENT.md for
+the complete record. Configured intake remains false and both timers were restored.
+The only failing diagnostic was three overdue deletion reviews, reproduced by the
+previous image with all structural counters zero; this remains owner operational work.
+Recover forward with compatible code; do not run the old pre-builder image over
+new configured histories or reverse migrations to discard records.
+
 ## First optimized CI failure repair - 29 October 2026
 
 Hosted run `40786013227` (`fb59370`) executed 373 tests per isolated shard:

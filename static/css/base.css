@@ -1641,6 +1641,14 @@ dl.row dt {
   .brand-name {
     max-width: 10.5rem;
     font-size: 0.94rem;
+    white-space: normal;
+  }
+
+  .site-navbar.navbar-expand-lg .brand-lockup {
+    min-width: 0;
+    max-width: calc(100% - 7.5rem);
+    margin-right: .25rem;
+    gap: .45rem;
   }
 
   .brand-mark {
@@ -1928,6 +1936,7 @@ dl.row dt {
 
 .offer-header { max-width: 52rem; }
 .offer-details summary { padding: .5rem 0; cursor: pointer; font-weight: 600; }
+#illustration-heading { scroll-margin-top: 6rem; }
 @media (max-width: 575.98px) {
   .offer-header h1 { font-size: 1.8rem; }
   .offer-header > .text-secondary { font-size: .95rem; }

@@ -2,6 +2,127 @@
 
 ## Owner builder v1 release contract (approved 24 October 2026)
 
+**Current engineering item - 29 October 2026:** owner authorized `FW-UX-006` while
+the first published offer is observed. Local branch `agent/denomination-aware-offers`
+now contains denomination-aware shared copy, comparable facts, public per-offer
+explanations and GET-only Decimal illustrations derived from recorded policy.
+No plan rules, agreements or production settings changed. The user-authorized
+engineering visual/copy review now passes at desktop/390px/320px and both themes,
+including keyboard, examples and errors. Five presentation findings were corrected;
+99 local regression tests pass. See TESTING.md. Owner commercial-copy/CMS acceptance,
+hosted CI and reviewed deployment remain; the earlier automation interruption was
+resolved through a fresh valid native-browser observation, with no safety bypass.
+Do not treat this as approval to list INR offers or advertise a gold-value VA waiver.
+
+**Current acceptance checkpoint - 29 October 2026:** the owner's test-customer
+enrolment is verified. Agreement **JSK-958ABDE4 / ID 14** is ACTIVE, pinned to offer
+revision **2** and configuration **1/v1**: INR 5,000 fixed, GOLD_22K_916, 12-month
+minimum AND 12 qualifying calendar-month payments. Customer disclosure/owner
+decision evidence and one enrolment audit are retained. All 15 periods validate
+(12 original plus three ordinary replacements); first window ends before
+1 November 2026 and duration floor is 29 October 2027. Zero contributions/orders,
+allocations or principal receipts were created. Only the agreement, request and
+period models changed; other 43 compared model snapshots, legacy offers and
+liabilities match. Eight integrity commands pass. **Controlled activation and
+first-enrolment acceptance are complete. Next is bounded operating observation.**
+Recommend 29 October-5 November before the next retrospective, with no scheduled
+automation or required payment. Inbox delivery was not independently rechecked.
+
+**Earlier activation checkpoint - 29 October 2026:** owner approved the first
+offer unchanged and authorized intake/publication. `CONFIGURED_PLANS_ENABLED=True`
+is live on the same tested `8f3ba5a` image. Plan **3 / MC22K-5000-12M** is published
+and listed, configuration **1/v1**, immutable publication revision **2 / ID 2**,
+audit **118**. Public listing/application CTA, HTTPS health and integrity checks
+pass. All 46 compared scheme-model snapshots, legacy offers, 13 existing agreements
+and liabilities are unchanged; configured agreements remain zero. No rebuild,
+migration, customer enrolment or payment was needed for activation. **Next is one
+genuine customer enrolment and frozen-contract verification, with no payment required.**
+See STATUS.md and PRODUCTION_DEPLOYMENT.md for the protected production evidence.
+
+**Earlier disabled-first deployment checkpoint:** current-head normal CI `40799459905` passed
+all 1,492 tests, inventory verification, checks and container security gate. Final
+release review completed and PR #77 merged as `8f3ba5a`, with the tested tree
+unchanged. Main CI `40818256991` passed and published digest `e9c126344938846b0e991644958265804317417636305447e364d99d10b75834`.
+Its isolated PostgreSQL 18.6 upgrade, financial/history dump-restore, guarded downgrade,
+forward reapplication and actual application health rehearsal passed. Owner
+laptop/Android/email acceptance and readiness engineering are complete. The owner
+confirmed **29 October 2026 10:00 AM IST** recovery-point availability and approved
+the exact rollout. Release `8f3ba5a` is now deployed: all 39 migrations applied,
+original financial-history hashes/balances match, web/HTTPS and builder integrity
+checks pass, and previous payment controls are restored. Configured intake remains
+explicitly disabled, with no configured offers/agreements created. Remaining:
+separately approve controlled configured-offer activation. Both operational timers
+were restored and verified active with future runs scheduled.
+Three pre-existing overdue deletion reviews need owner follow-up; both old/new images
+report them with no structural deletion errors. Detailed evidence is in TESTING.md
+and PRODUCTION_DEPLOYMENT.md.
+
+### Current execution priority — 29 October 2026
+
+The builder is deployed, the first approved offer is published and one customer
+enrolment is verified; **operating observation is next**. Do not restart completed engineering/CI/device acceptance
+or expand this release to match every competitor. The market review below records
+knowledge and backlog, not new product promises or activation approval. This current
+sequence and the release checkpoint above supersede outstanding-release wording in
+the older dated implementation/evidence sections, which remain historical evidence.
+
+| Order | Work | Completion boundary |
+| --- | --- | --- |
+| Done | Document research and reconcile priorities | Sources, compatibility, design observations and conditional gaps recorded here and in FUTURE_WORK.md. |
+| Done | Prepare and review one real configuration and draft through the owner interface | Owner accepted configuration 1/v1 and plan 3 unchanged: fixed INR 5,000, 22K only, calendar-month completion plus duration, no benefit, full-only settlement. This does not remove INR/benefit capabilities from the delivered builder. |
+| Done | Approved activation and publication of only the reviewed offer | Global configured intake enabled; plan 3 listed with immutable revision 2/audit 118. The two legacy offers, financial history and rights are unchanged. No other configured offer exists. |
+| Done | First customer enrolment and frozen-contract verification | JSK-958ABDE4, revision 2/configuration 1/v1, correct amount/grade/count/duration/periods and consent; one audit, no financial side effects. Customer reports enrolment success; inbox delivery not independently rechecked. |
+| Now | Observe operation before adding another offer/workstream | Recommend seven calendar days, 29 October-5 November. Record application/review friction and misunderstandings, not invented conversion uplift. Handle actual payments through existing verification/escalation procedures; no payment is required solely for this check. No automatic review was scheduled. |
+| Owner-authorized engineering follow-up | FW-UX-006, local presentation candidate during observation | Shared copy, comparable facts and illustrations implemented; engineering visual/copy review and 99 local tests pass. Finish owner commercial-copy/CMS acceptance, hosted CI and deployment before claiming production acceptance. Observation is a recommendation, not a prohibition on authorized engineering. |
+| Separate owner operations | Promptly triage the three overdue deletion reviews | Inspect retained requests, balances/holds and next action individually; no bulk closure, erased history or silent balance change. A discovered financial/privacy hold is handled on its own evidence. |
+
+**Conditional gates, not a blanket new release:** before any INR purchase-credit
+offer is publicly listed, correct shared metal-only marketing/refund copy
+(`FW-UX-006`). Before advertising another benefit formula, tier, day deadline or
+product restriction, implement and accept that exact workflow (`FW-PLAN-009`,
+with early-exit tiers in `FW-PRICE-002`). These do not block an offer using supported
+rules and accurate existing disclosures. If a defect affects the chosen metal
+offer, fix it before publication; do not waive it for speed.
+
+Keep one engineering delivery item active after the pilot. Broader calculators,
+comparison polish, new financial variants, mandates, gifts, online jewellery
+checkout and customer-authored configurations are not parallel launch requirements.
+Existing operational checks/incident response continue. Prior budget, rotation and
+staging deferrals remain; this plan neither starts another email-provider migration
+nor closes separate legal/accounting/monitoring work by assertion.
+
+**Earlier first-draft preparation checkpoint — 29 October:** configuration 1/v1; plan 3,
+`MC22K-5000-12M`, **22K Monthly Jewellery Savings**. Owner UI preparation/validation
+passed; plan is inactive/unlisted with zero agreements. Existing offers remain
+active/listed (10 and 3 agreements). Proposed terms are showroom-fixed INR 5,000,
+GOLD_22K_916 only, duration 12 months AND 12 qualifying calendar-month payments,
+joining month counts, one qualifying payment per period, no extra grace/catch-up,
+three ordinary replacements then review, no bonus/discount, full-only settlement
+and no post-cutoff collection. Exact-grade early discontinuation retains customer
+authorization, reconciliation and no voluntary cash conversion. Internal review
+notes distinguish this from approval. No flag or financial workflow was changed.
+Read-only origin/host verification and the financial check passed. The real owner
+publication review now loads and reports only the disabled intake gate; its
+Publish action is disabled. A transient browser 502/525 recovered on a GET reload,
+without changing TLS/proxy/application settings; the cause is not established.
+
+- [x] Prepare one genuine inactive draft using the owner UI and validate its policy.
+- [x] Owner accepts or amends the actual amount, monthly obligation, period/count,
+  duration, no-benefit and full-exit terms. The older FMS-001 plan is a frequency
+  ceiling/date-based agreement; this new draft requires actual qualifying instalments.
+- [x] Check server-generated draft/offer facts and read-only publication readiness:
+  matching v1, 22K only, full duration/count/monthly/exit boundaries, zero agreements,
+  inactive/unlisted, disabled flag as sole application blocker, financial check green.
+- [x] Obtain owner acceptance of customer-facing terms and explicit configured
+  intake/publication approval; use the existing controlled activation runbook.
+- [x] Enable intake and publish only this reviewed offer; verify public listing,
+  immutable revision/audit, health and unchanged financial records/liabilities.
+- [x] Verify one user-completed enrolment without requiring a payment: agreement
+  JSK-958ABDE4; frozen terms, consent, audit, periods and no-financial-side-effect
+  checks pass. Existing rights and versions remain unchanged.
+- [ ] Observe initial operation and review practical friction before selecting the
+  next single offer/improvement; recommended observation ends 5 November 2026.
+
 **29 October CI priority:** the owner asked to optimize CI before the next release
 run. Runs `40783890107` (PR) and `40783885495` (duplicate push) were intentionally
 cancelled. FW-CI-001 now implements four isolated serial test shards with complete
@@ -120,9 +241,10 @@ historical meaning and are not fresh instructions to reimplement completed work.
 - [x] Implement count-only and anytime eligibility and the agreed additional amount/schedule combinations, including consistent UI, reminders and full closure. Local gated paths and family tests exist; no automatic maturity forecast for count-only/anytime.
 - [x] Implement only defined benefit policies, including qualification, actual fulfilment and append-only corrections/reversal. Local retained awards, actual invoice application, full returns and customer-authorized replacement review are present; no benefit cashout or partial redemption.
 - [x] Implement verified provider-history disposition needed for closure: read-only observations, fresh owner-bound payment resolution and separate all-attempt order retirement. Ambiguity remains a hold; no owner checkbox substitutes for provider evidence. Operator containment/escalation acceptance passed on 28 October; current-head CI still applies before release.
-- [ ] Verify every approved matrix row through enrolment, online/cash payment, missed/late/duplicate payment, correction, normal/early full settlement, unused cancellation and reversal. Test concurrent/idempotent paths and preserved legacy history.
-- [ ] Update generated agreements, public disclosures and owner manual; complete owner/mobile/keyboard acceptance and clean normal CI.
-- [ ] Rehearse exact-image migrations, rollback/forward-recovery and financial invariants; obtain explicit approval for the single production activation.
+- [x] Verify the approved representative family matrix through enrolment, online/cash payment, missed/late/duplicate handling, corrections, normal/early full settlement, unused cancellation and reversal. Current-head CI 40799459905 passed 1,492 tests, including 268 categorical compatibility shapes and 20 unmocked family/denomination/channel journeys, concurrency and legacy history. This does not claim 268 manual device journeys or every numeric variant.
+- [x] Update generated agreements, public disclosures and the Edition 5 owner manual; agreed owner/laptop/Android/keyboard/email acceptance is recorded and normal CI 40799459905 passed. Final image/release acceptance remains separate.
+- [x] Rehearse exact-image migrations, retained-history restore/forward recovery and financial invariants; obtain rollout approval and deploy disabled-first. Completed on 29 October for `8f3ba5a`; see the release checkpoint and production runbook. This is not configured-intake approval.
+- [ ] Complete the separately approved controlled-intake sequence: one reviewed real draft, explicit flag activation, publication of only that offer and one genuine enrolment with frozen terms and no payment requirement.
 
 Excluded from v1: customer-authored configurations (`FW-PLAN-008`), partial redemption,
 arbitrary executable rules, unapproved cash-payout products and silent legacy conversion.
@@ -138,9 +260,9 @@ and its dependencies are resolved.
 | Owner operations and provider exceptions | 28 October: 24 focused checks passed on `b2a9d62`; actual synthetic queue/cash/online forms reviewed. After guided explanation, owner confirmed the operator can follow hold/escalation, refund, evidence and final-closure decisions | Agreed four-case laptop acceptance complete. Initial operation uses recognition/containment and technical/provider escalation; independent owner mastery of every recovery screen is deferred. Full INR settlement fulfilment cannot clear a separate exception; real cases still require their actual evidence. Revisit if the material workflow changes. |
 | Performance | 31 focused tests passed; four-return reads use 1,101 INR / 713 metal queries. Current `6c5034b` local image on PostgreSQL 18.6 at one CPU/768 MB: two-return medians 1.742s INR / 0.860s metal with 1.5 ms added per query; 5.854s / 3.168s at 10 ms. Complete hashes and read-only assertions passed; TESTING.md records samples and limits | Engineering + owner: accept actual device/workflow latency on the final activation candidate. This is bounded synthetic sensitivity evidence, not a load test or SLA. Keep full history and fresh mutation authority; higher latency remains a limitation. |
 | Device, accessibility and messages | Current-candidate synthetic export: 16 real owner/customer screens and two captured completion emails; Chrome widths 320/390/1280, labels/error associations and light/dark text sampling. Keyboard-outline/theme-contrast corrected; laptop forms/keyboard reach checked. Owner confirmed all four test emails received/readable and premature completion refused on Android | 29 October: owner confirmed the physical Android browser check as All checked and usable on the 6c5034b runtime; final history/cleanup passed. The subsequent light dropdown fix was locally verified at mobile/desktop widths. Later material UI changes need their own appropriate checks. Full device matrix and comprehensive specialist audit are deferred; critical defects still block. Do not repeat unchanged inbox/premature-closure checks solely for ceremony. |
-| INR publication and fulfilment | Owner confirmed business/accounting/provider suitability and approved original-source routes on 27 October. On 28 October, source-linked simulated fulfilment, pending refund containment and zero-outstanding closure were demonstrated; owner accepted the operator procedure | Laptop operational portion complete for `b2a9d62`. Real settlements still require actual fulfilment and customer receipt evidence; pending refunds or unsupported cash fallback cannot discharge liability. No automated refund API required. Base-candidate CI and the agreed Android check passed. Publication still awaits the readiness change checks/CI, final image evidence and release approval. |
+| INR publication and fulfilment | Owner confirmed business/accounting/provider suitability and approved original-source routes on 27 October. On 28 October, source-linked simulated fulfilment, pending refund containment and zero-outstanding closure were demonstrated; owner accepted the operator procedure | Laptop operational portion complete for `b2a9d62`. Real settlements still require actual fulfilment and customer receipt evidence; pending refunds or unsupported cash fallback cannot discharge liability. No automated refund API required. Base-candidate CI and the agreed Android check passed. Readiness checks and current-head CI 40799459905 passed. Publication still awaits final image evidence and release approval. |
 | Migration and recovery | Current `6c5034b` local image passed PostgreSQL 18.6 deployed-checkout upgrade (1 test, 67.801s), configured INR/metal dump/restore, complete row/liability comparison, whole-graph 0056 refusal and eight retained-history guards with forward recovery. The fixture includes archived draft/configuration and retired-plan evidence. Exact image identity and cleanup are recorded in TESTING.md | Engineering: base-candidate normal CI passed; approve a published compatible recovery digest and reconcile final activation-image evidence before deployment. Local image compatibility is not a production rollback approval. Never delete retained evidence to force a downgrade. |
-| Activation implementation | Local code now supports validated schema 2, preserves schema-1 restrictions and verifies account encoding/denomination. Publication/new intake stays default off; existing rights and reminders are independent of that switch. Unmocked 20-case family/denomination/channel journeys and the 156/64/47-case affected batches passed; 10 handbook checks passed | Former gate-only tests now exercise actual contract/source/role/fulfilment boundaries. Require current-head CI and final image/recovery review. No production flag change or rollout approval is implied. |
+| Activation implementation | Local code now supports validated schema 2, preserves schema-1 restrictions and verifies account encoding/denomination. Publication/new intake stays default off; existing rights and reminders are independent of that switch. Unmocked 20-case family/denomination/channel journeys and the 156/64/47-case affected batches passed; 10 handbook checks passed | Former gate-only tests now exercise actual contract/source/role/fulfilment boundaries. Current-head CI 40799459905 passed; final published-image/recovery review remains. No production flag change or rollout approval is implied. |
 | Production rollout | Existing digest-pinned GHCR deployment procedure | Owner + engineering: approve exact digest, current recovery point, compatible recovery image and one coherent activation. No build on the serving host. |
 
 The first refund-resolution prerequisite is local (0052): strict read-only Live
@@ -200,7 +322,7 @@ eligibility and actual full settlement. The online path replays captured evidenc
 INR closure refuses until jewellery and each original-source refund are evidenced.
 Pausing intake does not disable existing collection, settlement or notices. The
 156-case affected batch passed; the further 64-case boundary/reminder and 47-case
-proof batches passed, as did all 10 updated handbook checks. Current-head normal CI
+proof batches passed, as did all 10 updated handbook checks. Current-head normal CI 40799459905 passed; final image/recovery acceptance
 remains required. An INR cash source without a recorded principal receipt
 now refuses correction with a validation error and transaction rollback rather than
 an uncaught lookup error. No financial constraint or source requirement was relaxed.
@@ -320,6 +442,124 @@ benefit; optional monthly ceiling without any debt; invoice below/equal/above fu
 credit; correction after a benefit is fulfilled; late capture during accepted closure.
 Complete only the relevant checkbox with evidence; local persistence and INR primitives
 do not complete the builder or permit activation of a future family.
+
+## Jewellery savings market review (29 October 2026)
+
+### Evidence and scope
+
+Research/discussion requested, then approved for documentation on 29 October.
+Reviewed Tanishq, Joyalukkas, Kalyan, Bhima Gold, MN Jewel Park and V Chetty
+Radhakrishna Chetty against the deployed builder. Sources: public official sites,
+retrievable terms/brochures and publisher app descriptions. Chrome visual inspection
+covered Joyalukkas, Bhimagold, V Chetty and Tanishq; JSK's plans page and repository
+templates/services were also read. No competitor account, application, payment or
+authenticated app journey was created. Design observations are judgments, not
+measured conversion gains or comprehensive accessibility results.
+
+Regional, historic and channel variants differ. Recheck one identified dated
+showroom contract before proposing its JSK equivalent; do not combine promotional
+headlines into an invented contract. Competitor terms do not establish JSK's legal,
+accounting or provider suitability. This audit authorizes no financial promise,
+refund route, runtime change or activation. "Core fit" below is not exact replication.
+
+### Published schemes versus our builder
+
+| Offering | Public evidence | Compatibility / missing exact terms |
+| --- | --- | --- |
+| Tanishq Golden Harvest | Ten fixed monthly payments from INR 2,000 with INR 1,000 increments; maturity from day 300; discount rising towards 75% of one instalment at day 365; seven-day grace, lateness reductions and day-421 closure boundary. [Official terms](https://www.tanishqgoldenharvest.co.in/online/TermsandConditions). | Customer-fixed INR/monthly collection and purchase benefits fit. Exact-day rules, first-instalment benefit base, progressive discounts, grace and deadline-driven refund/voucher lifecycle do not. Equal outcomes in an ideal example are not equivalent contracts. |
+| Joyalukkas Easy Gold Payment, monthly | Ten monthly advances from INR 1,000; purchase from day 300; gold MC threshold waiver and separate stone/category benefits. [Current comparison](https://www.joyalukkas.in/joyalukkas-gold-scheme). | Core INR family fits; exact waiver, category rules, due dates/default and discontinuation semantics need extensions. |
+| Joyalukkas Advance Smart Gold, monthly | Ten monthly payments from INR 5,000; gold weight fixed at payment; purchase from day 300; advertised gold MC threshold of 14%. Same official comparison. | Exact-metal core fits; confirm actual purity in the accepted contract. Day boundaries, waiver basis and category benefits differ from our generic VA calculation. |
+| Joyalukkas single-payment variants | Value and weight-fix plans from INR 1 lakh, purchase from day 300. Same official comparison. | Related count/amount primitives exist; a dedicated single-advance preset with precise funding/day-based maturity/benefit terms is not exposed. Do not substitute an anytime or ordinary monthly contract silently. |
+| Kalyan purchase advances / Dhan Samriddhi material | Corporate disclosure describes monthly advances up to eleven months and a specified purchase period not exceeding 365 days. Separate illustrations show membership fees, invoice thresholds and alternative gold/studded benefits. [Corporate disclosure](https://www.kalyanjewellers.net/images/investors/pdf/Other/Prospectus%20Kalyan%20Jewellers%20India%20Ltd.pdf), [Dhan Samriddhi illustration](https://www.kalyanmatrimony.com/gold-saving-scheme-online). | Basic INR/monthly family fits; fees, alternative benefits and invoice/category thresholds do not. These pages are not one verified current Vellore contract. Overseas terms are not evidence of Indian scheme rules. |
+| Bhimagold My Choice | Golden Key: eleven equal advances from INR 5,000, advertised no VA/MC plus promotional coin and online enrolment/redemption. Shreyas advertises a threshold waiver, Kubera a 50% eligible MC discount, Kanaka Plus a single advance. [Official catalogue](https://www.bhimagold.com/bhima-my-choice). | Multiple core families fit. Percentage-of-eligible-charges resembles current VA arithmetic with agreed scope/cap. Gifts, threshold waivers, product restrictions and online jewellery fulfilment need more work. Several full brochures were inaccessible; no complete-contract equivalence is claimed. |
+| V Chetty Swarnalakshmi | Ten monthly gold-weight contributions, INR 500–10,000 in INR 500 groups; purchase in month eleven; advertised 11% VA waiver on accumulated gold, payment cutoff, holiday-rate handling and collection/refund deadlines. [Official plan](https://vchettyjewellery.com/gold-saving-scheme). | Strong core metal/amount/monthly fit. VA base, exact deadlines, holiday pricing and early-exit valuation differ. Its screenshot-assisted payment practice does not replace JSK's verified-source evidence. |
+| MN Jewel Park, Vellore | Storefront/app description shows catalogue discovery, accounts, WhatsApp and digital gold/silver booking. [Vellore storefront](https://www.mnjewelparkvellore.com/), [publisher app description](https://apps.apple.com/in/app/mn-jewel-park/id6504754023). | Insufficient consistent public contractual terms to judge tenure, rates, benefits or refunds. Obtain the current brochure/in-app contract; reviews and similarly named older apps/domains cannot establish these rules. |
+
+Bhima regional schemes are not interchangeable: the separate
+[Future Gold page](https://www.thebhimajewellery.com/scheme/future-gold-scheme)
+describes eleven 22K-weight payments and VA benefits; do not merge that with
+Bhimagold Golden Key or older Gold Tree terms. Joyalukkas's
+[Easy Gold brochure](https://cdn.joyalukkas.in/media/jas-assets/static/easy-gold-purchase-scheme.pdf)
+adds payment/default, excess-purchase and collection conditions beyond the headline.
+Exact rules must belong to one identified offer/version.
+
+### Critical calculation distinction
+
+Current `schemes/benefits.py` calculates a capped percentage of verified qualifying
+INR principal for purchase bonus, or a capped percentage of evidenced eligible
+invoice charges for VA discount. Percentage of charges is not a threshold waiver
+expressed as a percentage of gold value. Illustrative eligible gold value INR
+100,000 and eligible making/VA charges INR 15,000:
+
+| Promise | Formula | Discount before a separate contractual cap |
+| --- | --- | --- |
+| 11% off eligible making charges | 15,000 x 11% | INR 1,650 |
+| Waive VA up to 11% of eligible gold value | min(15,000, 100,000 x 11%) | INR 11,000 |
+
+Likewise, percentage of one instalment, one additional instalment and percentage of
+total principal differ even when ideal completion produces the same amount. Missing
+or corrected payments, early closure and caps expose those differences. Do not
+encode another formula through misleading copy or arbitrary owner-entered eligible
+charges. Base, eligible portion, rate, cap, rounding, qualification and invoice
+evidence need explicit retained rules before a new formula is advertised.
+
+### Current capabilities and limits
+
+Keep the implemented separation of INR versus one exact grade; showroom-fixed,
+customer-fixed and compatible variable amounts; optional versus required monthly
+payments; calendar versus anniversary periods; payment ceilings; duration/count/
+both/anytime eligibility; missed-payment consequences; conditional benefits and
+one final full settlement. Frozen revisions, verified source records, original-source
+refund routes and actual-fulfilment evidence remain valuable foundations.
+
+The **268 valid categorical combinations (104 metal, 164 INR)** hold numeric values
+constant. Different amounts, durations, counts, percentages, caps and offered grades
+are excluded; this is neither 268 published products nor an arbitrary rules engine.
+Current restrictions include whole-month duration, zero extra grace, no bulk catch-up,
+bounded replacements, one selected percentage/cap benefit and full-only settlement.
+Nomination/succession, fees, combined/alternative category benefits, mandates, gifts
+and ecommerce fulfilment are not supplied simply by selecting a configuration.
+
+### Design and onboarding observations
+
+| Reference | Useful observed pattern | Recommended JSK application |
+| --- | --- | --- |
+| [Tanishq landing page](https://www.tanishqgoldenharvest.co.in/) | Jewellery-goal imagery, benefit calculator, separate joining/payment/auto-debit actions | Explain paid amount and actual conditional benefit with an example; distinguish prospective and returning customers. |
+| Joyalukkas comparison | Value versus weight and monthly versus single payment; comparable cards, brochures and callback help | Separate "Accumulate gold grams" and "Build jewellery purchase credit"; use the same facts/order on cards. |
+| Bhimagold catalogue | Named offers, short benefit, enrolment, brochure and calculator | Publish a small understandable range, not the entire compatibility matrix. |
+| V Chetty local plan | Local identity, accumulation illustration and assisted joining; assumed rates distinguished from actual future accumulation | Connect savings to jewellery and showroom help; disclose assumptions without guaranteed future grams/rates/returns. |
+| [Kalyan payment portal](https://payments.kalyanjewellers.net/) | Separate existing-scheme identification/OTP front door | Discoverable payment action through JSK's existing secure account flow, without anonymous identity lookup or weaker verification. |
+| MN Jewel Park storefront / publisher description | Catalogue discovery, app presence and showroom communication | Relate jewellery goals to offers without promising stock reservation/future price. Authenticated onboarding/payment was not tested. |
+
+Keep the current plan-first request: select offer, contact/preferences, verify email,
+complete details, showroom review and agreed enrolment. Conversion work does not
+require bypassing owner approval or unrestricted signup. Preserve the selected plan,
+progress and next action. Explain what accumulates, amount, required payments,
+eligibility, benefit, exclusions and early exit. Distinguish applications from
+agreements and attempts from verified payments; show showroom-only fulfilment.
+Do not copy unproven "100% secure", guaranteed-return or instant-approval claims,
+accept screenshots as payment authority, or hide Test mode.
+
+### Gaps in priority order and engineering recommendation
+
+| Priority / trigger | Gap | Recommended scope / tracking |
+| --- | --- | --- |
+| Before public INR listing | Shared homepage/plans introduction and generic instructions assume all contributions create metal | `FW-UX-006`: denomination-aware marketing, FAQs and refund explanation. Examples: homepage lead and plans introduction/"Before you apply". Review every shared path; INR principal is neither grams nor a voluntary cash-withdrawal product. Not a blanket blocker for accurate metal offers. |
+| First post-pilot customer improvement | Comparable offer facts and personalised worked illustrations | `FW-UX-006`, approved messaging under `FW-UX-002`: read-only output from recorded policy; separate paid principal, hypothetical grams, benefit qualification/caps, taxes and purchase-time charges. No illustration becomes a rate lock or entitlement. |
+| Before advertising a threshold VA waiver | Percentage-of-charges does not implement percentage-of-eligible-gold-value waiver | `FW-PLAN-009`: explicit base, eligible purchase portion, cap and retained calculation/invoice evidence. Never just rename the old formula. |
+| Only for a selected offer needing it | Exact days, due-day/grace and collection expiry | `FW-PLAN-009`: agree first-payment versus agreement-start anchor, late confirmation, notices, rights and final refund/settlement behaviour. Never silently convert months to 30 days or forfeit principal. |
+| Only for a selected offer needing it | Tiered benefit, early-exit slabs, product/excess-purchase/offer-stacking scope | `FW-PLAN-009`; retain early-exit schedules in existing `FW-PRICE-002`. Versioned calculations and scoping, not prose-only promises or duplicate work. |
+| Later / conditional | Single-advance presets, nominees/succession, mandates and richer assistance | Fit analysis after a commercial need; reuse current primitives/verified payment boundaries first. |
+| Outside this activation | Fees, gifts, online jewellery redemption/shipping and customer-authored policies | Separate business/architecture decisions and acceptance; `FW-PLAN-008` remains deferred. No partial redemption, replacement-credit wallet/voucher or platform rewrite. |
+
+Recommended direction: operate one reviewed supported offer first, improve
+denomination-aware presentation/illustrations next, and add only a specifically
+selected new benefit formula afterward. A future small range can distinguish
+flexible 22K, required-monthly 22K, INR purchase credit and optionally silver.
+These are candidate families, not approved amounts/tenures/benefits or four parallel
+launch tasks. Current execution is tracked at the top of this document; actionable
+backlog is in FUTURE_WORK.md. Do not reopen the complete-builder release to clone
+every competitor.
 
 ## Plan builder and agreement lifecycle (owner approved 22 October 2026)
 

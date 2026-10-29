@@ -1,7 +1,7 @@
 {% load workspace %}
 <div class="card mb-3"><div class="card-body">
   <h2 class="h5">Selected plan: {{ plan.name }}</h2>
-  {% if plan.configuration_id %}<p>Configuration {{ plan.configuration }}. {{ plan.configuration.get_amount_policy_display }}.{% if plan.configuration.amount_policy == 'CUSTOMER_FIXED' %} Your confirmed selection becomes the exact amount for each contribution, not merely a preference.{% endif %}{% if plan.configuration.amount_step %} Select increments of ₹{{ plan.configuration.amount_step|inr }} from the minimum.{% endif %} No bonus or discount is included.</p>{% endif %}
+  {% if plan.configuration_id %}<p>Configuration {{ plan.configuration }}. {{ plan.configuration.get_amount_policy_display }}.{% if plan.configuration.amount_policy == 'CUSTOMER_FIXED' %} Your confirmed selection becomes the exact amount for each contribution, not merely a preference.{% endif %}{% if plan.configuration.amount_step %} Select increments of ₹{{ plan.configuration.amount_step|inr }} from the minimum.{% endif %}{% if plan.configuration.benefit_policy == 'NONE' %} No bonus or discount is included.{% endif %}</p>{% endif %}
   {% if compact %}<p class="small mb-2">{% if plan.amount_rule == 'FIXED' %}₹{{ plan.fixed_contribution_amount|inr }}{% elif plan.maximum_contribution %}₹{{ plan.minimum_contribution|inr }}–₹{{ plan.maximum_contribution|inr }}{% else %}From ₹{{ plan.minimum_contribution|inr }}{% endif %} · {% if plan.configuration.instalment_policy == 'MONTHLY_COMPLETION' %}Monthly completion{% else %}{{ plan.get_frequency_rule_display }}{% endif %} · {{ plan.default_months }} months</p><details><summary class="small">Contribution and duration details</summary>{% endif %}
   <dl class="row small mb-0">
     <dt class="col-6">Contribution</dt><dd class="col-6">{% if plan.amount_rule == 'FIXED' %}₹{{ plan.fixed_contribution_amount|inr }}{% elif plan.maximum_contribution %}₹{{ plan.minimum_contribution|inr }}–₹{{ plan.maximum_contribution|inr }}{% else %}₹{{ plan.minimum_contribution|inr }} or more{% endif %}</dd>
@@ -10,6 +10,6 @@
     <dt class="col-6">After eligibility</dt><dd class="col-6">{% if plan.allow_contributions_after_eligibility %}Further contributions allowed under your agreement{% else %}No further contributions{% endif %}</dd>
   </dl>
   {% include 'schemes/includes/configured_offer_rules.html' %}
-  <p class="small text-secondary mb-0 mt-2">Gold and silver jewellery purchase savings. Metal is allocated using the Scheme Rate applicable to a confirmed payment. This application does not guarantee a return or enable payments.</p>
+  <p class="small text-secondary mb-0 mt-2">{% if plan.configuration.accumulation == 'INR_PURCHASE_CREDIT' %}Verified contributions record INR jewellery purchase credit, not metal grams. Any purchase-only benefit remains separate from principal.{% else %}Gold and silver jewellery purchase savings. Metal is allocated using the Scheme Rate locked for a verified payment.{% endif %} This application does not guarantee a return or enable payments.</p>
   {% if compact %}</details>{% endif %}
 </div></div>

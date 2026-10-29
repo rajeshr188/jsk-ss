@@ -1,6 +1,7 @@
 import logging
 
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db import DatabaseError, connection
 from django.http import Http404, HttpResponse, JsonResponse
 from django.template.loader import render_to_string
@@ -16,6 +17,7 @@ from .business import showroom_structured_data
 from .models import AboutPage, OurStoryPage, PublicFunnelDailyCount
 from .services import record_public_funnel_step
 from .selectors import public_editorial_page
+from .offer_selectors import get_public_offers, offer_facts, OfferIllustrationForm, offer_illustration
 
 logger = logging.getLogger(__name__)
 
@@ -148,7 +150,7 @@ class HomePageView(TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["featured_plans"] = get_public_scheme_plans(limit=3)
+        context["featured_plans"] = get_public_offers(limit=3)
         context["showroom_json_ld"] = showroom_structured_data()
         context["customer_enrolment_requests_enabled"] = (
             settings.CUSTOMER_ENROLMENT_REQUESTS_ENABLED
@@ -195,7 +197,7 @@ class PricingPageView(ListView):
         return super().get(request, *args, **kwargs)
 
     def get_queryset(self):
-        return get_public_scheme_plans()
+        return get_public_offers()
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -207,6 +209,27 @@ class PricingPageView(ListView):
 
 class HowItWorksPageView(TemplateView):
     template_name = "pages/how_it_works.html"
+
+
+@require_GET
+def plan_detail(request, plan_id):
+    plan = get_object_or_404(get_public_scheme_plans().select_related("configuration"), pk=plan_id)
+    plan.public_facts = offer_facts(plan)
+    form = OfferIllustrationForm(request.GET or None, plan=plan)
+    # Display one valid initial scenario without accepting arbitrary query fields.
+    if not request.GET:
+        form = OfferIllustrationForm({key: field.initial for key, field in form.fields.items()}, plan=plan)
+    illustration = None
+    if form.is_valid():
+        try:
+            illustration = offer_illustration(form)
+        except ValidationError as error:
+            form.add_error(None, error)
+    return HttpResponse(render_to_string("pages/plan_detail.html", {
+        "plan": plan, "form": form, "illustration": illustration,
+        "canonical_url": request.build_absolute_uri(reverse("plan_detail", args=[plan.pk])),
+        "customer_enrolment_requests_enabled": settings.CUSTOMER_ENROLMENT_REQUESTS_ENABLED,
+    }, request=request))
 
 
 @never_cache

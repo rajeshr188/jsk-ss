@@ -1,0 +1,81 @@
+{% extends '_base.html' %}
+{% load crispy_forms_tags %}
+{% block title %}{{ plan.name }} | Jai Sri Krishna Jewellery{% endblock %}
+{% block meta_description %}Understand {{ plan.name }}: contribution rules, eligibility, settlement terms and an illustrative example. Showroom approval is required.{% endblock %}
+{% block canonical_url %}<link rel="canonical" href="{{ canonical_url }}">{% endblock %}
+{% block content %}
+<header class="offer-header mb-4">
+  <a class="d-inline-block py-2" href="{% url 'pricing' %}">← Compare savings plans</a>
+  <p class="page-eyebrow">Jewellery savings · {{ plan.code }}</p>
+  <h1>{{ plan.name }}</h1>
+  <p class="lead">{{ plan.public_facts.accumulation }} for jewellery at our Vellore showroom.</p>
+  <p>Your application is a request, not an agreement or a payment. The showroom confirms your chosen offer and accepted terms before enrolment.</p>
+</header>
+<div class="row g-4">
+  <div class="col-lg-7">
+    <section class="card mb-4" aria-labelledby="offer-facts"><div class="card-body p-3 p-lg-4">
+      <h2 class="h4" id="offer-facts">Your plan at a glance</h2>
+      <dl>
+        <dt>What accumulates</dt><dd>{{ plan.public_facts.accumulation }}.{% if not plan.public_facts.inr %}{% if plan.public_facts.grades|length > 1 %} Offered grades: {% for grade in plan.public_facts.grades %}{{ grade.display_name }}{% if not forloop.last %}, {% endif %}{% endfor %}.{% endif %} One exact grade is fixed at enrolment; grades are never combined.{% else %} Contributions do not buy gold or silver grams or lock a metal rate.{% endif %}</dd>
+        <dt>Contribution amount</dt><dd>{{ plan.public_facts.amount }}. {% if plan.fixed_contribution_amount %}₹{{ plan.fixed_contribution_amount|floatformat:2 }}{% else %}From ₹{{ plan.minimum_contribution|floatformat:2 }}{% if plan.maximum_contribution %} to ₹{{ plan.maximum_contribution|floatformat:2 }}{% endif %}{% endif %}.</dd>
+        <dt>Monthly obligation and payment limit</dt><dd>{{ plan.public_facts.obligation }}. {{ plan.public_facts.limit }}.</dd>
+        {% if plan.public_facts.rows %}{% for label, value in plan.public_facts.rows %}{% if label == 'Duration' or label == 'Missed payments' %}<dt>{{ label }}</dt><dd>{{ value }}</dd>{% endif %}{% endfor %}{% else %}<dt>Agreed duration</dt><dd>{{ plan.minimum_months }} months minimum; {{ plan.default_months }} months standard. The showroom confirms your individual agreement.</dd>{% endif %}
+        <dt>When normal settlement is eligible</dt><dd>{{ plan.public_facts.eligibility }}</dd>
+        <dt>Conditional benefit</dt><dd>{{ plan.public_facts.benefit }}</dd>
+        <dt>Settlement and early exit</dt><dd>{{ plan.public_facts.exit }}</dd>
+      </dl>
+      <details class="offer-details"><summary>Read the complete recorded policy</summary><div class="mt-3">{% include 'schemes/includes/configured_offer_rules.html' %}</div></details>
+    </div></section>
+    <section class="card" aria-labelledby="offer-exclusions"><div class="card-body p-3 p-lg-4">
+      <h2 class="h4" id="offer-exclusions">What to keep in mind</h2>
+      <ul>
+        <li>Contributions do not reserve a jewellery item, guarantee future prices or create investment returns.</li>
+        <li>Making charges, wastage/value addition and taxes are confirmed on the purchase invoice. A benefit applies only if expressly recorded and qualified under your agreement.</li>
+        <li>Showroom-only selection, invoicing and fulfilment. No online jewellery delivery or automatic cash withdrawal.</li>
+        <li>Pending, duplicate or uncertain payments need reconciliation. Do not pay again merely because confirmation is delayed.</li>
+        <li>Later offer edits do not rewrite an existing agreement. Its accepted rules and retained financial records remain authoritative.</li>
+      </ul>
+      <a href="{% url 'cancellation_refund' %}">Read settlement, cancellation and source-refund arrangements</a>
+    </div></section>
+  </div>
+  <div class="col-lg-5">
+    <section class="card" aria-labelledby="illustration-heading"><div class="card-body p-3 p-lg-4">
+      <p class="page-eyebrow">Understand the numbers</p>
+      <h2 class="h4" id="illustration-heading">Try an illustrative example</h2>
+      <p class="small">This example shows one contribution. It does not simulate completed instalments, confirm eligibility, award a benefit or create an agreement, order, payment or rate lock.</p>
+      <form method="get" action="{% url 'plan_detail' plan.pk %}#illustration-heading" novalidate>
+        {{ form|crispy }}
+        <button class="btn btn-outline-dark" type="submit">Update example</button>
+      </form>
+      <div aria-live="polite" class="mt-4">
+      {% if illustration %}
+        <ol class="list-group list-group-numbered mb-3">
+          <li class="list-group-item">Illustrative contribution: <strong>₹{{ illustration.amount|floatformat:2 }}</strong></li>
+          {% if illustration.inr %}
+          <li class="list-group-item">If verified, principal purchase credit: <strong>₹{{ illustration.principal|floatformat:2 }}</strong>. No grams or metal rate.</li>
+          {% else %}
+          <li class="list-group-item">Hypothetical {{ illustration.grade.display_name }} rate: <strong>₹{{ illustration.rate|floatformat:4 }}/g</strong>.</li>
+          <li class="list-group-item">Contribution ÷ assumed rate: <strong>{{ illustration.display_quantity|floatformat:3 }} g</strong> of {{ illustration.grade.display_name }}.<br><small>Rounded to three decimals for display; six-decimal calculation retained. {% if illustration.display_quantity == 0 %}This example is less than 0.001 g; it is not a zero allocation.{% endif %}</small></li>
+          {% endif %}
+        </ol>
+        {% if illustration.benefit %}
+        <p><strong>Conditional benefit illustration only:</strong> {{ illustration.benefit.percentage|floatformat:2 }}% of ₹{{ illustration.benefit.base|floatformat:2 }}, capped at ₹{{ illustration.benefit.cap|floatformat:2 }} = <strong>₹{{ illustration.benefit.amount|floatformat:2 }}</strong>.</p>
+        {% if illustration.benefit.kind == 'VA_DISCOUNT' %}<p class="small">Base: assumed eligible charges, defined by the offer as “{{ illustration.eligible_charge_definition }}”. This is a percentage discount on those charges, not a waiver calculated on gold value.</p>{% else %}<p class="small">Base: the illustrated verified principal only. This purchase-only bonus is separate from paid principal; it is not cash, interest or extra grams.</p>{% endif %}
+        <p class="small">This assumes all recorded qualification and fulfilment conditions are met; one contribution does not establish that. The actual award requires review, source evidence and invoice fulfilment. Unearned benefits cannot be refunded.</p>
+        {% else %}<p class="small">No additional bonus or discount is included in this example.</p>{% endif %}
+        <p class="small mb-0">Taxes and purchase-time charges are excluded from this illustration, not waived. {% if not illustration.inr %}Actual metal credit uses the grade's rate locked for the verified payment and may differ. {% endif %}This is not a jewellery price, guaranteed future quantity or spendable cash balance.</p>
+      {% else %}<p role="status">Correct the highlighted assumptions to show an example. No financial action has been taken.</p>{% endif %}
+      </div>
+    </div></section>
+  </div>
+</div>
+<section class="conversion-panel mt-4" aria-labelledby="offer-apply">
+  <div><h2 class="h4" id="offer-apply">Does this offer suit your jewellery goal?</h2><p class="mb-0">Review the terms with the showroom before committing. No payment is taken on this page.</p></div>
+  <div class="conversion-actions">
+    {% if user.is_authenticated and user.role == 'CUSTOMER' and customer_enrolment_requests_enabled or not user.is_authenticated and public_customer_registration_enabled %}
+      <a class="btn btn-jsk" href="{% url 'plan_apply' plan.pk %}">Apply for this plan</a>
+    {% else %}<a class="btn btn-jsk" href="{% url 'contact' %}">Ask the showroom about this plan</a>{% endif %}
+    <a class="btn btn-outline-dark" href="{% url 'pricing' %}">Compare plans</a>
+  </div>
+</section>
+{% endblock %}

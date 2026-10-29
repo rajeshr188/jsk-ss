@@ -7,16 +7,22 @@
     {% if plan.configuration.amount_policy == 'CUSTOMER_FIXED' %}<p class="small">Choose your contribution amount once at enrolment. After confirmation, every contribution uses that fixed amount.</p>{% endif %}
     {% if plan.configuration.amount_step %}<p class="small">Choose increments of ₹{{ plan.configuration.amount_step|floatformat:2 }} from the minimum.</p>{% endif %}
     {% if plan.configuration.policy_schema_version == 2 %}<p class="small fw-semibold mb-2">{{ plan.configuration.get_accumulation_display }} &middot; {{ plan.configuration.get_eligibility_policy_display }}{% if plan.configuration.duration_months %} &middot; {{ plan.configuration.duration_months }} months{% endif %}</p>{% else %}    <p class="small fw-semibold mb-2">{% if plan.configuration.instalment_policy == 'MONTHLY_COMPLETION' %}{{ plan.configuration.get_period_basis_display }} — one qualifying payment{% elif plan.frequency_rule == 'ONCE_PER_MONTH' %}Once per calendar month{% else %}Flexible contribution timing{% endif %} · {{ plan.default_months }} months</p>{% endif %}
-    <div class="d-flex flex-wrap gap-2 mb-3" aria-label="Available metal grades">
-      {% for offering in plan.metal_offerings.all %}{% if offering.active %}<span class="badge text-bg-light border">{{ offering.metal_grade.display_name }}</span>{% endif %}{% endfor %}
+    <div class="d-flex flex-wrap gap-2 mb-3" aria-label="What this plan records">
+      {% if plan.public_facts.inr %}<span class="badge text-bg-light border">INR purchase credit · no grams</span>{% else %}{% for offering in plan.metal_offerings.all %}{% if offering.active %}<span class="badge text-bg-light border">{{ offering.metal_grade.display_name }}</span>{% endif %}{% endfor %}{% endif %}
     </div>
+    {% if plan.public_facts %}<dl class="small">
+      <dt>What accumulates</dt><dd>{{ plan.public_facts.accumulation }}</dd>
+      <dt>Payment obligation</dt><dd>{{ plan.public_facts.obligation }}. {{ plan.public_facts.limit }}.</dd>
+      <dt>Benefit</dt><dd>{{ plan.public_facts.benefit }}</dd>
+    </dl>{% endif %}
     <p class="small text-secondary mb-3">{% if plan.amount_rule == 'FIXED' %}For customers who prefer a fixed contribution amount.{% else %}For customers who want to choose their contribution amount.{% endif %}</p>
+    <a class="fw-semibold d-inline-block py-2 mb-2 mt-auto" href="{% url 'plan_detail' plan.pk %}">Explore terms and example<span class="visually-hidden">: {{ plan.name }}</span></a>
     <div class="d-grid gap-2 mb-3">
       {% if user.is_authenticated and user.role == 'CUSTOMER' and customer_enrolment_requests_enabled or not user.is_authenticated and public_customer_registration_enabled %}
       <a class="btn btn-jsk" href="{% url 'plan_apply' plan.pk %}">Apply for this plan<span class="visually-hidden">: {{ plan.name }}</span></a>
       {% else %}<a class="btn btn-outline-dark" href="{% url 'contact' %}">Ask the showroom about this plan</a>{% endif %}
     </div>
-    <details class="offer-details mt-auto">
+    <details class="offer-details">
       <summary>Contribution and duration details</summary>
       {% if plan.configuration.policy_schema_version != 2 %}
       <dl class="row small mt-2 mb-0">

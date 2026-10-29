@@ -153,6 +153,16 @@ This is the canonical source for stable business rules.
   Exact-customer privacy history remains bounded, feature-gated and owner-only. Counts and
   enhanced filters retain the same scoped selector as ordinary GET.
 
+- **UX-011:** Public offer details and illustrations use the same active/listed,
+  configured-release and catalogue visibility boundaries as plan application entry.
+  Facts derive from structured recorded policy, never internal plan notes. Examples
+  accept only permitted amounts/steps and offered exact grades, use Decimal arithmetic,
+  separate INR principal/metal/conditional benefits, and label assumed rates and
+  purchase-time charges. They cannot lock a rate, call a payment provider, create or
+  change an agreement, qualify an instalment, award a benefit, or establish entitlement.
+  Illustration GETs do not emit application analytics or retain assumptions in
+  financial records. A new benefit formula requires its own financial workflow.
+
 - **SCH-001:** Historical liabilities remain separated into `CASH` and exact Gold or
   Silver grade dimensions; new production enrolments are limited to explicitly
   offered metal grades.
