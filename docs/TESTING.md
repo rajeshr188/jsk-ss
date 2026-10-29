@@ -1,5 +1,93 @@
 # Testing
 
+## Owner plan workspace and approved names - 30 October 2026
+
+Feature `agent/owner-plan-details` adds only private reads/routes/templates and
+documentation. Local isolated PostgreSQL regression passed **51 tests in 69.734s**:
+owner workspace, plan governance, catalogue retirement and public offer modules.
+After refining draft/withdrawn and last-publication wording, **20 focused workspace
+and handbook tests passed in 4.611s**. Django checks and migration-drift checks pass.
+The first focused run exposed a duplicate mobile in synthetic application fixtures;
+unique fixture numbers corrected it before the green regression. No production
+validation was relaxed.
+
+Coverage includes owner-only access and staff/customer refusal, GET-only/no-store,
+missing IDs, safe section fallback, scoped/distinct customer counts, accepted
+agreement names after rename, retired-history access, no-write snapshots for all
+five sections, exact-grade/INR draft and release-state rendering, both scoped intake
+sources without private tokens, history pagination and one-query list projections.
+Logs remain ignored `.uv-cache/owner-plan-workspace-regression.log` and
+`.uv-cache/owner-plan-workspace-final.log`.
+
+Native Chrome reviewed synthetic static snapshots at desktop 1600px in light/dark
+and emulated 390x844 in light mode: overview actions/counts, wrapping section
+navigation, agreement table overflow and distinct enrolled-customer rows. Fixture
+grade/name wording was made generic rather than suggesting 22K for a 24K legacy
+fixture. Application/history sections are covered by rendered tests, not claimed
+as a separate visual audit. A stale preview-helper catalogue digest was fixed by
+reloading its edited plan; successful export took 4.290s. The disposable preview
+database was removed (verified zero matching databases), the loopback static server
+was stopped and the separate Chrome tab closed, preserving the production tab.
+No real data, external payment, outbound message or browser security change was used.
+This is not a physical Android or owner acceptance result. Hosted CI is still required.
+
+The owner separately approved both real display names. Existing production services
+updated the unpublished flexible draft and transactionally withdrew/renamed/
+republished the monthly offer. Economic/final visibility terms and 49 other scheme
+models match, including existing agreement snapshots. No pending monthly application
+existed. Configuration/agreement checks and public listing/detail name probes pass.
+No plan was retired; production data evidence is in PRODUCTION_DEPLOYMENT.md.
+
+## FW-UX-006 exact-image and production verification - 29 October 2026
+
+Main run `40884955268` succeeded, including all four test shards, inventory gate
+and publication/security scan of digest
+`c8f60b76ef601889b9ee10d440b00721556451a6194acc21a9f98a8f7f3cd86b` for
+`b20241ab961b24a6d7ca98e94cbf1c6ed1e67c3e`. The image label matches that revision.
+
+An isolated local PostgreSQL 18.6 container used `--network none`, no published
+ports and a synthetic-only database; the exact app image shared that network
+namespace, used mock payments and in-memory email, and received no production
+environment. Applied migrations to the empty database and ran Django checks.
+Created synthetic exact-metal and INR offers through the existing services.
+Public/health routes returned 200, the metal example displayed 0.227 g, INR
+retained principal/source-refund wording, and both detail routes refused POST.
+All scheme records compared equal before/after the examples; no agreement,
+contribution, allocation or SchemeRate existed. The initial rehearsal helper's
+import path and policy URL were corrected before this successful run; production
+code was unchanged. Container/volume cleanup passed. Log remains ignored at
+`.uv-cache/offer-exact-image-smoke.log`.
+
+Production preflight verified zero pending orders/migrations, existing flags,
+capacity, candidate identity and equivalent read-only financial snapshots. The
+first post-Caddy-recreation connection probe refused TCP before startup completed;
+the automatic compatible rollback was healthy. Retried with bounded
+`--retry-connrefused` checks, preserving TLS validation; the rollout then passed.
+
+Origin/public live and ready return the new release. Home, plans, plan 3 detail,
+how-it-works, terms and refunds return 200. Fourteen integrity commands pass for
+configuration, agreements, schedules, payment ledger, financial exceptions, live
+Razorpay, graded rates, in-store cash, INR principal, benefits/reapplications,
+closures, optional orders and enrolment requests. All 50 compared scheme-model
+snapshots/counts and liabilities match the prior image. Timer/service checks pass.
+Host-only evidence is recorded in PRODUCTION_DEPLOYMENT.md; no live payment,
+customer email or new offer was used as a test. This is not new physical-device
+acceptance or owner approval to launch an additional offer.
+
+## PR #78 full hosted acceptance and merge - 29 October 2026
+
+[Run 40875176430](https://github.com/rajeshr188/jsk-ss/actions/runs/40875176430)
+passed on exact head `216ba565b2a5bba0e9c6b6e665d861ef6919f33d`: all four
+test shards, application checks, required `django` inventory gate and container
+build/security job. Image publication was correctly skipped for the PR event.
+No unresolved review thread or change-request review was present at final review.
+
+[PR #78](https://github.com/rajeshr188/jsk-ss/pull/78) merged as
+`b20241ab961b24a6d7ca98e94cbf1c6ed1e67c3e`. Fetching main and comparing its tree
+with the tested PR head returned no differences. Main release run `40884955268`
+started; its completion and published digest remain separate deployment evidence.
+This records engineering CI/merge acceptance, not production or commercial approval.
+
 ## PR #78 hosted CI policy-copy fix - 29 October 2026
 
 Run `40865018323` on `25f0b3b` reported one failing governance assertion in

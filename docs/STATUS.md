@@ -2,6 +2,111 @@
 
 ## Current milestone
 
+**30 October 2026 - approved clearer names applied; owner plan workspace prepared.**
+Owner explicitly selected **Flexible Gold Savings (22K)** and **Monthly Gold
+Savings (22K)**. On production `b20241a`, existing validated services renamed
+draft plan 4 (still inactive/unlisted) and transactionally withdrew/renamed/
+republished plan 3. Monthly publication revision is now **5 / ID 7**. No economic
+term or final visibility state changed; all other 49 scheme-model snapshots,
+including existing agreement name/term snapshots, match. No pending monthly
+applications existed. Configuration/agreement checks pass. Host-only evidence:
+`/home/deploy/jsk-rollouts/20261030-plan-names/renamed.json` (700 directory/600 file).
+
+Legacy plan 1 has 10 agreements / 9 customers; legacy plan 2 has 3 agreements /
+3 customers. Both currently have zero pending requests/in-progress applications.
+Neither was retired: recommended cutover is review/publish the replacement
+flexible offer, then explicitly retire superseded offers. Retirement stops new
+intake, not payments or settlement under existing agreement terms.
+
+Local feature `agent/owner-plan-details` adds an owner-only GET workspace linked
+from each plan row. Overview shows recorded rules, configuration and actual public/
+enrolment availability. Paginated sections show separate agreements, distinct
+enrolled customers with plan-scoped counts, both application sources and immutable
+revision history. Archived/retired plans remain accessible. Names in agreement
+rows come from accepted snapshots; stored status is not presented as effective
+eligibility. Private responses are non-cacheable; GET appends no audit/revision
+or financial record. Existing mutation/retirement services are unchanged. Regression
+passed 51 tests; final workspace/manual checks passed 20 tests. Native Chrome
+reviewed desktop light/dark and 390x844 light-mode synthetic layouts; the temporary
+server/tab and database were cleaned up. See TESTING.md. Owner acceptance and
+hosted CI/deployment remain; the new page is not deployed yet.
+The branch includes the documentation-only parent changes from open PR #79.
+
+**30 October 2026 - Flexible 22K offer prepared for owner review, unpublished.**
+Owner authorized the next recommendation. Used the existing explicit services on
+the deployed `b20241a` application to create configuration **2/v1** and plan **4**,
+**FLEX22K-ANYTIME / Flexible 22K Jewellery Savings**. The audit records delegated
+operator preparation, not an owner-interface submission or publication approval.
+Proposed bounds copy existing legacy offer `fsp`: **INR 150-100,000 per contribution**,
+no additional increment. These remain review choices, not approved new public terms.
+
+Rules: variable optional contributions, **GOLD_22K_916 only**, no compulsory
+instalments/duration/qualifying count, no bonus, flexible payment timing, and
+positive verified entitlement permits requesting one final full showroom jewellery
+settlement. Review, customer authorization, reconciliation and actual fulfilment
+remain required; no voluntary metal-to-cash conversion. Further contributions may
+continue before closure under the normal payment guards. Existing agreements are
+not converted. Plan is inactive/unlisted, has no publication revision or agreement.
+
+All existing rows across 53 scheme models match before/after. Only one configuration,
+plan, revision and audit plus offering rows were appended; only the 22K offering is
+active. Existing public offer IDs 3/2/1 and liabilities are unchanged. Configuration,
+agreement and financial checks pass; public plan-detail access returns 404.
+Host evidence: `/home/deploy/jsk-rollouts/20261030-flex22k-draft/prepared.json`
+(directory 700/file 600). Next: owner reviews the actual draft, especially bounds
+and anytime full-only eligibility, before separately authorizing publication.
+
+**30 October 2026 - owner accepted the deployed Savings Plans presentation.**
+After the requested production review, the owner reported "reviewed looks great".
+The reviewed deployed presentation under FW-UX-006 is accepted; do not infer a
+specific device/browser matrix, conversion improvement or approval of a new offer.
+Next recommended product step is preparing one differentiated supported offer,
+preferably flexible 22K, for review of its actual amount limits, eligibility and
+full-only settlement terms before publication. This requires no new builder or
+VA-waiver formula. Existing first-offer observation continues; its suggested
+5 November review date is not a technical gate. Rollout evidence remains local
+on `agent/denomination-offers-rollout-evidence` until pushed through review.
+
+**29 October 2026 - FW-UX-006 presentation deployed and verified.**
+Main CI `40884955268` passed and published release
+`b20241ab961b24a6d7ca98e94cbf1c6ed1e67c3e`, digest
+`c8f60b76ef601889b9ee10d440b00721556451a6194acc21a9f98a8f7f3cd86b`.
+The exact image passed an isolated PostgreSQL 18.6 rehearsal covering synthetic
+metal/INR offers, public pages, GET examples, POST refusal and unchanged scheme
+records after illustration requests. The isolated containers and volume were removed.
+
+Deployed to the authorized `172.235.9.77` host by pulling the digest, preserving
+the compatible prior image and changing only APP_IMAGE/APP_RELEASE. No build,
+migration, flag change, offer publication, enrolment, payment or refund occurred.
+The first immediate Caddy probe encountered connection refusal and the safeguard
+restored the prior release. Confirmed healthy rollback; bounded connection-refused
+retries resolved the probe startup race and the second rollout passed.
+
+Web is healthy; certificate-validated origin/public live/ready and all six public
+page probes pass, including the existing plan 3 detail/example. All 14 financial,
+contract, instalment, benefit and closure integrity commands pass. Fifty compared
+scheme-model snapshots, 15 customers, 14 agreements and separate liabilities match;
+pending orders remain zero. Both reminder/reconciliation timers are active and their
+services report success. Final available RAM is 369 MiB; disk has 7.8 GB free (67%).
+Private host evidence and the environment backup are retained in
+`/home/deploy/jsk-rollouts/20261029-b20241a-presentation` (directory 700, files 600).
+Engineering rollout is accepted. Owner commercial-copy/CMS follow-up and operating
+observation remain distinct; this does not approve additional INR/benefit offers.
+
+**29 October 2026 - FW-UX-006 PR #78 merged after successful full CI.**
+Run `40875176430` passed on `216ba565b2a5bba0e9c6b6e665d861ef6919f33d`:
+all four test shards, checks, required Django inventory gate and container job.
+Final review found no blocking issue or unresolved review thread. The automated
+security review completed on application-code commit `25f0b3b`; the later delta
+was the reproduced governance-test correction and validation documentation.
+Owner authorized proceeding; merged as `b20241ab961b24a6d7ca98e94cbf1c6ed1e67c3e`.
+Fetched main and verified its complete tree matches the tested PR head.
+
+Main run `40884955268` is in progress. Wait for its required checks and successful
+digest publication before preparing an exact-image production rollout. No image
+digest, production change, new offer launch or owner commercial-copy/CMS acceptance
+is inferred from this merge. Production remains on the previously accepted release.
+
 **29 October 2026 - PR #78 CI policy-copy regression identified and corrected.**
 Hosted run `40865018323` on `25f0b3b` failed one of the 376 tests in shard 3:
 the governance policy test still required date-only early-discontinuation wording.

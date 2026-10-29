@@ -2,6 +2,24 @@
 
 ## Owner builder v1 release contract (approved 24 October 2026)
 
+**Owner plan management follow-up - 30 October 2026:** approved customer-facing
+names are applied: **Monthly Gold Savings (22K)** remains published; **Flexible
+Gold Savings (22K)** remains an unpublished draft. Existing agreement snapshots
+and economic terms are unchanged. New local `FW-UX-007` owner detail workspace
+shows plan-scoped agreements/customers, applications, rules, visibility and revision
+history; CI/review/deployment are still required. Existing legacy plans remain
+active pending an explicit replacement/cutover decision; retirement will not migrate
+or close their agreements. This work adds no benefit formula or financial workflow.
+
+**Current product step - 30 October 2026:** owner authorized preparing one new
+offer after accepting the deployed presentation. **Plan 4 / FLEX22K-ANYTIME** and
+configuration **2/v1** now exist in production, inactive/unlisted and without a
+publication revision. Proposed INR 150-100,000 variable contributions reuse legacy
+`fsp` bounds for review; 22K only, optional payments, anytime full settlement with
+positive verified grams, no bonus and no partial/cash withdrawal. No existing
+agreement/publication or financial record changed. Review these actual proposed
+terms before publication; another builder or VA formula is not needed. See STATUS.md.
+
 **Current engineering item - 29 October 2026:** owner authorized `FW-UX-006` while
 the first published offer is observed. Local branch `agent/denomination-aware-offers`
 now contains denomination-aware shared copy, comparable facts, public per-offer
@@ -9,9 +27,15 @@ explanations and GET-only Decimal illustrations derived from recorded policy.
 No plan rules, agreements or production settings changed. The user-authorized
 engineering visual/copy review now passes at desktop/390px/320px and both themes,
 including keyboard, examples and errors. Five presentation findings were corrected;
-99 local regression tests pass. See TESTING.md. Owner commercial-copy/CMS acceptance,
-hosted CI and reviewed deployment remain; the earlier automation interruption was
-resolved through a fresh valid native-browser observation, with no safety bypass.
+99 local regression tests pass. See TESTING.md. PR #78 full hosted CI passed on
+`216ba56` and merged as `b20241a` with an identical tree. Main CI/image publication,
+isolated exact-image rehearsal and controlled production rollout now pass; release
+`b20241a` is live with unchanged financial snapshots and existing offer/flags.
+The owner accepted the deployed Savings Plans presentation on 30 October. Next
+is one reviewed differentiated offer using supported rules; proposed amount limits,
+eligibility and commercial terms still need offer-specific confirmation before
+publication. Operating observation continues independently. The earlier automation interruption was resolved
+through a fresh valid native-browser observation, with no safety bypass.
 Do not treat this as approval to list INR offers or advertise a gold-value VA waiver.
 
 **Current acceptance checkpoint - 29 October 2026:** the owner's test-customer
