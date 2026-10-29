@@ -2,6 +2,37 @@
 
 ## Current milestone
 
+**29 October 2026 - FW-UX-006 local visual and copy review completed.**
+The user authorized local desktop/mobile review. The in-app browser host was
+unavailable, but a fresh native Chrome observation established the current URL.
+Opened the synthetic loopback preview in a separate tab, preserving the production
+edit tab. No safety setting was changed and no production form was submitted.
+
+Reviewed desktop comparison/details at the 1600px browser width, mobile layouts at
+390px (including 390x844) and narrow 320px, light/dark themes, opaque theme dropdown,
+mobile navigation, keyboard focus/Tab/Enter, valid metal/INR examples, invalid
+amount messaging and the final application action. Corrected findings: precise
+offered-grade labels, aligned card actions, visible duration/missed-payment facts
+in the detail summary, dark outline-button state colours and narrow-header overlap.
+The mobile illustration anchor also clears the sticky header. Changes are display
+projections/CSS only; accepted configurations and financial services are unchanged.
+
+Observed INR example: principal INR 5,000.25, separately illustrated capped 5%
+purchase-only benefit INR 250.01. Observed metal example: INR 3,333.33 / assumed
+INR 14,667 per gram displays 0.227 g with the six-decimal/three-decimal explanation.
+Invalid INR zero shows an error and suppresses results. A read-only database check
+confirmed zero preview agreements, contributions, allocations, rates, principal
+receipts and webhooks after the browser interactions. These are fictional offers,
+not approved additions to the live catalogue or observed customer conversion.
+
+The combined **99-test** local regression passed in **76.500s**, with Django checks
+and no migration drift. Final **15 offer tests** passed in **7.421s**. The preview
+tab/server were closed and its disposable database removed; see TESTING.md.
+This completes the engineering visual/copy audit, superseding the earlier failed
+automation attempt below. It is browser emulation, not a new physical Android
+acceptance or formal accessibility certification. Owner commercial-copy/CMS
+acceptance, hosted CI and reviewed deployment remain open; production is unchanged.
+
 **29 October 2026 - FW-UX-006 presentation implementation prepared locally.**
 Owner selected denomination-aware presentation as the next engineering item while
 the accepted first offer remains under observation. Work is isolated on

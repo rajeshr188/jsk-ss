@@ -22,7 +22,8 @@ def offer_facts(plan):
     grades = tuple(o.metal_grade for o in plan.metal_offerings.all() if o.active)
     return {
         "inr": inr,
-        "accumulation": "INR jewellery purchase credit" if inr else "Exact-grade gold or silver grams",
+        "accumulation": ("INR jewellery purchase credit" if inr else
+            f"{grades[0].display_name} grams" if len(grades) == 1 else "Exact-grade metal grams (one selected grade)"),
         "grades": grades,
         "amount": facts.get("Amount rule", "Plan-fixed contribution amount" if plan.amount_rule == "FIXED" else "Variable contributions within the recorded bounds"),
         "obligation": facts.get("Required schedule", "Required monthly payments" if policy and policy.obligation == "REQUIRED_MONTHLY" else "No mandatory instalments"),

@@ -71,6 +71,9 @@ class PublicOfferTests(TestCase):
         self.assertContains(response, "enrolment month counts")
         self.assertContains(response, "Three ordinary replacement periods")
         self.assertContains(response, "One final full settlement")
+        summary = response.content.decode().split("Read the complete recorded policy", 1)[0]
+        self.assertIn("18 months", summary)
+        self.assertIn("Three ordinary replacement periods", summary)
 
     def test_each_supported_eligibility_family_is_explained_from_policy(self):
         for values, expected in (
@@ -188,4 +191,6 @@ class PublicOfferTests(TestCase):
         response = self.detail(plan, {"amount": "500.00", "grade": silver.code, "rate": "100.0000"})
         self.assertEqual(response.context["illustration"]["quantity"], Decimal("5.000000"))
         self.assertEqual(response.context["illustration"]["grade"].code, silver.code)
+        self.assertEqual(response.context["plan"].public_facts["accumulation"], f"{silver.display_name} grams")
+        self.assertNotIn("gold", response.context["plan"].public_facts["accumulation"].lower())
         self.assertContains(response, '<link rel="canonical" href="http://testserver'+reverse("plan_detail", args=[plan.pk])+'">', html=True)

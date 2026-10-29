@@ -55,7 +55,20 @@
     border-color: #e8bd73;
   }
   [data-bs-theme="dark"] .btn-jsk:is(:hover, :focus, :active) { background: #f6d6a0; border-color: #f6d6a0; }
-  [data-bs-theme="dark"] .btn-outline-dark { color: var(--jsk-ink); border-color: var(--jsk-muted); }
+  [data-bs-theme="dark"] .btn-outline-dark {
+    --bs-btn-color: var(--jsk-ink);
+    --bs-btn-border-color: var(--jsk-muted);
+    --bs-btn-hover-color: var(--jsk-ink);
+    --bs-btn-hover-bg: #49372b;
+    --bs-btn-hover-border-color: var(--jsk-muted);
+    --bs-btn-active-color: var(--jsk-ink);
+    --bs-btn-active-bg: #49372b;
+    --bs-btn-active-border-color: var(--jsk-muted);
+    --bs-btn-disabled-color: var(--jsk-muted);
+    --bs-btn-disabled-border-color: var(--jsk-muted);
+    color: var(--jsk-ink);
+    border-color: var(--jsk-muted);
+  }
   [data-bs-theme="dark"] .btn-outline-dark:is(:hover, :focus) { background: #49372b; }
   [data-bs-theme="dark"] .btn-outline-primary {
     --bs-btn-color: var(--jsk-primary);

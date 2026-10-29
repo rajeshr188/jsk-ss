@@ -16,13 +16,13 @@
       <dt>Benefit</dt><dd>{{ plan.public_facts.benefit }}</dd>
     </dl>{% endif %}
     <p class="small text-secondary mb-3">{% if plan.amount_rule == 'FIXED' %}For customers who prefer a fixed contribution amount.{% else %}For customers who want to choose their contribution amount.{% endif %}</p>
-    <a class="fw-semibold d-inline-block py-2 mb-2" href="{% url 'plan_detail' plan.pk %}">Explore terms and example<span class="visually-hidden">: {{ plan.name }}</span></a>
+    <a class="fw-semibold d-inline-block py-2 mb-2 mt-auto" href="{% url 'plan_detail' plan.pk %}">Explore terms and example<span class="visually-hidden">: {{ plan.name }}</span></a>
     <div class="d-grid gap-2 mb-3">
       {% if user.is_authenticated and user.role == 'CUSTOMER' and customer_enrolment_requests_enabled or not user.is_authenticated and public_customer_registration_enabled %}
       <a class="btn btn-jsk" href="{% url 'plan_apply' plan.pk %}">Apply for this plan<span class="visually-hidden">: {{ plan.name }}</span></a>
       {% else %}<a class="btn btn-outline-dark" href="{% url 'contact' %}">Ask the showroom about this plan</a>{% endif %}
     </div>
-    <details class="offer-details mt-auto">
+    <details class="offer-details">
       <summary>Contribution and duration details</summary>
       {% if plan.configuration.policy_schema_version != 2 %}
       <dl class="row small mt-2 mb-0">

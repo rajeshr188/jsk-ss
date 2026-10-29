@@ -36,7 +36,8 @@ retain balances/holds and review individually, never bulk-complete.
 
 The owner subsequently authorized **FW-UX-006 as the next engineering item during
 observation**. Its local presentation candidate does not launch another offer or
-alter production. Copy/visual acceptance, hosted CI and deployment are still open.
+alter production. Engineering visual/copy review and 99 local tests now pass;
+owner commercial-copy/CMS acceptance, hosted CI and deployment remain open.
 
 First offer is now published: plan 3 `MC22K-5000-12M`, configuration 1/v1, 22K only,
 INR 5,000 fixed, 12 months AND 12 qualifying calendar-month payments, no benefit,
@@ -322,11 +323,13 @@ scope: ADR-0017. These approved design items are not implemented by migration 00
   - [x] Add read-only worked illustrations using authoritative policy/Decimal reads;
     label hypothetical rate assumptions and separate principal, grams, benefit/cap,
     making charges and taxes. Do not value metal into spendable INR or create a lock.
-  - [ ] Verify applicable family/role/flag paths, mobile/keyboard/errors and accepted
-    terms; obtain copy approval through `FW-UX-002`. Measure actual outcomes through
-    `FW-UX-001`, without treating visual polish or synthetic tests as conversion uplift.
-    Automated family/role/flag/error and no-write checks pass; visual acceptance
-    remains pending after the browser URL safety stop. Review CMS-authored copy too.
+  - [x] Verify family/role/flag/error/no-write paths and perform engineering
+    desktop/mobile, keyboard and light/dark review. The fresh native Chrome review
+    passed after correcting grade wording, action alignment, detail-summary facts,
+    dark button colours and a 320px header overlap. No production changes.
+  - [ ] Obtain owner commercial-copy/CMS acceptance through `FW-UX-002`. Measure
+    actual outcomes through `FW-UX-001`, without treating visual polish, browser
+    emulation or synthetic tests as physical-device proof or conversion uplift.
   - [ ] Obtain hosted CI and reviewed deployment acceptance; no production changes
     or INR-offer launch are part of the local implementation evidence.
   Keep existing Bootstrap/Django/services/selectors. Do not add product reservations,

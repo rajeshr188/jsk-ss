@@ -1,5 +1,39 @@
 # Testing
 
+## FW-UX-006 visual review follow-up - 29 October 2026
+
+The user authorized the local review. In-app browser host was unavailable; fresh
+native Chrome state established the URL and allowed the existing Computer Use
+workflow. A separate loopback tab preserved the production edit form. No safety
+configuration, production record, payment provider or outbound mail was touched.
+The earlier safety interruption below is historical, not the current QA state.
+
+Inspected desktop comparison and detail pages at a 1600px browser width, mobile
+390px including 390x844, and narrow 320px. Verified light/dark surfaces, opaque
+mode menu, mobile navigation, field wrapping, focus visibility, Tab/Enter form
+submission, error text, stacked results and application/compare links. Corrected
+the observed dark outline-button states, 320px brand overlap, grade specificity,
+card action alignment and detail-summary duration/missed-payment visibility.
+Retested those views after refreshing assets/restarting the disposable preview.
+
+Observed examples: INR 5,000.25 stays INR principal, with a separate hypothetical
+5% capped benefit of INR 250.01; INR 3,333.33 at assumed 14,667/g displays 0.227 g
+with explicit rounding/assumption boundaries. Zero INR gives a readable error and
+no result. The local database read after UI requests confirmed zero agreements,
+contributions, allocations, rates, INR receipts and webhooks. Four preview offers
+are fictional and do not approve or publish any new production product.
+
+Combined local run of the six regression modules and owner handbook passed **99
+tests in 76.500s**. Django checks passed; no migration drift. Final **15 focused
+offer tests passed in 7.421s**, covering exact silver labels and duration/missed-payment
+facts before the collapsed policy. The preview tab/server were closed and the
+disposable database was removed after review. Raw logs remain ignored `.uv-cache/denomination-offers-visual-fixes.log`
+and `.uv-cache/denomination-offers-final-summary.log`.
+
+This completes engineering browser/copy review, not owner commercial-copy/CMS
+acceptance, physical Android verification, a formal accessibility audit, hosted CI
+or production acceptance. Keep those distinctions when recording release status.
+
 ## FW-UX-006 local offer presentation - 29 October 2026
 
 On `agent/denomination-aware-offers`, an isolated local PostgreSQL 17 test database
