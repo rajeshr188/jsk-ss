@@ -2,6 +2,83 @@
 
 ## Current milestone
 
+**30 October 2026 - FW-AUTH-006 owner expiry candidate; cleanup not yet executed.**
+PR #80's required checks passed at head `106f7b9`; it remains open and mergeable.
+Separate branch `agent/registration-expiry-review` adds a narrow, confirmed owner
+decision for standalone unverified registrations whose verification deadline passed.
+Existing review fields retain owner, reason and time. Row locking and a current-state
+digest refuse stale forms, replaced links, verified identities and coordinated plan
+journeys. Exact retries preserve the original decision; no email, account, agreement,
+financial change or deletion is produced. Migration `accounts.0010` preserves existing
+automatic-expiry rows and extends the lifecycle constraint for reviewed expiry.
+Its reverse guard refuses to discard reviewed-expiry evidence.
+
+Local registration/application/deletion regression passed 123 tests; 36 final
+expiry/inbox/workspace checks also pass. Hosted CI/release remain pending. No production application has
+been expired, rejected or approved. The verified September application still needs
+the owner's genuine-applicant versus obsolete/test decision. Deletion work follows
+the completed-with-retention review first, then the two contained/open legacy cases;
+actual external provider/log/backup/offline-obligation findings and recent owner
+authentication are required before recording a disposition. Do not invent completed
+checks, erase history or mark zero-balance legacy agreements redeemed.
+
+**30 October 2026 - read-only production application/deletion backlog audit.**
+The Applications inbox has four attention records, all standalone registrations:
+one email-verified request awaiting an owner decision, and three unverified requests
+from September with expired verification links. None is linked to an approved login
+or a plan journey/agreement. Fourteen other intake records have recorded decisions.
+The current owner UI can approve/reject the verified request or resend verification;
+it lacks an explicit audited expiry action for the three stale unverified requests.
+Rejection is deliberately restricted to verified applications. Do not invent new
+applications, send unnecessary email, delete rows or directly relabel statuses to
+clear the badge. Follow-up is tracked as FW-AUTH-006.
+
+Three deletion reviews are overdue: one AWAITING_SETTLEMENT with two open legacy
+agreements/one contribution record; one CONTAINED with one open legacy agreement
+and no contributions; one COMPLETED_WITH_RETENTION with no agreements/contributions
+and an already-minimized login. Recorded balances are zero; no pending provider
+payments, financial/allocation exceptions, unresolved webhooks, pending enrolments
+or ambiguous email-matched registrations were found. Logins remain disabled.
+The completed case needs retained-record review, not another deletion. The two
+open cases need a real category/external-obligation review, then justified hold or
+completion with necessary financial/contact retention. Open agreements require
+showroom name/email retention with a stated purpose; privacy minimization does not
+require pretending those agreements were redeemed. The unused-cancellation service
+supports configured agreements only; these legacy agreements must not be forced
+through it or rewritten. No request, deadline, identity or financial record changed.
+
+**30 October 2026 - requested four-offer range is prepared, all unpublished.**
+Owner requested generating the recommended range for independent review/publication.
+Reused plan **4 / Flexible Gold Savings (22K)** and configuration **2/v1** unchanged.
+Existing validated services created three new configurations and three drafts:
+
+| Review draft | Code / configuration | Proposed rules |
+| --- | --- | --- |
+| **5 — Monthly Gold Savings (22K) - Choose Your Amount** | MC22K-CHOICE-12M / 3/v1 | Customer-selected fixed amount, 22K grams, 12 calendar months AND 12 qualifying monthly payments, three replacement periods then review, no bonus. |
+| **6 — Jewellery Purchase Savings** | INR-MONTHLY-12M / 4/v1 | Customer-selected fixed monthly amount; INR principal, not grams; same 12-month/12-count schedule; proposed 5% purchase-only bonus capped at INR 3,000 after required-schedule qualification. Completion within allowed replacements preserves qualification; early discontinuation does not qualify. |
+| **7 — Flexible Silver Savings** | SILVER-FLEX-ANYTIME / 5/v1 | Optional variable payments, SILVER_999 grams, anytime full settlement with positive verified entitlement, no bonus. |
+
+All four use proposed INR **150-100,000 per contribution**, without an additional
+step, copied from the existing flexible draft. Gold/silver flexible offers permit
+continued contributions before closure; monthly offers stop at qualification.
+All use one final full showroom settlement. INR unused principal uses the agreed
+original-source return process; its benefit is purchase-only and never cashable.
+Amounts, the new monthly variants and especially the 5%/INR 3,000 benefit remain
+review proposals, not new public promises or implied legal/accounting approvals.
+
+All four are inactive/unlisted, with null publication revision and zero linked
+agreements. Existing public offers 1/2/3 and all existing rows across 53 scheme
+models match; only 3 configurations/plans/revisions/audits and 6 offering rows
+were appended. Liabilities and 14 agreements are unchanged; INR principal is zero.
+Exact preparation/repeat/cap/amount-bound rehearsal passed locally; production
+configuration/agreement/financial/INR checks pass. See TESTING.md and runbook.
+No code deployment, publication, retirement, customer message or payment ran.
+Owner can review/publish each draft through existing forms without waiting for
+the new owner workspace in PR #80. Review withdrawing the fixed-INR-5,000 offer
+when adopting its customer-choice replacement; do not silently migrate agreements.
+Evidence is retained privately on the host; local documentation is kept on
+`agent/offer-range-drafts-evidence` to avoid interrupting PR #80's CI.
+
 **30 October 2026 - approved clearer names applied; owner plan workspace prepared.**
 Owner explicitly selected **Flexible Gold Savings (22K)** and **Monthly Gold
 Savings (22K)**. On production `b20241a`, existing validated services renamed

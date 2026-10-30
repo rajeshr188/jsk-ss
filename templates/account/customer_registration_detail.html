@@ -23,6 +23,7 @@
     {% if application.status == 'PENDING_EMAIL_VERIFICATION' %}
     <div class="card form-card"><h2 class="h4">Email verification pending</h2><p>The owner cannot approve this request until the applicant verifies the email address.</p>
       <form method="post" action="{% url 'customer_registration_resend_verification' application.pk %}">{% csrf_token %}{% if request.GET.return_to or request.POST.return_to %}<input type="hidden" name="return_to" value="{{ application_inbox_url }}">{% endif %}<button class="btn btn-outline-dark" type="submit">Send replacement verification</button></form>
+      {% if expiry_available %}<hr><p>The verification link has expired. If this application is no longer needed, record expiry without sending another email.</p><a class="btn btn-outline-dark" href="{% url 'customer_registration_expire' application.pk %}{% if request.GET.return_to %}?return_to={{ application_inbox_url|urlencode }}{% endif %}">Review expiry</a>{% endif %}
     </div>
     {% elif application.status == 'AWAITING_OWNER_APPROVAL' %}
     <form method="post" action="{% url 'customer_registration_approve' application.pk %}" class="card form-card mb-4" novalidate>
@@ -37,7 +38,10 @@
       <button class="btn btn-outline-danger" type="submit">Reject request</button>
     </form>
     {% elif application.status == 'EXPIRED' %}
-    <div class="card"><div class="card-body p-4"><h2 class="h4">Email verification expired</h2><p class="mb-0">This unverified request was superseded by a later submission and cannot be approved.</p></div></div>
+    <div class="card"><div class="card-body p-4"><h2 class="h4">Email verification expired</h2>
+      {% if application.reviewed_at %}<p>This unverified request was closed by owner review and cannot be approved.</p><dl class="row mb-0"><dt class="col-5">Reviewed by</dt><dd class="col-7">{{ application.reviewed_by_label }}</dd><dt class="col-5">Reviewed at</dt><dd class="col-7">{{ application.reviewed_at|date:"d M Y, h:i A" }}</dd><dt class="col-5">Reason</dt><dd class="col-7">{{ application.review_reason }}</dd></dl>
+      {% else %}<p class="mb-0">This unverified request was superseded by a later submission and cannot be approved.</p>{% endif %}
+    </div></div>
     {% else %}
     <div class="card"><div class="card-body p-4"><h2 class="h4">Decision recorded</h2>
       {% if application.reviewed_at %}<dl class="row mb-0"><dt class="col-5">Reviewed by</dt><dd class="col-7">{{ application.reviewed_by_label }}</dd><dt class="col-5">Reviewed at</dt><dd class="col-7">{{ application.reviewed_at|date:"d M Y, h:i A" }}</dd><dt class="col-5">Reason</dt><dd class="col-7">{{ application.review_reason }}</dd></dl>{% endif %}

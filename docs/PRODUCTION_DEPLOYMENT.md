@@ -7,6 +7,74 @@ explicit Razorpay Test/Live modes, and manually published Scheme Rate build. Dev
 
 ## Production-readiness boundary
 
+### Pending owner-registration expiry release - 30 October 2026
+
+`accounts.0010_owner_registration_expiry` changes only the registration lifecycle
+constraint, without backfill. Existing automatic expiry is preserved. It permits
+an explicit owner-reviewed EXPIRED decision only for an unverified standalone
+request with an elapsed verification deadline. Deploy only after CI and normal
+digest-pinned image/recovery-point checks; review `migrate --plan` first. There is
+no financial migration and no bulk cleanup command. Production is still on
+`b20241a`; no expiry decision has been executed by this candidate.
+
+After deployment, use Applications > Needs attention > each standalone request >
+Review expiry. Check identity, unverified state and deadline, then record the real
+reason and confirm. Reload a stale form rather than overriding a replaced link.
+Expect three existing eligible records to move to Recorded decisions; the verified
+request remains for genuine approval/rejection. Check registration integrity and
+unchanged users, agreements and financial baseline. Do not resend verification or
+submit a fake replacement application merely to clear the counter.
+
+**Recovery:** once an owner-reviewed expiry exists, reversing `accounts.0010` is
+refused before its constraint is removed. Keep the schema and use compatible
+forward recovery code; do not delete decision evidence to make reverse migration
+pass. Old blank-review automatic-expiry rows remain supported.
+
+Deletion reviews are separate authenticated owner operations, in this order:
+already-minimized retention case, contained legacy case, then awaiting-settlement
+legacy case. Validate actual provider/log/backup/offline facts and the minimum
+retention purpose before saving. Pending external checks may justify a dated
+follow-up; they are not evidence of external erasure or absence of obligations.
+Zero entitlement does not authorize forced legacy agreement closure. No provider
+erasure or customer notice is authorized by this migration.
+
+### Requested range preparation, no deployment - 30 October 2026
+
+On deployed `b20241a`, owner authorized generating the recommended range for their
+own review/publication. Reused unpublished plan 4 / configuration 2/v1. Through
+`create_configuration_version` and `create_configured_plan_draft`, appended:
+
+| Plan / code | Configuration | Proposed family |
+| --- | --- | --- |
+| 5 / MC22K-CHOICE-12M | 3/v1 | Customer-fixed monthly 22K, 12 months + 12 qualifying calendar payments, no bonus. |
+| 6 / INR-MONTHLY-12M | 4/v1 | Customer-fixed monthly INR purchase credit with the same duration/count and a proposed 5% purchase-only bonus capped at INR 3,000. |
+| 7 / SILVER-FLEX-ANYTIME | 5/v1 | Optional variable 999 silver, anytime full settlement, no bonus. |
+
+Proposed contribution bounds copy plan 4: INR 150-100,000, no additional step.
+Monthly schedules have three replacement periods then review; INR qualification
+is preserved on successful extended completion, not early discontinuation.
+The benefit is separate from paid principal and cannot be returned as cash.
+Final INR settlement retains the approved original-source procedure: manual
+Razorpay-dashboard refund for gateway-origin principal and evidenced in-person
+return for cash-origin principal. There is no automated refund integration.
+
+Policy validation, amount boundaries, grade bindings, repeat-run safety and benefit
+cap were rehearsed before preparation. The production operation compared existing
+rows across 53 scheme models within its transaction; none changed. Public plan IDs
+and 14 agreements/liabilities match; INR principal stays zero. Four review drafts
+are inactive/unlisted, with null publication revisions and no linked agreements.
+Configuration/agreement/financial/INR checks pass. No publication, retirement,
+application, rate, payment, benefit award, message or deployment was performed.
+The audit records delegated operator preparation, not a claim of customer consent
+or commercial approval. The owner must review the proposed values before publishing.
+
+Private evidence: `/home/deploy/jsk-rollouts/20261030-offer-range-drafts/prepared.json`
+(directory 700, file 600). The existing owner plan edit/configuration/publication
+forms are sufficient; the new plan-workspace feature is not required for review.
+When adopting customer-choice monthly intake, consider withdrawing the older fixed
+INR 5,000 configured offer to avoid redundant public offers. Legacy 1/2 retirement
+and any offer cutover remain explicit decisions; accepted agreements are untouched.
+
 ### Owner-approved offer names - 30 October 2026
 
 No code deployment was needed. The owner explicitly selected both names. Existing

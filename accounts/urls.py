@@ -89,6 +89,11 @@ urlpatterns = [
         name="customer_registration_approve",
     ),
     path(
+        "owner/registrations/<uuid:application_id>/expire/",
+        views.customer_registration_expire,
+        name="customer_registration_expire",
+    ),
+    path(
         "owner/registrations/<uuid:application_id>/reject/",
         views.customer_registration_reject,
         name="customer_registration_reject",

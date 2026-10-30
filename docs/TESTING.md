@@ -1,5 +1,52 @@
 # Testing
 
+## Audited standalone-registration expiry - 30 October 2026
+
+Local isolated PostgreSQL regression passed **123 tests in 153.977s** across the
+new expiry module, public registration, independent/coordinated plan applications,
+account-deletion containment and deletion completion. Django checks and migration
+drift checks pass. The initial 32-test run found one stale in-memory fixture after
+an explicit test-only status reset; refreshing that fixture corrected it. No
+production invariant was relaxed.
+
+Eleven new cases cover explicit owner/reason/confirmation, stale-form/replacement
+refusal, verified/linked-journey refusal, retry preservation, fresh reapplication,
+unchanged users/all scheme-model rows, no outbound email, attention/recorded counts,
+owner-only GET/POST, CSRF/no-store, invalid methods and bounded return navigation.
+Real PostgreSQL threads serialize replacement and expiry without closing a fresh
+verification. An actual migration roundtrip preserves old rows and refuses reverse
+migration after a reviewed decision; the database rejects partial audit or verified
+EXPIRED records while accepting existing blank-review automatic expiry.
+
+After correcting the recorded-decision detail copy to distinguish owner expiry
+from automatic supersession, **36 expiry/inbox/workspace tests passed in 17.047s**.
+Hosted CI, migration/deployment and the actual three production expiry decisions
+remain pending. No live applicant status, privacy disposition or review date changed.
+Ignored logs: `.uv-cache/registration-expiry-{regression,workspace}.log`.
+
+## Requested unpublished offer range - 30 October 2026
+
+Before production preparation, the exact payload was exercised against a disposable
+loopback PostgreSQL database using mock payments and in-memory email. **One
+integration case passed in 2.110s**, preparing the three new families, checking
+amount bounds and benefit arithmetic/cap, retaining zero agreements/liability,
+and repeating the operation without duplicate plans/configurations. The existing
+flexible gold draft was reused. No source code, migration or financial workflow
+was changed; this is validation of configuration preparation, not a new live
+enrolment-to-settlement acceptance claim. Ignored log: `.uv-cache/offer-range-rehearsal.log`.
+
+Production services saved plans 5/6/7 and configurations 3/4/5 with the same
+definitions, explicitly inactive/unlisted and without publication revisions or
+agreements. Their policy/full-clean/amount/grade/publication-readiness validation
+passes. The proposed 5% INR purchase-only benefit on INR 60,000 illustrates INR
+3,000; a larger base remains capped at INR 3,000. No award or entitlement is created.
+All existing rows across 53 scheme models, original public plan IDs and liabilities
+compare unchanged. Only preparation/audit/revision/offering records were appended.
+Configuration, agreement, financial and INR integrity checks pass, and all four
+review drafts are excluded from public selectors. Production evidence remains
+host-only as recorded in PRODUCTION_DEPLOYMENT.md. Commercial approval, individual
+publication, later customer enrolment and legacy retirement were not performed.
+
 ## Owner plan workspace and approved names - 30 October 2026
 
 Feature `agent/owner-plan-details` adds only private reads/routes/templates and

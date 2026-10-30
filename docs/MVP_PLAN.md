@@ -2,6 +2,19 @@
 
 ## Owner builder v1 release contract (approved 24 October 2026)
 
+**Current product checkpoint - 30 October 2026:** owner requested the complete
+recommended range as independently reviewable unpublished drafts. Plan 4 flexible
+22K is reused; plan 5 customer-choice monthly 22K, plan 6 monthly INR purchase
+savings and plan 7 flexible silver are now saved, all inactive/unlisted with no
+publication revision or agreement. Proposed contribution bounds are INR 150-100,000.
+Monthly families use customer-fixed amounts, 12 months AND 12 calendar-month
+payments, three replacements then review. INR proposes a 5% purchase-only bonus
+capped at INR 3,000, conditional on schedule qualification and actual fulfilment.
+These are concrete review proposals, not commercial approval or a new financial
+formula. No existing offer/contract/payment changed. Next is owner review and
+individual publication/cutover through the existing controls; no builder code or
+deployment is needed merely to publish a supported reviewed draft. See STATUS.md.
+
 **Owner plan management follow-up - 30 October 2026:** approved customer-facing
 names are applied: **Monthly Gold Savings (22K)** remains published; **Flexible
 Gold Savings (22K)** remains an unpublished draft. Existing agreement snapshots
@@ -99,6 +112,15 @@ the older dated implementation/evidence sections, which remain historical eviden
 | Now | Observe operation before adding another offer/workstream | Recommend seven calendar days, 29 October-5 November. Record application/review friction and misunderstandings, not invented conversion uplift. Handle actual payments through existing verification/escalation procedures; no payment is required solely for this check. No automatic review was scheduled. |
 | Owner-authorized engineering follow-up | FW-UX-006, local presentation candidate during observation | Shared copy, comparable facts and illustrations implemented; engineering visual/copy review and 99 local tests pass. Finish owner commercial-copy/CMS acceptance, hosted CI and deployment before claiming production acceptance. Observation is a recommendation, not a prohibition on authorized engineering. |
 | Separate owner operations | Promptly triage the three overdue deletion reviews | Inspect retained requests, balances/holds and next action individually; no bulk closure, erased history or silent balance change. A discovered financial/privacy hold is handled on its own evidence. |
+
+**30 October backlog sequence:** PR #80 CI passed. Finish and release the separate
+FW-AUTH-006 audited standalone-registration expiry action before closing the three
+expired unverified requests. Keep the verified application for a factual owner
+approve/reject decision. For privacy, first review the already-minimized retention
+case; then review the contained case and the awaiting-settlement case with open
+legacy agreements. Record only established local/external findings and justified
+retention/follow-up dates after recent owner authentication. No automatic erasure,
+bulk approval or fictional agreement settlement is part of this sequence.
 
 **Conditional gates, not a blanket new release:** before any INR purchase-credit
 offer is publicly listed, correct shared metal-only marketing/refund copy

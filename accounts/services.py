@@ -396,6 +396,35 @@ def _approve_registration_identity(*, application, reviewed_by, reason):
 
 
 @transaction.atomic
+def expire_customer_registration(*, application, reviewed_by, reason, confirmed, expected_digest):
+    """Close one expired, standalone unverified request; never erase or grant access."""
+    from .registration_selectors import registration_expiry_review
+
+    _validate_registration_owner(reviewed_by)
+    if confirmed is not True or not isinstance(reason, str) or not reason.strip() or len(reason.strip()) > 500:
+        raise ValidationError("Confirmation and a review reason of at most 500 characters are required.")
+    application = CustomerRegistration.objects.select_for_update().get(pk=application.pk)
+    reason = reason.strip()
+    # An exact retry reads the recorded decision; it does not rewrite its audit time.
+    if (application.status == CustomerRegistration.Status.EXPIRED
+            and application.reviewed_at is not None and application.reviewed_by_id == reviewed_by.pk
+            and application.review_reason == reason):
+        return application, False
+    preview = registration_expiry_review(application)
+    if not preview["available"]:
+        raise InvalidCustomerRegistration(preview["blocker"])
+    if not expected_digest or not constant_time_compare(expected_digest, preview["expected_digest"]):
+        raise InvalidCustomerRegistration("This application changed. Reload and review it before confirming expiry.")
+    application.status = CustomerRegistration.Status.EXPIRED
+    application.reviewed_at = timezone.now()
+    application.reviewed_by = reviewed_by
+    application.reviewed_by_label = _actor_label(reviewed_by)
+    application.review_reason = reason
+    application.save(update_fields=["status", "reviewed_at", "reviewed_by", "reviewed_by_label", "review_reason"])
+    return application, True
+
+
+@transaction.atomic
 def reject_customer_registration(*, application, reviewed_by, reason):
     _validate_registration_owner(reviewed_by)
     application = CustomerRegistration.objects.select_for_update().get(

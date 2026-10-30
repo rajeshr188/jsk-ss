@@ -770,6 +770,25 @@ every historic backlog item as a new prerequisite for this already-deployed buil
 
 ## Privacy and identity lifecycle
 
+- **FW-AUTH-006 — Audited expiry for stale unverified registrations:** Identified
+  30 October during the production attention-queue audit: three standalone
+  unverified September applications have expired links but remain pending. Existing
+  owner UI offers resend; rejection requires verified identity. Existing automatic
+  expiry only runs when a new submission matches a stale pending identity.
+  - [x] Implement a validated owner expiry decision with retained actor/reason/time,
+    confirmation and supported lifecycle constraints; no raw status edits or deletion.
+  - [x] Keep verified awaiting-approval requests on their approve/reject workflow;
+    expiry of an already-used email token does not expire verified identity.
+  - [x] Recheck pending/verified state, linked plan journey and concurrent verification
+    under lock; preserve all user/agreement/payment records and allow legitimate
+    fresh applications through existing identity safeguards.
+  - [x] Test permission/CSRF, stale/racing decisions, retained evidence, no messages
+    or financial changes and correct Needs attention/Recorded decisions counts.
+  - [ ] Pass hosted CI and deploy `accounts.0010` with a verified recovery point;
+    review and expire the three eligible requests individually. Obtain a genuine
+    applicant versus obsolete/test decision for the separate verified request.
+  This is not completed cleanup, applicant-data erasure or a retention-period policy.
+
 - **FW-PRIV-001B — Complete verified customer account deletion:** ADR-0015 is accepted,
   and `FW-PRIV-001A` supplies a disabled public/authenticated request, one-time
   verification, immediate access containment, owner queue, reasoned hold, provider

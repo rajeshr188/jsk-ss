@@ -8,6 +8,13 @@ This is the canonical source for stable business rules.
 - **AUTH-002:** Owners create customer login/profile records and issue a time-limited, one-time password-setup invitation; owners and staff must never choose or transmit a temporary customer password.
 - **AUTH-003:** Public registration remains separate from closed allauth signup. Legacy access-only applications collect a complete profile. Plan-first applications (both registration and enrolment-request switches enabled) collect contact details, selected plan/grade/preferences and policy consent first, then postal address and current offer/start-date confirmation after email verification. Neither intake creates a user, customer, agreement, password or entitlement before owner review.
 - **AUTH-004:** The applicant must verify control of the email address through a bounded one-time token and then remain `AWAITING_OWNER_APPROVAL`. An active owner must confirm the mobile number and record a reason before approval or rejection.
+  A standalone unverified request may instead be explicitly expired by an active
+  owner after its verification deadline: confirmation, current evidence and a
+  retained actor/reason/time are required. A replaced link or verified/approved
+  identity refuses expiry; linked plan journeys use coordinated review. Automatic
+  expiry keeps its existing blank review fields. Owner expiry grants no access,
+  sends no message, erases no record and changes no financial facts. The applicant
+  may submit a fresh request through the normal identity safeguards.
 - **AUTH-005:** Only an active owner may issue or replace a customer invitation. Issuing a replacement revokes every older unused invitation for that customer; an account with a usable password must use password reset instead.
   A matching expired, unused, unsuperseded invitation secret can record one setup-help
   request through CSRF POST. It cannot issue/extend credentials, activate login or send
