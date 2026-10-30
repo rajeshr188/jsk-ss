@@ -2,6 +2,26 @@
 
 ## Current milestone
 
+**30 October 2026 - FW-AUTH-006 owner expiry candidate; cleanup not yet executed.**
+PR #80's required checks passed at head `106f7b9`; it remains open and mergeable.
+Separate branch `agent/registration-expiry-review` adds a narrow, confirmed owner
+decision for standalone unverified registrations whose verification deadline passed.
+Existing review fields retain owner, reason and time. Row locking and a current-state
+digest refuse stale forms, replaced links, verified identities and coordinated plan
+journeys. Exact retries preserve the original decision; no email, account, agreement,
+financial change or deletion is produced. Migration `accounts.0010` preserves existing
+automatic-expiry rows and extends the lifecycle constraint for reviewed expiry.
+Its reverse guard refuses to discard reviewed-expiry evidence.
+
+Local registration/application/deletion regression passed 123 tests; 36 final
+expiry/inbox/workspace checks also pass. Hosted CI/release remain pending. No production application has
+been expired, rejected or approved. The verified September application still needs
+the owner's genuine-applicant versus obsolete/test decision. Deletion work follows
+the completed-with-retention review first, then the two contained/open legacy cases;
+actual external provider/log/backup/offline-obligation findings and recent owner
+authentication are required before recording a disposition. Do not invent completed
+checks, erase history or mark zero-balance legacy agreements redeemed.
+
 **30 October 2026 - read-only production application/deletion backlog audit.**
 The Applications inbox has four attention records, all standalone registrations:
 one email-verified request awaiting an owner decision, and three unverified requests

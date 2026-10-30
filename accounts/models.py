@@ -221,15 +221,15 @@ class CustomerRegistration(models.Model):
                         mobile_verified_at__isnull=True,
                         approved_user__isnull=True,
                     )
-                    | models.Q(
+                    | (models.Q(
                         status="EXPIRED",
                         email_verified_at__isnull=True,
-                        reviewed_at__isnull=True,
-                        reviewed_by_label="",
-                        review_reason="",
                         mobile_verified_at__isnull=True,
                         approved_user__isnull=True,
-                    )
+                    ) & (
+                        models.Q(reviewed_at__isnull=True, reviewed_by_label="", review_reason="")
+                        | models.Q(reviewed_at__isnull=False, reviewed_by_label__gt="", review_reason__gt="")
+                    ))
                     | models.Q(
                         status="AWAITING_OWNER_APPROVAL",
                         email_verified_at__isnull=False,

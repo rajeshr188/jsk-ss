@@ -558,7 +558,7 @@ def get_owner_application_items(keys):
             elif record.status == record.Status.PENDING_EMAIL_VERIFICATION:
                 journey = getattr(record, "plan_application", None)
                 action = "Ask the applicant to start a new plan application" if journey and journey.expires_at <= timezone.now() else "Review verification delivery" if record.delivery_failed_at else (
-                    "Replace expired verification" if record.email_verification_expires_at <= timezone.now()
+                    "Review expired verification" if record.email_verification_expires_at <= timezone.now()
                     else "Await customer email verification"
                 )
             else:

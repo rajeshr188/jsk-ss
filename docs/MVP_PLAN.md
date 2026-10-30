@@ -113,6 +113,15 @@ the older dated implementation/evidence sections, which remain historical eviden
 | Owner-authorized engineering follow-up | FW-UX-006, local presentation candidate during observation | Shared copy, comparable facts and illustrations implemented; engineering visual/copy review and 99 local tests pass. Finish owner commercial-copy/CMS acceptance, hosted CI and deployment before claiming production acceptance. Observation is a recommendation, not a prohibition on authorized engineering. |
 | Separate owner operations | Promptly triage the three overdue deletion reviews | Inspect retained requests, balances/holds and next action individually; no bulk closure, erased history or silent balance change. A discovered financial/privacy hold is handled on its own evidence. |
 
+**30 October backlog sequence:** PR #80 CI passed. Finish and release the separate
+FW-AUTH-006 audited standalone-registration expiry action before closing the three
+expired unverified requests. Keep the verified application for a factual owner
+approve/reject decision. For privacy, first review the already-minimized retention
+case; then review the contained case and the awaiting-settlement case with open
+legacy agreements. Record only established local/external findings and justified
+retention/follow-up dates after recent owner authentication. No automatic erasure,
+bulk approval or fictional agreement settlement is part of this sequence.
+
 **Conditional gates, not a blanket new release:** before any INR purchase-credit
 offer is publicly listed, correct shared metal-only marketing/refund copy
 (`FW-UX-006`). Before advertising another benefit formula, tier, day deadline or

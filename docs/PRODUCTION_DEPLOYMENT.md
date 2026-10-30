@@ -7,6 +7,37 @@ explicit Razorpay Test/Live modes, and manually published Scheme Rate build. Dev
 
 ## Production-readiness boundary
 
+### Pending owner-registration expiry release - 30 October 2026
+
+`accounts.0010_owner_registration_expiry` changes only the registration lifecycle
+constraint, without backfill. Existing automatic expiry is preserved. It permits
+an explicit owner-reviewed EXPIRED decision only for an unverified standalone
+request with an elapsed verification deadline. Deploy only after CI and normal
+digest-pinned image/recovery-point checks; review `migrate --plan` first. There is
+no financial migration and no bulk cleanup command. Production is still on
+`b20241a`; no expiry decision has been executed by this candidate.
+
+After deployment, use Applications > Needs attention > each standalone request >
+Review expiry. Check identity, unverified state and deadline, then record the real
+reason and confirm. Reload a stale form rather than overriding a replaced link.
+Expect three existing eligible records to move to Recorded decisions; the verified
+request remains for genuine approval/rejection. Check registration integrity and
+unchanged users, agreements and financial baseline. Do not resend verification or
+submit a fake replacement application merely to clear the counter.
+
+**Recovery:** once an owner-reviewed expiry exists, reversing `accounts.0010` is
+refused before its constraint is removed. Keep the schema and use compatible
+forward recovery code; do not delete decision evidence to make reverse migration
+pass. Old blank-review automatic-expiry rows remain supported.
+
+Deletion reviews are separate authenticated owner operations, in this order:
+already-minimized retention case, contained legacy case, then awaiting-settlement
+legacy case. Validate actual provider/log/backup/offline facts and the minimum
+retention purpose before saving. Pending external checks may justify a dated
+follow-up; they are not evidence of external erasure or absence of obligations.
+Zero entitlement does not authorize forced legacy agreement closure. No provider
+erasure or customer notice is authorized by this migration.
+
 ### Requested range preparation, no deployment - 30 October 2026
 
 On deployed `b20241a`, owner authorized generating the recommended range for their

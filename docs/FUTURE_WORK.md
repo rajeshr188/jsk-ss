@@ -775,15 +775,18 @@ every historic backlog item as a new prerequisite for this already-deployed buil
   unverified September applications have expired links but remain pending. Existing
   owner UI offers resend; rejection requires verified identity. Existing automatic
   expiry only runs when a new submission matches a stale pending identity.
-  - [ ] Add a validated owner expiry decision with retained actor/reason/time,
+  - [x] Implement a validated owner expiry decision with retained actor/reason/time,
     confirmation and supported lifecycle constraints; no raw status edits or deletion.
-  - [ ] Keep verified awaiting-approval requests on their approve/reject workflow;
+  - [x] Keep verified awaiting-approval requests on their approve/reject workflow;
     expiry of an already-used email token does not expire verified identity.
-  - [ ] Recheck pending/verified state, linked plan journey and concurrent verification
+  - [x] Recheck pending/verified state, linked plan journey and concurrent verification
     under lock; preserve all user/agreement/payment records and allow legitimate
     fresh applications through existing identity safeguards.
-  - [ ] Test permission/CSRF, stale/racing decisions, retained evidence, no messages
+  - [x] Test permission/CSRF, stale/racing decisions, retained evidence, no messages
     or financial changes and correct Needs attention/Recorded decisions counts.
+  - [ ] Pass hosted CI and deploy `accounts.0010` with a verified recovery point;
+    review and expire the three eligible requests individually. Obtain a genuine
+    applicant versus obsolete/test decision for the separate verified request.
   This is not completed cleanup, applicant-data erasure or a retention-period policy.
 
 - **FW-PRIV-001B — Complete verified customer account deletion:** ADR-0015 is accepted,

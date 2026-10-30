@@ -24,6 +24,7 @@ from .forms import (
     CustomerAccountDeletionPublicForm,
     CustomerInvitationPasswordForm,
     CustomerRegistrationApprovalForm,
+    CustomerRegistrationExpiryForm,
     CustomerRegistrationForm,
     CustomerRegistrationRejectionForm,
 )
@@ -51,6 +52,7 @@ from .services import (
     InvalidCustomerInvitation,
     accept_customer_invitation,
     approve_customer_registration,
+    expire_customer_registration,
     issue_registration_verification,
     invitation_is_available,
     request_customer_invitation_recovery,
@@ -280,6 +282,7 @@ def customer_registration_list(request):
 def customer_registration_detail(request, application_id):
     from .application_selectors import get_plan_application
     from .application_views import owner_application_context
+    from .registration_selectors import registration_expiry_review
     journey = get_plan_application(application_id)
     if journey:
         return render(request, "account/plan_application_review.html", owner_application_context(journey))
@@ -294,8 +297,34 @@ def customer_registration_detail(request, application_id):
             "application": application,
             "approval_form": CustomerRegistrationApprovalForm(),
             "rejection_form": CustomerRegistrationRejectionForm(),
+            "expiry_available": registration_expiry_review(application)["available"],
         },
     )
+
+
+@owner_required
+@require_http_methods(["GET", "POST"])
+@never_cache
+def customer_registration_expire(request, application_id):
+    from .registration_selectors import registration_expiry_review
+
+    application = get_object_or_404(CustomerRegistration, pk=application_id)
+    preview = registration_expiry_review(application)
+    form = CustomerRegistrationExpiryForm(request.POST if request.method == "POST" else None,
+        initial={"expected_digest": preview["expected_digest"]})
+    if request.method == "POST" and form.is_valid():
+        try:
+            application, changed = expire_customer_registration(application=application, reviewed_by=request.user,
+                **form.cleaned_data)
+        except (InvalidCustomerRegistration, ValidationError) as error:
+            _add_validation_errors(form, error)
+        else:
+            messages.success(request, "Application expired; the decision is retained. No access or email was created."
+                if changed else "This expiry decision is already recorded.")
+            return redirect(application_inbox_url(request) if request.POST.get("return_to") else "customer_registration_list")
+    return render(request, "account/customer_registration_expiry.html", {
+        "application": application, "preview": preview, "form": form,
+    }, status=400 if request.method == "POST" else 200)
 
 
 def _add_validation_errors(form, error):

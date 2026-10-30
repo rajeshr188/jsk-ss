@@ -84,6 +84,12 @@ class CustomerRegistrationApprovalForm(forms.Form):
     )
 
 
+class CustomerRegistrationExpiryForm(forms.Form):
+    expected_digest = forms.CharField(max_length=64, widget=forms.HiddenInput)
+    reason = forms.CharField(label="Expiry reason", max_length=500, widget=forms.Textarea(attrs={"rows": 3}))
+    confirmed = forms.BooleanField(label="I reviewed this expired, unverified application and want to close it without creating access or deleting records.")
+
+
 class CustomerRegistrationRejectionForm(forms.Form):
     reason = forms.CharField(
         label="Rejection reason",
