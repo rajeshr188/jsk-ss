@@ -2,6 +2,133 @@
 
 ## Current milestone
 
+**31 October 2026 - SES source reconciliation and observation checkpoint.**
+The owner authorised publication of the deployed SES changes through the normal
+GitHub PR/CI process. This branch preserves the runtime patch from deployed local
+commit `a41e727` and reconciles the completed rollout evidence below. The older
+`c444b3c` preparation is superseded rather than duplicated into this release.
+The serving private image remains unchanged; merging source history is not a new
+production deployment or a replacement of protected SMTP configuration.
+
+Review target: **7 November 2026**, with genuine transactional delivery evidence,
+admin failure-alert review, SES account/reputation metrics and suppression/recovery
+handling. Low traffic may require longer observation. Retire Postmark only after
+delivery acceptance and retained-data review; its working rollback credentials,
+image/configuration and DNS remain available meanwhile. No automatic retirement,
+provider cancellation or extra customer/financial test record is authorised here.
+The PR checks and merge history are the authority for hosted CI acceptance; the
+local and live verification scope is recorded in TESTING.md. Existing rollout
+records describing the earlier unpublished state remain historical evidence.
+
+**31 October 2026 - Amazon SES migration completed and verified.**
+The owner explicitly approved private transfer and use of the prepared image in
+place of the normal CI-published-image path, keeping both commits unpublished.
+The 395 MB archive was transferred to the exact approved protected directory and
+its SHA-256 verified. On the host it loads as image
+`sha256:52ff796c8f54ff9d24d5a406b91cb7d4f0f57de0ef17d7bbc8a280aad3a325c9`;
+every base layer, runtime setting, source revision and both changed-file hashes
+match the reviewed candidate. The different host image ID is recorded alongside
+the verified archive and local image identity; no different source was substituted.
+
+Production now runs `a41e7277ac125e86f5a3aae258b26dc52a7d3bfc` with Mumbai SES SMTP.
+The existing reminder switch was held false during the controlled change and is
+now restored true; both reminder and checkout-reconciliation timers have verified
+future runs scheduled. The deploy
+account requires a sudo password for system-timer management, so the existing
+application switch supplies the dispatch hold without changing access permissions.
+Caddy and all unreviewed environment fields are verified unchanged.
+
+An initial hold attempt restored the exact original Postmark environment because
+Cloudflare returned 403 to the server's edge probe. Caddy origin HTTPS was 200.
+The corrected checks use certificate-validated Caddy origin requests and separate
+public-browser verification; no WAF, TLS or authentication protection was bypassed.
+The successful retry and SES replacement passed health, origin home/login/readiness,
+private-route redirects and webhook GET 405 checks. Deployment checks retain only
+the existing two HSTS warnings; all six financial-exception counters remain zero.
+The configured default SMTP backend accepted one controlled post-cutover message,
+marker `c89f65b8358f`; the actual message was verified in the admin Inbox with a
+direct login link. Reminder-switch restoration recreated only web, preserved every
+other runtime environment value, and passed all origin/financial checks again.
+The 11:50:59 IST audit confirms the healthy exact release, SES port 587/STARTTLS,
+ten-second timeout, unchanged sender, read-only web and unchanged Caddy. Reminder
+dry-run is enabled with zero candidates/failures, and Postmark rollback SMTP still
+authenticates (235) over validated TLS without sending. Protected rollback includes
+the exact original environment and SMTP-only
+snapshot outside the repo. After browser recovery, fresh public requests verified
+the homepage renders normally and the existing signed-in owner session still opens
+Owner dashboard. The final **11:57:54 IST** audit confirms the exact healthy SES
+release/image, restored reminder/timer operation, unchanged other configuration and
+Caddy, preserved rollback and all six financial-exception counters at zero.
+The migration goal is achieved. Postmark remains a controlled rollback option;
+retirement is separate follow-up after delivery observation and retained-data review.
+No schema migration, financial write, GitHub push or PR occurred.
+
+**31 October 2026 - pre-cutover SES approval and preparation checkpoint.**
+The owner supplied AWS correspondence dated 30 October 15:48:31 IST granting
+production access in Mumbai, with 50,000 messages/day and 14 messages/second.
+This supersedes the historical sandbox checkpoint below. After owner sign-in,
+fresh native-browser observation resolved the prior URL-policy interruption without
+bypassing a control. Live Support correspondence and the Mumbai SES account
+dashboard confirm approval, healthy account and both sending quotas.
+
+Read-only SSH confirmed healthy production release
+`b20241ab961b24a6d7ca98e94cbf1c6ed1e67c3e`, image
+`ghcr.io/rajeshr188/jsk-savings@sha256:c8f60b76ef601889b9ee10d440b00721556451a6194acc21a9f98a8f7f3cd86b`,
+still using Postmark. Postmark outbound suppressions are zero. The protected SES
+candidate authenticated with SMTP 235 over certificate-validated TLS 1.3. A fresh
+SMTP-only rollback snapshot is retained mode 0600 at
+`/home/deploy/.config/jsk/postmark-smtp-rollback-20261031.json`; both scheduled
+reminder and checkout-reconciliation timers remain running. Deployment checks pass
+at ERROR level with the two existing HSTS warnings; all six financial-exception
+counters are zero. Explicit SES-only test connections accepted an admin message
+and two simulator messages, marker `9aa30b08f1f8`. Admin delivery and both SNS
+Bounce/Complaint events were verified in the admin Inbox, with the exact default
+configuration set and restricted SMTP identity visible in synthetic event metadata.
+The received login link is direct. Gmail's original-message view confirms delivery
+after two seconds, SPF/DKIM/DMARC pass, the custom `ses-bounce` Return-Path, a direct
+login link and no tracking image in the complete received multipart HTML.
+Fresh SES console review confirms sending enabled, account-level bounce/complaint
+suppression enabled and zero SES suppressions. `jsk-transactional` inherits that
+suppression policy, with archiving and Auto Validation disabled and no redirect
+domain. Its sole enabled destination publishes hard bounces, complaints, delivery
+delays, rejects and rendering failures to `jsk-ses-failures`; opens/clicks are absent.
+VDM SES deliverability remains unenabled on its Get started/enable screen. Current
+authentication, registration/progress, invitation, deletion, enrolment and reminder
+mail builders retain no-track Postmark headers for rollback; those headers are not
+relied on to configure SES. The runbook now records actual SES retention surfaces
+without inventing a provider deletion period or claiming historical copies removed.
+No production SMTP switch, container replacement or database migration occurred.
+
+The original local commit `c444b3c` remains unpublished as instructed. A separate
+`chore/ses-cutover-b20241a` checkout uses the current production base and adapts only
+the owner provider/privacy labels plus their existing preview assertion. The old
+patch did not apply cleanly to the newer selector context; its check failed before
+any partial application, then the same three wording replacements were applied
+explicitly. All **199 affected accounts/reminder/enrolment regressions passed in
+307.315s**, normal hashing/logging, on unique disposable localhost PostgreSQL,
+destroyed afterwards. Runtime AST comparison proves only the three wording
+substitutions changed. The public privacy notice already covers email providers.
+
+The adapted checkpoint is unpublished local commit `a41e7277ac125e86f5a3aae258b26dc52a7d3bfc`.
+A private local image preserves all production base layers/platform and adds only
+the two reviewed runtime files; source/image file hashes match. Isolated read-only,
+network-disabled deployment checks pass at ERROR level with the expected synthetic
+loopback DB TLS warning. Final image ID:
+`sha256:d8257f6ac5927324b0f584f31239236d1eb29e053beb474c77d9a8bae6305771`.
+Its 395,446,272-byte local archive SHA-256 is
+`b243a356d3eff43d668fea6c84de6ec1d4ce0048ab7ed4583a17b3611e55557e`.
+
+At this preparation checkpoint, automatic approval review rejected the full image
+transfer pending exact payload/destination approval. No workaround was attempted.
+The owner subsequently approved private transfer and use of the tested artifact in
+place of the normal CI-published image while keeping both commits off GitHub.
+Verified execution is recorded in the newer checkpoint above. Pre-cutover
+application/transport/settings review is complete. The final public browser/session
+check was temporarily blocked by a minimized window and user-input detection;
+fresh restored-window observation subsequently allowed both checks to pass. No
+browser protection was bypassed. Production SES and reminder dispatch are
+healthy/enabled; no rollout phase or dispatcher hold is pending.
+
 **29 October 2026 - PR #78 CI policy-copy regression identified and corrected.**
 Hosted run `40865018323` on `25f0b3b` failed one of the 376 tests in shard 3:
 the governance policy test still required date-only early-discontinuation wording.

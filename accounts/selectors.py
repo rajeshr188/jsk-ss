@@ -201,7 +201,7 @@ def customer_account_deletion_disposition(deletion_request):
         ("Cash receipts", InStoreCashReceipt.objects.filter(contribution__in=contributions).count(), "Review receipt and correction evidence; never cascade financial history."),
         ("Redemptions", Redemption.objects.filter(scheme_account__customer=customer).count(), "Preserve settlement and associated reversal evidence."),
         ("Webhook events", webhooks.count(), "Preserve payment/recovery evidence; local completion does not delete provider records."),
-        ("Scheme reminders", SchemeReminder.objects.filter(scheme_account__customer=customer).count(), "Review recipient copies and delivery evidence, including copies held by Postmark."),
+        ("Scheme reminders", SchemeReminder.objects.filter(scheme_account__customer=customer).count(), "Review recipient copies and delivery evidence held by email providers, including Amazon SES and historical Postmark copies."),
         ("Related financial audits", AuditEvent.objects.filter(Q(actor=user) | Q(scheme_account__customer=customer) | Q(contribution__in=contributions) | Q(redemption__scheme_account__customer=customer)).distinct().count(), "Review actor labels, free text and identifiers; immutable evidence is not automatically anonymous."),
         ("Privacy requests", customer.account_deletion_requests.count(), "Minimize request email/digests and customer actor labels; decisions/actions have their own bounded evidence purpose."),
     )
@@ -237,7 +237,7 @@ def customer_account_deletion_disposition(deletion_request):
         financial_exceptions=financial_exceptions,
         external_checks=(
             "Razorpay: verify unresolved captures, refunds, disputes and provider retention. Local zero counts do not establish their absence.",
-            "Postmark, Google and support mail: record deletion requests or justified retention and delivery evidence; do not claim provider copies were removed without confirmation.",
+            "Amazon SES, historical Postmark copies, Google and support mail: record deletion requests or justified retention and delivery evidence; do not claim provider copies were removed without confirmation.",
             "Showroom/exported records: review downloaded statements, CSVs and paper records; identify the responsible person and disposition evidence.",
             "Cloudflare/Caddy/application logs and Linode backups: record actual retention/expiry, restricted access and restoration suppression. A database restore must not resurrect erased accounts.",
             "For each retained category: record purpose/basis, minimum fields, start event, duration or hold-release condition, next review and responsible owner. Do not assume a blanket statutory period.",

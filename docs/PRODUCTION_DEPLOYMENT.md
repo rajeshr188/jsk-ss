@@ -2630,7 +2630,74 @@ the final single-container replacement. Use the existing host; no second stack,
 database migration or unrelated local application release belongs in this change.
 Postmark continues serving customers until the gates below pass.
 
-Read-only production inventory confirmed release
+**31 October approved cutover:** production now runs privately built release
+`a41e7277ac125e86f5a3aae258b26dc52a7d3bfc` with Mumbai SES at port 587, STARTTLS,
+ten-second timeout and the unchanged admin sender. The owner explicitly approved
+private transfer and this image in place of the normal CI-published-image gate.
+The archive checksum was verified on the host; loaded image ID is
+`sha256:52ff796c8f54ff9d24d5a406b91cb7d4f0f57de0ef17d7bbc8a280aad3a325c9`.
+Layer/platform, runtime configuration, revision and source-file hash checks match
+the reviewed artifact despite the different host representation of the image ID.
+The original environment is protected mode 0600 at
+`/home/deploy/.config/jsk/ses-release-a41e727/environment-before.env`; bounded phase
+state is protected alongside it. Neither was downloaded or committed.
+
+Sudo required a password to control the system timer. The approved change used the
+existing application reminder switch for the dispatch hold, then restored it true
+after actual post-cutover Inbox receipt, marker `c89f65b8358f`. Both timers have future
+runs scheduled. All other runtime environment values and Caddy identity are unchanged.
+Deployment checks pass at ERROR level with the existing HSTS warnings; all six
+financial-exception counters remain zero. Final dry-run reports enabled reminders
+and zero candidates/failures. Postmark rollback authentication still passes (235)
+over validated TLS without a send. Keep its credentials, DNS and retained copies.
+
+The first hold attempt restored the exact original environment after the server's
+Cloudflare edge probe returned 403. The retry used validated origin TLS checks,
+with browser edge verification separate; no security control changed. Origin
+home/login/live/readiness are 200, private routes redirect, webhook GET is 405.
+After recovering the minimized Chrome window, fresh post-cutover browser requests
+verified the normal public homepage and retained owner session. The 11:57:54 IST
+completion audit confirms the exact healthy release/image, unchanged other
+configuration/Caddy, active timers/enabled reminders and six zero financial-exception
+counters. No pending rollout phase or dispatcher hold remains. Migration acceptance
+is complete. No schema/financial mutation, GitHub push, PR or Postmark retirement
+occurred. Observe actual delivery and review retained data before retiring rollback;
+no automatic retirement or provider cancellation is scheduled.
+
+Pre-cutover 31 October inventory ran `b20241a` at image
+`ghcr.io/rajeshr188/jsk-savings@sha256:c8f60b76ef601889b9ee10d440b00721556451a6194acc21a9f98a8f7f3cd86b`,
+healthy and still on Postmark. AWS approved Mumbai production access on 30 October;
+live Support/SES checks confirm 50,000 messages/day, 14/second and healthy status.
+Both Postmark outbound and SES suppression lists are empty. SES bounce/complaint
+suppression is enabled; the configuration set inherits it. Fresh controlled marker
+`9aa30b08f1f8` proves two-second admin Inbox delivery with SPF/DKIM/DMARC pass,
+custom MAIL FROM, direct links/no tracking image, and both failure types delivered
+through the exact SNS topic. Archiving/Auto Validation remain disabled.
+
+For the initial cutover, the owner required commits to remain unpublished. The
+owner subsequently authorised normal GitHub PR/CI reconciliation; publishing the
+source does not itself replace the serving private image. The adapted checkpoint is
+`a41e7277ac125e86f5a3aae258b26dc52a7d3bfc`, based on that exact production release:
+three provider-review strings, an existing read-only assertion and evidence docs.
+All 199 affected regressions pass. A private local image preserves every production
+base layer/platform and adds only the two reviewed wording files; its isolated
+deployment checks pass. Image ID
+`sha256:d8257f6ac5927324b0f584f31239236d1eb29e053beb474c77d9a8bae6305771`;
+archive SHA-256 `b243a356d3eff43d668fea6c84de6ec1d4ce0048ab7ed4583a17b3611e55557e`.
+Automatic approval review initially rejected the full image/source transfer without
+exact payload/destination approval. The owner subsequently approved that exact
+private transfer and release path; execution and verified archive are recorded above.
+The protected artifact/rollback directory is
+`/home/deploy/.config/jsk/ses-release-a41e727/`.
+
+Use the refreshed SMTP-only rollback
+`/home/deploy/.config/jsk/postmark-smtp-rollback-20261031.json` (mode 0600), not the
+dated 24 October baseline, after checking current live settings. Keep the existing
+checkout-reconciliation timer running; hold only reminder dispatch for the approved
+replacement. No schema change, migration or unrelated worktree release is needed.
+The earlier setup sequence and 24 October baseline below remain historical evidence.
+
+Initial 24 October read-only production inventory confirmed release
 `4d92b57588d0714eb2e9b48661df1878824953d0`, a healthy web container, standard Django
 SMTP, `smtp.postmarkapp.com:587`, STARTTLS, a ten-second timeout and sender/server
 address `admin@jaishrikrishnajewellery.com`. Cloudflare is authoritative DNS; root MX
@@ -3801,7 +3868,8 @@ financial record.
   GHCR artifact, closing `FW-PROD-006`. The reminder implementation, schema, command,
   owner view, and hardened scheduler boundary are accepted. Because there was no
   legitimate candidate, `FW-ELIG-002` retains one non-blocking first-use observation:
-  confirm the first naturally occurring reminder is accepted by Postmark and appears
+  confirm the first naturally occurring reminder is accepted by the configured SMTP
+  provider (SES after 31 October 2026) and appears
   in the owner delivery view. Do not manufacture a financial or redemption event.
 
 ### Live reconciliation, payment-error refund, and dispute boundary
@@ -4482,6 +4550,18 @@ establish the restricted independent register and approve the applicable recover
 procedure. Do not mark production restore suppression accepted from this result alone.
 
 #### Owner-reported provider inventory — 10 September 2026
+
+SES migration addition, verified 31 October 2026: message archiving is disabled.
+The account-level suppression list retains recipient addresses for bounce/complaint
+handling; the default configuration set publishes failure metadata, including the
+recipient/message identity, to the confirmed business-admin SNS email subscription.
+Those Workspace mailbox copies, AWS support correspondence, provider operational
+records and historical Postmark copies remain part of external disposition review.
+The sending identity uses a console-disabled SMTP IAM user with scoped sending
+permission; owner console/support and business-mailbox access are separate from that
+credential. Do not infer a fixed provider retention/deletion period from disabled
+archiving, or claim copies were erased without provider/mailbox evidence. Apply the
+existing documented purpose/minimum-data/review rules to suppression and alert copies.
 
 - Postmark activity retention: 45 days (owner confirmed). Message activity/content
   expiry does not establish deletion of suppressions or support mailbox copies.

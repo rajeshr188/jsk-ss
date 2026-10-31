@@ -1,5 +1,93 @@
 # Testing
 
+## SES source publication scope - 31 October 2026
+
+The publication branch has the same three changed runtime string constants and
+existing preview assertions as deployed `a41e727`; only canonical documentation is
+added to reconcile GitHub with the completed rollout. The 199-test local result and
+private-image/live checks below apply to that unchanged runtime patch. Hosted CI
+acceptance must be established for the actual PR head and is recorded by GitHub's
+checks and merge history; this text does not claim a pending run passed.
+
+## Approved private SES cutover - 31 October 2026
+
+The owner explicitly approved private archive transfer and use of the locally tested
+image instead of a CI-published image, keeping both source commits unpublished at
+that cutover checkpoint. Subsequent source reconciliation is described above. The
+archive's SHA-256 matched on the existing host. Preserved base layers/platform and
+runtime defaults, full local revision and both changed-file hashes were verified
+again after load; no serving-host build occurred. The deploy user's sudo required a
+password, so the existing application flag held reminder dispatch during the change.
+
+The first hold was automatically restored because the Cloudflare edge rejected the
+server's homepage probe with 403; the exact original environment, SMTP values,
+reminder flag and healthy Postmark release were verified restored. Origin TLS was
+200. Corrected checks use certificate-validated origin requests plus separate browser
+verification, with no WAF, TLS or auth control changed. The subsequent hold, SES
+switch and reminder restoration recreated only web, leaving Caddy unchanged.
+
+Production now runs `a41e727` using actual configured Mumbai SES SMTP. Controlled
+message `c89f65b8358f` was accepted once by the default backend and verified in the
+admin Inbox with the direct login link. All unreviewed environment fields matched
+the baseline hash; only the reminder switch changed when dispatch was restored.
+Origin home/login/live/readiness return 200, private owner/customer routes 302 and
+webhook GET 405. Deployment checks pass at ERROR level with the existing two HSTS
+warnings. All six financial-exception counters remain zero.
+
+The 11:50:59 IST audit confirms healthy/read-only web, exact release/image, SES
+587/STARTTLS/timeout 10, unchanged sender, reminder enablement and unchanged Caddy.
+Both timers have future runs scheduled; reminder dry-run is enabled with zero
+candidates, failures and invalid recipients. Protected rollback/state files are
+0600, and Postmark still authenticates (235) over validated TLS without a send.
+The final public browser/session check initially encountered a minimized window and
+user-input detection. A fresh restored-window observation resolved that interruption.
+Unique post-cutover requests to the public homepage and owner dashboard rendered
+normally, with the existing owner session retained and no new authentication flow.
+The final 11:57:54 IST host audit confirms the expected release/image, healthy SES
+SMTP, enabled reminders/active timers, unchanged other settings/Caddy and six zero
+financial-exception counters. No dispatcher is left paused. No database migration,
+financial write, customer test record, GitHub push or PR occurred. Migration acceptance
+is complete; retain Postmark rollback until later owner delivery/retention review.
+
+## SES candidate and transport revalidation - 31 October 2026
+
+Local commit `a41e727` adapts only the three provider-review strings and the existing
+read-only preview assertion to production base `b20241a`. All **199 accounts,
+reminder and enrolment-notification tests passed in 307.315s**, with normal hashing
+and logging, locmem delivery and mock providers on unique disposable localhost
+PostgreSQL. The database was destroyed. Runtime AST comparison proves that the two
+runtime files differ only in those three string constants; scoped whitespace passes.
+
+The private candidate preserves every production image base layer and platform,
+and image/source SHA-256 file hashes match. Network-disabled, read-only container
+deployment checks passed at ERROR level with the expected synthetic loopback DB
+TLS warning. This is local evidence, not hosted CI. At that preparation checkpoint,
+the original and adapted commits were unpublished; private transfer/deployment awaited the owner's decision after
+automatic approval review rejected the full image/source upload.
+
+Current production Compose/deployment checks pass at ERROR level with the two
+existing HSTS warnings. All six financial-exception counters are zero. Postmark
+outbound suppressions are zero, SES authentication is 235 over validated TLS 1.3,
+and a fresh SMTP-only rollback snapshot is protected mode 0600 outside the repo.
+
+Explicit candidate SMTP connections sent only synthetic admin/simulator tests,
+marker `9aa30b08f1f8`. Gmail confirms admin Inbox delivery in two seconds, SPF,
+own-domain DKIM and DMARC pass, custom MAIL FROM Return-Path, a direct HTTPS login
+link and no tracking image in the complete received multipart message. Both SNS
+Bounce and Complaint events reached the admin Inbox with the exact transactional
+configuration set and restricted IAM identity in synthetic metadata. The first
+probe failed before SMTP because its settings module was missing; it sent nothing.
+The corrected probe accepted each of the three test messages once. No customer or
+financial record, production SMTP setting, schema or running image was changed.
+
+Fresh console inspection confirms enabled bounce/complaint suppression with zero
+SES entries; the configuration set inherits account settings. Sending is enabled,
+archiving and Auto Validation disabled, with no redirect domain. The only enabled
+event destination targets the expected SNS topic for hard bounces, complaints,
+delays, rejects and rendering failures, excluding opens/clicks. VDM SES deliverability
+is unenabled. The current mail builders retain no-track Postmark headers for rollback;
+SES privacy is verified independently through console settings and the received HTML.
+
 ## PR #78 hosted CI policy-copy fix - 29 October 2026
 
 Run `40865018323` on `25f0b3b` reported one failing governance assertion in
