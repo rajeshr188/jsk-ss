@@ -585,17 +585,21 @@ every historic backlog item as a new prerequisite for this already-deployed buil
 - **FW-PROD-008 — Migrate transactional email from Postmark to Amazon SES:** Added
   22 October 2026 at the owner's request. Setup/migration authorised 24 October;
   the owner accepts a brief interruption for the final web-container replacement.
-  Execution is in progress; Postmark still serves production. Follow the staged
+  Migration completed and verified 31 October; SES serves production.
+  Postmark remains protected rollback. Follow the staged
   sequence in [Production deployment](PRODUCTION_DEPLOYMENT.md#amazon-ses-migration-fw-prod-008-in-progress-24-october-2026).
   Retain Django's standard SMTP backend, existing templates and notification services.
   No database migration, AWS SDK or new runtime service is expected for SMTP sending.
-  Keep Postmark current until SES verification, production access, operations and
-  controlled delivery gates pass; retain it for rollback after the authorised switch.
+  Postmark served until SES verification, production access, operations and
+  controlled delivery gates passed; it remains protected rollback after the switch.
 
-  - [ ] Select the AWS account/region and verify sender identities, DKIM and DMARC
+  - [x] Select the AWS account/region and verify sender identities, DKIM and DMARC
     alignment; configure custom MAIL FROM/SPF if used without disrupting existing
     mailbox delivery or Postmark DNS. Obtain SES production access and suitable
     sending quotas in that region before sending to unverified customer recipients.
+    AWS approved Mumbai production access on 30 October; live verification on
+    31 October confirms a healthy account, 50,000/day and 14/second. The fresh admin
+    test passed SPF/DKIM/DMARC with custom MAIL FROM and two-second Inbox delivery.
   - [x] Create restricted, region-specific SES SMTP credentials and test TLS on port
     587 from the application host; keep secrets outside the repository. Prepare the
     environment change and credential rotation/rollback procedure (`FW-PROD-003`).
@@ -603,7 +607,8 @@ every historic backlog item as a new prerequisite for this already-deployed buil
     configuration-set resources and admin FromAddress restriction; TLS 1.3/auth 235,
     controlled authenticated inbox delivery, and alternate-sender rejection verified.
     Candidate credentials are protected outside the server application repository;
-    production still uses Postmark. Production-access review remains pending.
+    production now uses SES. Production access is approved; 31 October
+    revalidation passed TLS/authentication and refreshed the protected rollback.
   - [x] Configure bounce/complaint handling, suppression, delivery/failure evidence
     and alerts (`FW-PROD-002`). Preserve the distinction between SMTP acceptance and
     inbox delivery; agree how owners review and recover delivery failures.
@@ -612,23 +617,51 @@ every historic backlog item as a new prerequisite for this already-deployed buil
     Both simulator event types reached the Inbox through SNS. Direct feedback's bounce
     went to Spam, retained as a secondary route without a spam-bypass rule. Controlled
     real-inbox transport evidence and manual owner recovery are in the runbook.
-  - [ ] Review Postmark-specific tracking/tag headers across authentication,
+  - [x] Review Postmark-specific tracking/tag headers across authentication,
     verification, application-progress, invitation, deletion, enrolment and reminder
     messages. Explicitly disable SES open/click tracking for private-link messages;
     verify received messages have direct, unmodified links and no tracking pixels.
     Postmark headers are not SES tracking controls.
-  - [ ] Update provider references in owner privacy/disposition screens, runbooks and
+    Revalidated 31 October: all current mail builders retain no-track Postmark
+    headers for rollback; VDM SES deliverability is not enabled, the sole SES event
+    destination excludes opens/clicks, and received multipart HTML has the direct
+    login link with no tracking image. No header removal or tracking upgrade occurred.
+  - [x] Update provider references in owner privacy/disposition screens, runbooks and
     applicable privacy/Data Safety records. Record SES retention/access arrangements
     and remaining Postmark copies without rewriting historical deletion decisions or
     delivery evidence (`FW-PRIV-001B`).
-  - [ ] Run affected email/privacy regressions and controlled recipient tests for
+    Prepared and tested in unpublished local commit `a41e727`; the public notice
+    already covers email providers, and the runbook now inventories SES suppression,
+    SNS/admin-mailbox metadata, disabled archiving and historical Postmark copies.
+    The owner approved the private image path; those screens are deployed in
+    `a41e727`. No historical privacy decision or provider deletion evidence changed.
+    Internal mobile-release provider inventory is updated; no new Play submission occurred.
+  - [x] Run affected email/privacy regressions and controlled recipient tests for
     registration, progress, activation/replacement, password reset, enrolment notices,
     reminders and deletion verification/completion. Exercise bounce/complaint handling
     and recoverable sending failure without duplicate agreements or financial writes.
-  - [ ] Finish the reviewed cutover gates, execute the owner-authorised SMTP
+    Evidence: 199 local regressions pass on the production-base candidate; fresh
+    admin and both SNS simulator receipts pass. Actual configured-backend
+    post-cutover Inbox delivery is verified, with the direct login link. No real
+    customer or financial record was manufactured. Final homepage and existing
+    owner-session browser checks pass after the last web recreation.
+  - [x] Finish the reviewed cutover gates, execute the owner-authorised SMTP
     configuration switch and verify delivery. Retain Postmark temporarily for controlled
-    rollback; do not automatically send each message through both providers. Retire
-    old credentials/provider access only after acceptance and review of retained data.
+    rollback; do not automatically send each message through both providers.
+    Completed on the explicitly approved private image path with commits unpublished:
+    exact artifact/source checks, controlled configured-backend Inbox delivery,
+    health/TLS/private-route/webhook checks, zero financial exceptions, unchanged
+    other settings/Caddy and restored reminders/timers. See STATUS.md/TESTING.md.
+  - [ ] After delivery observation and owner review of retained data, retire unused
+    Postmark credentials/provider access and DNS as appropriate. This cleanup must
+    not remove the currently retained rollback path prematurely. No automatic
+    retirement date or provider cancellation was scheduled.
+
+  Observation checkpoint: review around **7 November 2026**. Inspect genuine
+  transactional delivery and owner failure-alert handling, SES health/bounce/
+  complaint/reject metrics, current suppressions and retained-provider data. Extend
+  observation if traffic is insufficient. This is a review target, not an automatic
+  retirement or cancellation date.
 
   Setup references: [SES SMTP requirements](https://docs.aws.amazon.com/ses/latest/dg/send-email-smtp.html),
   [production access](https://docs.aws.amazon.com/ses/latest/dg/request-production-access.html),
@@ -810,7 +843,8 @@ every historic backlog item as a new prerequisite for this already-deployed buil
   command, owner view, additive `schemes.0019` migration, and hardened systemd
   execution boundary are deployed. A zero-candidate production run correctly sent
   nothing. Formal closure now requires the first naturally occurring reminder to be
-  accepted by Postmark and appear in the owner delivery view; do not manufacture a
+  accepted by the current SMTP provider (SES from 31 October) and appear in the
+  owner delivery view; do not manufacture a
   financial or redemption event for this observation. This does not block other
   isolated development.
 

@@ -525,7 +525,8 @@ the release candidate.
 Expected purposes are app functionality, account management, fraud prevention,
 security/compliance, and developer communications where applicable. No advertising
 or data-sale purpose is approved. Whether transfers to Cloudflare, Linode/Akamai,
-Postmark, Google, or Razorpay qualify as service-provider processing or reportable
+Amazon SES (current email transport from 31 October 2026), retained Postmark copies,
+Google, or Razorpay qualify as service-provider processing or reportable
 sharing must be checked against the final contracts and integration. Data is sent
 over HTTPS, but encryption and deletion answers must be verified again at submission.
 
