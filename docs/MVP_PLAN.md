@@ -57,6 +57,17 @@ Three pre-existing overdue deletion reviews need owner follow-up; both old/new i
 report them with no structural deletion errors. Detailed evidence is in TESTING.md
 and PRODUCTION_DEPLOYMENT.md.
 
+### CI spending priority — 31 October 2026
+
+Before additional application/evidence merges, owner authorised CI cost controls:
+verify budget enforcement, avoid full suites for pure prose/draft work, profile the
+actual slow tests, and cache Docker layers. Keep all application/financial/migration/
+concurrency tests for ready runtime changes, unchanged `django`/`container` required
+gate names, and full merged-code validation before image publication. Drafts with
+deferred full validation must not receive release approval. See FW-CI-002 and
+TESTING.md; no new paid full run has been initiated by this work. Existing SES
+observation, applicant decisions and privacy obligations remain separate work.
+
 ### Current execution priority — 29 October 2026
 
 The builder is deployed, the first approved offer is published and one customer

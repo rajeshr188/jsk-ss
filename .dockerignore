@@ -40,3 +40,4 @@ compose.production.yml
 .ci-reports/
 django_project/ci_inventory.py
 django_project/ci_runner.py
+django_project/ci_scope.py

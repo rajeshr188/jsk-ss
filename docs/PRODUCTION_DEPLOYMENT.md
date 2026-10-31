@@ -1878,13 +1878,31 @@ request body with the webhook signature.
 
 ## Build and release artifacts
 
-CI is the release gate. It uses PostgreSQL 16 to apply migrations, checks migration
+CI is the release gate. It uses PostgreSQL 18.6 to apply migrations, checks migration
 drift, runs Django checks and the full regression suite, runs deploy checks, collects
-static files, and builds the production image. Pull requests and non-`main` pushes
+static files, and builds the production image. Ready runtime pull requests
 build and scan a local CI image without registry credentials. After an approved
 change reaches protected `main`, a separate least-privilege job builds the merged
 commit once, pushes only its full-commit tag to GHCR, scans the published digest, and
 records the immutable deploy reference in the GitHub Actions job summary.
+
+**CI cost-control candidate (31 October):** exact prose-only changes under `docs/`
+(excluding all served handbook/source/assets under `docs/guides/`), `README.md` and
+`AGENTS.md` use UTF-8/path/diff checks with explicit `django` and `container`
+documentation-only outcomes. They do not claim application-suite coverage or
+publish a new image. Unknown, mixed, runtime, deployment, build and CI changes
+require the full inventory. Draft runtime PRs perform only cheap scope/gate work;
+their required gates fail clearly until marked ready, when the complete run starts.
+Do not use workflow-level path/commit skipping to evade required checks.
+
+Manual dispatch always runs the full suite. On `main`, select `publish_image=true`
+only when an exact-revision image is needed; publication still waits for complete
+validation and retains the digest/security gate. A prose-only main commit cannot
+be deployed by pairing its SHA with an older image: use the last validated runtime
+release, or explicitly validate/publish the exact new revision. Docker GHA caches
+reuse layers with a two-minute transfer bound; failed cache export cannot waive
+the actual build/scan. No paid cache-storage allowance is increased. Keep production
+builds on CI/a separate builder, never the serving 1 GB Linode.
 
 For a release candidate:
 

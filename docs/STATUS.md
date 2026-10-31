@@ -2,6 +2,42 @@
 
 ## Current milestone
 
+**31 October 2026 - CI cost controls and measured constraint-validation candidate.**
+Owner prioritised spending protection before the remaining merges/releases.
+The existing account-level Actions budget was inspected: hard-stop enforcement
+is already enabled and remains unchanged. No full hosted run was triggered by
+this investigation; a draft runs only lightweight scope/gate jobs. Separate
+branch `agent/ci-cost-controls` starts from current
+main `8f451e6`, preserving the SES source reconciliation and green PRs #80/#81.
+
+PR #81's retained evidence covers 1,528 tests exactly once. Its test suites consumed
+133.086 aggregate execution minutes before setup/build overhead; the slowest
+single case took 1,013.316s. A local isolated profile of that same case passed in
+283.700s with 59,890 SELECTs and 25,544 savepoint pairs. Repeated configuration
+`full_clean()` CHECK queries dominate. The candidate combines the same configuration
+CHECK predicates into one SQL query per validation, preserves uniqueness/field/
+policy checks and exact invalid-input fallback, and caches no validation authority.
+No schema or financial rule changes. Constraint/error/NULL/uniqueness parity and
+policy regressions passed 25 tests. The same profiled case then passed in 222.892s
+(21.4% lower local elapsed time), with 38,638 SELECTs (35.5% fewer) and 4,292
+savepoint pairs (83.2% fewer). INSERT/UPDATE/DELETE counts match. With the final
+SQL-error fallback guard, 23 focused normal/invalid/concurrent and CI-infrastructure
+tests passed. Complete discovery retains 1,517 cases on this main-based branch;
+PR #81's different feature head includes unmerged application work. No existing
+test was removed. Broader financial/policy/migration/concurrency regression passed
+134 tests in 1,633.997s. That run loaded the batching candidate before the final
+SQL-error guard; the 23-case final run verifies that guard and fresh validation.
+This is not a production or whole-hosted-suite claim.
+
+Workflow candidate: explicit verified prose-only scope; the served handbook/assets,
+application/build/deployment/CI files and unknown changes still require every test.
+Draft runtime PRs defer heavy work but required gates refuse approval until ready.
+Manual dispatch always runs the full suite. Docker builds reuse bounded-time GHA
+layer caches; critical scanning and full inventory verification remain. Prose-only
+main merges do not publish a release image. Owner chose to keep the cost-control
+PR in draft and run complete hosted CI later; validation/merge/deployment remain
+pending. Do not start another full hosted run as part of this preparation.
+
 **31 October 2026 - SES source reconciliation and observation checkpoint.**
 The owner authorised publication of the deployed SES changes through the normal
 GitHub PR/CI process. This branch preserves the runtime patch from deployed local
