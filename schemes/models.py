@@ -4,7 +4,7 @@ from decimal import Decimal
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
-from django.db import models, transaction
+from django.db import DatabaseError, connections, models, router, transaction
 from django.utils import timezone
 
 from .eligibility import is_redemption_eligible
@@ -224,6 +224,54 @@ class SchemePlanConfiguration(models.Model):
             ), name="plan_config_benefit_cap_finite"),
             models.CheckConstraint(condition=~models.Q(actor_label="") & ~models.Q(reason=""), name="plan_config_evidence_required"),
         ]
+
+    def validate_constraints(self, exclude=None):
+        """Evaluate valid configuration CHECKs together, never cache their result.
+
+        Django normally sends one SELECT per CheckConstraint. Contract reads call
+        full_clean repeatedly to retain fresh policy/provenance checks. Combining
+        this model's literal-value conditions preserves PostgreSQL CHECK/NULL
+        semantics while avoiding those repeated round trips. Invalid/excluded or
+        inherited cases use Django's original validation and exact error reporting.
+        Unique constraints, field validation, clean(), writes and database schema
+        constraints are unchanged. This deliberately re-evaluates on every call.
+        """
+        groups = self.get_constraints()
+        if exclude or len(groups) != 1 or groups[0][0] is not type(self):
+            return super().validate_constraints(exclude=exclude)
+        constraints = groups[0][1]
+        checks = [c for c in constraints if type(c) is models.CheckConstraint]
+        if len(checks) < 2:
+            return super().validate_constraints(exclude=exclude)
+        using = router.db_for_write(type(self), instance=self)
+        against = self._get_field_expression_map(meta=self._meta, exclude=exclude)
+        failed = False
+        def detect_error(execute, sql, params, many, context):
+            nonlocal failed
+            try:
+                return execute(sql, params, many, context)
+            except DatabaseError:
+                failed = True
+                raise
+        # Q.check() logs/swallow SQL errors. Such a result must not skip other
+        # checks: rerun Django's individual validations and exact error handling.
+        with connections[using].execute_wrapper(detect_error):
+            valid = models.Q(*(c.condition for c in checks)).check(against, using=using)
+        if failed or not valid:
+            return super().validate_constraints(exclude=exclude)
+        errors = {}
+        for constraint in constraints:
+            if type(constraint) is models.CheckConstraint:
+                continue
+            try:
+                constraint.validate(type(self), self, exclude=exclude, using=using)
+            except ValidationError as error:
+                if getattr(error, "code", None) == "unique" and len(constraint.fields) == 1:
+                    errors.setdefault(constraint.fields[0], []).append(error)
+                else:
+                    errors = error.update_error_dict(errors)
+        if errors:
+            raise ValidationError(errors)
 
     def clean(self):
         super().clean()

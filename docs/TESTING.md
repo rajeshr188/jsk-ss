@@ -1,5 +1,58 @@
 # Testing
 
+## CI cost controls and configuration CHECK parity - 31 October 2026
+
+Read existing PR #81 artifacts/logs without triggering a workflow: 1,528 test IDs
+verified exactly once; shard suites 3,587.032/2,069.390/1,510.975/817.749s. Their
+sum is 133.086 execution minutes before setup/build, not measured billable usage.
+The slowest single test was the owner benefit-review matrix (1,013.316s hosted).
+
+The unchanged case passed under an isolated loopback PostgreSQL/cProfile run in
+283.700s: 59,890 SELECTs, 25,544 savepoint pairs, 68.980s within SQL execution and
+208 million function calls. Repeated configuration `full_clean()` constraint
+evaluation dominates. Different host/profiling overhead prevents treating this
+as a direct hosted comparison. The candidate evaluates the same CHECK conjunction
+in one SQL query; every validation call remains fresh, field/clean/unique checks
+remain and invalid/excluded cases use stock Django errors. Database constraints
+and financial rules are unchanged; no migration is required.
+
+The identical matrix case passed after batching in **222.892s**, with 38,638
+SELECTs and 4,292 savepoint pairs. Same-host profiled elapsed time is 21.4% lower,
+SELECT count 35.5% lower and savepoint count 83.2% lower. Both runs record exactly
+113 INSERTs, 36 UPDATEs and one DELETE, with all original assertions passing.
+This single local pair is not a whole-suite, hosted-runtime or bill reduction claim.
+
+Constraint/query/error/NULL/uniqueness parity and policy regression passed **25
+tests in 8.085s**. Initial CI infrastructure tests passed 14 cases before adding
+the real temporary-Git rename/prose case; final scope-only tests pass **6 cases**.
+After adding the SQL-error fallback guard, **23 final focused tests passed in
+196.234s**, including the original benefit-review workflow, concurrent replacement
+settlements, exact stock-Django error/uniqueness/NULL parity, repeated fresh reads
+and an injected batch SQL error that must not hide an invalid individual check.
+This uses Django 6's expression-map hook; the parity tests must also pass on future
+dependency updates. No Django or test password-hasher setting was weakened.
+
+Complete discovery on current main plus this candidate finds **1,517 tests**,
+partitioned 380/379/379/379. This differs from #81's 1,528-case feature head because
+its unmerged application features are not on this main-based branch. No existing
+test was removed; the six scope and four constraint-parity cases are added. This
+is inventory discovery only, not a claim that all 1,517 cases have executed locally.
+
+Official checksum-verified actionlint v1.7.12 reports no workflow errors (ShellCheck
+is unavailable locally and explicitly disabled). Broader financial/policy/migration/
+concurrency regression passed **134 tests in 1,633.997s**, including configuration
+and independent-policy storage/schedules/ledgers, benefit review/replacement,
+owner query budgets and all-family builder activation. It loaded the batching
+candidate before the final SQL-error guard; the 23-case final run above verifies
+that guard and repeated fresh evaluation. Both disposable databases were destroyed.
+Owner chose a draft PR and deferred full
+hosted CI to conserve the remaining budget; do not mark it ready, merge or deploy
+without the later complete validation. Draft scope/gate jobs are lightweight and
+the runtime release gates deliberately refuse approval while the suite is deferred.
+Ignored local evidence: `.uv-cache/ci-cost-*.{log,json,pstats}` and retained CI class
+timing artifacts. No production configuration, budget, payment or privacy decision
+changed; PRs #80/#81 and their green heads remain untouched.
+
 ## SES source publication scope - 31 October 2026
 
 The publication branch has the same three changed runtime string constants and

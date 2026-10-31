@@ -510,6 +510,34 @@ every historic backlog item as a new prerequisite for this already-deployed buil
 
 ## Production operations
 
+- **FW-CI-002 - Reduce billed CI work without weakening the release gate:** Owner
+  prioritised this on 31 October 2026 after inspecting PR #81's 1,528-test run.
+  Four suite execution times totalled 133.086 runner-minutes, excluding setup/build.
+  - [x] Inspect existing spending controls: account-level Actions hard stop is already
+    enabled; do not raise the budget or change repository visibility for this work.
+  - [x] Prepare conservative prose-only validation, cheap blocked draft checks,
+    bounded job/cache durations and Docker layer reuse. Runtime handbook/assets,
+    application, deployment, build and CI changes still require the complete suite.
+  - [x] Profile the actual slowest benefit-review case locally with unchanged
+    financial assertions and normal hashing; identify repeated configuration CHECK
+    queries, not intentional sleeps or four duplicate copies of the suite.
+  - [x] Complete equivalent batched-CHECK regression and same-host before/after
+    measurement, retaining every field/unique/policy/DB check and no cross-call cache.
+    The broad run passed 134 tests in 1,633.997s; 23 final focused tests verify the
+    final SQL-error guard and concurrent settlement replacements. One profiled
+    local case improved 21.4%; this is not a hosted or invoice savings claim.
+  - [ ] Validate the workflow locally and obtain one final hosted complete run before
+    merge/release. Local lint/scope checks pass; owner explicitly chose a draft and
+    deferred the full hosted run to conserve budget. Do not launch repeated paid
+    full runs during implementation or mark this draft ready without that decision.
+  - [ ] Measure the first real cached build/full run before claiming hosted cost
+    savings. Rebalance whole classes using measured durations only if needed;
+    more parallel runners alone do not reduce aggregate compute minutes.
+  Prose-only merges intentionally have no new release image. Manual dispatch on
+  main with `publish_image=true` is an explicit complete-validation/image path if
+  an image for that exact documentation revision is necessary. Budget reports are
+  aggregate estimates; workflow wall time is not an invoice or exact billed usage.
+
 - **FW-CI-001 - Profile and safely parallelize the full test suite:** Owner
   prioritized implementation on 29 October 2026 before rerunning release CI.
   Baseline run `40670193738` passed 1,473 tests in 14,359.871s. The two duplicate

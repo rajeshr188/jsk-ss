@@ -4,7 +4,13 @@ on:
   push:
     branches: [main]
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
   workflow_dispatch:
+    inputs:
+      publish_image:
+        description: Publish a validated main image (runs the complete suite)
+        type: boolean
+        default: false
 
 # One PR run per revision; feature pushes no longer duplicate the PR run.
 # Never interrupt a running main release/image publication with a newer push.
@@ -23,8 +29,34 @@ env:
   METAL_RATE_PROVIDER: mock
 
 jobs:
-  checks:
+  scope:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      mode: ${{ steps.scope.outputs.mode }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Test conservative scope and required-gate rules
+        run: python -m unittest django_project.tests.test_ci_scope
+      - name: Classify the exact change and validate prose-only updates
+        id: scope
+        env:
+          BASE_REVISION: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_REVISION: ${{ github.sha }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: >-
+          python -m django_project.ci_scope scope
+          --base "$BASE_REVISION" --head "$HEAD_REVISION"
+          --event "$EVENT_NAME" --output "$GITHUB_OUTPUT"
+
+  checks:
+    needs: scope
+    if: ${{ needs.scope.outputs.mode == 'full' && github.event.pull_request.draft != true }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
     services:
       postgres:
         # Match the managed production database verified during release rehearsal.
@@ -105,8 +137,11 @@ jobs:
           retention-days: 7
 
   tests:
+    needs: scope
+    if: ${{ needs.scope.outputs.mode == 'full' && github.event.pull_request.draft != true }}
     name: tests (${{ matrix.shard }})
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       max-parallel: 4
@@ -161,38 +196,69 @@ jobs:
   # stale report or incomplete inventory must never turn this gate green.
   django:
     if: ${{ always() }}
-    needs: [checks, tests]
+    needs: [scope, checks, tests]
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
-      - name: Require all validation and test jobs to succeed
-        env:
-          CHECKS_RESULT: ${{ needs.checks.result }}
-          TESTS_RESULT: ${{ needs.tests.result }}
-        run: |
-          test "$CHECKS_RESULT" = success
-          test "$TESTS_RESULT" = success
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: Require complete tests or verified prose-only scope
+        env:
+          SCOPE_RESULT: ${{ needs.scope.result }}
+          VALIDATION_MODE: ${{ needs.scope.outputs.mode }}
+          CHECKS_RESULT: ${{ needs.checks.result }}
+          TESTS_RESULT: ${{ needs.tests.result }}
+        run: python -m django_project.ci_scope gate
       - name: Download inventory and execution reports
+        if: ${{ needs.scope.outputs.mode == 'full' }}
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           pattern: ci-*
           path: .ci-reports
           merge-multiple: true
       - name: Verify complete coverage and display slowest tests
+        if: ${{ needs.scope.outputs.mode == 'full' }}
         run: python -m django_project.ci_inventory .ci-reports --revision "$GITHUB_SHA"
 
   container:
-    if: ${{ github.event_name != 'push' || github.ref != 'refs/heads/main' }}
+    needs: scope
+    if: ${{ github.ref != 'refs/heads/main' || (github.event_name != 'push' && inputs.publish_image != true) }}
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
+      - name: Require a validated scope; drafts cannot approve a runtime release
+        env:
+          SCOPE_RESULT: ${{ needs.scope.result }}
+          VALIDATION_MODE: ${{ needs.scope.outputs.mode }}
+          IS_DRAFT: ${{ github.event.pull_request.draft }}
+        run: |
+          test "$SCOPE_RESULT" = success
+          case "$VALIDATION_MODE" in
+            docs) echo "Verified prose-only update: no image build or release claim." ;;
+            full) test "$IS_DRAFT" != true ;;
+            *) exit 1 ;;
+          esac
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: ${{ needs.scope.outputs.mode == 'full' }}
         with:
           persist-credentials: false
-      - name: Build production image
-        run: docker build --tag jsk-savings:${{ github.sha }} .
+      - name: Set up Docker Buildx
+        if: ${{ needs.scope.outputs.mode == 'full' }}
+        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
+      - name: Build production image with reusable layers
+        if: ${{ needs.scope.outputs.mode == 'full' }}
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        env:
+          DOCKER_BUILD_RECORD_UPLOAD: "false"
+        with:
+          context: .
+          load: true
+          tags: jsk-savings:${{ github.sha }}
+          cache-from: type=gha,scope=jsk-linux-amd64,timeout=2m
+          cache-to: type=gha,mode=max,scope=jsk-linux-amd64,ignore-error=true,timeout=2m
       - name: Scan production image for fixable critical vulnerabilities
+        if: ${{ needs.scope.outputs.mode == 'full' }}
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           image-ref: jsk-savings:${{ github.sha }}
@@ -203,9 +269,10 @@ jobs:
           format: table
 
   publish-container:
-    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
-    needs: django
+    if: ${{ github.ref == 'refs/heads/main' && needs.scope.outputs.mode == 'full' && (github.event_name == 'push' || inputs.publish_image == true) }}
+    needs: [scope, django]
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     permissions:
       contents: read
       packages: write
@@ -226,10 +293,14 @@ jobs:
       - name: Build and publish the merged production image
         id: build
         uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        env:
+          DOCKER_BUILD_RECORD_UPLOAD: "false"
         with:
           context: .
           platforms: linux/amd64
           push: true
+          cache-from: type=gha,scope=jsk-linux-amd64,timeout=2m
+          cache-to: type=gha,mode=max,scope=jsk-linux-amd64,ignore-error=true,timeout=2m
           tags: ${{ env.IMAGE_REPOSITORY }}:${{ github.sha }}
           labels: |
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
