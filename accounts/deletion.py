@@ -29,7 +29,7 @@ RETENTION_CATEGORIES = (
     ("financial", "Scheme, payment, settlement and financial audit history"),
     ("profile", "Necessary showroom identity/contact fields"),
     ("privacy", "Consent, privacy decisions and temporary notice delivery address"),
-    ("providers", "Postmark, Google, Razorpay and support mailbox copies"),
+    ("providers", "Amazon SES, Postmark, Google, Razorpay and support mailbox copies"),
     ("logs", "Application, Caddy and Cloudflare logs"),
     ("exports", "Downloaded, exported and paper showroom records"),
     ("backups", "Database backups and restore suppression"),

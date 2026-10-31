@@ -1,5 +1,22 @@
 # Testing
 
+## SES privacy candidate on production b20241a - 31 October 2026
+
+All 199 tests in `accounts`, `schemes.tests.test_reminders` and
+`schemes.tests.test_enrolment_requests` passed in 307.315 seconds. The runner used
+a uniquely named disposable localhost PostgreSQL database, normal password hashing
+and logging, locmem mail and mock financial providers, then destroyed the database.
+The existing no-write privacy preview test now checks SES, historical Postmark
+copies and the warning against claiming unconfirmed external deletion. Runtime AST
+comparison against b20241a proves only three string substitutions across two files.
+
+The private local image preserves every exact production base layer and adds only
+those two source files; image/source SHA-256 hashes match. An isolated read-only,
+network-disabled container passed `check --deploy --fail-level ERROR` with synthetic
+settings and only the expected loopback database TLS warning. This is local evidence,
+not hosted CI or a waiver of the normal published-image deployment requirement.
+No production SMTP setting, schema, financial record or ordinary local DB changed.
+
 ## PR #78 hosted CI policy-copy fix - 29 October 2026
 
 Run `40865018323` on `25f0b3b` reported one failing governance assertion in

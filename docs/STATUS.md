@@ -2,6 +2,36 @@
 
 ## Current milestone
 
+**31 October 2026 - local SES-only privacy candidate on the current production base.**
+AWS case `179283496400032` grants Mumbai production access from 30 October
+15:48:31 IST; live Support correspondence and the SES dashboard now confirm the
+approval, healthy account, 50,000 messages/day and 14 messages/second.
+Production remains on Postmark at release `b20241ab961b24a6d7ca98e94cbf1c6ed1e67c3e`.
+Its deployment checks pass at ERROR level with the two existing HSTS warnings;
+all six financial-exception counters are zero. The Postmark suppression count is
+zero; SES candidate authentication is SMTP 235 over certificate-validated TLS 1.3.
+A current SMTP-only rollback snapshot is protected mode 0600 outside the server repo.
+
+This checkout changes three provider-review strings in two runtime files and
+extends the existing read-only privacy preview test. Runtime AST comparison proves
+that only those strings changed. All **199 accounts/reminder/enrolment regressions
+passed in 307.315s**, with normal hashing/logging and a unique disposable localhost
+PostgreSQL database, destroyed afterwards. No schema or financial logic changed.
+An initial old-base patch check failed before application; explicit adaptation
+preserved the newer selector logic. The first transport probe lacked the Django
+settings module and failed before SMTP; the corrected probe accepted one admin
+message and two simulator messages, marker `9aa30b08f1f8`. Inbox/raw-message and
+failure-alert receipt verification remains to be collected.
+
+The owner instructed that commit `c444b3c` remain local. No push or PR was created.
+For review, a private local candidate layers only these two files over the exact
+production image, preserving every base layer and matching the source hashes.
+Its isolated read-only/network-disabled deployment checks pass at ERROR level;
+only the expected synthetic loopback DB TLS warning remains. The ordinary
+CI-published-image runbook requirement has not been replaced or waived. Private
+image delivery/deployment needs the owner's concrete release-path decision.
+No production SMTP switch, image deployment, timer pause or database write occurred.
+
 **29 October 2026 - PR #78 CI policy-copy regression identified and corrected.**
 Hosted run `40865018323` on `25f0b3b` failed one of the 376 tests in shard 3:
 the governance policy test still required date-only early-discontinuation wording.
